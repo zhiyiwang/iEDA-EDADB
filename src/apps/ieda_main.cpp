@@ -30,6 +30,10 @@
 #include "log/Log.hh"
 #include "time/Time.hh"
 
+//////[USE_EDADB]
+//////zhiyi: test edadb@src/third_party/edadb/
+#include "edadb.h"
+
 using namespace iplf;
 
 int main(int argc, char** argv)
@@ -63,6 +67,29 @@ int main(int argc, char** argv)
   if (printVersion) {
     std::cout << "Git version: " << iEDA_GIT_VERSION << std::endl;
   }
+
+//////[USE_EDADB]
+//////zhiyi: test edadb usage
+  if (1) {
+    std::cout << "The following is edadb output:" << std::endl;
+  
+    //// zhiyi: test edadb connection
+    // init edadb database to test
+    std::string db_name("edadb.debug.db");
+    if (!edadb::initDatabase(db_name)) {
+      std::cerr << "Failed to initialize database: " << db_name << std::endl;
+      return 1;
+    }
+  
+    // exec some sql, such as get 
+    if (!edadb::executeSql("SELECT sqlite_version();")) {
+      std::cerr << "Failed to check SQLite version" << std::endl;
+      return 1;
+    }
+
+    std::cout << "edadb output done" << std::endl;
+  } // if 
+
 
   plfInst->runTcl(argc, argv);
 

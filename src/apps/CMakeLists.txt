@@ -22,4 +22,10 @@ add_executable(iEDA
     ieda_main.cpp
 )
 
-target_link_libraries(iEDA flow)
+#### [USE_EDADB]
+## Zhiyi: link iEDA with edadb
+target_link_libraries(iEDA flow edadb)
+target_include_directories(iEDA PRIVATE ${CMAKE_SOURCE_DIR}/src/third_party/edadb/include)
+
+##target_link_libraries(iEDA flow)
+#### [USE_EDADB] Done

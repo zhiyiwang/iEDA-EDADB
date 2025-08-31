@@ -7,3 +7,6 @@
 ##	path = scripts/foundry/ihp130
 ##	url = https://github.com/IHP-GmbH/IHP-Open-PDK.git
 ##	branch = main
+[submodule "src/third_party/edadb"]
+	path = src/third_party/edadb
+	url = https://github.com/zhiyiwang/edadb.git
