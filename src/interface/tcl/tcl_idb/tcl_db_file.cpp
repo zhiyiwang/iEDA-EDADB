@@ -493,4 +493,128 @@ unsigned CmdGenerateMPScript::exec()
   return 1;
 }
 
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+//===========================================================
+//   [USE_EDADB]
+//===========================================================
+CmdEdadbRead::CmdEdadbRead(const char* cmd_name) : TclCmd(cmd_name)
+{
+  auto* path = new TclStringOption(TCL_PATH, 1);
+  addOption(path);
+
+  auto* edadb_path = new TclStringOption(TCL_EDADB_DB_PATH, 1); 
+  addOption(edadb_path);
+
+  auto* edadb_index = new TclIntOption(TCL_EDADB_INDEX, 0);
+  addOption(edadb_index);
+}
+
+unsigned CmdEdadbRead::check()
+{
+  TclOption* path = getOptionOrArg(TCL_PATH);
+  LOG_FATAL_IF(!path);
+
+  auto* edadb_index = new TclIntOption(TCL_EDADB_INDEX, 0);
+  LOG_FATAL_IF(!edadb_index);
+
+  TclOption* edadb_path = getOptionOrArg(TCL_EDADB_DB_PATH);
+  LOG_FATAL_IF(!edadb_path);
+
+  return 1;
+}
+
+unsigned CmdEdadbRead::exec()
+{
+  std::cout<<"###################################" << std::endl;
+  std::cout<<"CmdEdadbRead::exec()\n";
+  std::cout<<"###################################" << std::endl;
+
+  if (!check()) {
+    return 0;
+  }
+
+//  // TODO: use edadb_path to read 
+//  TclOption* edadb_index = getOptionOrArg(TCL_EDADB_INDEX);
+//  auto int_index = edadb_index->getIntVal();
+//  TclOption* def_name = getOptionOrArg(TCL_PATH);
+//  auto def_path = def_name->getStringVal();
+//  if (def_path != nullptr) {
+//    // dmInst->get_config().set_def_path(def_path);
+//    // dmInst->readDefEdadb(def_path, int_index);
+//    dmInstEdadb->readDef(def_path, int_index);
+//    return 1;
+//  }
+  return 1;
+}
+
+
+
+CmdEdadbWrite::CmdEdadbWrite(const char* cmd_name) : TclCmd(cmd_name)
+{
+  auto* option = new TclStringOption(TCL_NAME, 1, nullptr);
+  addOption(option);
+
+  auto* path = new TclStringOption(TCL_PATH, 1);
+  addOption(path);
+
+  auto* edadb_path = new TclStringOption(TCL_EDADB_DB_PATH, 1);
+  addOption(edadb_path);
+}
+
+unsigned CmdEdadbWrite::check()
+{
+  TclOption* option = getOptionOrArg(TCL_NAME);
+  LOG_FATAL_IF(!option);
+
+  TclOption* path = getOptionOrArg(TCL_PATH);
+  LOG_FATAL_IF(!path);
+
+  TclOption* edadb_path = getOptionOrArg(TCL_EDADB_DB_PATH);
+  LOG_FATAL_IF(!edadb_path);
+
+  return 1;
+}
+
+unsigned CmdEdadbWrite::exec()
+{
+  std::cout<<"###################################" << std::endl;
+  std::cout<<"CmdEdadbWrite::exec()\n";
+  std::cout<<"###################################" << std::endl;
+  std::cout<< std::flush;
+
+  if (!check()) {
+    return 0;
+  }
+
+//  // TODO: use edadb_path to write
+//  TclOption* option = getOptionOrArg(TCL_NAME);
+//  auto name = option->getStringVal();
+//  if (name != nullptr) {
+//    // if (iplf::tmInst->idbSave(name)) {
+//    std::cout<<"when name != nullptr\n";
+//    if (iplf::tmInst->idbSaveEdadb(name)) {
+//      std::cout << "idb save to edadb success." << std::endl;
+//      return 1;
+//    }
+//  }
+//
+//  TclOption* def_path = getOptionOrArg(TCL_PATH);
+//  auto str_path = def_path->getStringVal();
+//  if (str_path != nullptr) {
+//    dmInst->saveDef(str_path); //执行不到
+//    return 1;
+//  }
+
+  return 1;
+}
+//===[USE_EDADB]: end========================================
+
+
 }  // namespace tcl

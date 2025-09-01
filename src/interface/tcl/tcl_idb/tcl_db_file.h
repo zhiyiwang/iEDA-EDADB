@@ -192,4 +192,39 @@ class CmdSaveJSON : public TclCmd
   // private data
 };
 
+
+
+//===========================================================
+//   [USE_EDADB]
+//===========================================================
+class CmdEdadbRead : public TclCmd
+{
+ public:
+  explicit CmdEdadbRead(const char* cmd_name);
+  ~CmdEdadbRead() override = default;
+
+  unsigned check() override;
+  unsigned exec() override;
+
+ private:
+  // private function
+  // private data
+};
+
+class CmdEdadbWrite : public TclCmd
+{
+ public:
+  explicit CmdEdadbWrite(const char* cmd_name);
+  ~CmdEdadbWrite() override = default;
+
+  unsigned check() override;
+  unsigned exec() override;
+
+ private:
+  // private function
+  // private data
+};
+
+//===[USE_EDADB]: end========================================
+
 }  // namespace tcl

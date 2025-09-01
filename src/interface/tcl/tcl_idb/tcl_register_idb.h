@@ -50,6 +50,13 @@ int registerCmdDB()
   registerTclCmd(CmdSaveGDS, "gds_save");
   registerTclCmd(CmdGenerateMPScript, "aimp_random");
 
+//===========================================================
+//   [USE_EDADB]
+//===========================================================
+  registerTclCmd(CmdEdadbRead, "edadb_read");
+  registerTclCmd(CmdEdadbWrite, "edadb_write");
+//===[USE_EDADB]: end========================================
+
   /// idb operator
   registerTclCmd(CmdIdbSetNet, "set_net");
   registerTclCmd(CmdIdbMergeNets, "merge_nets");

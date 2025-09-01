@@ -70,7 +70,7 @@ int main(int argc, char** argv)
 
 //////[USE_EDADB]
 //////zhiyi: test edadb usage
-  if (1) {
+  if (0) {
     std::cout << "The following is edadb output:" << std::endl;
   
     //// zhiyi: test edadb connection

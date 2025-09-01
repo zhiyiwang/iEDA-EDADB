@@ -38,6 +38,12 @@ namespace tcl {
 #define TCL_PATCH_ROW_STEP "-patch_row_step"
 #define TCL_PATCH_COL_STEP "-patch_col_step"
 
+//   [USE_EDADB]
+//===========================================================
+#define TCL_EDADB_DB_PATH "-edadb_db_path"
+#define TCL_EDADB_INDEX "-edadb_index"
+//===========================================================
+
 const char* const EMPTY_STR = "";
 
 #define DEFINE_CMD_CLASS(CLASSNAME)                \
