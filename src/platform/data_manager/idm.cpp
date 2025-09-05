@@ -28,21 +28,50 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "idm.h"
+#include "idm_edadb.h"
 
 namespace idm {
 
-DataManager* DataManager::_instance = nullptr;
-
+DataManager*    DataManager::_instance = nullptr;
 
 ////////////////////////////////////////////////////////////////////////////
 //// [USE_EDADB]
 //// zhiy: 
-//
-//#include "idm_edadb.h"
-//
-//static DataManager* DataManager::createEdadb() {
-//  return new DataManagerEdadb();
-//}
+
+//DataManagerType DataManager::_type = DataManagerType::kDefault;
+DataManagerType DataManager::_type = DataManagerType::kEdadb; 
+
+void DataManager::set_type(DataManagerType t) {
+  if (_instance) {  // current type 
+    delete _instance;
+    _instance = nullptr;
+  }
+  _type = t;
+}
+
+DataManagerType DataManager::type() { return _type; }
+
+void DataManager::reset_instance_for_test() {
+  if (_instance) { delete _instance; _instance = nullptr; }
+}
+
+std::unique_ptr<DataManager> DataManager::create(DataManagerType t) {
+  if (t == DataManagerType::kEdadb) {
+    return std::unique_ptr<DataManager>(new DataManagerEdadb());
+  }
+  return std::unique_ptr<DataManager>(new DataManager());
+}
+
+DataManager* DataManager::getInstance()
+{
+  if (!_instance) {
+    _instance = (_type == DataManagerType::kEdadb)
+              ? static_cast<DataManager*>(new DataManagerEdadb())
+              : static_cast<DataManager*>(new DataManager());
+  }
+  return _instance;
+}
+
 ////////////////////////////////////////////////////////////////////////////
 
 

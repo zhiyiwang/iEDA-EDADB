@@ -563,15 +563,12 @@ unsigned CmdEdadbRead::exec()
   std::cout<<"###################################" << std::endl;
   std::cout<< std::flush;
 
+  if (edadb_path != nullptr) {
+    dmInst->readDef(edadb_path);
+    return 1;
+  }
 
-//  // TODO: use edadb_path to read 
-//  if (path != nullptr) {
-//    // dmInst->get_config().set_def_path(def_path);
-//    // dmInst->readDefEdadb(def_path, int_index);
-//    dmInstEdadb->readDef(def_path, int_index);
-//    return 1;
-//  }
-  return 1;
+  return 0;
 }
 
 
@@ -634,27 +631,12 @@ unsigned CmdEdadbWrite::exec()
   std::cout<<"###################################" << std::endl;
   std::cout<< std::flush;
 
+  if (edadb_path != nullptr) {
+    dmInst->saveDef(edadb_path);
+    return 1;
+  }
 
-//  // TODO: use edadb_path to write
-//  TclOption* option = getOptionOrArg(TCL_NAME);
-//  auto name = option->getStringVal();
-//  if (name != nullptr) {
-//    // if (iplf::tmInst->idbSave(name)) {
-//    std::cout<<"when name != nullptr\n";
-//    if (iplf::tmInst->idbSaveEdadb(name)) {
-//      std::cout << "idb save to edadb success." << std::endl;
-//      return 1;
-//    }
-//  }
-//
-//  TclOption* def_path = getOptionOrArg(TCL_PATH);
-//  auto str_path = def_path->getStringVal();
-//  if (str_path != nullptr) {
-//    dmInst->saveDef(str_path); //执行不到
-//    return 1;
-//  }
-
-  return 1;
+  return 0;
 }
 //===[USE_EDADB]: end========================================
 

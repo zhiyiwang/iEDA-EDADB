@@ -51,14 +51,7 @@ using namespace idb;
 
 namespace idm {
 
-////////////////////////////////////////////////////////////////////////////
-//// [USE_EDADB]
-// zhiy: 
-enum class DataManagerType { Normal, Edadb };
-
-
-////////////////////////////////////////////////////////////////////////////
-
+enum class DataManagerType { kDefault, kEdadb };
 
 class DataManager
 {
@@ -66,56 +59,11 @@ class DataManager
 ////////////////////////////////////////////////////////////////////////////
 //// [USE_EDADB]
 //// zhiy: 
-//  static void setDefaultManagerType(DataManagerType type) {
-//    defaultType() = type;
-//  }
-//
-//  static DataManager* getInstance() {
-//    return getInstance(defaultType());
-//  }
-//
-//  static DataManager* getInstance(DataManagerType type) {
-//    static std::once_flag normal_once;
-//    static std::once_flag edadb_once;
-//    static DataManager* normal = nullptr;
-//    static DataManager* edadb  = nullptr;
-//  
-//    switch (type) {
-//      case DataManagerType::Normal:
-//        std::call_once(normal_once, [] { normal = createNormal(); });
-//        return normal;
-//  
-//      case DataManagerType::Edadb:
-//        std::call_once(edadb_once, [] { edadb = createEdadb(); });
-//        return edadb;
-//    }
-//    return nullptr; // 不会走到
-//  } 
-//
-//
-//protected:
-//  static DataManagerType& defaultType() {
-//    static DataManagerType t = DataManagerType::Normal; // default is Normal 
-//    return t;
-//  }
-//
-//  static DataManager* createNormal() {
-//    return new DataManager();
-//  }
-//
-//  // 
-//  static DataManager* createEdadb();
-//
-////////////////////////////////////////////////////////////////////////////
-
-  static DataManager* getInstance()
-  {
-    if (!_instance) {
-      _instance = new DataManager;
-    }
-    return _instance;
-  }
-
+  static DataManager* getInstance();
+  static DataManagerType type();           // get DataManagerType
+  static void set_type(DataManagerType t); // set DataManagerType
+  static void reset_instance_for_test();   // reset _instance for test
+  static std::unique_ptr<DataManager> create(DataManagerType t);
 ////////////////////////////////////////////////////////////////////////////
 
   /// getter
@@ -140,12 +88,12 @@ class DataManager
   bool init(string config_path);
   bool readLef(string config_path);
   bool readLef(vector<string> lef_paths, bool b_techlef = false);
-  bool readDef(string path);
+  virtual bool readDef(string path);
   bool readVerilog(string path, string top_module = "");
 
   /// iDB save
   bool save(string name, string def_path = "");
-  bool saveDef(string def_path);
+  virtual bool saveDef(string def_path);
   bool saveLef(string lef_path);
   void saveVerilog(string verilog_path, std::set<std::string>&& exclude_cell_names = {}, bool is_add_space_for_escape_name = false);
   bool saveGDSII(string path);
@@ -276,8 +224,8 @@ class DataManager
   bool isNetConnected(std::string net_name);
   bool isNetConnected(IdbNet* net);
 
-// private:
 protected:
+  static DataManagerType _type;
   static DataManager* _instance;
   DataConfig _config;
   IdbBuilder* _idb_builder = nullptr;
@@ -290,9 +238,12 @@ protected:
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+public:
   /// constructor
-  DataManager() {}
-  ~DataManager() = default;
+  DataManager() = default;
+  virtual ~DataManager() = default;
+
+protected:
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

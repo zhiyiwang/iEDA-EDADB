@@ -17,6 +17,10 @@ add_library(idm
     config/dm_config.cpp
     config/dm_cts_config.cpp
     checker/check_connection.cpp
+
+## USE_EDADB
+    idm_edadb.cpp
+## USE_EDADB
 )
 
 target_link_libraries(idm 
