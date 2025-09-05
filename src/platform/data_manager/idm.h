@@ -51,9 +51,63 @@ using namespace idb;
 
 namespace idm {
 
+////////////////////////////////////////////////////////////////////////////
+//// [USE_EDADB]
+// zhiy: 
+enum class DataManagerType { Normal, Edadb };
+
+
+////////////////////////////////////////////////////////////////////////////
+
+
 class DataManager
 {
  public:
+////////////////////////////////////////////////////////////////////////////
+//// [USE_EDADB]
+//// zhiy: 
+//  static void setDefaultManagerType(DataManagerType type) {
+//    defaultType() = type;
+//  }
+//
+//  static DataManager* getInstance() {
+//    return getInstance(defaultType());
+//  }
+//
+//  static DataManager* getInstance(DataManagerType type) {
+//    static std::once_flag normal_once;
+//    static std::once_flag edadb_once;
+//    static DataManager* normal = nullptr;
+//    static DataManager* edadb  = nullptr;
+//  
+//    switch (type) {
+//      case DataManagerType::Normal:
+//        std::call_once(normal_once, [] { normal = createNormal(); });
+//        return normal;
+//  
+//      case DataManagerType::Edadb:
+//        std::call_once(edadb_once, [] { edadb = createEdadb(); });
+//        return edadb;
+//    }
+//    return nullptr; // 不会走到
+//  } 
+//
+//
+//protected:
+//  static DataManagerType& defaultType() {
+//    static DataManagerType t = DataManagerType::Normal; // default is Normal 
+//    return t;
+//  }
+//
+//  static DataManager* createNormal() {
+//    return new DataManager();
+//  }
+//
+//  // 
+//  static DataManager* createEdadb();
+//
+////////////////////////////////////////////////////////////////////////////
+
   static DataManager* getInstance()
   {
     if (!_instance) {
@@ -61,6 +115,8 @@ class DataManager
     }
     return _instance;
   }
+
+////////////////////////////////////////////////////////////////////////////
 
   /// getter
   DataConfig& get_config() { return _config; };
@@ -220,7 +276,8 @@ class DataManager
   bool isNetConnected(std::string net_name);
   bool isNetConnected(IdbNet* net);
 
- private:
+// private:
+protected:
   static DataManager* _instance;
   DataConfig _config;
   IdbBuilder* _idb_builder = nullptr;

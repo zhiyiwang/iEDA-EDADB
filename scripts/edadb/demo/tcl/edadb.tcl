@@ -23,6 +23,7 @@ if {[info exists ::env(READ_DEF)] && $::env(READ_DEF)} {
 
 
 
+## when read / write edadb, EDADB_DB_PATH must be set
 # --- flags: 1 => use EDADB; 0 => use DEF
 set read_edadb  [expr {[info exists ::env(READ_EDADB)]  && $::env(READ_EDADB)}]
 set write_edadb [expr {[info exists ::env(WRITE_EDADB)] && $::env(WRITE_EDADB)}]

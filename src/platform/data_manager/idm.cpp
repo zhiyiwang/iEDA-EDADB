@@ -33,6 +33,19 @@ namespace idm {
 
 DataManager* DataManager::_instance = nullptr;
 
+
+////////////////////////////////////////////////////////////////////////////
+//// [USE_EDADB]
+//// zhiy: 
+//
+//#include "idm_edadb.h"
+//
+//static DataManager* DataManager::createEdadb() {
+//  return new DataManagerEdadb();
+//}
+////////////////////////////////////////////////////////////////////////////
+
+
 bool DataManager::initConfig(string config_path)
 {
   return _config.initConfig(config_path);

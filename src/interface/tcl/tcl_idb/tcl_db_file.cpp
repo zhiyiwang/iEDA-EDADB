@@ -504,48 +504,68 @@ unsigned CmdGenerateMPScript::exec()
 //===========================================================
 //   [USE_EDADB]
 //===========================================================
+
+// replace CmdInitDef to init and read def files
 CmdEdadbRead::CmdEdadbRead(const char* cmd_name) : TclCmd(cmd_name)
 {
-  auto* path = new TclStringOption(TCL_PATH, 1);
-  addOption(path);
+  auto* path_opt = new TclStringOption(TCL_PATH, 1);
+  addOption(path_opt);
 
-  auto* edadb_path = new TclStringOption(TCL_EDADB_DB_PATH, 1); 
-  addOption(edadb_path);
+  auto* edadb_path_opt = new TclStringOption(TCL_EDADB_DB_PATH, 1); 
+  addOption(edadb_path_opt);
 
-  auto* edadb_index = new TclIntOption(TCL_EDADB_INDEX, 0);
-  addOption(edadb_index);
+  auto* edadb_index_opt = new TclIntOption(TCL_EDADB_INDEX, 0);
+  addOption(edadb_index_opt);
 }
 
 unsigned CmdEdadbRead::check()
 {
-  TclOption* path = getOptionOrArg(TCL_PATH);
-  LOG_FATAL_IF(!path);
+  TclOption* path_opt = getOptionOrArg(TCL_PATH);
+  LOG_FATAL_IF(!path_opt);
 
-  auto* edadb_index = new TclIntOption(TCL_EDADB_INDEX, 0);
-  LOG_FATAL_IF(!edadb_index);
+  auto* edadb_index_opt = new TclIntOption(TCL_EDADB_INDEX, 0);
+  LOG_FATAL_IF(!edadb_index_opt);
 
-  TclOption* edadb_path = getOptionOrArg(TCL_EDADB_DB_PATH);
-  LOG_FATAL_IF(!edadb_path);
+  TclOption* edadb_path_opt = getOptionOrArg(TCL_EDADB_DB_PATH);
+  LOG_FATAL_IF(!edadb_path_opt);
 
   return 1;
 }
 
 unsigned CmdEdadbRead::exec()
 {
-  std::cout<<"###################################" << std::endl;
-  std::cout<<"CmdEdadbRead::exec()\n";
-  std::cout<<"###################################" << std::endl;
-
   if (!check()) {
     return 0;
   }
 
+  // get edadb_read tcl options
+  const char* path = nullptr;
+  TclOption* path_opt = getOptionOrArg(TCL_PATH);
+  if (path_opt) {
+    path = path_opt->getStringVal();
+  }
+  const char* edadb_path = nullptr;
+  TclOption* edadb_path_opt = getOptionOrArg(TCL_EDADB_DB_PATH);
+  if (edadb_path_opt) {
+    edadb_path = edadb_path_opt->getStringVal();
+  }
+  int edadb_idx = 0; 
+  TclOption* edadb_idx_opt = getOptionOrArg(TCL_EDADB_INDEX);
+  if (edadb_idx_opt) {
+    edadb_idx = edadb_idx_opt->getIntVal();
+  }
+
+  std::cout<<"###################################" << std::endl;
+  std::cout<<"CmdEdadbRead::exec()\n";
+  std::cout << "TCL_PATH: " << (path ? path : "null") << std::endl;
+  std::cout << "TCL_EDADB_DB_PATH: " << (edadb_path ? edadb_path : "null") << std::endl;
+  std::cout << "TCL_EDADB_INDEX: " << edadb_idx << std::endl;
+  std::cout<<"###################################" << std::endl;
+  std::cout<< std::flush;
+
+
 //  // TODO: use edadb_path to read 
-//  TclOption* edadb_index = getOptionOrArg(TCL_EDADB_INDEX);
-//  auto int_index = edadb_index->getIntVal();
-//  TclOption* def_name = getOptionOrArg(TCL_PATH);
-//  auto def_path = def_name->getStringVal();
-//  if (def_path != nullptr) {
+//  if (path != nullptr) {
 //    // dmInst->get_config().set_def_path(def_path);
 //    // dmInst->readDefEdadb(def_path, int_index);
 //    dmInstEdadb->readDef(def_path, int_index);
@@ -556,42 +576,64 @@ unsigned CmdEdadbRead::exec()
 
 
 
+// replace CmdSaveDef to save def files
 CmdEdadbWrite::CmdEdadbWrite(const char* cmd_name) : TclCmd(cmd_name)
 {
-  auto* option = new TclStringOption(TCL_NAME, 1, nullptr);
-  addOption(option);
+  auto* name_opt = new TclStringOption(TCL_NAME, 1, nullptr);
+  addOption(name_opt);
 
-  auto* path = new TclStringOption(TCL_PATH, 1);
-  addOption(path);
+  auto* path_opt = new TclStringOption(TCL_PATH, 1);
+  addOption(path_opt);
 
-  auto* edadb_path = new TclStringOption(TCL_EDADB_DB_PATH, 1);
-  addOption(edadb_path);
+  auto* edadb_path_opt = new TclStringOption(TCL_EDADB_DB_PATH, 1);
+  addOption(edadb_path_opt);
 }
 
 unsigned CmdEdadbWrite::check()
 {
-  TclOption* option = getOptionOrArg(TCL_NAME);
-  LOG_FATAL_IF(!option);
+  TclOption* option_opt = getOptionOrArg(TCL_NAME);
+  LOG_FATAL_IF(!option_opt);
 
-  TclOption* path = getOptionOrArg(TCL_PATH);
-  LOG_FATAL_IF(!path);
+  TclOption* path_opt = getOptionOrArg(TCL_PATH);
+  LOG_FATAL_IF(!path_opt);
 
-  TclOption* edadb_path = getOptionOrArg(TCL_EDADB_DB_PATH);
-  LOG_FATAL_IF(!edadb_path);
+  TclOption* edadb_path_opt = getOptionOrArg(TCL_EDADB_DB_PATH);
+  LOG_FATAL_IF(!edadb_path_opt);
 
   return 1;
 }
 
 unsigned CmdEdadbWrite::exec()
 {
-  std::cout<<"###################################" << std::endl;
-  std::cout<<"CmdEdadbWrite::exec()\n";
-  std::cout<<"###################################" << std::endl;
-  std::cout<< std::flush;
-
   if (!check()) {
     return 0;
   }
+
+  // get edadb_write tcl options
+  const char* name = nullptr;
+  TclOption* name_opt = getOptionOrArg(TCL_NAME);
+  if (name_opt) {
+    name = name_opt->getStringVal();
+  }
+  const char* path = nullptr;
+  TclOption* path_opt = getOptionOrArg(TCL_PATH);
+  if (path_opt) {
+      path = path_opt->getStringVal();
+  }
+  const char* edadb_path = nullptr;
+  TclOption* edadb_path_opt = getOptionOrArg(TCL_EDADB_DB_PATH);
+  if (edadb_path_opt) {
+    edadb_path = edadb_path_opt->getStringVal();
+  }
+
+  std::cout<<"###################################" << std::endl;
+  std::cout<<"CmdEdadbWrite::exec()\n";
+  std::cout << "TCL_NAME: " << (name ? name : "null") << std::endl;
+  std::cout << "TCL_PATH: " << (path ? path : "null") << std::endl;
+  std::cout << "TCL_EDADB_DB_PATH: " << (edadb_path ? edadb_path : "null") << std::endl;
+  std::cout<<"###################################" << std::endl;
+  std::cout<< std::flush;
+
 
 //  // TODO: use edadb_path to write
 //  TclOption* option = getOptionOrArg(TCL_NAME);

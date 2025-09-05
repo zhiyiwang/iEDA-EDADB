@@ -197,6 +197,7 @@ class CmdSaveJSON : public TclCmd
 //===========================================================
 //   [USE_EDADB]
 //===========================================================
+// replace CmdInitDef to init and read def files
 class CmdEdadbRead : public TclCmd
 {
  public:
@@ -211,6 +212,7 @@ class CmdEdadbRead : public TclCmd
   // private data
 };
 
+// replace CmdSaveDef to save def files
 class CmdEdadbWrite : public TclCmd
 {
  public:
