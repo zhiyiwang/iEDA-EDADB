@@ -88,12 +88,12 @@ class DataManager
   bool init(string config_path);
   bool readLef(string config_path);
   bool readLef(vector<string> lef_paths, bool b_techlef = false);
-  virtual bool readDef(string path);
+  bool readDef(string path);
   bool readVerilog(string path, string top_module = "");
 
   /// iDB save
   bool save(string name, string def_path = "");
-  virtual bool saveDef(string def_path);
+  bool saveDef(string def_path);
   bool saveLef(string lef_path);
   void saveVerilog(string verilog_path, std::set<std::string>&& exclude_cell_names = {}, bool is_add_space_for_escape_name = false);
   bool saveGDSII(string path);

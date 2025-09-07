@@ -17,6 +17,7 @@
 #include "tcl_db_file.h"
 
 #include "idm.h"
+#include "idm_edadb.h"
 #include "report_manager.h"
 #include "tool_manager.h"
 namespace tcl {
@@ -564,7 +565,13 @@ unsigned CmdEdadbRead::exec()
   std::cout<< std::flush;
 
   if (edadb_path != nullptr) {
-    dmInst->readDef(edadb_path);
+    idm::DataManager* dm = dmInst;
+    idm::DataManagerEdadb* dm_edadb = dynamic_cast<idm::DataManagerEdadb*>(dm);
+    if (dm_edadb == nullptr) {
+      std::cerr << "Error: DataManager is not of type DataManagerEdadb." << std::endl;
+      return 0;
+    }
+    dm_edadb->readDefFromEdadb(edadb_path);
     return 1;
   }
 
@@ -632,7 +639,13 @@ unsigned CmdEdadbWrite::exec()
   std::cout<< std::flush;
 
   if (edadb_path != nullptr) {
-    dmInst->saveDef(edadb_path);
+    idm::DataManager* dm = dmInst;
+    idm::DataManagerEdadb* dm_edadb = dynamic_cast<idm::DataManagerEdadb*>(dm);
+    if (dm_edadb == nullptr) {
+      std::cerr << "Error: DataManager is not of type DataManagerEdadb." << std::endl;
+      return 0;
+    }
+    dm_edadb->writeDefToEdadb(edadb_path);
     return 1;
   }
 

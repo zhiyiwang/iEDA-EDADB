@@ -39,8 +39,8 @@ public:
   DataManagerEdadb() = default;
   ~DataManagerEdadb() override = default;
 
-  bool readDef(string path) override;
-  bool saveDef(string path) override;
+  bool writeDefToEdadb (string path);
+  bool readDefFromEdadb(string path);
 };
 
 }  // namespace idm

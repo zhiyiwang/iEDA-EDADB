@@ -59,4 +59,8 @@ target_include_directories(idm
         ##operation
         ${HOME_OPERATION}
 
+        ##edadb
+        ${PROJECT_SOURCE_DIR}/src/database/edadb
+        ${PROJECT_SOURCE_DIR}/src/third_party/edadb/include
+
 )

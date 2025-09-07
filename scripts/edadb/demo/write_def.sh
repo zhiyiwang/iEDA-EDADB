@@ -40,11 +40,14 @@ export SDC_FILE=$FOUNDRY_DIR/sdc/gcd.sdc
 export SPEF_FILE=$FOUNDRY_DIR/spef/gcd.spef
 
 
-# read lef, write def
+# edadb for write/read def
 export EDADB_DB_PATH="$WORKSPACE/result/edadb.db"
+rm -f $EDADB_DB_PATH
 
+export READ_DEF=1
 export WRITE_EDADB=1 # 0: write edadb; 1: write def
 export READ_EDADB=1 # 0: read edadb; 1: read def
+#gdb ./iEDA
 ./iEDA -script $EDADB_TCL_SCRIPT_DIR/edadb.tcl
 
 
