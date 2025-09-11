@@ -130,6 +130,25 @@ class IdbBuilder
   //   std::shared_ptr<IdbDataService> _data_service;
 
   void checkNetPins();
+
+
+// [USE_EDADB] by zhiyi
+public:
+    /**
+     * @brief build def from edadb database
+     * @param edadb_path the path of edadb database file
+     * @param edadb_idx the index of def file in edadb database, default is 0
+     * @return IdbDefService* if build successfully, nullptr otherwise
+     */
+    IdbDefService* buildDefFromEdadb(const char* edadb_path, int edadb_idx);
+
+    /**
+     * @brief write def to edadb database
+     * @param edadb_path the path of edadb database file
+     * @return true if write successfully, false otherwise
+     */
+    bool writeDefToEdadb(const char* edadb_path);
+// [USE_EDADB] done
 };
 
 }  // namespace idb

@@ -17,7 +17,6 @@
 #include "tcl_db_file.h"
 
 #include "idm.h"
-#include "idm_edadb.h"
 #include "report_manager.h"
 #include "tool_manager.h"
 namespace tcl {
@@ -556,6 +555,7 @@ unsigned CmdEdadbRead::exec()
     edadb_idx = edadb_idx_opt->getIntVal();
   }
 
+#if 0
   std::cout<<"###################################" << std::endl;
   std::cout<<"CmdEdadbRead::exec()\n";
   std::cout << "TCL_PATH: " << (path ? path : "null") << std::endl;
@@ -563,17 +563,25 @@ unsigned CmdEdadbRead::exec()
   std::cout << "TCL_EDADB_INDEX: " << edadb_idx << std::endl;
   std::cout<<"###################################" << std::endl;
   std::cout<< std::flush;
+#endif 
 
+// TODO Begin
+//  if (edadb_path != nullptr) {
+//    idm::DataManager* dm = dmInst;
+//    idm::DataManagerEdadb* dm_edadb = dynamic_cast<idm::DataManagerEdadb*>(dm);
+//    if (dm_edadb == nullptr) {
+//      std::cerr << "Error: DataManager is not of type DataManagerEdadb." << std::endl;
+//      return 0;
+//    }
+//    dm_edadb->readDefFromEdadb(edadb_path);
+//    return 1;
+//  }
+// TODO
   if (edadb_path != nullptr) {
-    idm::DataManager* dm = dmInst;
-    idm::DataManagerEdadb* dm_edadb = dynamic_cast<idm::DataManagerEdadb*>(dm);
-    if (dm_edadb == nullptr) {
-      std::cerr << "Error: DataManager is not of type DataManagerEdadb." << std::endl;
-      return 0;
-    }
-    dm_edadb->readDefFromEdadb(edadb_path);
+    dmInst->readDefFromEdadb(edadb_path, edadb_idx);
     return 1;
   }
+// TODO End
 
   return 0;
 }
@@ -622,7 +630,7 @@ unsigned CmdEdadbWrite::exec()
   const char* path = nullptr;
   TclOption* path_opt = getOptionOrArg(TCL_PATH);
   if (path_opt) {
-      path = path_opt->getStringVal();
+    path = path_opt->getStringVal();
   }
   const char* edadb_path = nullptr;
   TclOption* edadb_path_opt = getOptionOrArg(TCL_EDADB_DB_PATH);
@@ -630,6 +638,7 @@ unsigned CmdEdadbWrite::exec()
     edadb_path = edadb_path_opt->getStringVal();
   }
 
+#if 0
   std::cout<<"###################################" << std::endl;
   std::cout<<"CmdEdadbWrite::exec()\n";
   std::cout << "TCL_NAME: " << (name ? name : "null") << std::endl;
@@ -637,17 +646,25 @@ unsigned CmdEdadbWrite::exec()
   std::cout << "TCL_EDADB_DB_PATH: " << (edadb_path ? edadb_path : "null") << std::endl;
   std::cout<<"###################################" << std::endl;
   std::cout<< std::flush;
+#endif
 
-  if (edadb_path != nullptr) {
-    idm::DataManager* dm = dmInst;
-    idm::DataManagerEdadb* dm_edadb = dynamic_cast<idm::DataManagerEdadb*>(dm);
-    if (dm_edadb == nullptr) {
-      std::cerr << "Error: DataManager is not of type DataManagerEdadb." << std::endl;
-      return 0;
+// TODO Begin
+//  if (edadb_path != nullptr) {
+//    idm::DataManager* dm = dmInst;
+//    idm::DataManagerEdadb* dm_edadb = dynamic_cast<idm::DataManagerEdadb*>(dm);
+//    if (dm_edadb == nullptr) {
+//      std::cerr << "Error: DataManager is not of type DataManagerEdadb." << std::endl;
+//      return 0;
+//    }
+//    dm_edadb->writeDefToEdadb(edadb_path);
+//    return 1;
+//  }
+// TODO
+    if (edadb_path != nullptr) {
+        dmInst->writeDefToEdadb(edadb_path);
+        return 1;
     }
-    dm_edadb->writeDefToEdadb(edadb_path);
-    return 1;
-  }
+// TODO End
 
   return 0;
 }

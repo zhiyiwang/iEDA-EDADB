@@ -1,91 +1,44 @@
 /**
- * @File Name: idm_edadb.cpp
- * @Brief :
- * @Author : zhiyi wang
- * @Version : 1.0
+ * @file  idm_edadb.cpp
+ * @brief DataManager methods for edadb integration
+ * @author Zhiyi Wang
+ * @version 1.0
+ * @date 2025-09-10
  */
 
-#include "idm_edadb.h"
-#include "macro.h"
-
+#include "idm.h"
 
 namespace idm {
 
-bool DataManagerEdadb::writeDefToEdadb(string path) {
-  std::cout << "============================================" << std::endl;
-  std::cout << "[iDM] write DEF using EDADB backend: " << path << std::endl;
-  std::cout << "============================================" << std::endl;
+bool DataManager::readDefFromEdadb(const char* edadb_path, int edadb_idx)
+{
+    if (_idb_builder == nullptr || _idb_lef_service == nullptr || _layout == nullptr) {
+      return false;
+    }
 
-  // init database
-  if (!edadb::initDatabase(path)) {
-    std::cerr << "Error: failed to init database from " << path << std::endl;
-    return false;
-  }
-  std::cout << "Info: succeeded to init database from " << path << std::endl;
+    // Similiar to bool DataManager::initDef(string def_path)
+    _idb_def_service = _idb_builder->buildDefFromEdadb(edadb_path, edadb_idx);
+    _design = get_idb_design();
 
-  // create table IdbDesign
-  edadb::DbMap<idb::IdbDesign> idb_design_dbmap;
-  if (!edadb::createTable(idb_design_dbmap)) {
-    std::cerr << "Error: failed to create table IdbDesign" << std::endl;
-    return false;
-  }
-  std::cout << "Info: succeeded to create table IdbDesign" << std::endl;
-
-//TODO: _design is nullptr, since it is builded from def_path
-//    _idb_def_service = _idb_builder->buildDef(def_path);
-//    _design = get_idb_design();
-//   IdbDesign* get_idb_design() { return _idb_def_service != nullptr ? _idb_def_service->get_design() : nullptr; }
-
-
-  // insert _design
-  if (!edadb::insertObject(idb_design_dbmap, _design)) {
-    std::cerr << "Error: failed to insert IdbDesign" << std::endl;
-    return false;
-  }
-  std::cout << "Info: succeeded to insert IdbDesign" << std::endl;
-  std::cout << "===================================================" << std::endl;
-
-  return true;
-}
+    /// make original coordinate on (0,0)
+    if (isNeedTransformByDie()) {
+      /// transform
+      transformByDie();
+    }
+  
+    return _idb_def_service == nullptr ? false : true;
+} // readDefFromEdadb
 
 
 
-bool DataManagerEdadb::readDefFromEdadb(string path) {
-  std::cout << "============================================" << std::endl;
-  std::cout << "[iDM] read DEF using EDADB backend: " << path << std::endl;
-  std::cout << "============================================" << std::endl;
+bool DataManager::writeDefToEdadb(const char* edadb_path)
+{
+    if (_idb_builder == nullptr || _idb_lef_service == nullptr || _layout == nullptr) {
+      return false;
+    }
 
-  // init database
-  if (!edadb::initDatabase(path)) {
-    std::cerr << "Error: failed to init database from " << path << std::endl;
-    return false;
-  }
-  std::cout << "Info: succeeded to init database from " << path << std::endl;
-
-  // create table IdbDesign
-  edadb::DbMap<idb::IdbDesign> idb_design_dbmap;
-  edadb::DbMapReader<idb::IdbDesign> *idb_design_dbmap_reader = nullptr;
-  idb::IdbDesign got;
-  if (edadb::read2Scan(idb_design_dbmap_reader, idb_design_dbmap, &got) != 1) {
-    std::cerr << "Error: failed to read IdbDesign" << std::endl;
-    return false;
-  }
-  if (edadb::read2Scan(idb_design_dbmap_reader, idb_design_dbmap, &got) != 0) {
-    std::cerr << "Error: more than one IdbDesign found" << std::endl;
-    return false;
-  }
-
-  // compare _design and got are the same
-  std::cout << "Info: succeeded to read IdbDesign" << std::endl;
-  std::cout << "===================================================" << std::endl;
-
-
-  // compare _design and got are the same
-  assert(got._version == _design->_version);
-  std::cout << "Comparing IdbDesign" << got._version << " with original IdbDesign" << _design->_version << std::endl;
-
-  return true;
-}
+    return _idb_builder->writeDefToEdadb(edadb_path);
+} // writeDefToEdadb
 
 
 } // namespace idm

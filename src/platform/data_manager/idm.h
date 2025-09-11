@@ -51,20 +51,16 @@ using namespace idb;
 
 namespace idm {
 
-enum class DataManagerType { kDefault, kEdadb };
-
 class DataManager
 {
  public:
-////////////////////////////////////////////////////////////////////////////
-//// [USE_EDADB]
-//// zhiy: 
-  static DataManager* getInstance();
-  static DataManagerType type();           // get DataManagerType
-  static void set_type(DataManagerType t); // set DataManagerType
-  static void reset_instance_for_test();   // reset _instance for test
-  static std::unique_ptr<DataManager> create(DataManagerType t);
-////////////////////////////////////////////////////////////////////////////
+  static DataManager* getInstance()
+  {
+    if (!_instance) {
+      _instance = new DataManager;
+    }
+    return _instance;
+  }
 
   /// getter
   DataConfig& get_config() { return _config; };
@@ -225,7 +221,6 @@ class DataManager
   bool isNetConnected(IdbNet* net);
 
 protected:
-  static DataManagerType _type;
   static DataManager* _instance;
   DataConfig _config;
   IdbBuilder* _idb_builder = nullptr;
@@ -241,7 +236,7 @@ protected:
 public:
   /// constructor
   DataManager() = default;
-  virtual ~DataManager() = default;
+  ~DataManager() = default;
 
 protected:
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -284,6 +279,25 @@ protected:
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+// [USE_EDADB] by zhiyi
+public:
+    /**
+     * @brief read def file from edadb database, similar to readDef
+     * @param edadb_path: the path of edadb database
+     * @param edadb_idx: the index of def file in edadb database, default is 0
+     * @return true if read def file from edadb database successfully, false otherwise
+     */
+    bool readDefFromEdadb(const char* edadb_path, int edadb_idx = 0);
+
+    /**
+     * @brief write def file to edadb database, similar to saveDef
+     * @param edadb_path: the path of edadb database
+     * @return true if write def file to edadb database successfully, false otherwise
+     */
+    bool writeDefToEdadb(const char* edadb_path);
+// [USE_EDADB] done
 };
 
 }  // namespace idm
