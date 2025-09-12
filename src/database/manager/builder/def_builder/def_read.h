@@ -54,7 +54,7 @@ class DefRead
 {
  public:
   DefRead(IdbDefService* def_service);
-  ~DefRead();
+  virtual ~DefRead();
 
   // getter
   IdbDefService* get_service() { return _def_service; }
@@ -157,7 +157,7 @@ class DefRead
     std::cout << std::endl;
   }
 
- private:
+protected:
   IdbDefService* _def_service;
   clock_t _start_time;
   clock_t _end_time;

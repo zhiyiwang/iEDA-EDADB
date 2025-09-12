@@ -73,7 +73,7 @@ class DefWrite
 {
  public:
   DefWrite(IdbDefService* def_service, DefWriteType type = DefWriteType::kChip);
-  ~DefWrite();
+  virtual ~DefWrite();
 
   // getter
   IdbDefService* get_service() { return _def_service; }
@@ -126,7 +126,7 @@ class DefWrite
   bool closeFile();
   bool writeLef();
 
- private:
+ protected:
   IdbDefService* _def_service;
   int32_t _index = 0;
   clock_t _start_time;

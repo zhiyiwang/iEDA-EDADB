@@ -1,6 +1,11 @@
 add_library(def_builder
     def_read.cpp
     def_write.cpp
+
+## USE_EDADB
+    def_read_edadb.cpp
+    def_write_edadb.cpp
+## USE_EDADB
 )
 
 target_include_directories(def_builder 
@@ -12,6 +17,10 @@ target_include_directories(def_builder
         ${HOME_DATABASE}/manager/service/def_service
         ${HOME_DATABASE}/manager/service/lef_service
         ${HOME_UTILITY}/string
+##edadb
+        ${PROJECT_SOURCE_DIR}/src/database/edadb
+        ${PROJECT_SOURCE_DIR}/src/third_party/edadb/include
+##edadb
 )
 
 target_include_directories(def_builder 

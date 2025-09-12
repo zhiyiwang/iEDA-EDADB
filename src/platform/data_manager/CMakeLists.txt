@@ -17,10 +17,9 @@ add_library(idm
     config/dm_config.cpp
     config/dm_cts_config.cpp
     checker/check_connection.cpp
-
-## USE_EDADB
+##edadb
     idm_edadb.cpp
-## USE_EDADB
+##edadb
 )
 
 target_link_libraries(idm 
@@ -58,9 +57,5 @@ target_include_directories(idm
 
         ##operation
         ${HOME_OPERATION}
-
-        ##edadb
-        ${PROJECT_SOURCE_DIR}/src/database/edadb
-        ${PROJECT_SOURCE_DIR}/src/third_party/edadb/include
 
 )

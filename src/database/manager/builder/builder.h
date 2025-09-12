@@ -40,9 +40,11 @@
 #include <string>
 #include <vector>
 
-#include "def_read.h"
 #include "def_service.h"
+#include "def_read.h"
+#include "def_read_edadb.h"
 #include "def_write.h"
+#include "def_write_edadb.h"
 #include "gds_write.h"
 #include "json_write.h"
 #include "lef_read.h"
@@ -135,7 +137,9 @@ class IdbBuilder
 // [USE_EDADB] by zhiyi
 public:
     /**
-     * @brief build def from edadb database
+     * @brief build def from edadb database:
+     *   must call IdbDefService* IdbBuilder::buildDef(string file) to build def from file first
+     *   then call this function to update def data from edadb database
      * @param edadb_path the path of edadb database file
      * @param edadb_idx the index of def file in edadb database, default is 0
      * @return IdbDefService* if build successfully, nullptr otherwise
@@ -147,7 +151,7 @@ public:
      * @param edadb_path the path of edadb database file
      * @return true if write successfully, false otherwise
      */
-    bool writeDefToEdadb(const char* edadb_path);
+    bool writeDefToEdadb(const char* edadb_path, DefWriteType type = DefWriteType::kChip);
 // [USE_EDADB] done
 };
 

@@ -340,14 +340,8 @@ bool IdbBuilder::saveJSON(string file, string options)
 // [USE_EDADB] by zhiyi
 IdbDefService* IdbBuilder::buildDefFromEdadb(const char* edadb_path, int edadb_idx)
 {
-    // Similiar to IdbDefService* IdbBuilder::buildDef(string file)
-    if (_def_service != nullptr) {
-      delete _def_service;
-      _def_service = nullptr;
-    }
-  
-    IdbLayout* layout = _lef_service->get_layout();
-    _def_service = new IdbDefService(layout);
+    // already call IdbDefService* IdbBuilder::buildDef(string file) to build def from file
+    assert(_def_service != nullptr);
 
     std::cout << "Read DEF from EDADB database : " << edadb_path << " with index: " << edadb_idx << endl;
 
@@ -355,29 +349,30 @@ IdbDefService* IdbBuilder::buildDefFromEdadb(const char* edadb_path, int edadb_i
     std::cout << "IdbBuilder::buildDefFromEdadb()\n" << std::flush << std::endl;
     std::cout << "###################################" << std::endl;
 
-//    // TODO
-//    std::shared_ptr<DefReadEdadb> def_read_edadb = std::make_shared<DefReadEdadb>(_def_service);
-//    if (!def_read_edadb->createDbFromEdadb(edadb_path, edadb_idx)) {
-//      LOG_FATAL << "Def file read from edadb database failed..." << endl;
-//    }
-//
-//    buildNet();
-//    buildBus();
-//    log();
+    std::shared_ptr<DefReadEdadb> def_read_edadb = std::make_shared<DefReadEdadb>(_def_service);
+    if (!def_read_edadb->createDbFromEdadb(edadb_path, edadb_idx)) {
+      LOG_FATAL << "Def file read from edadb database failed..." << endl;
+    }
+
+    // TODO:
+    // update _design and _layout of _idb_service to compare with read from def file
+
+    buildNet();
+    buildBus();
+    log();
 
     return _def_service;
 } // buildDefFromEdadb
 
 
-bool IdbBuilder::writeDefToEdadb(const char* edadb_path)
+bool IdbBuilder::writeDefToEdadb(const char* edadb_path, DefWriteType type)
 {
     std::cout << "###################################" << std::endl;
     std::cout << "Write DEF to EDADB database : " << edadb_path << std::flush << std::endl;
     std::cout << "###################################" << std::endl;
 
-    return true;
-//    std::shared_ptr<DefWriteEdadb> def_write_edadb = std::make_shared<DefWriteEdadb>(_def_service, type);
-//    return def_write_edadb->writeDbToEdadb(edadb_path);
+    std::shared_ptr<DefWriteEdadb> def_write_edadb = std::make_shared<DefWriteEdadb>(_def_service, type);
+    return def_write_edadb->writeDbToEdadb(edadb_path, type);
 } // writeDefToEdadb
 
 

@@ -565,23 +565,10 @@ unsigned CmdEdadbRead::exec()
   std::cout<< std::flush;
 #endif 
 
-// TODO Begin
-//  if (edadb_path != nullptr) {
-//    idm::DataManager* dm = dmInst;
-//    idm::DataManagerEdadb* dm_edadb = dynamic_cast<idm::DataManagerEdadb*>(dm);
-//    if (dm_edadb == nullptr) {
-//      std::cerr << "Error: DataManager is not of type DataManagerEdadb." << std::endl;
-//      return 0;
-//    }
-//    dm_edadb->readDefFromEdadb(edadb_path);
-//    return 1;
-//  }
-// TODO
   if (edadb_path != nullptr) {
     dmInst->readDefFromEdadb(edadb_path, edadb_idx);
     return 1;
   }
-// TODO End
 
   return 0;
 }
@@ -648,23 +635,10 @@ unsigned CmdEdadbWrite::exec()
   std::cout<< std::flush;
 #endif
 
-// TODO Begin
-//  if (edadb_path != nullptr) {
-//    idm::DataManager* dm = dmInst;
-//    idm::DataManagerEdadb* dm_edadb = dynamic_cast<idm::DataManagerEdadb*>(dm);
-//    if (dm_edadb == nullptr) {
-//      std::cerr << "Error: DataManager is not of type DataManagerEdadb." << std::endl;
-//      return 0;
-//    }
-//    dm_edadb->writeDefToEdadb(edadb_path);
-//    return 1;
-//  }
-// TODO
-    if (edadb_path != nullptr) {
-        dmInst->writeDefToEdadb(edadb_path);
-        return 1;
-    }
-// TODO End
+  if (edadb_path != nullptr) {
+      dmInst->writeDefToEdadb(edadb_path);
+      return 1;
+  }
 
   return 0;
 }

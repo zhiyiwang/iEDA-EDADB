@@ -3,14 +3,14 @@
 #### prepare env
 
 #===========================================================
-##   reset data path
+##   reset data path 
 #===========================================================
-source $::env(DESIGN_TCL_SCRIPT_DIR)/DB_script/db_path_setting.tcl
+source $::env(TCL_SCRIPT_DIR)/DB_script/db_path_setting.tcl
 
-##===========================================================
+#===========================================================
 ##   read lef
 #===========================================================
-source $::env(DESIGN_TCL_SCRIPT_DIR)/DB_script/db_init_lef.tcl
+source $::env(TCL_SCRIPT_DIR)/DB_script/db_init_lef.tcl
 
 
 #===========================================================
@@ -28,49 +28,46 @@ if {$read_edadb || $write_edadb} {
 
 
 
+#### read from def and edadb
+
 #===========================================================
-##   read def
+##   read def:
 #===========================================================
+set INPUT_DEF $::env(INPUT_DEF)
 if {[info exists ::env(READ_DEF)] && $::env(READ_DEF)} {
     puts "==> READ_DEF enabled, reading DEF file..."
-    def_init -path $::env(INPUT_DEF)
+    def_init -path $INPUT_DEF
 } else {
     puts "==> READ_DEF disabled, skip reading DEF."
 }
 
-
 #===========================================================
-##   write edadb 
+##   read edadb: 
 #===========================================================
-if {$write_edadb} {
-    file mkdir [file dirname $db_path]
-    puts "==> WRITE_EDADB=1: writing EDADB to $db_path"
-    edadb_write -edadb_db_path $db_path
-} else {
-    puts "==> WRITE_EDADB disabled, skip writing to edadb."
-}
-
-#===========================================================
-##   read edadb
-#===========================================================
-if {$read_edadb} {
-    puts "==> READ_EDADB=1: reading EDADB from $db_path"
-    edadb_read -edadb_db_path $db_path
+if {[info exists ::env(READ_EDADB)] && $::env(READ_EDADB)} {
+    puts "==> READ_EDADB enabled, reading edadb..."
+    edadb_read -index 1 -edadb_db_path $db_path
 } else {
     puts "==> READ_EDADB disabled, skip reading edadb."
 }
 
 
 #===========================================================
-##   Write something to check running status
+##   save def: output to def_post file to compare with input def
 #===========================================================
-set fh [open "$::env(RESULT_DIR)/.flow_ok" w]
-puts $fh "ok"
-close $fh
+set base [file rootname $INPUT_DEF]
+set ext [file extension $INPUT_DEF]
+set EDADB_DEF_POST $::env(EDADB_DEF_POST)
+set OUTPUT_DEF "${base}${EDADB_DEF_POST}${ext}"
+
+## output to terminal
+puts "==> Saving DEF to $OUTPUT_DEF ..."
+def_save -path $OUTPUT_DEF
 
 
 
 #===========================================================
 ##   Exit 
+##   [USE_EDADB]: 核心是执行 exit(0);
 #===========================================================
 flow_exit
