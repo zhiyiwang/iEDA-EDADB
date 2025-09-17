@@ -16,10 +16,16 @@ namespace idb {
 class DefReadEdadb : public DefRead
 {
 public:
-  DefReadEdadb(IdbDefService* def_service);
-  virtual ~DefReadEdadb() = default;
+    DefReadEdadb(IdbDefService* def_service);
+    virtual ~DefReadEdadb() = default;
+  
+    bool createDbFromEdadb(const char* edadb_path);
 
-  bool createDbFromEdadb(const char* edadb_path, int edadb_idx);
+private: // test functions
+    bool test2Read(const char* edadb_path);  
+
+    bool test2ReadIdbDesign(void);
+    bool test2ReadIdbUnits(void);
 }; // class DefReadEdadb
 
 } // namespace idb

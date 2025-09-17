@@ -141,10 +141,9 @@ public:
      *   must call IdbDefService* IdbBuilder::buildDef(string file) to build def from file first
      *   then call this function to update def data from edadb database
      * @param edadb_path the path of edadb database file
-     * @param edadb_idx the index of def file in edadb database, default is 0
      * @return IdbDefService* if build successfully, nullptr otherwise
      */
-    IdbDefService* buildDefFromEdadb(const char* edadb_path, int edadb_idx);
+    IdbDefService* buildDefFromEdadb(const char* edadb_path);
 
     /**
      * @brief write def to edadb database

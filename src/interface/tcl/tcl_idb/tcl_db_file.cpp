@@ -566,7 +566,7 @@ unsigned CmdEdadbRead::exec()
 #endif 
 
   if (edadb_path != nullptr) {
-    dmInst->readDefFromEdadb(edadb_path, edadb_idx);
+    dmInst->readDefFromEdadb(edadb_path);
     return 1;
   }
 

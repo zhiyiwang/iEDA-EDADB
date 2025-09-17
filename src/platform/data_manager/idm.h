@@ -286,10 +286,9 @@ public:
     /**
      * @brief read def file from edadb database, similar to readDef
      * @param edadb_path: the path of edadb database
-     * @param edadb_idx: the index of def file in edadb database, default is 0
      * @return true if read def file from edadb database successfully, false otherwise
      */
-    bool readDefFromEdadb(const char* edadb_path, int edadb_idx = 0);
+    bool readDefFromEdadb(const char* edadb_path);
 
     /**
      * @brief write def file to edadb database, similar to saveDef

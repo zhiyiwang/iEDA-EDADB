@@ -7,6 +7,18 @@
 
 #include "def_write_edadb.h"
 
+#define CALL_TEST_MACRO(fn, what)                  \
+  do {                                             \
+    if (!(fn())) {                                 \
+      std::cerr << "Error: failed to write " what  \
+                << " to database " << edadb_path   \
+                << std::endl;                      \
+      return false;                                \
+    }                                              \
+  } while (0)
+
+
+
 namespace idb {
 
 DefWriteEdadb::DefWriteEdadb(IdbDefService* def_service, DefWriteType type) : DefWrite(def_service, type)
@@ -14,50 +26,108 @@ DefWriteEdadb::DefWriteEdadb(IdbDefService* def_service, DefWriteType type) : De
 }
 
 
+
 bool DefWriteEdadb::writeDbToEdadb(const char* edadb_path, DefWriteType type)
 {
-  if (_def_service == nullptr) {
-    std::cerr << "Error: DefWriteEdadb::_def_service is nullptr" << std::endl;
-    return false;
-  }
+    if (_def_service == nullptr) {
+        std::cerr << "Error: DefWriteEdadb::_def_service is nullptr" << std::endl;
+        return false;
+    }
 
-  IdbDesign* design = _def_service->get_design();
-  if (design == nullptr) {
-    std::cerr << "Error: DefWriteEdadb::design is nullptr" << std::endl;
-    return false;
-  }
+    // init database
+    if (!edadb::initDatabase(edadb_path)) {
+        std::cerr << "Error: failed to init database from " << edadb_path << std::endl;
+        return false;
+    }
 
+    // TODO: write design rather than write to test
+    if (!test2Write(edadb_path, type)) {
+        std::cerr << "Error: failed to write to database " << edadb_path << std::endl;
+        return false;
+    }
 
-  std::cout << "=============================================" << std::endl;
-  std::cout << "[iDM] write DEF using EDADB backend: " << edadb_path << std::endl;
-  std::cout << "        with type: " << static_cast<int>(type) << std::endl;
-  std::cout << "=============================================" << std::endl;
-
-  // init database
-  if (!edadb::initDatabase(edadb_path)) {
-    std::cerr << "Error: failed to init database from " << edadb_path << std::endl;
-    return false;
-  }
-  std::cout << "Info: succeeded to init database from " << edadb_path << std::endl;
-
-  // create table IdbDesign
-  edadb::DbMap<idb::IdbDesign> idb_design_dbmap;
-  if (!edadb::createTable(idb_design_dbmap)) {
-    std::cerr << "Error: failed to create table IdbDesign" << std::endl;
-    return false;
-  }
-  std::cout << "Info: succeeded to create table IdbDesign" << std::endl;
-
-  // insert design
-  if (!edadb::insertObject(idb_design_dbmap, design)) {
-    std::cerr << "Error: failed to insert IdbDesign" << std::endl;
-    return false;
-  }
-  std::cout << "Info: succeeded to insert IdbDesign" << std::endl;
-  std::cout << "===================================================" << std::endl;
-
-
-  return true;
+    return true;
 } // writeDbToEdadb
+
+
+
+bool DefWriteEdadb::test2Write(const char* edadb_path, DefWriteType type)
+{
+    std::cout << "========================================================" << std::endl;
+    std::cout << "[DefWriteEdadb] Write to EDADB database : " << edadb_path << std::endl;
+    std::cout << "        with type: " << static_cast<int>(type) << std::endl;
+    std::cout << "========================================================" << std::endl;
+
+    CALL_TEST_MACRO(test2WriteIdbDesign, "IdbDesign");
+    CALL_TEST_MACRO(test2WriteIdbUnits, "IdbUnits");
+
+    return true;
+} // test2Write
+
+    
+
+bool DefWriteEdadb::test2WriteIdbDesign(void)
+{
+    IdbDesign* design = _def_service->get_design();
+    if (design == nullptr) {
+        std::cerr << "Error: DefWriteEdadb::design is nullptr" << std::endl;
+        return false;
+    }
+
+    // create table IdbDesign
+    edadb::DbMap<idb::IdbDesign> idb_design_dbmap;
+    if (!edadb::createTable(idb_design_dbmap)) {
+        std::cerr << "Error: failed to create table IdbDesign" << std::endl;
+        return false;
+    }
+    std::cout << "Info: succeeded to create table IdbDesign" << std::endl;
+  
+    // insert design
+    if (!edadb::insertObject(idb_design_dbmap, design)) {
+        std::cerr << "Error: failed to insert IdbDesign" << std::endl;
+        return false;
+    }
+    std::cout << "Info: succeeded to insert IdbDesign" << std::endl;
+    std::cout << "===================================================" << std::endl;
+  
+    return true;
+} // test2WriteIdbDesign
+
+
+bool DefWriteEdadb::test2WriteIdbUnits(void)
+{
+    IdbDesign* design = _def_service->get_design();
+    if (design == nullptr) {
+        std::cerr << "Error: DefWriteEdadb::design is nullptr" << std::endl;
+        return false;
+    }
+
+    IdbUnits* units = design->get_units();
+    if (units == nullptr) {
+        std::cerr << "Error: DefWriteEdadb::units is nullptr" << std::endl;
+        return false;
+    }
+
+    // create table IdbUnits
+    edadb::DbMap<idb::IdbUnits> idb_units_dbmap;
+    if (!edadb::createTable(idb_units_dbmap)) {
+        std::cerr << "Error: failed to create table IdbUnits" << std::endl;
+        return false;
+    }
+    std::cout << "Info: succeeded to create table IdbUnits" << std::endl;
+  
+    // insert units
+    if (!edadb::insertObject(idb_units_dbmap, units)) {
+        std::cerr << "Error: failed to insert IdbUnits" << std::endl;
+        return false;
+    }
+    std::cout << "Info: succeeded to insert IdbUnits" << std::endl;
+    std::cout << "===================================================" << std::endl;
+  
+    return true;
+} // test2WriteIdbUnits
+
+
+
 
 }  // namespace idb

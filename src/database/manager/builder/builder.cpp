@@ -338,19 +338,19 @@ bool IdbBuilder::saveJSON(string file, string options)
 
 
 // [USE_EDADB] by zhiyi
-IdbDefService* IdbBuilder::buildDefFromEdadb(const char* edadb_path, int edadb_idx)
+IdbDefService* IdbBuilder::buildDefFromEdadb(const char* edadb_path)
 {
     // already call IdbDefService* IdbBuilder::buildDef(string file) to build def from file
     assert(_def_service != nullptr);
 
-    std::cout << "Read DEF from EDADB database : " << edadb_path << " with index: " << edadb_idx << endl;
+    std::cout << "Read DEF from EDADB database : " << edadb_path << endl;
 
     std::cout << "###################################" << std::endl;
     std::cout << "IdbBuilder::buildDefFromEdadb()\n" << std::flush << std::endl;
     std::cout << "###################################" << std::endl;
 
     std::shared_ptr<DefReadEdadb> def_read_edadb = std::make_shared<DefReadEdadb>(_def_service);
-    if (!def_read_edadb->createDbFromEdadb(edadb_path, edadb_idx)) {
+    if (!def_read_edadb->createDbFromEdadb(edadb_path)) {
       LOG_FATAL << "Def file read from edadb database failed..." << endl;
     }
 

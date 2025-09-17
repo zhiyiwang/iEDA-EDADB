@@ -10,14 +10,14 @@
 
 namespace idm {
 
-bool DataManager::readDefFromEdadb(const char* edadb_path, int edadb_idx)
+bool DataManager::readDefFromEdadb(const char* edadb_path)
 {
     if (_idb_builder == nullptr || _idb_lef_service == nullptr || _layout == nullptr) {
       return false;
     }
 
     // Similiar to bool DataManager::initDef(string def_path)
-    _idb_def_service = _idb_builder->buildDefFromEdadb(edadb_path, edadb_idx);
+    _idb_def_service = _idb_builder->buildDefFromEdadb(edadb_path);
     _design = get_idb_design();
 
     /// make original coordinate on (0,0)

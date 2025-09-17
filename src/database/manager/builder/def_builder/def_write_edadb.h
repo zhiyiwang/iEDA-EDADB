@@ -16,11 +16,17 @@ namespace idb {
 class DefWriteEdadb : public DefWrite
 {
 public:
-  DefWriteEdadb(IdbDefService* def_service, DefWriteType type = DefWriteType::kChip);
-  virtual ~DefWriteEdadb() = default;
+    DefWriteEdadb(IdbDefService* def_service, DefWriteType type = DefWriteType::kChip);
+    virtual ~DefWriteEdadb() = default;
+  
+    // writer
+    bool writeDbToEdadb(const char* edadb_path, DefWriteType type);
 
-  // writer
-  bool writeDbToEdadb(const char* edadb_path, DefWriteType type);
+private: // test functions
+    bool test2Write(const char* edadb_path, DefWriteType type);
+
+    bool test2WriteIdbDesign(void);
+    bool test2WriteIdbUnits(void);
 }; // class DefWriteEdadb
 
 }  // namespace idb
