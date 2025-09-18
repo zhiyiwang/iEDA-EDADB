@@ -9,7 +9,7 @@
 
 #define CALL_TEST_MACRO(fn, what)                  \
   do {                                             \
-    if (!(fn())) {                                 \
+if (!(fn())) {                                 \
       std::cerr << "Error: failed to write " what  \
                 << " to database " << edadb_path   \
                 << std::endl;                      \
@@ -58,8 +58,18 @@ bool DefWriteEdadb::test2Write(const char* edadb_path, DefWriteType type)
     std::cout << "        with type: " << static_cast<int>(type) << std::endl;
     std::cout << "========================================================" << std::endl;
 
-    CALL_TEST_MACRO(test2WriteIdbDesign, "IdbDesign");
+    // test non-nested tables
     CALL_TEST_MACRO(test2WriteIdbUnits, "IdbUnits");
+    CALL_TEST_MACRO(test2WriteIdbPort, "IdbPort");
+
+
+    // test nested tables
+    CALL_TEST_MACRO(test2WriteIdbDesign, "IdbDesign");
+
+
+    std::cout << "=======================================================" << std::endl;
+    std::cout << "[DefWriteEdadb] write DEF using EDADB backend finished." << std::endl;
+    std::cout << "=======================================================" << std::endl;
 
     return true;
 } // test2Write
@@ -128,6 +138,31 @@ bool DefWriteEdadb::test2WriteIdbUnits(void)
 } // test2WriteIdbUnits
 
 
+
+bool DefWriteEdadb::test2WriteIdbPort(void)
+{
+    // use global object to test
+    test_edadb::initGlobalPort();
+    idb::IdbPort& port = test_edadb::gPort;
+
+    // create table IdbPort
+    edadb::DbMap<idb::IdbPort> idb_port_dbmap;
+    if (!edadb::createTable(idb_port_dbmap)) {
+        std::cerr << "Error: failed to create table IdbPort" << std::endl;
+        return false;
+    }
+    std::cout << "Info: succeeded to create table IdbPort" << std::endl;
+
+    // insert port
+    if (!edadb::insertObject(idb_port_dbmap, &port)) {
+        std::cerr << "Error: failed to insert IdbPort" << std::endl;
+        return false;
+    }
+    std::cout << "Info: succeeded to insert IdbPort" << std::endl;
+    std::cout << "===================================================" << std::endl;
+
+    return true;
+} // test2WriteIdbPort
 
 
 }  // namespace idb

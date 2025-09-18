@@ -76,7 +76,8 @@ class IdbCoordinate
 
   // operation
 
- private:
+// private:
+public:
   T _x;
   T _y;
 };
@@ -201,7 +202,8 @@ class IdbRect
   bool isIntersection(IdbRect rect);
   bool isIntersection(IdbRect* rect);
 
- private:
+// private:
+public:
   int32_t _lx;
   int32_t _ly;
   int32_t _hx;

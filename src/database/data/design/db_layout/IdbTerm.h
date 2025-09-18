@@ -142,7 +142,8 @@ class IdbPort
     return nullptr;
   }
 
- private:
+// private:
+public:
   vector<IdbLayerShape*> _layer_shape_list;
   vector<IdbVia*> _via_list;
   // IdbLayer* _layer;
@@ -225,7 +226,8 @@ class IdbTerm
 
   // operator
 
- private:
+// private:
+public:
   string _name;
   IdbConnectDirection _direction;
   IdbConnectType _type;

@@ -5,6 +5,7 @@
 
 #include "def_read_edadb.h"
 
+// macros to call test functions and handle errors
 #define CALL_TEST_MACRO(fn, what)                         \
     do {                                                  \
         if (!(fn())) {                                    \
@@ -14,11 +15,17 @@
             return false;                                 \
         }                                                 \
         else {                                            \
-            std::cout << "EDADB: succeeded to read " what \
-                      << " from edadb by calling " #fn << std::endl; \
-        }                                                 \
+            std::cout << "[DefReadEdadb]: succeeded to read " what   \
+                      << " from edadb by calling " #fn << std::endl  \
+                      << std::endl << std::endl << std::flush;       \
+        }                                                            \
     } while (0)
 
+// macro to compare the original and read values
+#define CALL_COMPARE_MACRO(org, got, what)   \
+    do {                                     \
+        return org == got ? true : (std::cerr << "Error: " what " mismatch " << std::endl, false); \
+    } while (0)
 
 
 namespace idb {
@@ -60,12 +67,17 @@ bool DefReadEdadb::test2Read(const char* edadb_path)
     std::cout << "[DefReadEdadb] Read from EDADB database : " << edadb_path << std::endl;
     std::cout << "========================================================" << std::endl;
   
-    CALL_TEST_MACRO(test2ReadIdbDesign, "IdbDesign");
+    // test non-nested tables
     CALL_TEST_MACRO(test2ReadIdbUnits, "IdbUnits");
 
-    std::cout << "==================================================" << std::endl;
-    std::cout << "[DEF] read DEF using EDADB backend finished." << std::endl;
-    std::cout << "==================================================" << std::endl;
+
+    // test nested tables
+    CALL_TEST_MACRO(test2ReadIdbDesign, "IdbDesign");
+
+
+    std::cout << "=====================================================" << std::endl;
+    std::cout << "[DefReadEdadb] read DEF using EDADB backend finished." << std::endl;
+    std::cout << "=====================================================" << std::endl;
     std::cout << std::endl;
   
     return true;
@@ -102,7 +114,7 @@ bool DefReadEdadb::test2ReadIdbDesign(void)
     //// update design from data_manager using read from edadb database 
     //// we will compare the data by comparing the def file to original def file
     design->set_version(got.get_version());
-  
+
  
     return true;
 } // test2ReadIdbDesign
@@ -142,6 +154,45 @@ bool DefReadEdadb::test2ReadIdbUnits(void)
 
     return true;
 } // test2ReadIdbUnits
+
+
+
+bool DefReadEdadb::test2ReadIdbPort(void)
+{
+    // use global object to test
+    idb::IdbPort got;
+    edadb::DbMap<idb::IdbPort> idb_port_dbmap;
+    edadb::DbMapReader<idb::IdbPort> *idb_port_dbmap_reader = nullptr;
+    // only one port in database
+    if (edadb::read2Scan(idb_port_dbmap_reader, idb_port_dbmap, &got) != 1) {
+      std::cerr << "Error: failed to read IdbPort" << std::endl;
+      return false;
+    }  
+    if (edadb::read2Scan(idb_port_dbmap_reader, idb_port_dbmap, &got) != 0) {
+      std::cerr << "Error: more than one IdbPort found" << std::endl;
+      return false;
+    }
+
+    // compare got with global object
+    idb::IdbPort& port = test_edadb::gPort;
+    CALL_COMPARE_MACRO(port.get_port_class(), got.get_port_class(), "IdbPort::_class");
+    CALL_COMPARE_MACRO(port.get_coordinate()->get_x(), got.get_coordinate()->get_x(), "IdbPort::_coordinate._x");
+    CALL_COMPARE_MACRO(port.get_coordinate()->get_y(), got.get_coordinate()->get_y(), "IdbPort::_coordinate._y");
+    CALL_COMPARE_MACRO(port.get_io_average_coordinate()->get_x(), got.get_io_average_coordinate()->get_x(), "IdbPort::_io_average_coordinate._x");
+    CALL_COMPARE_MACRO(port.get_io_average_coordinate()->get_y(), got.get_io_average_coordinate()->get_y(), "IdbPort::_io_average_coordinate._y");
+    CALL_COMPARE_MACRO(port.get_io_bounding_box()->get_low_x(), got.get_io_bounding_box()->get_low_x(), "IdbPort::_io_bounding_box._lx");
+    CALL_COMPARE_MACRO(port.get_io_bounding_box()->get_low_y(), got.get_io_bounding_box()->get_low_y(), "IdbPort::_io_bounding_box._ly");
+    CALL_COMPARE_MACRO(port.get_io_bounding_box()->get_high_x(), got.get_io_bounding_box()->get_high_x(), "IdbPort::_io_bounding_box._hx");
+    CALL_COMPARE_MACRO(port.get_io_bounding_box()->get_high_y(), got.get_io_bounding_box()->get_high_y(), "IdbPort::_io_bounding_box._hy");
+    CALL_COMPARE_MACRO(port.get_orient(), got.get_orient(), "IdbPort::_orient");
+    CALL_COMPARE_MACRO(port.get_placement_status(), got.get_placement_status(), "IdbPort::_placement_status");
+
+    std::cout << "[DefReadEdadb]: IdbPort read from edadb database matches the original." << std::endl;
+
+    return true;
+} // test2ReadIdbPort
+
+
 
 
 } // namespace idb
