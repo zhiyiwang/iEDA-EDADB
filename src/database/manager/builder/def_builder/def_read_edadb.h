@@ -27,6 +27,7 @@ private: // test functions
     bool test2ReadIdbDesign(void);
     bool test2ReadIdbUnits(void);
     bool test2ReadIdbPort(void);
+//    bool test2ReadIdbTerm(void);
 }; // class DefReadEdadb
 
 } // namespace idb

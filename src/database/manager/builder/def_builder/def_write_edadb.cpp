@@ -61,6 +61,7 @@ bool DefWriteEdadb::test2Write(const char* edadb_path, DefWriteType type)
     // test non-nested tables
     CALL_TEST_MACRO(test2WriteIdbUnits, "IdbUnits");
     CALL_TEST_MACRO(test2WriteIdbPort, "IdbPort");
+//    CALL_TEST_MACRO(test2WriteIdbTerm, "IdbTerm");
 
 
     // test nested tables
@@ -142,8 +143,8 @@ bool DefWriteEdadb::test2WriteIdbUnits(void)
 bool DefWriteEdadb::test2WriteIdbPort(void)
 {
     // use global object to test
-    test_edadb::initGlobalPort();
-    idb::IdbPort& port = test_edadb::gPort;
+    idb::IdbPort port;
+    test_edadb::initPort(&port);
 
     // create table IdbPort
     edadb::DbMap<idb::IdbPort> idb_port_dbmap;
@@ -163,6 +164,35 @@ bool DefWriteEdadb::test2WriteIdbPort(void)
 
     return true;
 } // test2WriteIdbPort
+
+
+
+#if 0
+bool DefWriteEdadb::test2WriteIdbTerm(void)
+{
+    // use global object to test
+    idb::IdbTerm term;
+    test_edadb::initTerm(&term);
+
+    // create table IdbTerm
+    edadb::DbMap<idb::IdbTerm> idb_term_dbmap;
+    if (!edadb::createTable(idb_term_dbmap)) {
+        std::cerr << "Error: failed to create table IdbTerm" << std::endl;
+        return false;
+    }
+    std::cout << "Info: succeeded to create table IdbTerm" << std::endl;
+
+    // insert term
+    if (!edadb::insertObject(idb_term_dbmap, &term)) {
+        std::cerr << "Error: failed to insert IdbTerm" << std::endl;
+        return false;
+    }
+    std::cout << "Info: succeeded to insert IdbTerm" << std::endl;
+    std::cout << "===================================================" << std::endl;
+
+    return true;
+} // test2WriteIdbTerm
+#endif
 
 
 }  // namespace idb

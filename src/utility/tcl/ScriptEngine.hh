@@ -83,7 +83,7 @@ class TclOption
   TclOption(const char* option_name, unsigned is_arg);
   virtual ~TclOption();
 
-  const char* get_option_name() { return _option_name; }
+  const char* get_option_name() { return _option_name.c_str(); }
   unsigned is_arg() const { return _is_arg; }
 
   virtual unsigned isSwitchOption() { return 0; }
@@ -197,7 +197,8 @@ class TclOption
   unsigned _is_set_val = 0;
 
  private:
-  const char* _option_name;
+  std::string _option_name;
+//  const char* _option_name;
   unsigned _is_arg;
 };
 
@@ -440,7 +441,7 @@ class TclCmd
   explicit TclCmd(const char* cmd_name);
   virtual ~TclCmd();
 
-  const char* get_cmd_name() { return _cmd_name; }
+  const char* get_cmd_name() { return _cmd_name.c_str(); }
   TclOption* getOptionOrArg(const char* option_name)
   {
     if (containWildcard(option_name)) {
@@ -499,7 +500,8 @@ class TclCmd
     }
     return res == _options.end() ? nullptr : res->second.get();
   }
-  const char* _cmd_name;
+  std::string _cmd_name;
+//  const char* _cmd_name;
   StrMap<std::unique_ptr<TclOption>> _options;  //!< The tcl option do not need keep order.
   Vector<TclOption*> _args;                     //!< The tcl arg need keep order.
 };

@@ -28,6 +28,7 @@ private: // test functions
     bool test2WriteIdbDesign(void);
     bool test2WriteIdbUnits(void);
     bool test2WriteIdbPort(void);
+//    bool test2WriteIdbTerm(void);
 }; // class DefWriteEdadb
 
 }  // namespace idb

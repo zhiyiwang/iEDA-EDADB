@@ -61,6 +61,13 @@ bool DefReadEdadb::createDbFromEdadb(const char* edadb_path)
 
 
 
+template <typename T>
+bool readread_exactly_one(edadb::DbMapReader<T>* &reader, edadb::DbMap<T> &dbmap, T* obj) { 
+    return edadb::read2Scan(reader, dbmap, obj) == 1;
+}
+
+
+
 bool DefReadEdadb::test2Read(const char* edadb_path)
 {
     std::cout << "========================================================" << std::endl;
@@ -69,6 +76,8 @@ bool DefReadEdadb::test2Read(const char* edadb_path)
   
     // test non-nested tables
     CALL_TEST_MACRO(test2ReadIdbUnits, "IdbUnits");
+    CALL_TEST_MACRO(test2ReadIdbPort, "IdbPort");
+//    CALL_TEST_MACRO(test2ReadIdbTerm, "IdbTerm");
 
 
     // test nested tables
@@ -132,24 +141,27 @@ bool DefReadEdadb::test2ReadIdbUnits(void)
 
   
     //// read units from edadb database
-    idb::IdbUnits *units = design->get_units();
-    delete units; // delete old units
-    units = new IdbUnits();
     edadb::DbMap<idb::IdbUnits> idb_units_dbmap;
     edadb::DbMapReader<idb::IdbUnits> *idb_units_dbmap_reader = nullptr;
-    // only one units in database
-    if (edadb::read2Scan(idb_units_dbmap_reader, idb_units_dbmap, units) != 1) {
+
+    idb::IdbUnits *units1 = new idb::IdbUnits();
+    if (!readread_exactly_one(idb_units_dbmap_reader, idb_units_dbmap, units1)) {
       std::cerr << "Error: failed to read IdbUnits" << std::endl;
       return false;
     }
-    if (edadb::read2Scan(idb_units_dbmap_reader, idb_units_dbmap, units) != 0) {
+
+    idb::IdbUnits *units2 = new idb::IdbUnits();
+    if (readread_exactly_one(idb_units_dbmap_reader, idb_units_dbmap, units2)) {
       std::cerr << "Error: more than one IdbUnits found" << std::endl;
       return false;
     }
+    delete units2; units2 = nullptr; // only one units in database
 
 
     //// update units from data_manager using read from edadb database
-    design->set_units(units);
+    idb::IdbUnits *units = design->get_units();
+    delete units; // delete old units
+    design->set_units(units1);
 
 
     return true;
@@ -159,22 +171,31 @@ bool DefReadEdadb::test2ReadIdbUnits(void)
 
 bool DefReadEdadb::test2ReadIdbPort(void)
 {
-    // use global object to test
-    idb::IdbPort got;
+    //// read port from edadb database
     edadb::DbMap<idb::IdbPort> idb_port_dbmap;
     edadb::DbMapReader<idb::IdbPort> *idb_port_dbmap_reader = nullptr;
-    // only one port in database
-    if (edadb::read2Scan(idb_port_dbmap_reader, idb_port_dbmap, &got) != 1) {
+
+    idb::IdbPort *port1 = new idb::IdbPort();
+    if (!readread_exactly_one(idb_port_dbmap_reader, idb_port_dbmap, port1)) {
       std::cerr << "Error: failed to read IdbPort" << std::endl;
-      return false;
-    }  
-    if (edadb::read2Scan(idb_port_dbmap_reader, idb_port_dbmap, &got) != 0) {
-      std::cerr << "Error: more than one IdbPort found" << std::endl;
       return false;
     }
 
+    idb::IdbPort *port2 = new idb::IdbPort();
+    if (readread_exactly_one(idb_port_dbmap_reader, idb_port_dbmap, port2)) {
+      std::cerr << "Error: more than one IdbPort found" << std::endl;
+      return false;
+    }
+    delete port2; port2 = nullptr; // only one port in database
+
+
+    //// update port from data_manager using read from edadb database
+    idb::IdbPort &got = *port1;
+
+
     // compare got with global object
-    idb::IdbPort& port = test_edadb::gPort;
+    idb::IdbPort port;
+    test_edadb::initPort(&port);
     CALL_COMPARE_MACRO(port.get_port_class(), got.get_port_class(), "IdbPort::_class");
     CALL_COMPARE_MACRO(port.get_coordinate()->get_x(), got.get_coordinate()->get_x(), "IdbPort::_coordinate._x");
     CALL_COMPARE_MACRO(port.get_coordinate()->get_y(), got.get_coordinate()->get_y(), "IdbPort::_coordinate._y");
@@ -192,6 +213,42 @@ bool DefReadEdadb::test2ReadIdbPort(void)
     return true;
 } // test2ReadIdbPort
 
+
+
+
+#if 0
+bool DefReadEdadb::test2ReadIdbTerm(void)
+{
+    // use global object to test
+    idb::IdbTerm got;
+    edadb::DbMap<idb::IdbTerm> idb_term_dbmap;
+    edadb::DbMapReader<idb::IdbTerm> *idb_term_dbmap_reader = nullptr;
+    // only one term in database
+    if (edadb::read2Scan(idb_term_dbmap_reader, idb_term_dbmap, &got) != 1) {
+      std::cerr << "Error: failed to read IdbTerm" << std::endl;
+      return false;
+    }  
+    if (edadb::read2Scan(idb_term_dbmap_reader, idb_term_dbmap, &got) != 0) {
+      std::cerr << "Error: more than one IdbTerm found" << std::endl;
+      return false;
+    }
+
+    // compare got with global object
+    idb::IdbTerm& term = test_edadb::gTerm;
+    CALL_COMPARE_MACRO(term.get_name(), got.get_name(), "IdbTerm::_name");
+    CALL_COMPARE_MACRO(term.get_direction(), got.get_direction(), "IdbTerm::_direction");
+    CALL_COMPARE_MACRO(term.get_type(), got.get_type(), "IdbTerm::_type");
+    CALL_COMPARE_MACRO(term.get_shape(), got.get_shape(), "IdbTerm::_shape");
+    CALL_COMPARE_MACRO(term.get_placement_status(), got.get_placement_status(), "IdbTerm::_placement_status");
+    CALL_COMPARE_MACRO(term.is_port_exist(), got.is_port_exist(), "IdbTerm::_has_port");
+    CALL_COMPARE_MACRO(term.is_special_net(), got.is_special_net(), "IdbTerm::_is_special_net");
+    CALL_COMPARE_MACRO(term.is_instance_pin(), got.is_instance_pin(), "IdbTerm::_is_instance");
+
+    std::cout << "[DefReadEdadb]: IdbTerm read from edadb database matches the original." << std::endl;
+
+    return true;
+} // test2ReadIdbTerm
+#endif
 
 
 

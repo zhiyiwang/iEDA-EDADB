@@ -8,6 +8,7 @@
 
 
 edadb::Cpp2SqlTypeTrait<idb::IdbRect>::setHasPrimKey(false); // no primary key
+
 edadb::Cpp2SqlTypeTrait<idb::IdbCoordinate<int32_t>>::setHasPrimKey(false); // no primary key
 
 

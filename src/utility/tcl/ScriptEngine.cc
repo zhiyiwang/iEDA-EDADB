@@ -147,15 +147,32 @@ const char* ScriptEngine::getResult()
   return Tcl_GetStringResult(_interp);
 }
 
-TclOption::TclOption(const char* option_name, unsigned is_arg) : _option_name(Str::copy(option_name)), _is_arg(is_arg)
+// [EDADB]: zhiyi
+// TODO: here we get some segment fault: Hint: address points to the zero page.
+//
+// //////// origin ////////
+// TclOption::TclOption(const char* option_name, unsigned is_arg) : _option_name(Str::copy(option_name)), _is_arg(is_arg)
+// {
+// }
+// 
+// TclOption::~TclOption()
+// {
+//   Str::free(_option_name);
+//   _option_name = nullptr;
+// }
+//
+//////// EDADB ////////
+TclOption::TclOption(const char* option_name, unsigned is_arg) :
+    _option_name(option_name ? option_name : ""), _is_arg(is_arg)
 {
+    assert(option_name);
 }
 
 TclOption::~TclOption()
 {
-  Str::free(_option_name);
-  _option_name = nullptr;
 }
+// [EDADB]: zhiyi
+
 
 TclSwitchOption::TclSwitchOption(const char* option_name) : TclOption(option_name, 0)
 {
@@ -287,15 +304,32 @@ void TclStringListListOption::setVal(const char* val)
   _is_set_val = 1;
 }
 
-TclCmd::TclCmd(const char* cmd_name) : _cmd_name(Str::copy(cmd_name))
+// [EDADB]: zhiyi
+// TODO: here we get some segment fault: Hint: address points to the zero page.
+//
+// //////// origin ////////
+//TclCmd::TclCmd(const char* cmd_name) : _cmd_name(Str::copy(cmd_name))
+//{
+//}
+//
+//TclCmd::~TclCmd()
+//{
+//  Str::free(_cmd_name);
+//  _cmd_name = nullptr;
+//}
+//////// EDADB ////////
+TclCmd::TclCmd(const char* cmd_name) :
+    _cmd_name(cmd_name ? cmd_name : "")
 {
+    assert(cmd_name);
 }
 
 TclCmd::~TclCmd()
 {
-  Str::free(_cmd_name);
-  _cmd_name = nullptr;
 }
+// zhiyi
+
+
 
 /**
  * @brief Reset the option and arg value.

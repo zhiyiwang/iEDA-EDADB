@@ -62,7 +62,9 @@ export READ_DEF=1
 export WRITE_EDADB=1 # 0: write edadb; 1: write def
 export READ_EDADB=1 # 0: read edadb; 1: read def
 
+##gdb ./iEDA
 ./iEDA -script $EDADB_TCL_SCRIPT_DIR/def2edadb.tcl
+##gdb ./iEDA
 ./iEDA -script $EDADB_TCL_SCRIPT_DIR/edadb2def.tcl
 
 # compare input def and output def, output diff if different
