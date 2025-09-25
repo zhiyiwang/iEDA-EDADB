@@ -9,7 +9,7 @@
 
 #define CALL_TEST_MACRO(fn, what)                  \
   do {                                             \
-if (!(fn())) {                                 \
+    if (!(fn())) {                                 \
       std::cerr << "Error: failed to write " what  \
                 << " to database " << edadb_path   \
                 << std::endl;                      \
@@ -59,13 +59,13 @@ bool DefWriteEdadb::test2Write(const char* edadb_path, DefWriteType type)
     std::cout << "========================================================" << std::endl;
 
     // test non-nested tables
-    CALL_TEST_MACRO(test2WriteIdbUnits, "IdbUnits");
-    CALL_TEST_MACRO(test2WriteIdbPort, "IdbPort");
-//    CALL_TEST_MACRO(test2WriteIdbTerm, "IdbTerm");
+    CALL_TEST_MACRO(test2Write<IdbUnits>, "IdbUnits");
+    CALL_TEST_MACRO(test2Write<IdbPort>, "IdbPort");
+    CALL_TEST_MACRO(test2Write<IdbTerm>, "IdbTerm");
 
 
     // test nested tables
-    CALL_TEST_MACRO(test2WriteIdbDesign, "IdbDesign");
+    CALL_TEST_MACRO(test2Write<IdbDesign>, "IdbDesign");
 
 
     std::cout << "=======================================================" << std::endl;
@@ -75,124 +75,53 @@ bool DefWriteEdadb::test2Write(const char* edadb_path, DefWriteType type)
     return true;
 } // test2Write
 
+
+
+template <typename T>
+bool DefWriteEdadb::test2Write()
+{
+    // initialize object
+    T obj;
+    test_edadb::init(&obj);
+
+    // create table
+    edadb::DbMap<T> dbmap;
+    if (!edadb::createTable(dbmap)) {
+        std::cerr << "Error: failed to create table " << dbmap.getTableName() << std::endl;
+        return false;
+    }
+    std::cout << "Info: succeeded to create table " << dbmap.getTableName() << std::endl;
+
+    // insert object
+    if (!edadb::insertObject(dbmap, &obj)) {
+        std::cerr << "Error: failed to insert " << dbmap.getTableName() << std::endl;
+        return false;
+    }
+    std::cout << "Info: succeeded to insert " << dbmap.getTableName() << std::endl;
+    std::cout << "===================================================" << std::endl;
+
+    return true;
+} // test2Write
     
 
-bool DefWriteEdadb::test2WriteIdbDesign(void)
-{
-    IdbDesign* design = _def_service->get_design();
-    if (design == nullptr) {
-        std::cerr << "Error: DefWriteEdadb::design is nullptr" << std::endl;
-        return false;
-    }
-
-    // create table IdbDesign
-    edadb::DbMap<idb::IdbDesign> idb_design_dbmap;
-    if (!edadb::createTable(idb_design_dbmap)) {
-        std::cerr << "Error: failed to create table IdbDesign" << std::endl;
-        return false;
-    }
-    std::cout << "Info: succeeded to create table IdbDesign" << std::endl;
-  
-    // insert design
-    if (!edadb::insertObject(idb_design_dbmap, design)) {
-        std::cerr << "Error: failed to insert IdbDesign" << std::endl;
-        return false;
-    }
-    std::cout << "Info: succeeded to insert IdbDesign" << std::endl;
-    std::cout << "===================================================" << std::endl;
-  
-    return true;
-} // test2WriteIdbDesign
+template bool DefWriteEdadb::test2Write<IdbUnits> (void);
+template bool DefWriteEdadb::test2Write<IdbPort>  (void);
+template bool DefWriteEdadb::test2Write<IdbTerm>  (void);
+template bool DefWriteEdadb::test2Write<IdbDesign>(void);
 
 
-bool DefWriteEdadb::test2WriteIdbUnits(void)
-{
-    IdbDesign* design = _def_service->get_design();
-    if (design == nullptr) {
-        std::cerr << "Error: DefWriteEdadb::design is nullptr" << std::endl;
-        return false;
-    }
-
-    IdbUnits* units = design->get_units();
-    if (units == nullptr) {
-        std::cerr << "Error: DefWriteEdadb::units is nullptr" << std::endl;
-        return false;
-    }
-
-    // create table IdbUnits
-    edadb::DbMap<idb::IdbUnits> idb_units_dbmap;
-    if (!edadb::createTable(idb_units_dbmap)) {
-        std::cerr << "Error: failed to create table IdbUnits" << std::endl;
-        return false;
-    }
-    std::cout << "Info: succeeded to create table IdbUnits" << std::endl;
-  
-    // insert units
-    if (!edadb::insertObject(idb_units_dbmap, units)) {
-        std::cerr << "Error: failed to insert IdbUnits" << std::endl;
-        return false;
-    }
-    std::cout << "Info: succeeded to insert IdbUnits" << std::endl;
-    std::cout << "===================================================" << std::endl;
-  
-    return true;
-} // test2WriteIdbUnits
+////bool DefWriteEdadb::test2WriteIdbDesign(void)
+////{
+//////    IdbDesign* design = _def_service->get_design();
+//////    if (design == nullptr) {
+//////        std::cerr << "Error: DefWriteEdadb::design is nullptr" << std::endl;
+//////        return false;
+//////    }
+////
+////    return true;
+////} // test2WriteIdbDesign
 
 
-
-bool DefWriteEdadb::test2WriteIdbPort(void)
-{
-    // use global object to test
-    idb::IdbPort port;
-    test_edadb::initPort(&port);
-
-    // create table IdbPort
-    edadb::DbMap<idb::IdbPort> idb_port_dbmap;
-    if (!edadb::createTable(idb_port_dbmap)) {
-        std::cerr << "Error: failed to create table IdbPort" << std::endl;
-        return false;
-    }
-    std::cout << "Info: succeeded to create table IdbPort" << std::endl;
-
-    // insert port
-    if (!edadb::insertObject(idb_port_dbmap, &port)) {
-        std::cerr << "Error: failed to insert IdbPort" << std::endl;
-        return false;
-    }
-    std::cout << "Info: succeeded to insert IdbPort" << std::endl;
-    std::cout << "===================================================" << std::endl;
-
-    return true;
-} // test2WriteIdbPort
-
-
-
-#if 0
-bool DefWriteEdadb::test2WriteIdbTerm(void)
-{
-    // use global object to test
-    idb::IdbTerm term;
-    test_edadb::initTerm(&term);
-
-    // create table IdbTerm
-    edadb::DbMap<idb::IdbTerm> idb_term_dbmap;
-    if (!edadb::createTable(idb_term_dbmap)) {
-        std::cerr << "Error: failed to create table IdbTerm" << std::endl;
-        return false;
-    }
-    std::cout << "Info: succeeded to create table IdbTerm" << std::endl;
-
-    // insert term
-    if (!edadb::insertObject(idb_term_dbmap, &term)) {
-        std::cerr << "Error: failed to insert IdbTerm" << std::endl;
-        return false;
-    }
-    std::cout << "Info: succeeded to insert IdbTerm" << std::endl;
-    std::cout << "===================================================" << std::endl;
-
-    return true;
-} // test2WriteIdbTerm
-#endif
 
 
 }  // namespace idb

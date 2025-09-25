@@ -24,10 +24,17 @@ public:
 private: // test functions
     bool test2Read(const char* edadb_path);  
 
-    bool test2ReadIdbDesign(void);
-    bool test2ReadIdbUnits(void);
-    bool test2ReadIdbPort(void);
-//    bool test2ReadIdbTerm(void);
+    template <typename T>
+    bool test2Read(void);
+
 }; // class DefReadEdadb
+
+
+extern template bool DefReadEdadb::test2Read<IdbUnits> (void);
+extern template bool DefReadEdadb::test2Read<IdbPort>  (void);
+extern template bool DefReadEdadb::test2Read<IdbTerm>  (void);
+extern template bool DefReadEdadb::test2Read<IdbDesign>(void);
+
+
 
 } // namespace idb

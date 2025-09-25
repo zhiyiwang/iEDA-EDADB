@@ -25,10 +25,14 @@ public:
 private: // test functions
     bool test2Write(const char* edadb_path, DefWriteType type);
 
-    bool test2WriteIdbDesign(void);
-    bool test2WriteIdbUnits(void);
-    bool test2WriteIdbPort(void);
-//    bool test2WriteIdbTerm(void);
+    template <typename T>
+    bool test2Write(void);
 }; // class DefWriteEdadb
+
+
+extern template bool DefWriteEdadb::test2Write<IdbUnits> (void);
+extern template bool DefWriteEdadb::test2Write<IdbPort>  (void);
+extern template bool DefWriteEdadb::test2Write<IdbTerm>  (void);
+extern template bool DefWriteEdadb::test2Write<IdbDesign>(void);
 
 }  // namespace idb
