@@ -29,7 +29,7 @@
 #include <vector>
 
 #include "IdbBusBitChars.h"
-#include "IdbObject.h"
+#include "../IdbObject.h"
 #include "IdbPins.h"
 namespace idb {
 class IdbBus

@@ -9,4 +9,5 @@ endif()
 
 target_include_directories(db_edadb PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${PROJECT_SOURCE_DIR}/src/third_party/edadb/include
 )

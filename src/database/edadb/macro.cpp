@@ -7,10 +7,18 @@
 #include "macro.h"
 
 
+namespace {
 
-edadb::Cpp2SqlTypeTrait<idb::IdbRect>::setHasPrimKey(false); // no primary key
-
-edadb::Cpp2SqlTypeTrait<idb::IdbCoordinate<int32_t>>::setHasPrimKey(false); // no primary key
+// use static object to set primary key config
+struct EdadbPrimaryKeyConfig {
+  EdadbPrimaryKeyConfig() {
+    edadb::Cpp2SqlTypeTrait<idb::IdbRect>::hasPrimKey = false;
+    edadb::Cpp2SqlTypeTrait<idb::IdbCoordinate<int32_t>>::hasPrimKey = false;
+  }
+};
+// global object to set primary key config
+const EdadbPrimaryKeyConfig kEdadbPrimaryKeyConfig{};
+} // namespace
 
 
 
@@ -19,7 +27,8 @@ edadb::Cpp2SqlTypeTrait<idb::IdbCoordinate<int32_t>>::setHasPrimKey(false); // n
 // macro to compare the original and read values
 #define CALL_COMPARE_MACRO(org, got, what)   \
     do {                                     \
-        return org == got ? true : (std::cerr << "Error: " what " mismatch " << std::endl, false); \
+        return org == got ? true : \
+            (std::cerr << "EDADB Error: " what " mismatch " << std::endl, false); \
     } while (0)
 
 
@@ -28,20 +37,24 @@ namespace test_edadb {
 
 void init(idb::IdbUnits* u)
 {
+    if (u == nullptr) return;
+
     // define global object and set values for test
-    u->_nanoseconds = 0.001;
-    u->_picofarads = 0.000001;
-    u->_ohms = 0.001;
-    u->_milliwatts = 0.001;
-    u->_milliamps = 0.001;
-    u->_volts = 0.001;
+    u->_nanoseconds = 1; 
+    u->_picofarads = 2;
+    u->_ohms = 3;
+    u->_milliwatts = 4;
+    u->_milliamps = 5;
+    u->_volts = 6;
     u->_micron_dbu = 2000; // 1 micron = 2000 dbu
     u->_megahertz = 1000;  // 1 megahertz = 1000 hertz
-} // initUnits
+} // 
 
 
 void init(idb::IdbPort* p)
 {
+    if (p == nullptr) return;
+
     // define global object and set values for test
     p->_class = idb::IdbPortClass::kCore;
     p->_coordinate->set_xy(100, 200);
@@ -49,11 +62,13 @@ void init(idb::IdbPort* p)
     p->_io_bounding_box->set_rect(50, 150, 250, 350);
     p->_orient = idb::IdbOrient::kN_R0;
     p->_placement_status = idb::IdbPlacementStatus::kFixed;
-} // initPort
+} // 
 
 
 void init(idb::IdbTerm *t)
 {
+    if (t == nullptr) return;
+
     // define global object and set values for test
     t->_name = "TEST_TERM";
     t->_direction = idb::IdbConnectDirection::kInput;
@@ -64,13 +79,15 @@ void init(idb::IdbTerm *t)
     t->_is_special_net = false;
     t->_is_instance = false;
     idb::IdbPort* port = new idb::IdbPort();
-    initPort(port);
+    init(port);
     t->add_port(port);
 } // initTerm
 
 
 void init(idb::IdbDesign* d)
 {
+    if (d == nullptr) return;   
+
     // define global object and set values for test
     d->_version = 5.8;
     d->_design_name = "TEST_DESIGN";
@@ -80,8 +97,10 @@ void init(idb::IdbDesign* d)
 
 
 
-bool verifyEqual(idb::IdbUnits* org, idb::IdbUnits* got)
+bool verifyEqual(const idb::IdbUnits* org, const idb::IdbUnits* got)
 {
+    if (org == nullptr || got == nullptr) return false;
+
     CALL_COMPARE_MACRO(org->_nanoseconds, got->_nanoseconds, "nanoseconds");
     CALL_COMPARE_MACRO(org->_picofarads, got->_picofarads, "picofarads");
     CALL_COMPARE_MACRO(org->_ohms, got->_ohms, "ohms");
@@ -94,8 +113,10 @@ bool verifyEqual(idb::IdbUnits* org, idb::IdbUnits* got)
 } 
 
 
-bool verifyEqual(idb::IdbPort* org, idb::IdbPort* got)
+bool verifyEqual(const idb::IdbPort* org, const idb::IdbPort* got)
 {
+    if (org == nullptr || got == nullptr) return false;
+
     CALL_COMPARE_MACRO(org->_class, got->_class, "class");
     CALL_COMPARE_MACRO(org->_coordinate->get_x(), got->_coordinate->get_x(), "coordinate x");
     CALL_COMPARE_MACRO(org->_coordinate->get_y(), got->_coordinate->get_y(), "coordinate y");
@@ -111,8 +132,10 @@ bool verifyEqual(idb::IdbPort* org, idb::IdbPort* got)
 }
 
 
-bool verifyEqual(idb::IdbTerm* org, idb::IdbTerm* got)
+bool verifyEqual(const idb::IdbTerm* org, const idb::IdbTerm* got)
 {
+    if (org == nullptr || got == nullptr) return false;
+
     CALL_COMPARE_MACRO(org->_name, got->_name, "name");
     CALL_COMPARE_MACRO(org->_direction, got->_direction, "direction");
     CALL_COMPARE_MACRO(org->_type, got->_type, "type");
@@ -137,8 +160,10 @@ bool verifyEqual(idb::IdbTerm* org, idb::IdbTerm* got)
 }
 
 
-bool verifyEqual(idb::IdbDesign* org, idb::IdbDesign *got)
+bool verifyEqual(const idb::IdbDesign* org, const idb::IdbDesign* got)
 {
+    if (org == nullptr || got == nullptr) return false;
+
     CALL_COMPARE_MACRO(org->_version, got->_version, "version");
     CALL_COMPARE_MACRO(org->_design_name, got->_design_name, "design_name");
     if (!verifyEqual(org->_units, got->_units)) {

@@ -43,20 +43,20 @@ namespace test_edadb {
 
 //////// init iEDA object funcs /////////////////////////////////
 template <typename T>
-void init (T* t) = delete;
+void init(T*) = delete;
 
-void init(idb::IdbUnits *u);
-void init(idb::IdbPort  *p);
-void init(idb::IdbTerm  *t);
-void init(idb::IdbDesign *d);
+void init(idb::IdbUnits*);
+void init(idb::IdbPort*);
+void init(idb::IdbTerm*);
+void init(idb::IdbDesign*);
 
 //////// verify equal funcs /////////////////////////////////
-template<typename T>
-bool verifyEqual(T* org, T* got) = delete;
+template <typename T>
+bool verifyEqual(const T*, const T*) = delete;
 
-bool verifyEqual(idb::IdbUnits* org, idb::IdbUnits* got);
-bool verifyEqual(idb::IdbPort* org, idb::IdbPort* got);
-bool verifyEqual(idb::IdbTerm* org, idb::IdbTerm* got);
-bool verifyEqual(idb::IdbDesign* org, idb::IdbDesign *got);
+bool verifyEqual(const idb::IdbUnits*,  const idb::IdbUnits*);
+bool verifyEqual(const idb::IdbPort*,   const idb::IdbPort*);
+bool verifyEqual(const idb::IdbTerm*,   const idb::IdbTerm*);
+bool verifyEqual(const idb::IdbDesign*, const idb::IdbDesign*);
 
 }  // namespace test_edadb

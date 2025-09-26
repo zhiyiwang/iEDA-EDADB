@@ -30,4 +30,10 @@ target_include_directories(def_builder
         ${HOME_THIRDPARTY}/lefdef/def/defzlib
 )
 
-target_link_libraries(def_builder PRIVATE  def defzlib str solver_geometry_boost)
+target_link_libraries(def_builder PRIVATE 
+    def
+    defzlib
+    str
+    solver_geometry_boost
+    db_edadb
+)

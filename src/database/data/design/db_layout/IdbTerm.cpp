@@ -46,8 +46,8 @@ IdbPort::IdbPort()
   _coordinate = new IdbCoordinate<int32_t>();
   _io_average_coordinate = new IdbCoordinate<int32_t>();
   _io_bounding_box = new IdbRect();
-  _placement_status = IdbPlacementStatus::kNone;
   _orient = IdbOrient::kN_R0;
+  _placement_status = IdbPlacementStatus::kNone;
 }
 
 IdbPort::~IdbPort()

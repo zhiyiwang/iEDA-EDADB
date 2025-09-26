@@ -57,8 +57,8 @@ bool DefReadEdadb::createDbFromEdadb(const char* edadb_path)
 
 
 template <typename T>
-bool read_exactly_one(edadb::DbMapReader<T>* &reader, edadb::DbMap<T> &dbmap, T* obj) { 
-    return edadb::read2Scan(reader, dbmap, obj) == 1;
+int read_exactly_one(edadb::DbMapReader<T>* &reader, edadb::DbMap<T> &dbmap, T* obj) { 
+    return edadb::read2Scan(reader, dbmap, obj);
 }
 
 
@@ -94,16 +94,17 @@ bool DefReadEdadb::test2Read(void)
 {
     //// read T from edadb database
     edadb::DbMap<T> dbmap;
+    dbmap.init();
     edadb::DbMapReader<T>* reader = nullptr;
 
     T* obj1 = new T();
-    if (!read_exactly_one(reader, dbmap, obj1)) {
+    if (read_exactly_one(reader, dbmap, obj1) != 1) {
         std::cerr << "Error: failed to read " << dbmap.getTableName() << std::endl;
         return false;
     }
 
     T* obj2 = new T();
-    if (!read_exactly_one(reader, dbmap, obj2)) {
+    if (read_exactly_one(reader, dbmap, obj2) != 0) {
         std::cerr << "Error: failed to read " << dbmap.getTableName() << std::endl;
         return false;
     }
@@ -123,10 +124,10 @@ bool DefReadEdadb::test2Read(void)
 } // test2Read
 
 
-template bool DefReadEdadb::test2Read<IdbUnits> (void);
-template bool DefReadEdadb::test2Read<IdbPort>  (void);
-template bool DefReadEdadb::test2Read<IdbTerm>  (void);
-template bool DefReadEdadb::test2Read<IdbDesign>(void);
+template bool DefReadEdadb::test2Read<idb::IdbUnits> (void);
+template bool DefReadEdadb::test2Read<idb::IdbPort>  (void);
+template bool DefReadEdadb::test2Read<idb::IdbTerm>  (void);
+template bool DefReadEdadb::test2Read<idb::IdbDesign>(void);
 
 
 
