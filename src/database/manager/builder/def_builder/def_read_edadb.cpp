@@ -74,6 +74,8 @@ bool DefReadEdadb::test2Read(const char* edadb_path)
     CALL_TEST_MACRO(test2Read<IdbPort>, "IdbPort");
     CALL_TEST_MACRO(test2Read<IdbTerm>, "IdbTerm");
 
+    CALL_TEST_MACRO(test2Read<IdbLayer>, "IdbLayer");
+
 
     // test nested tables
     CALL_TEST_MACRO(test2Read<IdbDesign>, "IdbDesign");
@@ -127,6 +129,9 @@ bool DefReadEdadb::test2Read(void)
 template bool DefReadEdadb::test2Read<idb::IdbUnits> (void);
 template bool DefReadEdadb::test2Read<idb::IdbPort>  (void);
 template bool DefReadEdadb::test2Read<idb::IdbTerm>  (void);
+
+template bool DefReadEdadb::test2Read<idb::IdbLayer> (void);
+
 template bool DefReadEdadb::test2Read<idb::IdbDesign>(void);
 
 

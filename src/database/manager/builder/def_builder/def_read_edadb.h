@@ -10,6 +10,7 @@
 #include "def_read.h"
 #include "edadb.h"
 #include "../../../edadb/macro.h"
+#include "../../../edadb/test_edadb.h"
 
 namespace idb {
 
@@ -33,6 +34,9 @@ private: // test functions
 extern template bool DefReadEdadb::test2Read<IdbUnits> (void);
 extern template bool DefReadEdadb::test2Read<IdbPort>  (void);
 extern template bool DefReadEdadb::test2Read<IdbTerm>  (void);
+
+extern template bool DefReadEdadb::test2Read<IdbLayer> (void);
+
 extern template bool DefReadEdadb::test2Read<IdbDesign>(void);
 
 

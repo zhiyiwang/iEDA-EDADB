@@ -90,7 +90,8 @@ class IdbLayer
   // verify data
   virtual void print();
 
- private:
+// private:
+public:
   string _name;
   IdbLayerType _type;
   int8_t _layer_id;

@@ -26,7 +26,6 @@ DefWriteEdadb::DefWriteEdadb(IdbDefService* def_service, DefWriteType type) : De
 }
 
 
-
 bool DefWriteEdadb::writeDbToEdadb(const char* edadb_path, DefWriteType type)
 {
     if (_def_service == nullptr) {
@@ -50,7 +49,6 @@ bool DefWriteEdadb::writeDbToEdadb(const char* edadb_path, DefWriteType type)
 } // writeDbToEdadb
 
 
-
 bool DefWriteEdadb::test2Write(const char* edadb_path, DefWriteType type)
 {
     std::cout << "========================================================" << std::endl;
@@ -62,6 +60,8 @@ bool DefWriteEdadb::test2Write(const char* edadb_path, DefWriteType type)
     CALL_TEST_MACRO(test2Write<IdbUnits>, "IdbUnits");
     CALL_TEST_MACRO(test2Write<IdbPort>, "IdbPort");
     CALL_TEST_MACRO(test2Write<IdbTerm>, "IdbTerm");
+
+    CALL_TEST_MACRO(test2Write<IdbLayer>, "IdbLayer");
 
 
     // test nested tables
@@ -107,6 +107,9 @@ bool DefWriteEdadb::test2Write()
 template bool DefWriteEdadb::test2Write<IdbUnits> (void);
 template bool DefWriteEdadb::test2Write<IdbPort>  (void);
 template bool DefWriteEdadb::test2Write<IdbTerm>  (void);
+
+template bool DefWriteEdadb::test2Write<IdbLayer> (void);
+
 template bool DefWriteEdadb::test2Write<IdbDesign>(void);
 
 
