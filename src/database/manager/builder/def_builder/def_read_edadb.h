@@ -22,23 +22,26 @@ public:
   
     bool createDbFromEdadb(const char* edadb_path);
 
+#if 0
 private: // test functions
     bool test2Read(const char* edadb_path);  
 
     template <typename T>
     bool test2Read(void);
-
+#endif 
 }; // class DefReadEdadb
 
 
+#if 0
 extern template bool DefReadEdadb::test2Read<IdbUnits> (void);
-extern template bool DefReadEdadb::test2Read<IdbPort>  (void);
-extern template bool DefReadEdadb::test2Read<IdbTerm>  (void);
-
-extern template bool DefReadEdadb::test2Read<IdbLayer> (void);
+//extern template bool DefReadEdadb::test2Read<IdbPort>  (void);
+//extern template bool DefReadEdadb::test2Read<IdbTerm>  (void);
+//
+//extern template bool DefReadEdadb::test2Read<IdbLayer> (void);
+//extern template bool DefReadEdadb::test2Read<IdbLayerShape>(void);
 
 extern template bool DefReadEdadb::test2Read<IdbDesign>(void);
-
+#endif 
 
 
 } // namespace idb

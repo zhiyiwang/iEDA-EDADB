@@ -5,6 +5,7 @@
 
 #include "def_read_edadb.h"
 
+#if 0
 // macros to call test functions and handle errors
 #define CALL_TEST_MACRO(fn, what)                         \
     do {                                                  \
@@ -20,6 +21,7 @@
                       << std::endl << std::endl << std::flush;       \
         }                                                            \
     } while (0)
+#endif 
 
 
 
@@ -45,17 +47,20 @@ bool DefReadEdadb::createDbFromEdadb(const char* edadb_path)
     }
     std::cout << "Info: succeeded to init database from " << edadb_path << std::endl;
   
+#if 0
     // TODO: read design rather than read to test
     if (!test2Read(edadb_path)) {
          std::cerr << "Error: failed to read from database " << edadb_path << std::endl;
          return false;
     }
+#endif 
   
     return true;
 } // createDbFromEdadb
 
 
 
+#if 0
 template <typename T>
 int read_exactly_one(edadb::DbMapReader<T>* &reader, edadb::DbMap<T> &dbmap, T* obj) { 
     return edadb::read2Scan(reader, dbmap, obj);
@@ -71,10 +76,11 @@ bool DefReadEdadb::test2Read(const char* edadb_path)
   
     // test non-nested tables
     CALL_TEST_MACRO(test2Read<IdbUnits>, "IdbUnits");
-    CALL_TEST_MACRO(test2Read<IdbPort>, "IdbPort");
-    CALL_TEST_MACRO(test2Read<IdbTerm>, "IdbTerm");
+//    CALL_TEST_MACRO(test2Read<IdbPort>, "IdbPort");
+//    CALL_TEST_MACRO(test2Read<IdbTerm>, "IdbTerm");
 
-    CALL_TEST_MACRO(test2Read<IdbLayer>, "IdbLayer");
+//    CALL_TEST_MACRO(test2Read<IdbLayer>, "IdbLayer");
+//    CALL_TEST_MACRO(test2Read<IdbLayerShape>, "IdbLayerShape");
 
 
     // test nested tables
@@ -127,13 +133,15 @@ bool DefReadEdadb::test2Read(void)
 
 
 template bool DefReadEdadb::test2Read<idb::IdbUnits> (void);
-template bool DefReadEdadb::test2Read<idb::IdbPort>  (void);
-template bool DefReadEdadb::test2Read<idb::IdbTerm>  (void);
-
-template bool DefReadEdadb::test2Read<idb::IdbLayer> (void);
+//template bool DefReadEdadb::test2Read<idb::IdbPort>  (void);
+//template bool DefReadEdadb::test2Read<idb::IdbTerm>  (void);
+//
+//template bool DefReadEdadb::test2Read<idb::IdbLayer> (void);
+//template bool DefReadEdadb::test2Read<idb::IdbLayerShape>(void);
 
 template bool DefReadEdadb::test2Read<idb::IdbDesign>(void);
 
+#endif 
 
 
 } // namespace idb

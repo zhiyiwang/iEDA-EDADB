@@ -20,21 +20,21 @@
 TABLE4CLASS(idb::IdbUnits, "IdbUnits", (_nanoseconds, _picofarads, _ohms, _milliwatts, _milliamps, _volts, _micron_dbu, _megahertz));
 
 
-// no primary key 
-TABLE4CLASS(idb::IdbRect, "IdbRect", (_lx, _ly, _hx, _hy));
-
-// no primary key 
-TABLE4CLASS(idb::IdbCoordinate<int32_t>, "IdbCoordinate", (_x, _y));
-
-TABLE4CLASS(idb::IdbPort, "IdbPort", (_class, _coordinate, _io_average_coordinate, _io_bounding_box, _orient, _placement_status));
-
-TABLE4CLASS_WVEC(idb::IdbTerm, "IdbTerm", (_name, _direction, _type, _shape, _placement_status, _has_port, _is_special_net, _is_instance), (_port_list));
-
-
-TABLE4CLASS(idb::IdbLayer, "IdbLayer", (_name, _type, _layer_id, _layer_order))
+//// no primary key 
+//TABLE4CLASS(idb::IdbRect, "IdbRect", (_lx, _ly, _hx, _hy));
+//
+//// no primary key 
+//TABLE4CLASS(idb::IdbCoordinate<int32_t>, "IdbCoordinate", (_x, _y));
+//
+//TABLE4CLASS(idb::IdbPort, "IdbPort", (_class, _coordinate, _io_average_coordinate, _io_bounding_box, _orient, _placement_status));
+//
+//TABLE4CLASS_WVEC(idb::IdbTerm, "IdbTerm", (_name, _direction, _type, _shape, _placement_status, _has_port, _is_special_net, _is_instance), (_port_list));
+//
+//
+//TABLE4CLASS(idb::IdbLayer, "IdbLayer", (_name, _type, _layer_id, _layer_order))
 
 //// no primary key
-//TABLE4CLASS(idb::IdbLayerShape, "IdbLayerShape", (_type, _layer),(_rect_list))
+//TABLE4CLASS_WVEC(idb::IdbLayerShape, "IdbLayerShape", (_type, _layer), (_rect_list))
 
 
 // no primary key

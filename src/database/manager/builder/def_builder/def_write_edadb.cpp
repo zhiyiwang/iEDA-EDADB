@@ -7,6 +7,7 @@
 
 #include "def_write_edadb.h"
 
+#if 0
 #define CALL_TEST_MACRO(fn, what)                  \
   do {                                             \
     if (!(fn())) {                                 \
@@ -16,6 +17,7 @@
       return false;                                \
     }                                              \
   } while (0)
+#endif 
 
 
 
@@ -39,16 +41,19 @@ bool DefWriteEdadb::writeDbToEdadb(const char* edadb_path, DefWriteType type)
         return false;
     }
 
+#if 0
     // TODO: write design rather than write to test
     if (!test2Write(edadb_path, type)) {
         std::cerr << "Error: failed to write to database " << edadb_path << std::endl;
         return false;
     }
+#endif 
 
     return true;
 } // writeDbToEdadb
 
 
+#if 0
 bool DefWriteEdadb::test2Write(const char* edadb_path, DefWriteType type)
 {
     std::cout << "========================================================" << std::endl;
@@ -56,12 +61,13 @@ bool DefWriteEdadb::test2Write(const char* edadb_path, DefWriteType type)
     std::cout << "        with type: " << static_cast<int>(type) << std::endl;
     std::cout << "========================================================" << std::endl;
 
-    // test non-nested tables
+//    // test non-nested tables
     CALL_TEST_MACRO(test2Write<IdbUnits>, "IdbUnits");
-    CALL_TEST_MACRO(test2Write<IdbPort>, "IdbPort");
-    CALL_TEST_MACRO(test2Write<IdbTerm>, "IdbTerm");
-
-    CALL_TEST_MACRO(test2Write<IdbLayer>, "IdbLayer");
+//    CALL_TEST_MACRO(test2Write<IdbPort>, "IdbPort");
+//    CALL_TEST_MACRO(test2Write<IdbTerm>, "IdbTerm");
+//
+//    CALL_TEST_MACRO(test2Write<IdbLayer>, "IdbLayer");
+//    CALL_TEST_MACRO(test2Write<IdbLayerShape>, "IdbLayerShape");
 
 
     // test nested tables
@@ -105,26 +111,15 @@ bool DefWriteEdadb::test2Write()
     
 
 template bool DefWriteEdadb::test2Write<IdbUnits> (void);
-template bool DefWriteEdadb::test2Write<IdbPort>  (void);
-template bool DefWriteEdadb::test2Write<IdbTerm>  (void);
+//template bool DefWriteEdadb::test2Write<IdbPort>  (void);
+//template bool DefWriteEdadb::test2Write<IdbTerm>  (void);
 
-template bool DefWriteEdadb::test2Write<IdbLayer> (void);
+//template bool DefWriteEdadb::test2Write<IdbLayer> (void);
+//template bool DefWriteEdadb::test2Write<IdbLayerShape> (void);
 
 template bool DefWriteEdadb::test2Write<IdbDesign>(void);
 
-
-////bool DefWriteEdadb::test2WriteIdbDesign(void)
-////{
-//////    IdbDesign* design = _def_service->get_design();
-//////    if (design == nullptr) {
-//////        std::cerr << "Error: DefWriteEdadb::design is nullptr" << std::endl;
-//////        return false;
-//////    }
-////
-////    return true;
-////} // test2WriteIdbDesign
-
-
+#endif 
 
 
 }  // namespace idb

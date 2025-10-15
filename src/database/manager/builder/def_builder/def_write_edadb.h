@@ -23,20 +23,25 @@ public:
     // writer
     bool writeDbToEdadb(const char* edadb_path, DefWriteType type);
 
+#if 0
 private: // test functions
     bool test2Write(const char* edadb_path, DefWriteType type);
 
     template <typename T>
     bool test2Write(void);
+#endif 
 }; // class DefWriteEdadb
 
 
+#if 0
 extern template bool DefWriteEdadb::test2Write<IdbUnits> (void);
-extern template bool DefWriteEdadb::test2Write<IdbPort>  (void);
-extern template bool DefWriteEdadb::test2Write<IdbTerm>  (void);
-
-extern template bool DefWriteEdadb::test2Write<IdbLayer> (void);
+//extern template bool DefWriteEdadb::test2Write<IdbPort>  (void);
+//extern template bool DefWriteEdadb::test2Write<IdbTerm>  (void);
+//
+//extern template bool DefWriteEdadb::test2Write<IdbLayer> (void);
+//extern template bool DefWriteEdadb::test2Write<IdbLayerShape> (void);
 
 extern template bool DefWriteEdadb::test2Write<IdbDesign>(void);
+#endif 
 
 }  // namespace idb
