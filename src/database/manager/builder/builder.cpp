@@ -338,24 +338,34 @@ bool IdbBuilder::saveJSON(string file, string options)
 
 
 // [USE_EDADB] by zhiyi
-IdbDefService* IdbBuilder::buildDefFromEdadb(const char* edadb_path)
+IdbDefService* IdbBuilder::buildDefFromEdadb(const char* edadb_path, const char* path)
 {
-    // already call IdbDefService* IdbBuilder::buildDef(string file) to build def from file
-    assert(_def_service != nullptr);
+    // same to IdbDefService* IdbBuilder::buildDef(string file)
+    if (_def_service != nullptr) {
+        delete _def_service;
+        _def_service = nullptr;
+    }
 
+    IdbLayout* layout = _lef_service->get_layout();
+    _def_service = new IdbDefService(layout);
+
+    if (IdbDefServiceResult::kServiceFailed == _def_service->DefFileInit(path)) {
+      std::cout << "Read DEF file from EDADB database failed..." << endl;
+      return nullptr;
+    }
+  
+#if DEBUG_EDADB_OUTPUT
     std::cout << "Read DEF from EDADB database : " << edadb_path << endl;
 
     std::cout << "###################################" << std::endl;
     std::cout << "IdbBuilder::buildDefFromEdadb()\n" << std::flush << std::endl;
     std::cout << "###################################" << std::endl;
+#endif
 
     std::shared_ptr<DefReadEdadb> def_read_edadb = std::make_shared<DefReadEdadb>(_def_service);
-    if (!def_read_edadb->createDbFromEdadb(edadb_path)) {
+    if (!def_read_edadb->createDbFromEdadb(edadb_path, path)) {
       LOG_FATAL << "Def file read from edadb database failed..." << endl;
     }
-
-    // TODO:
-    // update _design and _layout of _idb_service to compare with read from def file
 
     buildNet();
     buildBus();
@@ -365,14 +375,26 @@ IdbDefService* IdbBuilder::buildDefFromEdadb(const char* edadb_path)
 } // buildDefFromEdadb
 
 
-bool IdbBuilder::writeDefToEdadb(const char* edadb_path, DefWriteType type)
+bool IdbBuilder::writeDefToEdadb(const char* edadb_path, const DefWriteType type)
 {
-    std::cout << "###################################" << std::endl;
-    std::cout << "Write DEF to EDADB database : " << edadb_path << std::flush << std::endl;
-    std::cout << "###################################" << std::endl;
+    // open edadb database file for write and close the file
+    // then set _def_write_file in class IdbDefService
+    if (IdbDefServiceResult::kServiceFailed ==
+            _def_service->DefFileWriteInit(edadb_path)) {
+      std::cout << "Create EDADB database file for DEF failed..." << endl;
+      return false;
+    }
 
-    std::shared_ptr<DefWriteEdadb> def_write_edadb = std::make_shared<DefWriteEdadb>(_def_service, type);
-    return def_write_edadb->writeDbToEdadb(edadb_path, type);
+#if DEBUG_EDADB_OUTPUT
+    std::cout << "###################################" << std::endl;
+    std::cout << "Write DEF to EDADB database : "      << edadb_path 
+        << std::endl << std::flush; 
+    std::cout << "###################################" << std::endl;
+#endif 
+
+    std::shared_ptr<DefWriteEdadb> def_write_edadb =
+        std::make_shared<DefWriteEdadb>(_def_service, type);
+    return def_write_edadb->writeDbToEdadb(edadb_path);
 } // writeDefToEdadb
 
 

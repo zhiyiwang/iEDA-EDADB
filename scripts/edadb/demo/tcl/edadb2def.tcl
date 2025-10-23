@@ -46,7 +46,7 @@ if {[info exists ::env(READ_DEF)] && $::env(READ_DEF)} {
 #===========================================================
 if {[info exists ::env(READ_EDADB)] && $::env(READ_EDADB)} {
     puts "==> READ_EDADB enabled, reading edadb..."
-    edadb_read -index 1 -edadb_db_path $db_path
+    edadb_read -edadb_db_path $db_path -path $::env(INPUT_DEF)
 } else {
     puts "==> READ_EDADB disabled, skip reading edadb."
 }

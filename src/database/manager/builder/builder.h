@@ -141,16 +141,18 @@ public:
      *   must call IdbDefService* IdbBuilder::buildDef(string file) to build def from file first
      *   then call this function to update def data from edadb database
      * @param edadb_path the path of edadb database file
+     * @param path: the path of text def file
      * @return IdbDefService* if build successfully, nullptr otherwise
      */
-    IdbDefService* buildDefFromEdadb(const char* edadb_path);
+    IdbDefService* buildDefFromEdadb(const char* edadb_path, const char* path);
 
     /**
      * @brief write def to edadb database
      * @param edadb_path the path of edadb database file
+     * @param type the write type
      * @return true if write successfully, false otherwise
      */
-    bool writeDefToEdadb(const char* edadb_path, DefWriteType type = DefWriteType::kChip);
+    bool writeDefToEdadb(const char* edadb_path, const DefWriteType type = DefWriteType::kChip);
 // [USE_EDADB] done
 };
 

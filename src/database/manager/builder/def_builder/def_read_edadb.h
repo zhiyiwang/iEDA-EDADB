@@ -20,28 +20,32 @@ public:
     DefReadEdadb(IdbDefService* def_service);
     virtual ~DefReadEdadb() = default;
   
-    bool createDbFromEdadb(const char* edadb_path);
+    /**
+     * @brief build def from edadb database:
+     *   Currently, use path to call createDbByDef to debug;
+     *   Finally, will directly build def from edadb database.
+     * @param edadb_path edadb database path
+     * @param path def file path
+     * @return true if success, false otherwise
+     */
+    bool createDbFromEdadb(const char* edadb_path, const char* path);
 
-#if 0
-private: // test functions
-    bool test2Read(const char* edadb_path);  
+private:
+    /**
+     * @brief create database by def file
+     * @param path def file path
+     * @return true if success, false otherwise
+     */
+    bool createDbByDef(const char* path);
 
-    template <typename T>
-    bool test2Read(void);
-#endif 
+    /**
+     * @brief create database by edadb database
+     * @param edadb_path edadb database path
+     * @return true if success, false otherwise
+     */
+    bool createDbByEdadb(const char* edadb_path);
 }; // class DefReadEdadb
 
-
-#if 0
-extern template bool DefReadEdadb::test2Read<IdbUnits> (void);
-//extern template bool DefReadEdadb::test2Read<IdbPort>  (void);
-//extern template bool DefReadEdadb::test2Read<IdbTerm>  (void);
-//
-//extern template bool DefReadEdadb::test2Read<IdbLayer> (void);
-//extern template bool DefReadEdadb::test2Read<IdbLayerShape>(void);
-
-extern template bool DefReadEdadb::test2Read<IdbDesign>(void);
-#endif 
 
 
 } // namespace idb

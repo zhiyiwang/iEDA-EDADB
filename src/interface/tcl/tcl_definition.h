@@ -41,7 +41,6 @@ namespace tcl {
 //[USE_EDADB]
 //===========================================================
 #define TCL_EDADB_DB_PATH "-edadb_db_path"
-#define TCL_EDADB_INDEX "-edadb_index"
 //===========================================================
 
 const char* const EMPTY_STR = "";

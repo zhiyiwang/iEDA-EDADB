@@ -7,19 +7,6 @@
 
 #include "def_write_edadb.h"
 
-#if 0
-#define CALL_TEST_MACRO(fn, what)                  \
-  do {                                             \
-    if (!(fn())) {                                 \
-      std::cerr << "Error: failed to write " what  \
-                << " to database " << edadb_path   \
-                << std::endl;                      \
-      return false;                                \
-    }                                              \
-  } while (0)
-#endif 
-
-
 
 namespace idb {
 
@@ -28,7 +15,7 @@ DefWriteEdadb::DefWriteEdadb(IdbDefService* def_service, DefWriteType type) : De
 }
 
 
-bool DefWriteEdadb::writeDbToEdadb(const char* edadb_path, DefWriteType type)
+bool DefWriteEdadb::writeDbToEdadb(const char* edadb_path)
 {
     if (_def_service == nullptr) {
         std::cerr << "Error: DefWriteEdadb::_def_service is nullptr" << std::endl;
@@ -41,85 +28,40 @@ bool DefWriteEdadb::writeDbToEdadb(const char* edadb_path, DefWriteType type)
         return false;
     }
 
-#if 0
-    // TODO: write design rather than write to test
-    if (!test2Write(edadb_path, type)) {
-        std::cerr << "Error: failed to write to database " << edadb_path << std::endl;
-        return false;
-    }
-#endif 
+    std::cout << "DEADB: Def write to EDADB database : " << edadb_path << std::endl;
 
+#if 0
+   switch (_type) {
+     case DefWriteType::kChip: {
+//       writeChip();
+       break;
+     }
+     case DefWriteType::kSynthesis: {
+//       writeDbSynthesis();
+       break;
+     }
+     case DefWriteType::kFloorplan:
+     case DefWriteType::kGlobalPlace:
+     case DefWriteType::kDetailPlace:
+     case DefWriteType::kGlobalRouting:
+     case DefWriteType::kDetailRouting: {
+//       writeChip();
+       break;
+     }
+     case DefWriteType::kLef: {
+//       writeLef();
+       break;
+     }
+ 
+     default: {
+//       writeChip();
+       break;
+     }
+   }
+#endif
     return true;
 } // writeDbToEdadb
 
-
-#if 0
-bool DefWriteEdadb::test2Write(const char* edadb_path, DefWriteType type)
-{
-    std::cout << "========================================================" << std::endl;
-    std::cout << "[DefWriteEdadb] Write to EDADB database : " << edadb_path << std::endl;
-    std::cout << "        with type: " << static_cast<int>(type) << std::endl;
-    std::cout << "========================================================" << std::endl;
-
-//    // test non-nested tables
-    CALL_TEST_MACRO(test2Write<IdbUnits>, "IdbUnits");
-//    CALL_TEST_MACRO(test2Write<IdbPort>, "IdbPort");
-//    CALL_TEST_MACRO(test2Write<IdbTerm>, "IdbTerm");
-//
-//    CALL_TEST_MACRO(test2Write<IdbLayer>, "IdbLayer");
-//    CALL_TEST_MACRO(test2Write<IdbLayerShape>, "IdbLayerShape");
-
-
-    // test nested tables
-    CALL_TEST_MACRO(test2Write<IdbDesign>, "IdbDesign");
-
-
-    std::cout << "=======================================================" << std::endl;
-    std::cout << "[DefWriteEdadb] write DEF using EDADB backend finished." << std::endl;
-    std::cout << "=======================================================" << std::endl;
-
-    return true;
-} // test2Write
-
-
-
-template <typename T>
-bool DefWriteEdadb::test2Write()
-{
-    // initialize object
-    T obj;
-    test_edadb::init(&obj);
-
-    // create table
-    edadb::DbMap<T> dbmap;
-    if (!edadb::createTable(dbmap)) {
-        std::cerr << "Error: failed to create table " << dbmap.getTableName() << std::endl;
-        return false;
-    }
-    std::cout << "Info: succeeded to create table " << dbmap.getTableName() << std::endl;
-
-    // insert object
-    if (!edadb::insertObject(dbmap, &obj)) {
-        std::cerr << "Error: failed to insert " << dbmap.getTableName() << std::endl;
-        return false;
-    }
-    std::cout << "Info: succeeded to insert " << dbmap.getTableName() << std::endl;
-    std::cout << "===================================================" << std::endl;
-
-    return true;
-} // test2Write
-    
-
-template bool DefWriteEdadb::test2Write<IdbUnits> (void);
-//template bool DefWriteEdadb::test2Write<IdbPort>  (void);
-//template bool DefWriteEdadb::test2Write<IdbTerm>  (void);
-
-//template bool DefWriteEdadb::test2Write<IdbLayer> (void);
-//template bool DefWriteEdadb::test2Write<IdbLayerShape> (void);
-
-template bool DefWriteEdadb::test2Write<IdbDesign>(void);
-
-#endif 
 
 
 }  // namespace idb
