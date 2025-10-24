@@ -64,20 +64,21 @@ export READ_EDADB=1 # 0: read edadb; 1: read def
 
 ##gdb ./iEDA
 ./iEDA -script $EDADB_TCL_SCRIPT_DIR/def2edadb.tcl
-## ##gdb ./iEDA
-## ./iEDA -script $EDADB_TCL_SCRIPT_DIR/edadb2def.tcl
-## 
-## # compare input def and output def, output diff if different
-## echo "[demo.sh] compare input def and output def:"
-## echo "input def: $INPUT_DEF"
-## echo "output def: ${INPUT_DEF%.*}_edadb.def"
-## diff -q "$INPUT_DEF" "${INPUT_DEF%.*}${EDADB_DEF_POST}.def" > diff_output.txt || true
-## if [ ! -s diff_output.txt ]; then
-##     echo "Input def and output def are the same."
-##     rm diff_output.txt
-## else
-##     echo "Input def and output def are different. See diff below:"
-##     cat diff_output.txt
-##     rm diff_output.txt
-##     exit 1
-## fi 
+
+##gdb ./iEDA
+./iEDA -script $EDADB_TCL_SCRIPT_DIR/edadb2def.tcl
+
+# compare input def and output def, output diff if different
+echo "[demo.sh] compare input def and output def:"
+echo "input def: $INPUT_DEF"
+echo "output def: ${INPUT_DEF%.*}_edadb.def"
+diff -q "$INPUT_DEF" "${INPUT_DEF%.*}${EDADB_DEF_POST}.def" > diff_output.txt || true
+if [ ! -s diff_output.txt ]; then
+    echo "Input def and output def are the same."
+    rm diff_output.txt
+else
+    echo "Input def and output def are different. See diff below:"
+    cat diff_output.txt
+    rm diff_output.txt
+    exit 1
+fi 

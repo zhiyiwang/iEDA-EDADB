@@ -50,15 +50,15 @@ if {$write_edadb} {
     puts "==> WRITE_EDADB disabled, skip writing to edadb."
 }
 
-#===========================================================
-##   read edadb
-#===========================================================
-if {$read_edadb} {
-    puts "==> READ_EDADB=1: reading EDADB from $db_path"
-    edadb_read -edadb_db_path $db_path -path $::env(INPUT_DEF)
-} else {
-    puts "==> READ_EDADB disabled, skip reading edadb."
-}
+## #===========================================================
+## ##   read edadb
+## #===========================================================
+## if {$read_edadb} {
+##     puts "==> READ_EDADB=1: reading EDADB from $db_path"
+##     edadb_read -edadb_db_path $db_path -path $::env(INPUT_DEF)
+## } else {
+##     puts "==> READ_EDADB disabled, skip reading edadb."
+## }
 
 
 #===========================================================

@@ -394,7 +394,7 @@ bool IdbBuilder::writeDefToEdadb(const char* edadb_path, const DefWriteType type
 
     std::shared_ptr<DefWriteEdadb> def_write_edadb =
         std::make_shared<DefWriteEdadb>(_def_service, type);
-    return def_write_edadb->writeDbToEdadb(edadb_path);
+    return def_write_edadb->writeDb2Edadb(edadb_path);
 } // writeDefToEdadb
 
 

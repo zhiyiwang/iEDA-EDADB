@@ -20,10 +20,21 @@ public:
     DefWriteEdadb(IdbDefService* def_service, DefWriteType type = DefWriteType::kChip);
     virtual ~DefWriteEdadb() = default;
   
-    // writer
-    bool writeDbToEdadb(const char* edadb_path);
+    // operator using edadb 
+    bool writeDb2Edadb(const char* edadb_path);
 
-protected: // 
+protected: // writer
+    bool writeChip2Edadb();
+    bool writeDbSynthesis2Edadb();
+    bool writeLef2Edadb();
+ 
+protected:
+    /**
+     * write IdbDesign to edadb database, including DefWrite functions:
+     *   write_design, write_busbit_char, write_units, write_version
+     */
+    int32_t writeIdbDesign();
+
 
 
 }; // class DefWriteEdadb

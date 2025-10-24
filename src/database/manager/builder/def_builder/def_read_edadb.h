@@ -30,7 +30,7 @@ public:
      */
     bool createDbFromEdadb(const char* edadb_path, const char* path);
 
-private:
+protected:
     /**
      * @brief create database by def file
      * @param path def file path
@@ -44,6 +44,12 @@ private:
      * @return true if success, false otherwise
      */
     bool createDbByEdadb(const char* edadb_path);
+
+protected:
+    /**
+     *  read IdbDesign to edadb database
+     */
+    bool readIdbDesign();
 }; // class DefReadEdadb
 
 

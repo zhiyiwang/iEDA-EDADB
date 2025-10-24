@@ -30,16 +30,17 @@ if {$read_edadb || $write_edadb} {
 
 #### read from def and edadb
 
+set INPUT_DEF $::env(INPUT_DEF)
+
 #===========================================================
 ##   read def:
 #===========================================================
-set INPUT_DEF $::env(INPUT_DEF)
-if {[info exists ::env(READ_DEF)] && $::env(READ_DEF)} {
-    puts "==> READ_DEF enabled, reading DEF file..."
-    def_init -path $INPUT_DEF
-} else {
-    puts "==> READ_DEF disabled, skip reading DEF."
-}
+## if {[info exists ::env(READ_DEF)] && $::env(READ_DEF)} {
+##     puts "==> READ_DEF enabled, reading DEF file..."
+##     def_init -path $INPUT_DEF
+## } else {
+##     puts "==> READ_DEF disabled, skip reading DEF."
+## }
 
 #===========================================================
 ##   read edadb: 

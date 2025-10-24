@@ -17,7 +17,13 @@
 
 //////// macro for table and class mapping ////////////////////////////////////////
 
-TABLE4CLASS(idb::IdbUnits, "IdbUnits", (_nanoseconds, _picofarads, _ohms, _milliwatts, _milliamps, _volts, _micron_dbu, _megahertz));
+TABLE4CLASS(idb::IdbUnits, "iUnits", (_nanoseconds, _picofarads, _ohms, _milliwatts, _milliamps, _volts, _micron_dbu, _megahertz));
+
+TABLE4CLASS(idb::IdbBusBitChars, "iBusBitChars", (_left_delimiter, _right_delimiter))
+
+TABLE4CLASS(idb::IdbDesign, "iDesign", (_design_name, _version, _units, _bus_bit_chars));
+
+
 
 
 //// no primary key 
@@ -41,10 +47,5 @@ TABLE4CLASS(idb::IdbUnits, "IdbUnits", (_nanoseconds, _picofarads, _ohms, _milli
 //TABLE4CLASS(idb::IdbPin, "IdbPin", (_pin_name, _net_name, _io_term, 
 
 //TABLE4CLASS(idb::IdbNet, "IdbNet", (_net_name, _connect_type, _io_pin_list, _instance_pin_list, _wire_list));
-
-
-TABLE4CLASS(idb::IdbDesign, "IdbDesign", (_version, _design_name, _units));
-
-
 
 
