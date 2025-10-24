@@ -103,8 +103,7 @@ class IdbDesign
   bool connectIOPinToPowerStripe(std::vector<IdbCoordinate<int32_t>*>& point_list, IdbLayer* layer);
   bool connectPowerStripe(std::vector<IdbCoordinate<int32_t>*>& point_list, std::string net_name, std::string layer_name);
 
-// private:
-public:
+ private:
   std::string _version = "5.8";
   std::string _design_name;
   IdbUnits* _units;

@@ -80,8 +80,7 @@ class IdbUnits
   // verify data
   void print();
 
-// private:
-public:
+ private:
   int32_t _nanoseconds;
   int32_t _picofarads;
   int32_t _ohms;

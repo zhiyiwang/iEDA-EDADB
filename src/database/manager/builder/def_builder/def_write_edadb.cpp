@@ -100,7 +100,9 @@ int32_t DefWriteEdadb::writeIdbDesign() {
     }
 
 
-    edadb::DbMap<idb::IdbDesign> design_map;
+    edadb::DbMap<edadb::Shadow<idb::IdbDesign>> design_map;
+    edadb::Shadow<idb::IdbDesign> design_shadow;
+    design_shadow.toShadow(design);
 
     // create table in edadb
 #if DEBUG_EDADB_OUTPUT
@@ -115,7 +117,7 @@ int32_t DefWriteEdadb::writeIdbDesign() {
 #if DEBUG_EDADB_OUTPUT
     std::cout << "[DefWriteEdadb] insert IdbDesign object to edadb database" << std::endl;
 #endif 
-    if (!edadb::insertObject(design_map, design)) {
+    if (!edadb::insertObject(design_map, &design_shadow)) {
         std::cerr << "DefWriteEdadb::writeIdbDesign failed to insertObject" << std::endl;
         return kDbFail;
     }

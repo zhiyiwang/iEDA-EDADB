@@ -63,31 +63,35 @@ bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
 
 
 bool DefReadEdadb::readIdbDesign() {
-    edadb::DbMap<idb::IdbDesign> design_map;
+    edadb::DbMap<edadb::Shadow<idb::IdbDesign>> design_map;
     design_map.init();
 
-    idb::IdbDesign d;
-    edadb::DbMapReader<idb::IdbDesign>* rd = nullptr;
-    if (edadb::read2Scan<idb::IdbDesign>(rd, design_map, &d) <= 0) {
+    edadb::Shadow<idb::IdbDesign> got_shadow;
+    edadb::DbMapReader<edadb::Shadow<idb::IdbDesign>>* rd = nullptr;
+    if (edadb::read2Scan<edadb::Shadow<idb::IdbDesign>>(rd, design_map, &got_shadow) <= 0) {
         std::cout << "DefReadEdadb::readIdbDesign failed to read!" << std::endl;
         return false;
     } // if 
 
-    IdbDesign* design = _def_service->get_design();
-    design->set_design_name(d.get_design_name());
-    design->set_version(d.get_version());
-    std::cout << "EDADB DefReadEdadb::readIdbDesign read design name: " << d.get_design_name() << std::endl;
-    std::cout << "EDADB DefReadEdadb::readIdbDesign read design version: " << d.get_version() << std::endl;
+    IdbDesign got;
+    got_shadow.fromShadow(&got);
 
+    IdbDesign* design = _def_service->get_design();
+    design->set_design_name(got.get_design_name());
+    design->set_version(got.get_version());
+    std::cout << "EDADB DefReadEdadb::readIdbDesign read design name: " << got.get_design_name() << std::endl;
+    std::cout << "EDADB DefReadEdadb::readIdbDesign read design version: " << got.get_version() << std::endl;
+
+    // swap pointers 
     idb::IdbUnits* du = design->get_units();
-    idb::IdbUnits* ru = d.get_units();
+    idb::IdbUnits* ru = got.get_units();
     design->set_units(ru);
-    d.set_units(du);
+    got.set_units(du);
 
     idb::IdbBusBitChars* dbc = design->get_bus_bit_chars();
-    idb::IdbBusBitChars* rbc = d.get_bus_bit_chars();
+    idb::IdbBusBitChars* rbc = got.get_bus_bit_chars();
     design->set_bus_bit_chars(rbc);
-    d.set_bus_bit_chars(dbc);
+    got.set_bus_bit_chars(dbc);
 
     return true;
 } // readIdbDesign
