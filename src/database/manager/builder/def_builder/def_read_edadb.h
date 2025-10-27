@@ -46,10 +46,9 @@ protected:
     bool createDbByEdadb(const char* edadb_path);
 
 protected:
-    /**
-     *  read IdbDesign to edadb database
-     */
-    bool readIdbDesign();
+    bool readIdbDesign(void);
+    bool readIdbDie(void);
+
 }; // class DefReadEdadb
 
 

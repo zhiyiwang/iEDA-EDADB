@@ -67,6 +67,7 @@ bool DefWriteEdadb::writeDb2Edadb(const char* edadb_path)
 
 bool DefWriteEdadb::writeChip2Edadb() {
     writeIdbDesign();
+    writeIdbDie();
 
     return true;
 } // writeChip2Edadb
@@ -122,12 +123,52 @@ int32_t DefWriteEdadb::writeIdbDesign() {
         return kDbFail;
     }
 
+    return kDbSuccess;
+} // writeIdbDesign
 
-//  writestr("UNITS DISTANCE MICRONS %u ;\n", def_microns);
-//  string design_name = design->get_design_name();
-//  string version = design->get_version().empty() ? "5.8" : design->get_version();
+
+int32_t DefWriteEdadb::writeIdbDie(void) {
+    IdbLayout* layout = _def_service->get_layout();
+    IdbDie* die = layout->get_die();
+    if (die == nullptr) {
+       std::cout << "Write DIE error..." << std::endl;
+       return kDbFail;
+    }
+
+    edadb::DbMap< edadb::Shadow<idb::IdbCoordinate<int32_t>> > die_map;
+
+    // create table in edadb
+#if DEBUG_EDADB_OUTPUT
+    std::cout << "[DefWriteEdadb] write IdbDie to edadb database" << std::endl;
+#endif
+    if (!edadb::createTable(die_map)) {
+        std::cerr << "DefWriteEdadb::writeIdbDie failed to createTable" << std::endl;
+        return kDbFail; 
+    }
+
+    // insert object
+#if DEBUG_EDADB_OUTPUT
+    std::cout << "[DefWriteEdadb] insert IdbDie object to edadb database" << std::endl;
+#endif
+    std::vector< edadb::Shadow<idb::IdbCoordinate<int32_t>>* > ps_vec;
+    for (IdbCoordinate<int32_t>* point : die->get_points()) {
+        edadb::Shadow<idb::IdbCoordinate<int32_t>>* ps = new edadb::Shadow<idb::IdbCoordinate<int32_t>>();
+        ps->toShadow(point);
+        ps_vec.push_back(ps);
+    }
+
+    if (!edadb::insertVector(die_map, ps_vec)) {
+        std::cerr << "DefWriteEdadb::writeIdbDie failed to insertObject" << std::endl;
+        return kDbFail;
+    }
+
+    for (edadb::Shadow<idb::IdbCoordinate<int32_t>>* ps : ps_vec) {
+        delete ps;
+    }
 
     return kDbSuccess;
-}
+} // writeIdbDie
+
+
 
 }  // namespace idb

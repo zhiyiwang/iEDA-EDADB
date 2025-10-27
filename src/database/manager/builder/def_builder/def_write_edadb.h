@@ -29,11 +29,9 @@ protected: // writer
     bool writeLef2Edadb();
  
 protected:
-    /**
-     * write IdbDesign to edadb database, including DefWrite functions:
-     *   write_design, write_busbit_char, write_units, write_version
-     */
-    int32_t writeIdbDesign();
+    int32_t writeIdbDesign(void);
+    int32_t writeIdbDie(void);
+
 
 }; // class DefWriteEdadb
 

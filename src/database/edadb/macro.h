@@ -15,6 +15,14 @@
 #include "shadow.h"
 
 
+//////// global init function ////////////////////////////////////////
+namespace edadb {
+
+void initPrimKeys(void);
+
+} // edadb
+
+
 
 //////// macro for table and class mapping ////////////////////////////////////////
 
@@ -23,6 +31,13 @@ TABLE4EXTERNALCLASS(idb::IdbUnits, "iUnitsSD", (_nanoseconds_sd, _picofarads_sd,
 TABLE4EXTERNALCLASS(idb::IdbBusBitChars, "iBusBitCharsSD", (_left_delim_sd, _right_delim_sd));
 
 TABLE4EXTERNALCLASS(idb::IdbDesign, "iDesignSD", (_design_name_sd, _version_sd, _units_sd, _bus_bit_chars_sd));
+
+
+TABLE4EXTERNALCLASS(idb::IdbCoordinate<int32_t>, "iCoordSD", (_x_sd, _y_sd));
+
+//TABLE4CLASS(edadb::IdbDieShadow, "iDieSD", (_x_sd, _y_sd));
+
+    
 
 
 

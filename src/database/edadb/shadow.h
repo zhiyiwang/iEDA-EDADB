@@ -101,3 +101,43 @@ public:
     edadb::Shadow<idb::IdbUnits> _units_sd; 
     edadb::Shadow<idb::IdbBusBitChars> _bus_bit_chars_sd;
 };
+
+
+#include "../basic/geometry/IdbGeometry.h"
+template <>
+class edadb::Shadow<idb::IdbCoordinate<int32_t>> {
+public:
+    Shadow() = default;
+    ~Shadow() = default;
+
+public:
+    void fromShadow(idb::IdbCoordinate<int32_t>* obj) {
+        obj->set_x(_x_sd);
+        obj->set_y(_y_sd);
+    }
+
+    void toShadow(idb::IdbCoordinate<int32_t>* obj) {
+        _x_sd = obj->get_x();
+        _y_sd = obj->get_y();
+    }
+
+    void clear() {
+        _x_sd = 0;
+        _y_sd = 0;
+    }
+
+public:
+    int32_t _x_sd;
+    int32_t _y_sd;
+};
+
+
+#include "../data/design/db_layout/IdbDie.h"
+namespace edadb {
+// no need to define shadow class for IdbDie, 
+// directly store vector<IdbCoordinate<int32_t>*> _points instead.
+// So here we use edadb::Shadow<IdbCoordinate<int32_t>*> to store each point in the vector.
+// 
+// DO NOT need define the following typedef again, use 
+//   typedef edadb::Shadow<idb::IdbCoordinate<int32_t>> IdbDieShadow;
+}

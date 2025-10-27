@@ -42,8 +42,188 @@ bool DefReadEdadb::createDbFromEdadb(const char* edadb_path, const char* path)
 
 
 bool DefReadEdadb::createDbByDef(const char* path) {
-    return DefRead::createDb(path);
+    FILE* f = fopen(path, "r");
+    if (f == NULL) {
+      std::cerr << "Open def file failed..." << std::endl;
+      return false;
+    }
+
+    defrInit();
+    defrReset();
+
+    defrInitSession();
+
+//--    defrSetVersionStrCbk(versionCallback);
+//--    defrSetDesignCbk(designCallback);
+//--    defrSetBusBitCbk(busBitCharsCallBack);
+//--    defrSetUnitsCbk(unitsCallback);
+//    defrSetDieAreaCbk(dieAreaCallback);
+    defrSetBlockageCbk(blockageCallback);
+    defrSetComponentCbk(componentsCallback);
+    defrSetComponentStartCbk(componentNumberCallback);
+    defrSetComponentEndCbk(componentEndCallback);
+    defrSetFillStartCbk(fillsCallback);
+    defrSetFillCbk(fillCallback);
+    defrSetGcellGridCbk(gcellGridCallback);
+    defrSetGroupCbk(groupCallback);
+    defrSetNetStartCbk(netBeginCallback);
+    defrSetNetCbk(netCallback);
+    defrSetNetEndCbk(netEndCallback);
+    defrSetPinCbk(pinCallback);
+    defrSetPinEndCbk(pinsEndCallback);
+    defrSetStartPinsCbk(pinsBeginCallback);
+    defrSetRegionCbk(regionCallback);
+    defrSetRowCbk(rowCallback);
+    defrSetSlotCbk(slotsCallback);
+    defrSetSNetStartCbk(specialNetBeginCallback);
+    defrSetSNetCbk(specialNetCallback);
+    defrSetSNetEndCbk(specialNetEndCallback);
+    defrSetViaCbk(viaCallback);
+    defrSetViaStartCbk(viaBeginCallback);
+    defrSetAddPathToNet();
+    defrSetTrackCbk(trackGridCallback);
+//------------------------------------------------------------------
+
+    //   defrSetPropCbk(propCallback);
+    //   defrSetPropDefEndCbk(propEndCallback);
+    //   defrSetPropDefStartCbk(propStartCallback);
+    //  defrSetBlockageStartCbk(blockageBeginCallback);
+    //  defrSetBlockageEndCbk(blockageEndCallback);
+    //   defrSetComponentMaskShiftLayerCbk(componentMaskShiftCallback);
+    //   defrSetExtensionCbk(extensionCallback);
+    //   defrSetGroupMemberCbk(groupMemberCallback);
+    //   defrSetGroupNameCbk(groupNameCallback);
+    //   defrSetHistoryCbk(historyCallback);
+    //   defrSetNonDefaultCbk(nonDefaultRuleCallback);
+    //   defrSetPinPropCbk(pinPropCallback);
+    //   defrSetScanchainsStartCbk(scanchainsCallback);
+    // defrSetStartPinsCbk(pinsStartCallback);
+    //   defrSetStylesStartCbk(stylesCallback);
+    //   defrSetTechnologyCbk(technologyCallback);
+    // void* userData = (void*) 0x01020304;
+
+    int res = defrRead(f, path, (defiUserData) this, /* case sensitive */ 1);
+
+    if (res != 0) {
+      return false;
+    }
+
+    (void) defrUnsetCallbacks();
+
+    // Unset all the callbacks
+    defrUnsetArrayNameCbk();
+    defrUnsetAssertionCbk();
+    defrUnsetAssertionsStartCbk();
+    defrUnsetAssertionsEndCbk();
+    defrUnsetBlockageCbk();
+    defrUnsetBlockageStartCbk();
+    defrUnsetBlockageEndCbk();
+    defrUnsetBusBitCbk();
+    defrUnsetCannotOccupyCbk();
+    defrUnsetCanplaceCbk();
+    defrUnsetCaseSensitiveCbk();
+    defrUnsetComponentCbk();
+    defrUnsetComponentExtCbk();
+    defrUnsetComponentStartCbk();
+    defrUnsetComponentEndCbk();
+    defrUnsetConstraintCbk();
+    defrUnsetConstraintsStartCbk();
+    defrUnsetConstraintsEndCbk();
+    defrUnsetDefaultCapCbk();
+    defrUnsetDesignCbk();
+    defrUnsetDesignEndCbk();
+    defrUnsetDieAreaCbk();
+    defrUnsetDividerCbk();
+    defrUnsetExtensionCbk();
+    defrUnsetFillCbk();
+    defrUnsetFillStartCbk();
+    defrUnsetFillEndCbk();
+    defrUnsetFPCCbk();
+    defrUnsetFPCStartCbk();
+    defrUnsetFPCEndCbk();
+    defrUnsetFloorPlanNameCbk();
+    defrUnsetGcellGridCbk();
+    defrUnsetGroupCbk();
+    defrUnsetGroupExtCbk();
+    defrUnsetGroupMemberCbk();
+    defrUnsetComponentMaskShiftLayerCbk();
+    defrUnsetGroupNameCbk();
+    defrUnsetGroupsStartCbk();
+    defrUnsetGroupsEndCbk();
+    defrUnsetHistoryCbk();
+    defrUnsetIOTimingCbk();
+    defrUnsetIOTimingsStartCbk();
+    defrUnsetIOTimingsEndCbk();
+    defrUnsetIOTimingsExtCbk();
+    defrUnsetNetCbk();
+    defrUnsetNetNameCbk();
+    defrUnsetNetNonDefaultRuleCbk();
+    defrUnsetNetConnectionExtCbk();
+    defrUnsetNetExtCbk();
+    defrUnsetNetPartialPathCbk();
+    defrUnsetNetSubnetNameCbk();
+    defrUnsetNetStartCbk();
+    defrUnsetNetEndCbk();
+    defrUnsetNonDefaultCbk();
+    defrUnsetNonDefaultStartCbk();
+    defrUnsetNonDefaultEndCbk();
+    defrUnsetPartitionCbk();
+    defrUnsetPartitionsExtCbk();
+    defrUnsetPartitionsStartCbk();
+    defrUnsetPartitionsEndCbk();
+    defrUnsetPathCbk();
+    defrUnsetPinCapCbk();
+    defrUnsetPinCbk();
+    defrUnsetPinEndCbk();
+    defrUnsetPinExtCbk();
+    defrUnsetPinPropCbk();
+    defrUnsetPinPropStartCbk();
+    defrUnsetPinPropEndCbk();
+    defrUnsetPropCbk();
+    defrUnsetPropDefEndCbk();
+    defrUnsetPropDefStartCbk();
+    defrUnsetRegionCbk();
+    defrUnsetRegionStartCbk();
+    defrUnsetRegionEndCbk();
+    defrUnsetRowCbk();
+    defrUnsetScanChainExtCbk();
+    defrUnsetScanchainCbk();
+    defrUnsetScanchainsStartCbk();
+    defrUnsetScanchainsEndCbk();
+    defrUnsetSiteCbk();
+    defrUnsetSlotCbk();
+    defrUnsetSlotStartCbk();
+    defrUnsetSlotEndCbk();
+    defrUnsetSNetWireCbk();
+    defrUnsetSNetCbk();
+    defrUnsetSNetStartCbk();
+    defrUnsetSNetEndCbk();
+    defrUnsetSNetPartialPathCbk();
+    defrUnsetStartPinsCbk();
+    defrUnsetStylesCbk();
+    defrUnsetStylesStartCbk();
+    defrUnsetStylesEndCbk();
+    defrUnsetTechnologyCbk();
+    defrUnsetTimingDisableCbk();
+    defrUnsetTimingDisablesStartCbk();
+    defrUnsetTimingDisablesEndCbk();
+    defrUnsetTrackCbk();
+    defrUnsetUnitsCbk();
+    defrUnsetVersionCbk();
+    defrUnsetVersionStrCbk();
+    defrUnsetViaCbk();
+    defrUnsetViaExtCbk();
+    defrUnsetViaStartCbk();
+    defrUnsetViaEndCbk();
+
+    defrClear();
+
+    fclose(f);
+
+    return true;
 } // createDbByDef
+
+
 
 bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
 
@@ -54,6 +234,12 @@ bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
     // read IdbDesign from edadb database
     if (!readIdbDesign()) {
         std::cerr << "DefReadEdadb::createDbByEdadb failed to read IdbDesign!" << std::endl;
+        return false;
+    }
+
+    // read IdbDie from edadb database
+    if (!readIdbDie()) {
+        std::cerr << "DefReadEdadb::createDbByEdadb failed to read IdbDie!" << std::endl;
         return false;
     }
 
@@ -79,8 +265,6 @@ bool DefReadEdadb::readIdbDesign() {
     IdbDesign* design = _def_service->get_design();
     design->set_design_name(got.get_design_name());
     design->set_version(got.get_version());
-    std::cout << "EDADB DefReadEdadb::readIdbDesign read design name: " << got.get_design_name() << std::endl;
-    std::cout << "EDADB DefReadEdadb::readIdbDesign read design version: " << got.get_version() << std::endl;
 
     // swap pointers 
     idb::IdbUnits* du = design->get_units();
@@ -97,5 +281,30 @@ bool DefReadEdadb::readIdbDesign() {
 } // readIdbDesign
 
 
+
+bool DefReadEdadb::readIdbDie(void) {
+    IdbLayout* layout = _def_service->get_layout();
+    IdbDie* die = layout->get_die();
+    if (die == nullptr) {
+        std::cerr << "DefReadEdadb::IdbDie failed, die is nullptr!" << std::endl;
+        return false;
+    }
+
+    assert(die->get_points().empty());
+
+    edadb::DbMap< edadb::Shadow<idb::IdbCoordinate<int32_t>> > die_map;
+    die_map.init();
+    edadb::DbMapReader< edadb::Shadow<idb::IdbCoordinate<int32_t>> >* rd = nullptr;
+    edadb::Shadow<idb::IdbCoordinate<int32_t>> ps;
+    int got = 0;
+    while ((got = edadb::read2Scan(rd, die_map, &ps)) > 0) {
+        idb::IdbCoordinate<int32_t> *coord = new idb::IdbCoordinate<int32_t>();
+        ps.fromShadow(coord);
+        die->get_points().push_back(coord);
+        ps.clear();
+    }
+
+    return true;
+} // readIdbDie
 
 } // namespace idb
