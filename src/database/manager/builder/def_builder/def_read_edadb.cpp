@@ -26,10 +26,10 @@ bool DefReadEdadb::createDbFromEdadb(const char* edadb_path, const char* path)
          return false;
     }
 
-//    if (!createDbByDef(path)) {
-//        std::cerr << "Error: DefReadEdadb::createDbFromEdadb failed!" << std::endl; 
-//        return false;
-//    }
+    if (!createDbByDef(path)) {
+        std::cerr << "Error: DefReadEdadb::createDbFromEdadb failed!" << std::endl; 
+        return false;
+    }
 
     if (!createDbByEdadb(edadb_path)) {
         std::cerr << "Error: DefReadEdadb::createDbFromEdadb failed!" << std::endl;
@@ -57,7 +57,7 @@ bool DefReadEdadb::createDbByDef(const char* path) {
 //--    defrSetDesignCbk(designCallback);
 //--    defrSetBusBitCbk(busBitCharsCallBack);
 //--    defrSetUnitsCbk(unitsCallback);
-//    defrSetDieAreaCbk(dieAreaCallback);
+//--    defrSetDieAreaCbk(dieAreaCallback);
     defrSetBlockageCbk(blockageCallback);
     defrSetComponentCbk(componentsCallback);
     defrSetComponentStartCbk(componentNumberCallback);
