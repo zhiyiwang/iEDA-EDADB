@@ -76,7 +76,11 @@ class IdbCoordinate
 
   // operation
 
+#if EDADB_ENABLE
+public:
+#else
 private:
+#endif
   T _x;
   T _y;
 };

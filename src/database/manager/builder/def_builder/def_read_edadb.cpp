@@ -227,7 +227,7 @@ bool DefReadEdadb::createDbByDef(const char* path) {
 
 bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
 
-#if DEBUG_EDADB_OUTPUT
+#if EDADB_OUTPUT_DEBUG
     std::cout << "DEADB: Def read to EDADB database : " << edadb_path << std::endl;
 #endif
 
@@ -249,33 +249,28 @@ bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
 
 
 bool DefReadEdadb::readIdbDesign() {
-    edadb::DbMap<edadb::Shadow<idb::IdbDesign>> design_map;
+    edadb::DbMap<idb::IdbDesign> design_map;
     design_map.init();
 
-    edadb::Shadow<idb::IdbDesign> got_shadow;
-    edadb::DbMapReader<edadb::Shadow<idb::IdbDesign>>* rd = nullptr;
-    if (edadb::read2Scan<edadb::Shadow<idb::IdbDesign>>(rd, design_map, &got_shadow) <= 0) {
+    idb::IdbDesign got;
+    edadb::DbMapReader<idb::IdbDesign>* rd = nullptr;
+    if (edadb::read2Scan<idb::IdbDesign>(rd, design_map, &got) <= 0) {
         std::cout << "DefReadEdadb::readIdbDesign failed to read!" << std::endl;
         return false;
     } // if 
-
-    IdbDesign got;
-    got_shadow.fromShadow(&got);
 
     IdbDesign* design = _def_service->get_design();
     design->set_design_name(got.get_design_name());
     design->set_version(got.get_version());
 
-    // swap pointers 
-    idb::IdbUnits* du = design->get_units();
-    idb::IdbUnits* ru = got.get_units();
-    design->set_units(ru);
-    got.set_units(du);
+    // update the design pointer members
+    delete design->get_units();
+    design->set_units(got.get_units());
+    got.set_units(nullptr);
 
-    idb::IdbBusBitChars* dbc = design->get_bus_bit_chars();
-    idb::IdbBusBitChars* rbc = got.get_bus_bit_chars();
-    design->set_bus_bit_chars(rbc);
-    got.set_bus_bit_chars(dbc);
+    delete design->get_bus_bit_chars();
+    design->set_bus_bit_chars( got.get_bus_bit_chars() );
+    got.set_bus_bit_chars(nullptr);
 
     return true;
 } // readIdbDesign
@@ -292,17 +287,16 @@ bool DefReadEdadb::readIdbDie(void) {
 
     assert(die->get_points().empty());
 
-    edadb::DbMap< edadb::Shadow<idb::IdbCoordinate<int32_t>> > die_map;
-    die_map.init();
-    edadb::DbMapReader< edadb::Shadow<idb::IdbCoordinate<int32_t>> >* rd = nullptr;
-    edadb::Shadow<idb::IdbCoordinate<int32_t>> ps;
+    edadb::Shadow<idb::IdbDie> die_sd;
+    edadb::DbMap< edadb::Shadow<idb::IdbDie> > die_sd_map;
+    die_sd_map.init();
+    edadb::DbMapReader< edadb::Shadow<idb::IdbDie> >* die_sd_rd = nullptr;
     int got = 0;
-    while ((got = edadb::read2Scan(rd, die_map, &ps)) > 0) {
-        idb::IdbCoordinate<int32_t> *coord = new idb::IdbCoordinate<int32_t>();
-        ps.fromShadow(coord);
-        die->get_points().push_back(coord);
-        ps.clear();
+    if ((edadb::read2Scan<edadb::Shadow<idb::IdbDie>>(die_sd_rd, die_sd_map, &die_sd)) <= 0) {
+        std::cout << "DefReadEdadb::readIdbDie failed to read!" << std::endl;
+        return false;
     }
+    die_sd.fromShadow(die);
 
     return true;
 } // readIdbDie

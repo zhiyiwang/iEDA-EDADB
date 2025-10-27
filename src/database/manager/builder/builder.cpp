@@ -354,7 +354,7 @@ IdbDefService* IdbBuilder::buildDefFromEdadb(const char* edadb_path, const char*
       return nullptr;
     }
   
-#if DEBUG_EDADB_OUTPUT
+#if EDADB_OUTPUT_DEBUG
     std::cout << "Read DEF from EDADB database : " << edadb_path << endl;
 
     std::cout << "###################################" << std::endl;
@@ -385,7 +385,7 @@ bool IdbBuilder::writeDefToEdadb(const char* edadb_path, const DefWriteType type
       return false;
     }
 
-#if DEBUG_EDADB_OUTPUT
+#if EDADB_OUTPUT_DEBUG
     std::cout << "###################################" << std::endl;
     std::cout << "Write DEF to EDADB database : "      << edadb_path 
         << std::endl << std::flush; 

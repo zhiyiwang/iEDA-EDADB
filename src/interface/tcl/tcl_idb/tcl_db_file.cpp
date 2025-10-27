@@ -541,7 +541,7 @@ unsigned CmdEdadbRead::exec()
   TclOption* edadb_path_opt = getOptionOrArg(TCL_EDADB_DB_PATH);
   const char* edadb_path = edadb_path_opt->getStringVal();
 
-#if DEBUG_EDADB_OUTPUT
+#if EDADB_OUTPUT_DEBUG
   std::cout<<"###################################" << std::endl;
   std::cout<<"CmdEdadbRead::exec()\n";
   std::cout << "TCL_PATH: " << (path ? path : "null") << std::endl;
@@ -597,7 +597,7 @@ unsigned CmdEdadbWrite::exec()
   TclOption* edadb_path_opt = getOptionOrArg(TCL_EDADB_DB_PATH);
   const char* edadb_path = edadb_path_opt->getStringVal();
 
-#if DEBUG_EDADB_OUTPUT
+#if EDADB_OUTPUT_DEBUG
   std::cout<<"###################################" << std::endl;
   std::cout<<"CmdEdadbWrite::exec()\n";
   std::cout << "TCL_NAME: " << (name ? name : "null") << std::endl;

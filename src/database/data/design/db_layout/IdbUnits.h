@@ -80,7 +80,11 @@ class IdbUnits
   // verify data
   void print();
 
+#if EDADB_ENABLE
+ public:
+#else
  private:
+#endif 
   int32_t _nanoseconds;
   int32_t _picofarads;
   int32_t _ohms;

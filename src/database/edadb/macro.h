@@ -25,17 +25,16 @@ void initPrimKeys(void);
 
 
 //////// macro for table and class mapping ////////////////////////////////////////
+TABLE4CLASS(idb::IdbUnits, "iUnits", (_nanoseconds, _picofarads, _ohms, _milliwatts, _milliamps, _volts, _micron_dbu, _megahertz));
 
-TABLE4EXTERNALCLASS(idb::IdbUnits, "iUnitsSD", (_nanoseconds_sd, _picofarads_sd, _ohms_sd, _milliwatts_sd, _milliamps_sd, _volts_sd, _micron_dbu_sd, _megahertz_sd));
+TABLE4CLASS(idb::IdbBusBitChars, "iBusBitChars", (_left_delimiter, _right_delimiter));
 
-TABLE4EXTERNALCLASS(idb::IdbBusBitChars, "iBusBitCharsSD", (_left_delim_sd, _right_delim_sd));
-
-TABLE4EXTERNALCLASS(idb::IdbDesign, "iDesignSD", (_design_name_sd, _version_sd, _units_sd, _bus_bit_chars_sd));
+TABLE4CLASS(idb::IdbDesign, "iDesign", (_design_name, _version, _units, _bus_bit_chars));
 
 
-TABLE4EXTERNALCLASS(idb::IdbCoordinate<int32_t>, "iCoordSD", (_x_sd, _y_sd));
+TABLE4CLASS(idb::IdbCoordinate<int32_t>, "iCoord", (_x, _y));
 
-//TABLE4CLASS(edadb::IdbDieShadow, "iDieSD", (_x_sd, _y_sd));
+TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbDie>, "iDieSD", (primary_key), (points_sd));
 
     
 

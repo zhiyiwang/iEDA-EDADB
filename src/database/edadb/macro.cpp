@@ -10,11 +10,12 @@
 namespace edadb {
 
 void initPrimKeys(void) {
-    edadb::Cpp2SqlTypeTrait<edadb::Shadow<idb::IdbUnits>>::hasPrimKey = false;
-    edadb::Cpp2SqlTypeTrait<edadb::Shadow<idb::IdbBusBitChars>>::hasPrimKey = false;
+    edadb::Cpp2SqlTypeTrait<idb::IdbUnits>::hasPrimKey = false;
+    edadb::Cpp2SqlTypeTrait<idb::IdbBusBitChars>::hasPrimKey = false;
 
-    edadb::Cpp2SqlTypeTrait<edadb::Shadow<idb::IdbCoordinate<int32_t>>>::hasPrimKey = false;
+    edadb::Cpp2SqlTypeTrait<idb::IdbCoordinate<int32_t>>::hasPrimKey = false;
+
 }
 
 
-} // edadb 
+} // namespace edadb

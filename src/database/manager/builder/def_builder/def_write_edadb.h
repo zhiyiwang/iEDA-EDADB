@@ -32,7 +32,6 @@ protected:
     int32_t writeIdbDesign(void);
     int32_t writeIdbDie(void);
 
-
 }; // class DefWriteEdadb
 
 

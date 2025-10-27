@@ -28,7 +28,7 @@ bool DefWriteEdadb::writeDb2Edadb(const char* edadb_path)
         return false;
     }
 
-#if DEBUG_EDADB_OUTPUT
+#if EDADB_OUTPUT_DEBUG
     std::cout << "EDADB: Def write to EDADB database : " << edadb_path << std::endl;
 #endif 
 
@@ -101,12 +101,11 @@ int32_t DefWriteEdadb::writeIdbDesign() {
     }
 
 
-    edadb::DbMap<edadb::Shadow<idb::IdbDesign>> design_map;
-    edadb::Shadow<idb::IdbDesign> design_shadow;
-    design_shadow.toShadow(design);
+    edadb::DbMap<idb::IdbDesign> design_map;
+    design_map.init();
 
     // create table in edadb
-#if DEBUG_EDADB_OUTPUT
+#if EDADB_OUTPUT_DEBUG
     std::cout << "[DefWriteEdadb] write IdbDesign to edadb database" << std::endl;
 #endif 
     if (!edadb::createTable(design_map)) {
@@ -115,10 +114,10 @@ int32_t DefWriteEdadb::writeIdbDesign() {
     }
 
     // insert object
-#if DEBUG_EDADB_OUTPUT
+#if EDADB_OUTPUT_DEBUG
     std::cout << "[DefWriteEdadb] insert IdbDesign object to edadb database" << std::endl;
 #endif 
-    if (!edadb::insertObject(design_map, &design_shadow)) {
+    if (!edadb::insertObject(design_map, design)) {
         std::cerr << "DefWriteEdadb::writeIdbDesign failed to insertObject" << std::endl;
         return kDbFail;
     }
@@ -135,35 +134,28 @@ int32_t DefWriteEdadb::writeIdbDie(void) {
        return kDbFail;
     }
 
-    edadb::DbMap< edadb::Shadow<idb::IdbCoordinate<int32_t>> > die_map;
+    edadb::DbMap< edadb::Shadow<idb::IdbDie> > die_sd_map;
+    die_sd_map.init();
 
     // create table in edadb
-#if DEBUG_EDADB_OUTPUT
+#if EDADB_OUTPUT_DEBUG
     std::cout << "[DefWriteEdadb] write IdbDie to edadb database" << std::endl;
 #endif
-    if (!edadb::createTable(die_map)) {
+    if (!edadb::createTable(die_sd_map)) {
         std::cerr << "DefWriteEdadb::writeIdbDie failed to createTable" << std::endl;
         return kDbFail; 
     }
 
     // insert object
-#if DEBUG_EDADB_OUTPUT
+#if EDADB_OUTPUT_DEBUG
     std::cout << "[DefWriteEdadb] insert IdbDie object to edadb database" << std::endl;
 #endif
-    std::vector< edadb::Shadow<idb::IdbCoordinate<int32_t>>* > ps_vec;
-    for (IdbCoordinate<int32_t>* point : die->get_points()) {
-        edadb::Shadow<idb::IdbCoordinate<int32_t>>* ps = new edadb::Shadow<idb::IdbCoordinate<int32_t>>();
-        ps->toShadow(point);
-        ps_vec.push_back(ps);
-    }
+    edadb::Shadow<idb::IdbDie> die_sd;
+    die_sd.toShadow(die);
 
-    if (!edadb::insertVector(die_map, ps_vec)) {
+    if (!edadb::insertObject(die_sd_map, &die_sd)) {
         std::cerr << "DefWriteEdadb::writeIdbDie failed to insertObject" << std::endl;
         return kDbFail;
-    }
-
-    for (edadb::Shadow<idb::IdbCoordinate<int32_t>>* ps : ps_vec) {
-        delete ps;
     }
 
     return kDbSuccess;
