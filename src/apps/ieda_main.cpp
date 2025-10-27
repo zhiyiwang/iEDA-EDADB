@@ -33,6 +33,7 @@
 //////[USE_EDADB]
 //////zhiyi: test edadb@src/third_party/edadb/
 #include "edadb.h"
+#include "macro.h"
 
 using namespace iplf;
 
@@ -67,6 +68,9 @@ int main(int argc, char** argv)
   if (printVersion) {
     std::cout << "Git version: " << iEDA_GIT_VERSION << std::endl;
   }
+
+  edadb::initPrimKeys();
+
 
   plfInst->runTcl(argc, argv);
 
