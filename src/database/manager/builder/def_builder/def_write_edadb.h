@@ -31,8 +31,9 @@ protected: // writer
 protected:
     int32_t writeIdbDesign(void);
     int32_t writeIdbDie(void);
+    int32_t writeIdbGCellGridList(void);
 
-}; // class DefWriteEdadb
+}; // DefWriteEdadb
 
 
 }  // namespace idb

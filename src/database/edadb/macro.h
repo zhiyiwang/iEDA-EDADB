@@ -6,9 +6,9 @@
 
 #pragma once
 
+#include "../data/design/IdbEnum.h"
 #include "../data/design/IdbDesign.h"
 #include "../data/design/db_layout/IdbUnits.h"
-#include "../data/design/IdbEnum.h"
 #include "../data/design/db_layout/IdbTerm.h"
 
 #include "../../third_party/edadb/include/edadb.h"
@@ -36,6 +36,9 @@ TABLE4CLASS(idb::IdbCoordinate<int32_t>, "iCoord", (_x, _y));
 
 TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbDie>, "iDieSD", (primary_key), (points_sd));
 
+
+#include "../data/design/db_layout/IdbGCellGrid.h"
+TABLE4CLASS(idb::IdbGCellGrid, "iGCellGrid", (_direction, _start, _num, _space));
     
 
 

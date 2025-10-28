@@ -63,7 +63,11 @@ class IdbGCellGrid
 
   // operator
 
+#if EDADB_ENABLE
+ public:
+#else
  private:
+#endif 
   IdbTrackDirection _direction;
   int32_t _start;
   int32_t _num;

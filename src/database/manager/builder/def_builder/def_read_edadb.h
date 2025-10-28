@@ -48,6 +48,7 @@ protected:
 protected:
     bool readIdbDesign(void);
     bool readIdbDie(void);
+    bool readIdbGCellGridList(void);
 
 }; // class DefReadEdadb
 

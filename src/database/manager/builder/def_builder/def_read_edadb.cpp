@@ -58,13 +58,13 @@ bool DefReadEdadb::createDbByDef(const char* path) {
 //--    defrSetBusBitCbk(busBitCharsCallBack);
 //--    defrSetUnitsCbk(unitsCallback);
 //--    defrSetDieAreaCbk(dieAreaCallback);
+//--    defrSetGcellGridCbk(gcellGridCallback);
     defrSetBlockageCbk(blockageCallback);
     defrSetComponentCbk(componentsCallback);
     defrSetComponentStartCbk(componentNumberCallback);
     defrSetComponentEndCbk(componentEndCallback);
     defrSetFillStartCbk(fillsCallback);
     defrSetFillCbk(fillCallback);
-    defrSetGcellGridCbk(gcellGridCallback);
     defrSetGroupCbk(groupCallback);
     defrSetNetStartCbk(netBeginCallback);
     defrSetNetCbk(netCallback);
@@ -231,15 +231,20 @@ bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
     std::cout << "DEADB: Def read to EDADB database : " << edadb_path << std::endl;
 #endif
 
-    // read IdbDesign from edadb database
+    //////// read iEDA Idb classes from edadb database ////////////////////////
+
     if (!readIdbDesign()) {
         std::cerr << "DefReadEdadb::createDbByEdadb failed to read IdbDesign!" << std::endl;
         return false;
     }
 
-    // read IdbDie from edadb database
     if (!readIdbDie()) {
         std::cerr << "DefReadEdadb::createDbByEdadb failed to read IdbDie!" << std::endl;
+        return false;
+    }
+
+    if (!readIdbGCellGridList()) {
+        std::cerr << "DefReadEdadb::createDbByEdadb failed to read IdbGCellGridList!" << std::endl;
         return false;
     }
 
@@ -291,7 +296,6 @@ bool DefReadEdadb::readIdbDie(void) {
     edadb::DbMap< edadb::Shadow<idb::IdbDie> > die_sd_map;
     die_sd_map.init();
     edadb::DbMapReader< edadb::Shadow<idb::IdbDie> >* die_sd_rd = nullptr;
-    int got = 0;
     if ((edadb::read2Scan<edadb::Shadow<idb::IdbDie>>(die_sd_rd, die_sd_map, &die_sd)) <= 0) {
         std::cout << "DefReadEdadb::readIdbDie failed to read!" << std::endl;
         return false;
@@ -300,5 +304,46 @@ bool DefReadEdadb::readIdbDie(void) {
 
     return true;
 } // readIdbDie
+
+
+
+bool DefReadEdadb::readIdbGCellGridList(void) {
+    edadb::DbMap<idb::IdbGCellGrid> gcell_grid_map;
+    gcell_grid_map.init();
+
+    // check if gcell grid table exists
+    const std::string table_name = gcell_grid_map.getTableName();
+    if (!edadb::tableExists(table_name)) {
+        // no gcell grid table, return true
+        std::cout << "EDADB DefReadEdadb::readIdbGCellGridList: no table " << table_name << " exists." << std::endl;
+        return true;
+    }
+
+    IdbLayout* layout = _def_service->get_layout();  // Lef
+    IdbGCellGridList* gcell_grid_list = layout->get_gcell_grid_list();
+
+    int got = 0;
+    edadb::DbMapReader<idb::IdbGCellGrid>* rd = nullptr;
+    while (true) {
+        IdbGCellGrid* gcell_grid = new IdbGCellGrid();
+        got = edadb::read2Scan<idb::IdbGCellGrid>(rd, gcell_grid_map, gcell_grid);
+        if (got == 0) {
+            delete gcell_grid;
+            break;
+        }
+        else if (got < 0) {
+            std::cout << "DefReadEdadb::readIdbGCellGridList failed to read!" << std::endl;
+            return false;
+        }
+        gcell_grid_list->add_gcell_grid(gcell_grid);
+    } // while
+
+    if (got < 0) {
+        std::cout << "DefReadEdadb::readIdbGCellGridList failed to read!" << std::endl;
+        return false;
+    }
+
+    return true;
+} // readIdbGCellGridList
 
 } // namespace idb
