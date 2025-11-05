@@ -106,7 +106,11 @@ class IdbLayerShape
   bool isIntersected(int llx, int lly, int urx, int ury, IdbLayer* layer = nullptr);
   bool isIntersected(IdbRect* rect_check, IdbLayer* layer = nullptr);
 
+#if EDADB_ENABLE
+ public:
+#else
  private:
+#endif
   IdbLayerShapeType _type;
   IdbLayer* _layer;
   std::vector<IdbRect*> _rect_list;

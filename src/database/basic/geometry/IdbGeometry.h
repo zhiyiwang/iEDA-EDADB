@@ -205,7 +205,11 @@ class IdbRect
   bool isIntersection(IdbRect rect);
   bool isIntersection(IdbRect* rect);
 
+#if EDADB_ENABLE
+ public:
+#else   
 private:
+#endif
   int32_t _lx;
   int32_t _ly;
   int32_t _hx;

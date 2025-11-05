@@ -101,7 +101,11 @@ class IdbViaMasterRulePattern
     return false;
   }
 
+#if EDADB_ENABLE
+ public:
+#else
  private:
+#endif
   string _pattern;
 
   /// definition
@@ -225,7 +229,11 @@ class IdbViaMasterGenerate
   IdbViaMasterGenerate* clone();
   void clear();
 
+#if EDADB_ENABLE
+ public:
+#else
  private:
+#endif
   string _rule_name;
   IdbViaRuleGenerate* _rule_generate;
   int32_t _cut_size_x;
@@ -377,7 +385,11 @@ class IdbViaMaster
   IdbViaMaster* clone();
   void clear();
 
+#if EDADB_ENABLE
+ public:
+#else
  private:
+#endif
   string _name;
   IdbRect* _cut_rect;  // the core area of cut
   IdbViaMasterGenerate* _master_generate;

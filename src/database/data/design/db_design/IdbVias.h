@@ -81,7 +81,11 @@ class IdbVia : public IdbObject
 
   bool isIntersection(IdbRect rect, IdbLayer* layer);
 
+#if EDADB_ENABLE
+ public:
+#else
  private:
+#endif
   string _name;
   IdbViaMaster* _master_instance;
   bool _b_master_clone = false;
