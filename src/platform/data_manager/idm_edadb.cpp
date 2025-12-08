@@ -30,14 +30,14 @@ bool DataManager::readDefFromEdadb(const char* edadb_path, const char* path)
 } // readDefFromEdadb
 
 
-bool DataManager::writeDefToEdadb(const char* edadb_path)
+bool DataManager::saveDefToEdadb(const char* edadb_path)
 {
     if (_idb_builder == nullptr || _idb_lef_service == nullptr || _layout == nullptr) {
       return false;
     }
 
-    return _idb_builder->writeDefToEdadb(edadb_path);
-} // writeDefToEdadb
+    return _idb_builder->saveDefToEdadb(edadb_path);
+} // saveDefToEdadb
 
 
 } // namespace idm

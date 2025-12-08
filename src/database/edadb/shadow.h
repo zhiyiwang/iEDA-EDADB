@@ -38,61 +38,39 @@ private:
 
 
 
-//#include "../basic/geometry/IdbLayerShape.h"
-//namespace edadb {
-//template<>
-//class Shadow<idb::IdbLayerShape> {
-//public:
-//    Shadow(): primary_key(next_primary_key++) {}
-//public:
-//    void fromShadow(idb::IdbLayerShape* obj) {
-//        obj->_type = _type_sd;
-//        auto& rect_list = obj->get_rect_list();
-//        assert(rect_list.empty());
-//        _rect_list_sd.swap(rect_list);
-//        
-//        // layer name: use name to get layer instance during def read
-//        _layer_name_sd.assign(obj->get_layer()->get_name());
-//    } 
-//    void toShadow(idb::IdbLayerShape* obj) {
-//        _type_sd = obj->get_type();
-//        // assign to write, no need to deep copy
-//        _rect_list_sd = obj->get_rect_list(); 
-//
-//        _layer_name_sd = obj->get_layer() ? obj->get_layer()->get_name() : "";
-//    }
-//
-//public:
-//    uint64_t primary_key = 0;
-//    idb::IdbLayerShapeType _type_sd;
-//    std::string _layer_name_sd;
-//    std::vector<idb::IdbRect*> _rect_list_sd;
-//private:
-//    static inline uint64_t next_primary_key = 1;
-//}; // idb::IdbLayerShape
-//} // namespace edadb
+#include "../basic/geometry/IdbLayerShape.h"
+namespace edadb {
+template<>
+class Shadow<idb::IdbLayerShape> {
+public:
+    void fromShadow(idb::IdbLayerShape* obj) {
+        // layer name is the primary key to get layer instance,
+        // use name to get layer instance during def read
+        _layer_name_sd.assign(obj->get_layer()->get_name());
+        obj->_type = _type_sd;
+        auto& rect_list = obj->get_rect_list();
+        assert(rect_list.empty());
+        _rect_list_sd.swap(rect_list);
+        
+    } 
+    void toShadow(idb::IdbLayerShape* obj) {
+        _layer_name_sd = obj->get_layer() ? obj->get_layer()->get_name() : "";
+        _type_sd = obj->get_type();
+        // assign to write, no need to deep copy
+        _rect_list_sd = obj->get_rect_list(); 
+    }
+
+public:
+    std::string _layer_name_sd;
+    idb::IdbLayerShapeType _type_sd;
+    std::vector<idb::IdbRect*> _rect_list_sd;
+}; // idb::IdbLayerShape
+} // namespace edadb
 
 
 
 #include "../data/design/db_layout/IdbViaMaster.h"
 namespace edadb {
-template<>
-class Shadow<idb::IdbViaMasterFixed> {
-public:
-    Shadow(): primary_key(next_primary_key++) {}
-public:
-    void toShadow(idb::IdbViaMasterFixed* obj){
-//        _layer_shape_sd.toShadow( obj->get_layer_shape() );
-    }
-    void fromShadow(idb::IdbViaMasterFixed* obj){
-//        _layer_shape_sd.fromShadow( obj->get_layer_shape() );
-    }
-public:
-    uint64_t primary_key = 0;
-//    Shadow<idb::IdbLayerShape> _layer_shape_sd;
-private:
-    static inline uint64_t next_primary_key = 1;
-}; // idb::IdbViaMasterFixed
 
 
 template<>
@@ -176,10 +154,10 @@ template<>
 class Shadow<idb::IdbViaMaster> {
 public:
     ~Shadow<idb::IdbViaMaster>() {
-        for (auto& fixed : _master_fixed_list_sd) {
+        for (auto& fixed : fixed_layer_shape_list_sd) {
             delete fixed;
         }
-        _master_fixed_list_sd.clear();
+        fixed_layer_shape_list_sd.clear();
     }
 public:
     void toShadow(idb::IdbViaMaster* obj){
@@ -188,9 +166,9 @@ public:
         _master_generate_sd.toShadow( obj->get_master_generate() );
 
         for ( auto& fixed : obj->get_master_fixed_list() ) {
-            Shadow<idb::IdbViaMasterFixed> *sd = new Shadow<idb::IdbViaMasterFixed>();
-            sd->toShadow( fixed );
-            _master_fixed_list_sd.emplace_back(sd);
+            Shadow<idb::IdbLayerShape> *sd = new Shadow<idb::IdbLayerShape>();
+            sd->toShadow( fixed->get_layer_shape() );
+            fixed_layer_shape_list_sd.emplace_back(sd);
         }
     }
     void fromShadow(idb::IdbViaMaster* obj){
@@ -200,16 +178,18 @@ public:
 
         auto& fixed_list = obj->get_master_fixed_list();
         assert( fixed_list.empty() );
-        for ( auto& fixed_sd : _master_fixed_list_sd ) {
+        for ( auto& fixed_sd : fixed_layer_shape_list_sd ) {
             fixed_list.emplace_back( new idb::IdbViaMasterFixed() );
-            fixed_sd->fromShadow( fixed_list.back() );   
+            fixed_sd->fromShadow( fixed_list.back()->get_layer_shape() );   
         }
     }
 public:
     std::string _name_sd;
     idb::IdbViaMaster::IdbViaMasterType _type_sd;
     Shadow<idb::IdbViaMasterGenerate> _master_generate_sd;
-    std::vector< Shadow<idb::IdbViaMasterFixed>* > _master_fixed_list_sd;
+
+    // direct use the layer shape shadow to avoid higher level shadow include
+    std::vector< Shadow<idb::IdbLayerShape >* > fixed_layer_shape_list_sd;
 }; // IdbViaMaster
 
 } // namespace edadb

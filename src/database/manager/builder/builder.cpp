@@ -375,7 +375,7 @@ IdbDefService* IdbBuilder::buildDefFromEdadb(const char* edadb_path, const char*
 } // buildDefFromEdadb
 
 
-bool IdbBuilder::writeDefToEdadb(const char* edadb_path, const DefWriteType type)
+bool IdbBuilder::saveDefToEdadb(const char* edadb_path, const DefWriteType type)
 {
     // open edadb database file for write and close the file
     // then set _def_write_file in class IdbDefService
@@ -395,7 +395,7 @@ bool IdbBuilder::writeDefToEdadb(const char* edadb_path, const DefWriteType type
     std::shared_ptr<DefWriteEdadb> def_write_edadb =
         std::make_shared<DefWriteEdadb>(_def_service, type);
     return def_write_edadb->writeDb2Edadb(edadb_path);
-} // writeDefToEdadb
+} // saveDefToEdadb
 
 
 }  // namespace idb

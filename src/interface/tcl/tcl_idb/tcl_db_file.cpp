@@ -556,7 +556,7 @@ unsigned CmdEdadbRead::exec()
   }
 
   return 0;
-}
+} // CmdEdadbRead::exec()
 
 
 
@@ -607,12 +607,12 @@ unsigned CmdEdadbWrite::exec()
 #endif
 
   if (edadb_path != nullptr) {
-      dmInst->writeDefToEdadb(edadb_path);
+      dmInst->saveDefToEdadb(edadb_path);
       return 1;
   }
 
   return 0;
-}
+} // CmdEdadbWrite::exec()
 //===[USE_EDADB]: end========================================
 
 

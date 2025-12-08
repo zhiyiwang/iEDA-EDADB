@@ -21,8 +21,6 @@
  * @date		25/05/2021
  * @version		0.1
 * @description
-
-
         This is a def db management class to provide db interface, including read and write operation.
  *
  */

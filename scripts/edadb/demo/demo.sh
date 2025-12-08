@@ -80,5 +80,6 @@ else
     echo "Input def and output def are different. See diff below:"
     cat diff_output.txt
     rm diff_output.txt
+    echo "vimdiff $INPUT_DEF ${INPUT_DEF%.*}${EDADB_DEF_POST}.def"
     exit 1
 fi 

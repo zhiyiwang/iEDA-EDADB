@@ -10,7 +10,6 @@
 #include "edadb.h"
 #include "def_write.h"
 #include "../../../edadb/macro.h"
-#include "../../../edadb/test_edadb.h"
 
 namespace idb {
 

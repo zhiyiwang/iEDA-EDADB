@@ -292,11 +292,11 @@ public:
     bool readDefFromEdadb(const char* edadb_path, const char* path);
 
     /**
-     * @brief write def file to edadb database, similar to saveDef
+     * @brief save def file to edadb database, similar to saveDef
      * @param edadb_path: the path of edadb database
-     * @return true if write def file to edadb database successfully, false otherwise
+     * @return true if save def file to edadb database successfully, false otherwise
      */
-    bool writeDefToEdadb(const char* edadb_path);
+    bool saveDefToEdadb(const char* edadb_path);
 // [USE_EDADB] done
 };
 

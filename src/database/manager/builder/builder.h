@@ -147,12 +147,12 @@ public:
     IdbDefService* buildDefFromEdadb(const char* edadb_path, const char* path);
 
     /**
-     * @brief write def to edadb database
+     * @brief save def to edadb database
      * @param edadb_path the path of edadb database file
      * @param type the write type
      * @return true if write successfully, false otherwise
      */
-    bool writeDefToEdadb(const char* edadb_path, const DefWriteType type = DefWriteType::kChip);
+    bool saveDefToEdadb(const char* edadb_path, const DefWriteType type = DefWriteType::kChip);
 // [USE_EDADB] done
 };
 

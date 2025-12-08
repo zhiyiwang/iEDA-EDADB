@@ -447,51 +447,48 @@ bool DefReadEdadb::readIdbVia(void) {
             master_generate->set_cut_bouding_rect(ll_x_min, ll_y_min, ll_x_min + cut_width_total, ll_y_min + cut_height_total);
 
             master_instance->set_via_shape();
-        } // if
-//--        else 
-//--        {
-//--            master_instance->set_type_fixed();
-//--            // Fixed via
-//--            int32_t min_x = INT_MAX;
-//--            int32_t min_y = INT_MAX;
-//--            int32_t max_x = INT_MIN;
-//--            int32_t max_y = INT_MIN;
-//--            
-//--            // std::vector< Shadow<idb::IdbViaMasterFixed> > &
-//--            auto& _master_fixed_list_sd = via_sd._master_instance_sd._master_fixed_list_sd;
-//--            for ( auto& fixed_sd : _master_fixed_list_sd ) {
-//--                std::string& layer_name = fixed_sd._layer_shape_sd._layer_name_sd;
-//--
-//--                IdbViaMasterFixed* master_fixed = master_instance->add_fixed(layer_name);
-//--                IdbLayer* layer = layer_list->find_layer(layer_name);
-//--                if (layer == nullptr) {
-//--                  return kDbFail;
-//--                }
-//--
-//--                master_fixed->set_layer(layer);
-//--
-//--                std::vector<idb::IdbRect*> &rect_list = fixed_sd._layer_shape_sd._rect_list_sd;
-//--                assert(rect_list.size() == 1);
-//--                idb::IdbRect* rect = rect_list.at(0);
-//--                int32_t ll_x, ll_y, ur_x, ur_y;
-//--                ll_x = rect->get_low_x();
-//--                ll_y = rect->get_low_y();
-//--                ur_x = rect->get_high_x();
-//--                ur_y = rect->get_high_y();
-//--                master_fixed->add_rect(ll_x, ll_y, ur_x, ur_y);
-//--
-//--                // record the core area of cut
-//--                if (layer->get_type() == IdbLayerType::kLayerCut) {
-//--                  min_x = std::min(min_x, ll_x);
-//--                  min_y = std::min(min_y, ll_y);
-//--                  max_x = std::max(max_x, ur_x);
-//--                  max_y = std::max(max_y, ur_y);
-//--                }
-//--
-//--                master_instance->set_cut_rect(min_x, min_y, max_x, max_y);
-//--                master_instance->set_via_shape();
-//--            } // for 
-//--        } // if IdbViaMasterGenerate or Shadow<idb::IdbViaMasterFixed>
+        }
+        else
+        {
+            master_instance->set_type_fixed();
+            // Fixed via
+            int32_t min_x = INT_MAX;
+            int32_t min_y = INT_MAX;
+            int32_t max_x = INT_MIN;
+            int32_t max_y = INT_MIN;
+            
+            // Shadow<idb::IdbLayerShape>* in Shadow<idb::IdbViaMasterFixed> int std::vector<> 
+            auto& fixed_layer_shapes = via_sd._master_instance_sd.fixed_layer_shape_list_sd;
+            for (auto& fls : fixed_layer_shapes) {
+                std::string& layer_name = fls->_layer_name_sd;
+                IdbViaMasterFixed* master_fixed = master_instance->add_fixed(layer_name);
+                IdbLayer* layer = layer_list->find_layer(layer_name);
+                if (layer == nullptr) {
+                  return kDbFail;
+                }
+                master_fixed->set_layer(layer);
+
+                std::vector<idb::IdbRect*> &rect_list = fls->_rect_list_sd;
+                assert(rect_list.size() == 1);
+                idb::IdbRect* rect = rect_list.at(0);
+                int32_t ll_x = rect->get_low_x();
+                int32_t ll_y = rect->get_low_y();
+                int32_t ur_x = rect->get_high_x();
+                int32_t ur_y = rect->get_high_y();
+                master_fixed->add_rect(ll_x, ll_y, ur_x, ur_y);
+
+                // record the core area of cut
+                if (layer->get_type() == IdbLayerType::kLayerCut) {
+                  min_x = std::min(min_x, ll_x);
+                  min_y = std::min(min_y, ll_y);
+                  max_x = std::max(max_x, ur_x);
+                  max_y = std::max(max_y, ur_y);
+                }
+
+                master_instance->set_cut_rect(min_x, min_y, max_x, max_y);
+                master_instance->set_via_shape();
+            } // for 
+        } // if IdbViaMasterGenerate or Shadow<idb::IdbViaMasterFixed>
     } // while
 
     if (got < 0) {

@@ -11,8 +11,7 @@
 namespace idb {
 
 DefWriteEdadb::DefWriteEdadb(IdbDefService* def_service, DefWriteType type) : DefWrite(def_service, type)
-{
-}
+{}
 
 
 bool DefWriteEdadb::writeDb2Edadb(const char* edadb_path)
@@ -174,6 +173,12 @@ int32_t DefWriteEdadb::writeIdbVia(void) {
       return kDbFail;
     }
 
+    if (via_list->get_num_via() == 0) {
+      std::cout << "No VIAS To Write..." << std::endl;
+      return kDbFail;
+    }
+
+
     edadb::DbMap< edadb::Shadow<idb::IdbVia> > via_map;
     via_map.init();
 
@@ -185,7 +190,7 @@ int32_t DefWriteEdadb::writeIdbVia(void) {
     vector<IdbVia*>& via_vec = via_list->get_via_list();
     vector<edadb::Shadow<idb::IdbVia>*> via_sd_vec;
     via_sd_vec.reserve( via_vec.size() );
-    for ( auto& via : via_vec ) {
+    for (auto& via : via_vec) {
         edadb::Shadow<idb::IdbVia>* via_sd = new edadb::Shadow<idb::IdbVia>();
         via_sd->toShadow( via );
         via_sd_vec.emplace_back( via_sd );
@@ -196,8 +201,9 @@ int32_t DefWriteEdadb::writeIdbVia(void) {
         return kDbFail;
     }
 
-    for ( auto& via_sd : via_sd_vec ) {
+    for (auto& via_sd : via_sd_vec) {
         delete via_sd;
+        via_sd = nullptr;
     }
     via_sd_vec.clear();
 
