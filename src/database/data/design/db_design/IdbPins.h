@@ -113,7 +113,12 @@ class IdbPin : public IdbObject
   void adjustIOStripe(IdbCoordinate<int32_t>* start, IdbCoordinate<int32_t>* end);
   bool isIntersected(int x, int y, IdbLayer* layer);
 
+// enabled edadb
+#if EDADB_ENABLE
+public:
+#else
  private:
+#endif
   std::string _pin_name;
   std::string _net_name;
   IdbTerm* _io_term;

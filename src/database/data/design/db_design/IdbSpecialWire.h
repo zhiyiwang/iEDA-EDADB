@@ -149,7 +149,11 @@ class IdbSpecialWireSegment : public IdbObject
 
   int32_t length();
 
+#if EDADB_ENABLE
+    public:
+#else
  private:
+#endif
   // string _layer_name;
   IdbLayer* _layer;
   IdbVia* _via;

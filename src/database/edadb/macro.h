@@ -50,7 +50,20 @@ int createTable(void);
  */
 int createAllTables(void);
 
-} // edadb
+} // namespace edadb
+
+
+
+//////// utility classes for table mapping ////////////////////////////////////////
+namespace edadb {
+
+class CppStrings {
+public:
+    std::string str;
+};
+} // namespace edadb
+
+TABLE4CLASS(edadb::CppStrings, "CppStr", (str));
 
 
 
@@ -81,3 +94,21 @@ TABLE4EXTERNALCLASS(idb::IdbViaMasterGenerate, "iViaMasterGenerateSD", (_rule_na
 TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbViaMaster>, "iViaMasterSD", (_name_sd, _type_sd, _master_generate_sd), (fixed_layer_shape_list_sd));
 
 TABLE4CLASS(edadb::Shadow<idb::IdbVia>, "iViaSD", (_name_sd, _master_instance_sd));
+
+
+#if 0
+#include "../data/design/db_design/IdbSpecialNet.h"
+TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbSpecialWireSegment>, "iSpecWireSegSD", (_layer_name_sd, _via_name_sd, _shape_type_sd, _route_width_sd, _is_via_sd, _is_rect_sd, _delta_rect_sd), (_point_list_sd));
+
+TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbSpecialWire>, "iSpecWireSD", (_wire_name_sd), (_segment_list_sd));
+
+TABLE4CLASS(idb::IdbInstance, "iInstance", (_name));
+
+
+
+//  IdbTerm* _io_term; -> string _name;
+TABLE4CLASS(idb::IdbPin, "iPin", (_pin_name, _instance));
+
+TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbSpecialNet>, "iSpecNetSD", (_net_name_sd, _connection_type_sd), (_pin_name_list_sd, _pin_list_sd, _instance_list_sd, _wire_list));
+
+#endif 

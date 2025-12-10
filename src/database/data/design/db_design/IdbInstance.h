@@ -145,7 +145,11 @@ class IdbInstance : public IdbObject
 
   void transformCoordinate(int32_t& coord_x, int32_t& coord_y);
 
+#if EDADB_ENABLE
+public:
+#else
  private:
+#endif
   std::string _name;
   // string _master_name;
   IdbCellMaster* _cell_master;

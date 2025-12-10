@@ -14,8 +14,7 @@ DefWriteEdadb::DefWriteEdadb(IdbDefService* def_service, DefWriteType type) : De
 {}
 
 
-bool DefWriteEdadb::writeDb2Edadb(const char* edadb_path)
-{
+bool DefWriteEdadb::writeDb2Edadb(const char* edadb_path) {
     if (_def_service == nullptr) {
         std::cerr << "Error: DefWriteEdadb::_def_service is nullptr" << std::endl;
         return false;
@@ -209,6 +208,41 @@ int32_t DefWriteEdadb::writeIdbVia(void) {
 
     return kDbSuccess;
 } // writeIdbVia
+
+
+#if 0
+int32_t DefWriteEdadb::writeSpecialNet(void) {
+    IdbSpecialNetList* special_net_list = _def_service->get_design()->get_special_net_list();
+    if (special_net_list == nullptr || special_net_list->get_num() == 0) {
+      std::cout << "No SPECIALNETS..." << std::endl;
+      return kDbFail;
+    }
+
+    edadb::DbMap< edadb::Shadow<idb::IdbSpecialNet> > special_net_map;
+    special_net_map.init();
+
+    vector<idb::IdbSpecialNet*>& special_net_vec = special_net_list->get_net_list();
+    vector<edadb::Shadow<idb::IdbSpecialNet>*> special_net_sd_vec; 
+    for (auto& special_net : special_net_vec) {
+        edadb::Shadow<idb::IdbSpecialNet>* special_net_sd = new edadb::Shadow<idb::IdbSpecialNet>();
+        special_net_sd->toShadow( special_net );
+        special_net_sd_vec.emplace_back( special_net_sd );
+    }
+
+    if (!edadb::insertVector(special_net_map, special_net_sd_vec)) {
+        std::cerr << "DefWriteEdadb::writeSpecialNet failed to insertVector" << std::endl;
+        return kDbFail;
+    }
+
+    for (auto& special_net_sd : special_net_sd_vec) {
+        delete special_net_sd;
+        special_net_sd = nullptr;
+    }
+    special_net_sd_vec.clear();
+
+    return kDbSuccess;
+} // writeSpecialNet
+#endif 
 
 
 }  // namespace idb

@@ -45,11 +45,19 @@ int init2write(const char* edadb_path) {
 
 
 void initPrimKeys(void) {
-    edadb::Cpp2SqlTypeTrait<idb::IdbCoordinate<int32_t>>::hasPrimKey = false;
-    edadb::Cpp2SqlTypeTrait<idb::IdbRect>::hasPrimKey = false;
+    edadb::Cpp2SqlTypeTrait<edadb::CppStrings>::hasPrimKey = false;
 
     edadb::Cpp2SqlTypeTrait<idb::IdbUnits>::hasPrimKey = false;
     edadb::Cpp2SqlTypeTrait<idb::IdbBusBitChars>::hasPrimKey = false;
+
+    edadb::Cpp2SqlTypeTrait<idb::IdbCoordinate<int32_t>>::hasPrimKey = false;
+    edadb::Cpp2SqlTypeTrait<idb::IdbRect>::hasPrimKey = false;
+
+    edadb::Cpp2SqlTypeTrait<idb::IdbViaMasterGenerate>::hasPrimKey = false;
+    edadb::Cpp2SqlTypeTrait<idb::IdbViaMaster>::hasPrimKey = false;
+
+    edadb::Cpp2SqlTypeTrait<idb::IdbSpecialNetEdgeSegment>::hasPrimKey = false;
+
 } // initPrimKeys
 
 

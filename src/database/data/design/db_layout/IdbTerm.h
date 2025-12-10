@@ -226,8 +226,11 @@ class IdbTerm
 
   // operator
 
-// private:
+#if EDADB_ENABLE
+private:
+#else
 public:
+#endif 
   string _name;
   IdbConnectDirection _direction;
   IdbConnectType _type;

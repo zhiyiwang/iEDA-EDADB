@@ -32,7 +32,7 @@ protected:
     int32_t writeIdbDie(void);
     int32_t writeIdbGCellGridList(void);
     int32_t writeIdbVia(void);
-
+//    int32_t writeSpecialNet(void);
 }; // DefWriteEdadb
 
 

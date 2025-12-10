@@ -59,8 +59,12 @@ bool DefReadEdadb::createDbByDef(const char* path) {
 //--    defrSetDieAreaCbk(dieAreaCallback);
 //--    defrSetGcellGridCbk(gcellGridCallback);
 
-//    defrSetViaCbk(viaCallback);
-//    defrSetViaStartCbk(viaBeginCallback);
+//--    defrSetViaStartCbk(viaBeginCallback);
+//--    defrSetViaCbk(viaCallback);
+
+    defrSetSNetStartCbk(specialNetBeginCallback);
+    defrSetSNetCbk(specialNetCallback);
+    defrSetSNetEndCbk(specialNetEndCallback);
 
     defrSetBlockageCbk(blockageCallback);
     defrSetComponentCbk(componentsCallback);
@@ -78,9 +82,6 @@ bool DefReadEdadb::createDbByDef(const char* path) {
     defrSetRegionCbk(regionCallback);
     defrSetRowCbk(rowCallback);
     defrSetSlotCbk(slotsCallback);
-    defrSetSNetStartCbk(specialNetBeginCallback);
-    defrSetSNetCbk(specialNetCallback);
-    defrSetSNetEndCbk(specialNetEndCallback);
     defrSetAddPathToNet();
     defrSetTrackCbk(trackGridCallback);
 //------------------------------------------------------------------
@@ -253,6 +254,11 @@ bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
         return false;
     }
 
+//    if (!readSpecialNet()) {
+//        std::cerr << "DefReadEdadb::createDbByEdadb failed to read IdbSpecialNet!" << std::endl;
+//        return false;
+//    }
+
     return true;
 } // createDbByEdadb
 
@@ -361,7 +367,6 @@ bool DefReadEdadb::readIdbVia(void) {
 
     IdbVias* via_list = design->get_via_list();
 
-
     edadb::DbMap< edadb::Shadow<idb::IdbVia> > via_map;
     via_map.init();
 
@@ -384,10 +389,11 @@ bool DefReadEdadb::readIdbVia(void) {
         via_list->add_via(via_instance);
 
         //  get layer and pattern names from idb::IdbViaMasterGenerate shadow
+        edadb::Shadow<idb::IdbViaMaster> &mst_sd = via_sd._master_instance_sd;
         edadb::Shadow<idb::IdbViaMasterGenerate>
-            &mst_gen_sd = via_sd._master_instance_sd._master_generate_sd;
+            &mst_gen_sd = via_sd._master_generate_sd;
         IdbViaMaster* master_instance = via_instance->get_instance();
-        if (!mst_gen_sd._rule_name_sd.empty())
+        if (mst_sd._type_sd == idb::IdbViaMaster::IdbViaMasterType::kViaRule)
         {
             IdbViaMasterGenerate* master_generate = master_instance->get_master_generate();
             
@@ -498,6 +504,46 @@ bool DefReadEdadb::readIdbVia(void) {
 
     return true;
 } // readIdbVia
+
+
+#if 0
+bool DefReadEdadb::readSpecialNet(void) {
+    IdbDesign* design = _def_service->get_design();  // Def
+    IdbPins* io_pin_list = design->get_io_pin_list();
+    IdbInstanceList* instance_list = design->get_instance_list();
+    IdbSpecialNetList* net_list = design->get_special_net_list();
+
+    using SpecialNetShadw = edadb::Shadow<idb::IdbSpecialNet>;
+    edadb::DbMap<SpecialNetShadw> special_net_map;
+    special_net_map.init();
+
+    int got = 0;
+    edadb::DbMapReader<SpecialNetShadw>* rd_sd = nullptr;
+    while (true) {
+        SpecialNetShadw special_net_sd;
+        got = edadb::read2Scan<SpecialNetShadw>(rd_sd, special_net_map, &special_net_sd);
+        if (got < 0) {
+            std::cout << "DefReadEdadb::readSpecialNet failed to read!" << std::endl;
+            return false;
+        }
+        else if (got == 0) {
+            break;
+        }
+
+        // create IdbSpecialNet instance from shadow and add to net_list
+        IdbSpecialNet* special_net_instance = new IdbSpecialNet();
+        special_net_sd.fromShadow(special_net_instance, io_pin_list, instance_list);
+        net_list->add_net(special_net_instance);
+    } // while
+
+    return true;
+} // readSpecialNet
+#endif 
+
+
+
+
+
 
 
 } // namespace idb
