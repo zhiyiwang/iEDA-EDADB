@@ -25,15 +25,16 @@ bool DefReadEdadb::createDbFromEdadb(const char* edadb_path, const char* path)
         return false;
     }
 
+    if (!createDbByEdadb(edadb_path)) {
+        std::cerr << "Error: DefReadEdadb::createDbFromEdadb failed!" << std::endl;
+        return false;
+    }
+
     if (!createDbByDef(path)) {
         std::cerr << "Error: DefReadEdadb::createDbFromEdadb failed!" << std::endl; 
         return false;
     }
 
-    if (!createDbByEdadb(edadb_path)) {
-        std::cerr << "Error: DefReadEdadb::createDbFromEdadb failed!" << std::endl;
-        return false;
-    }
   
     return true;
 } // createDbFromEdadb
@@ -61,19 +62,18 @@ bool DefReadEdadb::createDbByDef(const char* path) {
 //--    defrSetGcellGridCbk(gcellGridCallback);
 //--    defrSetRowCbk(rowCallback);
 //--    defrSetViaStartCbk(viaBeginCallback);
-
-//-- working on 
 //--    defrSetRegionCbk(regionCallback);
 //--    defrSetSlotCbk(slotsCallback);
 
 // debugging
-    defrSetViaCbk(viaCallback);
+//    defrSetViaCbk(viaCallback);
 
-// todo 
+//-- working on 
     defrSetSNetStartCbk(specialNetBeginCallback);
     defrSetSNetCbk(specialNetCallback);
     defrSetSNetEndCbk(specialNetEndCallback);
 
+// todo 
     defrSetBlockageCbk(blockageCallback);
     defrSetComponentCbk(componentsCallback);
     defrSetComponentStartCbk(componentNumberCallback);
@@ -264,10 +264,10 @@ bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
         return false;
     }
 
-//    if (!readIdbVia()) {
-//        std::cerr << "DefReadEdadb::createDbByEdadb failed to read IdbVia!" << std::endl;
-//        return false;
-//    }
+    if (!readIdbVia()) {
+        std::cerr << "DefReadEdadb::createDbByEdadb failed to read IdbVia!" << std::endl;
+        return false;
+    }
 
 //    if (!readSpecialNet()) {
 //        std::cerr << "DefReadEdadb::createDbByEdadb failed to read IdbSpecialNet!" << std::endl;
