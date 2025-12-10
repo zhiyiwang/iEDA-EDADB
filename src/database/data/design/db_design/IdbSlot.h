@@ -69,7 +69,11 @@ class IdbSlot
   void add_rect(int32_t ll_x, int32_t ll_y, int32_t ur_x, int32_t ur_y);
   void reset_rect();
 
+#if EDADB_ENABLE
+public:
+#else
  private:
+#endif 
   string _layer_name;
   IdbLayer* _layer;
   vector<IdbRect*> _rect_list;
@@ -92,7 +96,11 @@ class IdbSlotList
 
   // operator
 
+#if EDADB_ENABLE
+ public:
+#else
  private:
+#endif 
   int32_t _num;
   vector<IdbSlot*> _slot_list;
 };

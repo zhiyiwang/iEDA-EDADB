@@ -88,6 +88,18 @@ int createAllTables(void) {
         return -1;
     }
 
+    if (createTable<idb::IdbRow>() < 0) {
+        return -1;
+    }
+
+    if (createTable<idb::IdbRegion>() < 0) {
+        return -1;
+    }
+
+    if (createTable<idb::IdbSlot>() < 0) {
+        return -1;
+    }
+
     if (createTable<idb::IdbGCellGrid>() < 0) {
         return -1;
     }

@@ -52,16 +52,24 @@ bool DefReadEdadb::createDbByDef(const char* path) {
 
     defrInitSession();
 
+//-- done
 //--    defrSetVersionStrCbk(versionCallback);
 //--    defrSetDesignCbk(designCallback);
 //--    defrSetBusBitCbk(busBitCharsCallBack);
 //--    defrSetUnitsCbk(unitsCallback);
 //--    defrSetDieAreaCbk(dieAreaCallback);
 //--    defrSetGcellGridCbk(gcellGridCallback);
-
+//--    defrSetRowCbk(rowCallback);
 //--    defrSetViaStartCbk(viaBeginCallback);
-//--    defrSetViaCbk(viaCallback);
 
+//-- working on 
+//--    defrSetRegionCbk(regionCallback);
+//--    defrSetSlotCbk(slotsCallback);
+
+// debugging
+    defrSetViaCbk(viaCallback);
+
+// todo 
     defrSetSNetStartCbk(specialNetBeginCallback);
     defrSetSNetCbk(specialNetCallback);
     defrSetSNetEndCbk(specialNetEndCallback);
@@ -79,9 +87,6 @@ bool DefReadEdadb::createDbByDef(const char* path) {
     defrSetPinCbk(pinCallback);
     defrSetPinEndCbk(pinsEndCallback);
     defrSetStartPinsCbk(pinsBeginCallback);
-    defrSetRegionCbk(regionCallback);
-    defrSetRowCbk(rowCallback);
-    defrSetSlotCbk(slotsCallback);
     defrSetAddPathToNet();
     defrSetTrackCbk(trackGridCallback);
 //------------------------------------------------------------------
@@ -244,15 +249,25 @@ bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
         return false;
     }
 
+    if (!readIdbRow()) {
+        std::cerr << "DefReadEdadb::createDbByEdadb failed to read IdbRow!" << std::endl;
+        return false;
+    }
+
+    if (!readIdbRegion()) {
+        std::cerr << "DefReadEdadb::createDbByEdadb failed to read IdbRegion!" << std::endl;
+        return false;
+    }
+
     if (!readIdbGCellGridList()) {
         std::cerr << "DefReadEdadb::createDbByEdadb failed to read IdbGCellGridList!" << std::endl;
         return false;
     }
 
-    if (!readIdbVia()) {
-        std::cerr << "DefReadEdadb::createDbByEdadb failed to read IdbVia!" << std::endl;
-        return false;
-    }
+//    if (!readIdbVia()) {
+//        std::cerr << "DefReadEdadb::createDbByEdadb failed to read IdbVia!" << std::endl;
+//        return false;
+//    }
 
 //    if (!readSpecialNet()) {
 //        std::cerr << "DefReadEdadb::createDbByEdadb failed to read IdbSpecialNet!" << std::endl;
@@ -317,6 +332,121 @@ bool DefReadEdadb::readIdbDie(void) {
 } // readIdbDie
 
 
+bool DefReadEdadb::readIdbRow(void) {
+    edadb::DbMap<idb::IdbRow> row_map;
+    row_map.init();
+    if (!row_map.tableExists(row_map.getTableName())) {
+        // no row table, return true
+        std::cout << "EDADB DefReadEdadb::readIdbRow: no table " << row_map.getTableName() << " exists." << std::endl;
+        return true;
+    }
+
+    IdbLayout* layout = _def_service->get_layout();  // Lef
+    IdbSites* sites = layout->get_sites();
+    IdbRows* rows = layout->get_rows();
+
+    int got = 0;
+    edadb::DbMapReader<idb::IdbRow>* rd = nullptr;
+    while (true) {
+        IdbRow *row = new IdbRow();
+        got = edadb::read2Scan<idb::IdbRow>(rd, row_map, row);
+        if (got == 0) {
+            delete row;
+            break;
+        }
+        else if (got < 0) {
+            std::cout << "DefReadEdadb::readIdbRow failed to read!" << std::endl;
+            return false;
+        }
+
+        row->set_bounding_box();
+
+        // update global sites from reading row
+        IdbSite* site = row->get_site();
+        std::string site_name = site->get_name();
+        IdbSite* lef_site = sites->find_site(site_name);
+        if (lef_site == nullptr) {
+            // IdbSite in site list only has name 
+            lef_site = sites->add_site_list(site_name);
+        }
+
+        rows->add_row_list(row);
+    } // while 
+
+    return true;
+} // readIdbRow
+
+
+bool DefReadEdadb::readIdbRegion(void) {
+    edadb::DbMap<idb::IdbRegion> region_map;
+    region_map.init();
+
+    // check if region table exists
+    const std::string table_name = region_map.getTableName();
+    if (!edadb::tableExists(table_name)) {
+        // no region table, return true
+        std::cout << "EDADB DefReadEdadb::readIdbRegion: no table " << table_name << " exists." << std::endl;
+        return true;
+    }
+
+    IdbDesign* design = _def_service->get_design();  // def
+    IdbRegionList* region_list = design->get_region_list();
+    
+    int got = 0;
+    edadb::DbMapReader<idb::IdbRegion>* rd = nullptr;
+    while (true) {
+        idb::IdbRegion* def_region = new idb::IdbRegion();
+        got = edadb::read2Scan<idb::IdbRegion>(rd, region_map, def_region);
+        if (got == 0) {
+            delete def_region;
+            break;
+        }
+        else if (got < 0) {
+            std::cout << "DefReadEdadb::readIdbRegion failed to read!" << std::endl;
+            return false;
+        }
+        region_list->add_region(def_region);
+    } // while
+
+    return true;
+} // readIdbRegion
+
+
+bool DefReadEdadb::readIdbSlot(void) {
+    edadb::DbMap<idb::IdbSlot> slot_map;
+    slot_map.init();
+
+    // check if slot table exists
+    const std::string table_name = slot_map.getTableName();
+    if (!edadb::tableExists(table_name)) {
+        // no slot table, return true
+        std::cout << "EDADB DefReadEdadb::readIdbSlot: no table " << table_name << " exists." << std::endl;
+        return true;
+    }
+
+    int got = 0;
+    edadb::DbMapReader<idb::IdbSlot>* rd = nullptr;
+
+    IdbDesign* design = _def_service->get_design();  // def
+    IdbSlotList* slot_list = design->get_slot_list();
+    while (true) {
+        IdbSlot* slot = new IdbSlot();
+        got = edadb::read2Scan<idb::IdbSlot>(rd, slot_map, slot);
+        if (got == 0) {
+            delete slot;
+            break;
+        }
+        else if (got < 0) {
+            std::cout << "DefReadEdadb::readIdbSlot failed to read!" << std::endl;
+            return false;
+        }
+
+        slot_list->_slot_list.emplace_back(slot);
+        slot_list->_num++;
+    }
+    return true;
+} // readIdbSlot
+
 
 bool DefReadEdadb::readIdbGCellGridList(void) {
     edadb::DbMap<idb::IdbGCellGrid> gcell_grid_map;
@@ -331,7 +461,7 @@ bool DefReadEdadb::readIdbGCellGridList(void) {
         return true;
     }
 
-    IdbLayout* layout = _def_service->get_layout();  // Lef
+    IdbLayout* layout = _def_service->get_layout();  // Lefri
     IdbGCellGridList* gcell_grid_list = layout->get_gcell_grid_list();
 
     int got = 0;
@@ -349,11 +479,6 @@ bool DefReadEdadb::readIdbGCellGridList(void) {
         }
         gcell_grid_list->add_gcell_grid(gcell_grid);
     } // while
-
-    if (got < 0) {
-        std::cout << "DefReadEdadb::readIdbGCellGridList failed to read!" << std::endl;
-        return false;
-    }
 
     return true;
 } // readIdbGCellGridList
@@ -391,26 +516,31 @@ bool DefReadEdadb::readIdbVia(void) {
         //  get layer and pattern names from idb::IdbViaMasterGenerate shadow
         edadb::Shadow<idb::IdbViaMaster> &mst_sd = via_sd._master_instance_sd;
         edadb::Shadow<idb::IdbViaMasterGenerate>
-            &mst_gen_sd = via_sd._master_generate_sd;
+            &mst_gen_sd = mst_sd._master_generate_sd;
+
         IdbViaMaster* master_instance = via_instance->get_instance();
-        if (mst_sd._type_sd == idb::IdbViaMaster::IdbViaMasterType::kViaRule)
+        if (master_instance->get_type() == idb::IdbViaMaster::IdbViaMasterType::kViaRule)
         {
             IdbViaMasterGenerate* master_generate = master_instance->get_master_generate();
             
             IdbViaRuleGenerate* via_rule =
                 _rule_list->find_via_rule_generate(mst_gen_sd._rule_name_sd);
+            assert(via_rule != nullptr);
             master_generate->set_rule_generate(via_rule);
 
             IdbLayer* layer_bottom =
-                layer_list->find_layer(mst_gen_sd._layer_bottom_name_sd.c_str());
+                layer_list->find_layer(mst_gen_sd._layer_bottom_name_sd);
+            assert(layer_bottom != nullptr);
             master_generate->set_layer_bottom(dynamic_cast<IdbLayerRouting*>(layer_bottom));
 
             IdbLayerCut* layer_cut = dynamic_cast<IdbLayerCut*>(
-                layer_list->find_layer(mst_gen_sd._layer_cut_name_sd.c_str()));
+                layer_list->find_layer(mst_gen_sd._layer_cut_name_sd));
+            assert(layer_cut != nullptr);
             layer_cut->set_via_rule(via_rule);
             master_generate->set_layer_cut(layer_cut);
 
             IdbLayer* layer_top = layer_list->find_layer(mst_gen_sd._layer_top_name_sd);
+            assert(layer_top != nullptr);
             master_generate->set_layer_top(dynamic_cast<IdbLayerRouting*>(layer_top));
 
             if (!mst_gen_sd._pattern_name_sd.empty()) {

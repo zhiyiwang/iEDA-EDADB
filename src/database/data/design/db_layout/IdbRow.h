@@ -90,7 +90,11 @@ class IdbRow : public IdbObject
   void set_orient(IdbOrient orient) { _orient = orient; }
   bool set_bounding_box();
 
+#if EDADB_ENABLE
+public:
+#else
  private:
+#endif
   IdbSite* _site;
   string _name;
   IdbCoordinate<int32_t>* _original_coordinate;

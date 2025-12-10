@@ -80,7 +80,11 @@ class IdbSite
   void set_type_pad() { _type = IdbSiteType::kPad; }
   void set_type_corner() { _type = IdbSiteType::kCorner; }
 
+#if EDADB_ENABLE
+ public:
+#else
  private:
+#endif
   string _name;
   int32_t _width;
   int32_t _heigtht;

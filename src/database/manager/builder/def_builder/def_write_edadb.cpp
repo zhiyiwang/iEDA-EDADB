@@ -61,6 +61,9 @@ bool DefWriteEdadb::writeDb2Edadb(const char* edadb_path) {
 bool DefWriteEdadb::writeChip2Edadb() {
     writeIdbDesign();
     writeIdbDie();
+    writeIdbRow();
+    writeIdbRegion();
+    writeIdbSlot();
     writeIdbGCellGridList();
     writeIdbVia();
 
@@ -138,6 +141,74 @@ int32_t DefWriteEdadb::writeIdbDie(void) {
 
     return kDbSuccess;
 } // writeIdbDie
+
+
+int32_t DefWriteEdadb::writeIdbRow(void) {
+    IdbLayout* layout = _def_service->get_layout();
+    IdbRows* rows = layout->get_rows();
+    if (rows == nullptr) {
+      std::cout << "Write ROWS error..." << std::endl;
+      return kDbFail;
+    }
+
+    edadb::DbMap< idb::IdbRow > row_map;
+    row_map.init();
+
+    vector<IdbRow*>& row_vec = rows->get_row_list();
+    if (!edadb::insertVector(row_map, row_vec)) {
+        std::cerr << "DefWriteEdadb::writeIdbRow failed to insertVector" << std::endl;
+        return kDbFail;
+    }
+
+    return kDbSuccess;
+} // writeIdbRow
+
+
+int32_t DefWriteEdadb::writeIdbRegion(void) {
+    IdbDesign* design = _def_service->get_design();  // def
+    IdbRegionList* region_list = design->get_region_list();
+    if (region_list == nullptr) {
+      std::cout << "Write REGIONS error..." << std::endl;
+      return kDbFail;
+    }
+    if (region_list->get_num() == 0) {
+      std::cout << "No REGION To Write..." << std::endl;
+      return kDbFail;
+    }
+
+    edadb::DbMap< idb::IdbRegion > region_map;
+    region_map.init();
+    if (!edadb::insertVector(region_map, region_list->get_region_list())) {
+        std::cerr << "DefWriteEdadb::writeIdbRegion failed to insertVector" << std::endl;
+        return kDbFail;
+    }
+
+    return kDbSuccess;
+} // writeIdbRegion
+
+
+int32_t DefWriteEdadb::writeIdbSlot(void) {
+    IdbDesign* design = _def_service->get_design();  // def
+    IdbSlotList* slot_list = design->get_slot_list();
+    if (slot_list == nullptr) {
+      std::cout << "Write SLOTS error..." << std::endl;
+      return kDbFail;
+    }
+  
+    if (slot_list->get_num() == 0) {
+      std::cout << "No SLOT To Write..." << std::endl;
+      return kDbFail;
+    }
+
+    edadb::DbMap< idb::IdbSlot > slot_map;
+    slot_map.init();
+    if (!edadb::insertVector(slot_map, slot_list->get_slot_list())) {
+        std::cerr << "DefWriteEdadb::writeIdbSlot failed to insertVector" << std::endl;
+        return kDbFail;
+    }
+
+    return kDbSuccess;
+} // writeIdbSlot
 
 
 int32_t DefWriteEdadb::writeIdbGCellGridList(void) {

@@ -72,7 +72,11 @@ class IdbRegion
 
   // operator
 
+#if EDADB_ENABLE
+public:
+#else
  private:
+#endif
   std::string _name;
   IdbRegionType _type;
   std::vector<IdbRect*> _boudary_list;

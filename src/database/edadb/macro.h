@@ -82,6 +82,20 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbDie>, "iDieSD", (primary_key), (points_sd
 TABLE4CLASS(idb::IdbGCellGrid, "iGCellGrid", (_direction, _start, _num, _space));
 
 
+#include "../data/design/db_layout/IdbSite.h"
+//TABLE4CLASS(idb::IdbSite, "iSite", (_name, _width, _heigtht, _b_overlap, _site_class, _symmetry, _orient, _type));
+TABLE4CLASS(idb::IdbSite, "iSite", (_name, _orient));
+
+#include "../data/design/db_layout/IdbRow.h"
+TABLE4CLASS(idb::IdbRow, "iRow", (_name, _site, _original_coordinate, _row_num_x, _row_num_y, _step_x, _step_y));
+
+
+#include "../data/design/db_design/IdbRegion.h"
+TABLE4CLASS_WVEC(idb::IdbRegion, "iRegion", (_name, _type), (_boudary_list));
+
+#include "../data/design/db_design/IdbSlot.h"
+TABLE4CLASS_WVEC(idb::IdbSlot, "iSlot", (_layer_name),(_rect_list));
+
 
 #include "../basic/geometry/IdbLayerShape.h"
 TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbLayerShape>, "iLayerShapeSD", (_layer_name_sd, _type_sd), (_rect_list_sd));
