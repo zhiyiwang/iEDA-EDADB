@@ -214,6 +214,50 @@ public:
 
 
 
+#include "../data/design/db_design/IdbTrackGrid.h"
+namespace edadb {
+template<>
+class Shadow<idb::IdbTrackGrid> {
+public:
+    Shadow(): primary_key(next_primary_key++) {}
+public:
+    void toShadow(idb::IdbTrackGrid* obj) {
+        _track_num_sd = obj->get_track_num();
+        // assign to write, no need to deep copy
+        _track_sd = *(obj->get_track());
+        _layer_name_vec_sd.clear();
+        for ( auto& layer : obj->get_layer_list() ) {
+            edadb::CppStrings layer_name_sd;
+            layer_name_sd.str = layer->get_name();
+            _layer_name_vec_sd.emplace_back( layer_name_sd );
+        }
+    }
+    void fromShadow(idb::IdbTrackGrid* obj) {
+        obj->set_track_number( _track_num_sd );
+        *(obj->get_track()) = _track_sd;
+        assert( obj->get_layer_list().empty() );
+        // use layer name to lookup layer during def read
+    }
+public:
+    uint64_t primary_key = 0;
+    uint32_t _track_num_sd = 0;
+    idb::IdbTrack _track_sd;
+    vector<edadb::CppStrings> _layer_name_vec_sd;
+private:
+    static inline uint64_t next_primary_key = 1;
+}; // shadow IdbTrackGrid
+} // namespace edadb
+
+
+
+
+
+
+    
+
+
+
+
 #if 0
 #include "../data/design/db_design/IdbSpecialNet.h"
 namespace edadb {
@@ -298,6 +342,7 @@ public:
     IdbWiringStatement _wire_state_sd;
     std::string _shiled_name_sd;
     std::vector< Shadow<idb::IdbSpecialWireSegment>* > segment_list_sd;
+
 }; // Shadow IdbSpecialWire
 
 
@@ -319,7 +364,7 @@ public:
         _instance_list_sd.clear();
         for ( auto& pin : obj->get_pin_list() ) {
             CppStrings* pin_name_sd = new CppStrings();
-            pin_name_sd->str_mem = pin->get_name();
+            pin_name_sd->str = pin->get_name();
             _pin_name_list_sd.emplace_back( pin_name_sd );
             _pin_list_sd.emplace_back( pin );
             if ( pin->get_instance() ) {
@@ -340,7 +385,7 @@ public:
         obj->get_pin_list().clear();
         for ( size_t i = 0; i < _pin_name_list_sd.size(); ++i ) {
             idb::IdbPin* pin = new idb::IdbPin();
-            pin->set_name( _pin_name_list_sd[i]->str_mem );
+            pin->set_name( _pin_name_list_sd[i]->str);
             if ( i < _instance_list_sd.size() ) {
                 pin->set_instance( _instance_list_sd[i] );
             }

@@ -54,18 +54,6 @@ int createAllTables(void);
 
 
 
-//////// utility classes for table mapping ////////////////////////////////////////
-namespace edadb {
-
-class CppStrings {
-public:
-    std::string str;
-};
-} // namespace edadb
-
-TABLE4CLASS(edadb::CppStrings, "CppStr", (str));
-
-
 
 //////// macro for table and class mapping ////////////////////////////////////////
 
@@ -77,6 +65,15 @@ TABLE4CLASS(idb::IdbCoordinate<int32_t>, "iCoord", (_x, _y));
 TABLE4CLASS(idb::IdbRect, "IdbRect", (_lx, _ly, _hx, _hy));
 
 TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbDie>, "iDieSD", (primary_key), (points_sd));
+
+// DO NOT STORE IdbLayer as a table, 
+// USE layer_name lookup _def_service->get_layout()->get_layers();
+//#include "../data/design/db_layout/IdbLayer.h"
+//TABLE4CLASS(idb::IdbLayer, "iLayer", (_name, _type, _layer_id, _layer_order));
+
+#include "../data/design/db_design/IdbTrackGrid.h"
+TABLE4CLASS(idb::IdbTrack, "iTrack", (_start, _direction, _pitch));
+TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbTrackGrid>, "iTrackGridSD", (primary_key, _track_num_sd, _track_sd), (_layer_name_vec_sd));
 
 #include "../data/design/db_layout/IdbGCellGrid.h"
 TABLE4CLASS(idb::IdbGCellGrid, "iGCellGrid", (_direction, _start, _num, _space));

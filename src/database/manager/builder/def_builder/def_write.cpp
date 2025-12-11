@@ -204,21 +204,21 @@ bool DefWrite::writeLef()
  */
 bool DefWrite::writeChip()
 {
-  write_version();
-  write_divider_char();
-  write_busbit_char();
-  write_design();
-  write_units();
-  write_die();
-  write_row();
-  write_track_grid();
-  write_gcell_grid();
-  write_via();
+  write_version(); //
+  write_divider_char(); //
+  write_busbit_char(); //
+  write_design(); //
+  write_units(); //
+  write_die(); //
+  write_row(); //
+  write_track_grid();  //
+  write_gcell_grid(); //
+  write_via(); //
   write_component();
   write_pin();
   write_blockage();
-  write_region();
-  write_slot();
+  write_region(); //  
+  write_slot(); // 
   write_group();
   write_fill();
   write_special_net();

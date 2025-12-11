@@ -90,8 +90,11 @@ class IdbLayer
   // verify data
   virtual void print();
 
-// private:
+#if EDADB_ENABLE
 public:
+#else
+ private:
+#endif
   string _name;
   IdbLayerType _type;
   int8_t _layer_id;

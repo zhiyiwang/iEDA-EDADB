@@ -62,10 +62,11 @@ bool DefWriteEdadb::writeChip2Edadb() {
     writeIdbDesign();
     writeIdbDie();
     writeIdbRow();
+    writeIdbTrackGrid();
+    writeIdbGCellGrid();
+    writeIdbVia();
     writeIdbRegion();
     writeIdbSlot();
-    writeIdbGCellGridList();
-    writeIdbVia();
 
     return true;
 } // writeChip2Edadb
@@ -81,6 +82,9 @@ bool DefWriteEdadb::writeDbSynthesis2Edadb() {
 bool DefWriteEdadb::writeLef2Edadb() {
     return true;
 }
+
+
+
 
 
 int32_t DefWriteEdadb::writeIdbDesign() {
@@ -164,6 +168,108 @@ int32_t DefWriteEdadb::writeIdbRow(void) {
 } // writeIdbRow
 
 
+int32_t DefWriteEdadb::writeIdbTrackGrid(void) {
+    IdbLayout* layout = _def_service->get_layout();
+    IdbTrackGridList* track_grid_list = layout->get_track_grid_list();
+    if (track_grid_list == nullptr) {
+        std::cout << "Write Track Grid error..." << std::endl;
+        return kDbFail;
+    }
+
+    edadb::DbMap<edadb::Shadow<idb::IdbTrackGrid>> track_grid_map;
+    track_grid_map.init();
+    
+    vector<edadb::Shadow<idb::IdbTrackGrid>*> track_grid_sd_vec;
+    for (auto& track_grid : track_grid_list->get_track_grid_list()) {
+        edadb::Shadow<idb::IdbTrackGrid>* track_grid_sd = new edadb::Shadow<idb::IdbTrackGrid>();
+        track_grid_sd->toShadow( track_grid );
+        track_grid_sd_vec.emplace_back( track_grid_sd );
+    }
+
+    if (!edadb::insertVector(track_grid_map, track_grid_sd_vec)) {
+        std::cerr << "DefWriteEdadb::writeIdbTrackGrid failed to insertVector" << std::endl;
+        return kDbFail;
+    }
+
+    for (auto& track_grid_sd : track_grid_sd_vec) {
+        delete track_grid_sd;
+        track_grid_sd = nullptr;
+    }
+
+    return kDbSuccess;
+} // writeIdbTrackGrid
+
+
+int32_t DefWriteEdadb::writeIdbGCellGrid(void) {
+    IdbLayout* layout = _def_service->get_layout();  // Lef
+    IdbGCellGridList* gcell_grid_list = layout->get_gcell_grid_list();
+    if (gcell_grid_list == nullptr) {
+        std::cout << "Write GCELLGRID error..." << std::endl;
+        return kDbFail;
+    }
+  
+    if (gcell_grid_list->get_gcell_grid_num() <= 0) {
+        std::cout << "No GCELLGRID..." << std::endl;
+        return kDbFail;
+    }
+
+    edadb::DbMap< idb::IdbGCellGrid > gcell_grid_map;
+    gcell_grid_map.init();
+    if (!edadb::insertVector(gcell_grid_map, gcell_grid_list->get_gcell_grid_list())) {
+        std::cerr << "DefWriteEdadb::writeIdbGCellGrid failed to insertVector" << std::endl;
+        return kDbFail;
+    }
+
+    return kDbSuccess;
+} // writeIdbGCellGrid
+
+
+int32_t DefWriteEdadb::writeIdbVia(void) {
+    IdbDesign* design = _def_service->get_design();  // Def
+    IdbVias* via_list = design->get_via_list();
+    if (via_list == nullptr) {
+      std::cout << "Write VIAS error" << std::endl;
+      return kDbFail;
+    }
+
+    if (via_list->get_num_via() == 0) {
+      std::cout << "No VIAS To Write..." << std::endl;
+      return kDbFail;
+    }
+
+
+    edadb::DbMap< edadb::Shadow<idb::IdbVia> > via_map;
+    via_map.init();
+
+    // insert object in vector to edadb
+#if EDADB_OUTPUT_DEBUG
+    std::cout << "[DefWriteEdadb] insert IdbVia object to edadb database" << std::endl;
+#endif
+
+    vector<IdbVia*>& via_vec = via_list->get_via_list();
+    vector<edadb::Shadow<idb::IdbVia>*> via_sd_vec;
+    via_sd_vec.reserve( via_vec.size() );
+    for (auto& via : via_vec) {
+        edadb::Shadow<idb::IdbVia>* via_sd = new edadb::Shadow<idb::IdbVia>();
+        via_sd->toShadow( via );
+        via_sd_vec.emplace_back( via_sd );
+    }
+
+    if (!edadb::insertVector(via_map, via_sd_vec)) {
+        std::cerr << "DefWriteEdadb::writeIdbVia failed to insertVector" << std::endl;
+        return kDbFail;
+    }
+
+    for (auto& via_sd : via_sd_vec) {
+        delete via_sd;
+        via_sd = nullptr;
+    }
+    via_sd_vec.clear();
+
+    return kDbSuccess;
+} // writeIdbVia
+
+
 int32_t DefWriteEdadb::writeIdbRegion(void) {
     IdbDesign* design = _def_service->get_design();  // def
     IdbRegionList* region_list = design->get_region_list();
@@ -211,74 +317,6 @@ int32_t DefWriteEdadb::writeIdbSlot(void) {
 } // writeIdbSlot
 
 
-int32_t DefWriteEdadb::writeIdbGCellGridList(void) {
-    IdbLayout* layout = _def_service->get_layout();  // Lef
-    IdbGCellGridList* gcell_grid_list = layout->get_gcell_grid_list();
-    if (gcell_grid_list == nullptr) {
-      std::cout << "Write GCELLGRID error..." << std::endl;
-      return kDbFail;
-    }
-  
-    if (gcell_grid_list->get_gcell_grid_num() <= 0) {
-      std::cout << "No GCELLGRID..." << std::endl;
-      return kDbFail;
-    }
-
-    edadb::DbMap< idb::IdbGCellGrid > gcell_grid_map;
-    gcell_grid_map.init();
-    if (!edadb::insertVector(gcell_grid_map, gcell_grid_list->get_gcell_grid_list())) {
-        std::cerr << "DefWriteEdadb::writeIdbGCellGridList failed to insertVector" << std::endl;
-        return kDbFail;
-    }
-
-    return kDbSuccess;
-} // writeIdbGCellGridList
-
-
-int32_t DefWriteEdadb::writeIdbVia(void) {
-    IdbDesign* design = _def_service->get_design();  // Def
-    IdbVias* via_list = design->get_via_list();
-    if (via_list == nullptr) {
-      std::cout << "Write VIAS error" << std::endl;
-      return kDbFail;
-    }
-
-    if (via_list->get_num_via() == 0) {
-      std::cout << "No VIAS To Write..." << std::endl;
-      return kDbFail;
-    }
-
-
-    edadb::DbMap< edadb::Shadow<idb::IdbVia> > via_map;
-    via_map.init();
-
-    // insert object in vector to edadb
-#if EDADB_OUTPUT_DEBUG
-    std::cout << "[DefWriteEdadb] insert IdbVia object to edadb database" << std::endl;
-#endif
-
-    vector<IdbVia*>& via_vec = via_list->get_via_list();
-    vector<edadb::Shadow<idb::IdbVia>*> via_sd_vec;
-    via_sd_vec.reserve( via_vec.size() );
-    for (auto& via : via_vec) {
-        edadb::Shadow<idb::IdbVia>* via_sd = new edadb::Shadow<idb::IdbVia>();
-        via_sd->toShadow( via );
-        via_sd_vec.emplace_back( via_sd );
-    }
-
-    if (!edadb::insertVector(via_map, via_sd_vec)) {
-        std::cerr << "DefWriteEdadb::writeIdbVia failed to insertVector" << std::endl;
-        return kDbFail;
-    }
-
-    for (auto& via_sd : via_sd_vec) {
-        delete via_sd;
-        via_sd = nullptr;
-    }
-    via_sd_vec.clear();
-
-    return kDbSuccess;
-} // writeIdbVia
 
 
 #if 0

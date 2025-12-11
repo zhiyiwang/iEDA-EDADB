@@ -73,7 +73,11 @@ class IdbTrack
 
   // void set_layer(IdbLayer* layer){_layer = layer;}
 
+#if EDADB_ENABLE
+public:
+#else
  private:
+#endif
   uint32_t _start;
   IdbTrackDirection _direction;  //!< PreferDirection
   uint32_t _pitch;               //!< spacing: The track spacing is the PITCH value for the layer defined in LEF.
@@ -100,8 +104,11 @@ class IdbTrackGrid
   void set_track(IdbTrack* track) { _track = track; }
   void set_track_number(uint32_t number) { _track_num = number; }
   void add_layer_list(IdbLayer* layer);
-
+#if EDADB_ENABLE
+public:
+#else
  private:
+#endif
   IdbTrack* _track;
   uint32_t _track_num;
 
