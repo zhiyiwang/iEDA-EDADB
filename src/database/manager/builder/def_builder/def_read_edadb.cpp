@@ -67,13 +67,16 @@ bool DefReadEdadb::createDbByDef(const char* path) {
 //--    defrSetViaCbk(viaCallback);
 //--    defrSetTrackCbk(trackGridCallback);
 
-// todo 
-    defrSetBlockageCbk(blockageCallback);
     defrSetComponentCbk(componentsCallback);
     defrSetComponentStartCbk(componentNumberCallback);
     defrSetComponentEndCbk(componentEndCallback);
+
+// todo 
+    defrSetBlockageCbk(blockageCallback);
+
     defrSetFillStartCbk(fillsCallback);
     defrSetFillCbk(fillCallback);
+
     defrSetGroupCbk(groupCallback);
     defrSetNetStartCbk(netBeginCallback);
     defrSetNetCbk(netCallback);
@@ -248,30 +251,35 @@ bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
         return false;
     }
 
-    if (!readIdbRow()) {
-        std::cerr << "DefReadEdadb::createDbByEdadb failed to read IdbRow!" << std::endl;
-        return false;
-    }
-
-    if (!readIdbRegion()) {
-        std::cerr << "DefReadEdadb::createDbByEdadb failed to read IdbRegion!" << std::endl;
-        return false;
-    }
-
-    if (!readIdbTrackGrid()) {
-        std::cerr << "DefReadEdadb::createDbByEdadb failed to read IdbTrackGrid!" << std::endl;
-        return false;
-    }
-
-    if (!readIdbGCellGrid()) {
-        std::cerr << "DefReadEdadb::createDbByEdadb failed to read IdbGCellGridList!" << std::endl;
-        return false;
-    }
-
-    if (!readIdbVia()) {
-        std::cerr << "DefReadEdadb::createDbByEdadb failed to read IdbVia!" << std::endl;
-        return false;
-    }
+//    if (!readIdbRow()) {
+//        std::cerr << "DefReadEdadb::createDbByEdadb failed to read IdbRow!" << std::endl;
+//        return false;
+//    }
+//
+//    if (!readIdbRegion()) {
+//        std::cerr << "DefReadEdadb::createDbByEdadb failed to read IdbRegion!" << std::endl;
+//        return false;
+//    }
+//
+//    if (!readIdbTrackGrid()) {
+//        std::cerr << "DefReadEdadb::createDbByEdadb failed to read IdbTrackGrid!" << std::endl;
+//        return false;
+//    }
+//
+//    if (!readIdbGCellGrid()) {
+//        std::cerr << "DefReadEdadb::createDbByEdadb failed to read IdbGCellGridList!" << std::endl;
+//        return false;
+//    }
+//
+//    if (!readIdbVia()) {
+//        std::cerr << "DefReadEdadb::createDbByEdadb failed to read IdbVia!" << std::endl;
+//        return false;
+//    }
+//
+//    if (!readComponent()) {
+//        std::cerr << "DefReadEdadb::createDbByEdadb failed to read IdbInstance!" << std::endl;
+//        return false;
+//    }
 
 //    if (!readSpecialNet()) {
 //        std::cerr << "DefReadEdadb::createDbByEdadb failed to read IdbSpecialNet!" << std::endl;
@@ -336,6 +344,7 @@ bool DefReadEdadb::readIdbDie(void) {
 } // readIdbDie
 
 
+#if 0
 bool DefReadEdadb::readIdbRow(void) {
     edadb::DbMap<idb::IdbRow> row_map;
     row_map.init();
@@ -450,8 +459,10 @@ bool DefReadEdadb::readIdbSlot(void) {
     }
     return true;
 } // readIdbSlot
+#endif
 
 
+#if 0
 bool DefReadEdadb::readIdbTrackGrid(void) {
     edadb::DbMap<edadb::Shadow<idb::IdbTrackGrid>> track_grid_map;
     track_grid_map.init();
@@ -686,6 +697,78 @@ bool DefReadEdadb::readIdbVia(void) {
 
     return true;
 } // readIdbVia
+#endif 
+
+
+#if 0
+bool DefReadEdadb::readComponent(void) {
+    IdbDesign* design = _def_service->get_design();  // Def
+    IdbLayout* layout = _def_service->get_layout();  // Lef
+    IdbLayers* layer_list = layout->get_layers();
+    IdbRegionList* region_list = design->get_region_list();
+    IdbInstanceList* instance_list = design->get_instance_list();
+    IdbCellMasterList* master_list = layout->get_cell_master_list();
+
+    edadb::DbMap< edadb::Shadow<idb::IdbInstance> > inst_map;
+    inst_map.init();
+
+#if EDADB_OUTPUT_DEBUG
+    std::cout << "[DefReadEdadb::readComponent] Start to read IdbInstance from EDADB..." << std::endl;
+#endif
+
+    int got = 0;
+    edadb::DbMapReader< edadb::Shadow<idb::IdbInstance>>* rd_sd = nullptr;
+    while (true) {
+        edadb::Shadow<idb::IdbInstance> inst_sd;
+        got = edadb::read2Scan<edadb::Shadow<idb::IdbInstance>>(rd_sd, inst_map, &inst_sd);
+        if (got < 0) {
+            std::cout << "DefReadEdadb::readComponent failed to read!" << std::endl;
+            return false;
+        }
+        else if (got == 0) {
+            break;
+        }
+
+        // create IdbInstance instance from shadow and add to instance_list
+        IdbInstance* inst = new IdbInstance();
+        if (nullptr == _cur_cell_master || _cur_cell_master->get_name() != inst_sd._cell_master_name_sd) {
+            _cur_cell_master = master_list->find_cell_master(inst_sd._cell_master_name_sd);
+        }
+        if (nullptr == _cur_cell_master) {
+            std::cerr << "DefReadEdadb::readComponent failed to find cell master: " << inst_sd._cell_master_name_sd << std::endl;
+            return false;
+        }
+
+        instance_list->add_instance(inst);
+        inst->set_cell_master(_cur_cell_master);
+
+        if (!inst_sd._region_name_sd.empty()) {
+            IdbRegion* region = region_list->find_region(inst_sd._region_name_sd);
+            if (region != nullptr) {
+                inst->set_region(region);
+                region->add_instance(inst);
+            }   
+        }
+
+        if (inst->get_route_halo() != nullptr) {
+            // update layer pointer in route halo
+            IdbRouteHalo* route_halo = inst->get_route_halo();
+            route_halo->set_layer_bottom(
+                dynamic_cast<IdbLayerRouting*>(
+                    layer_list->find_layer(inst_sd._route_halo_sd._layer_bottom_name_sd))
+            );
+            route_halo->set_layer_top(
+                dynamic_cast<IdbLayerRouting*>(
+                    layer_list->find_layer(inst_sd._route_halo_sd._layer_top_name_sd))
+            );  
+        } // if 
+
+        inst_sd.fromShadow(inst);
+    } // while 
+
+    return true;
+} // readComponent
+#endif 
 
 
 #if 0
@@ -721,11 +804,5 @@ bool DefReadEdadb::readSpecialNet(void) {
     return true;
 } // readSpecialNet
 #endif 
-
-
-
-
-
-
 
 } // namespace idb

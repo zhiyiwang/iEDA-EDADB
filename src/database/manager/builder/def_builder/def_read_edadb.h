@@ -9,7 +9,7 @@
 
 #include "def_read.h"
 #include "edadb.h"
-#include "../../../edadb/macro.h"
+#include "../../../edadb/edadb_api.h"
 
 namespace idb {
 
@@ -47,12 +47,13 @@ protected:
 protected:
     bool readIdbDesign(void);
     bool readIdbDie(void);
-    bool readIdbTrackGrid(void);
-    bool readIdbGCellGrid(void);
-    bool readIdbRow(void);
-    bool readIdbRegion(void);
-    bool readIdbSlot(void);
-    bool readIdbVia(void);
+//    bool readIdbTrackGrid(void);
+//    bool readIdbGCellGrid(void);
+//    bool readIdbRow(void);
+//    bool readIdbRegion(void);
+//    bool readIdbSlot(void);
+//    bool readIdbVia(void);
+//    bool readComponent(void);
 
 //    bool readSpecialNet(void);
 

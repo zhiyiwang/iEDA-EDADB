@@ -61,12 +61,13 @@ bool DefWriteEdadb::writeDb2Edadb(const char* edadb_path) {
 bool DefWriteEdadb::writeChip2Edadb() {
     writeIdbDesign();
     writeIdbDie();
-    writeIdbRow();
-    writeIdbTrackGrid();
-    writeIdbGCellGrid();
-    writeIdbVia();
-    writeIdbRegion();
-    writeIdbSlot();
+//    writeIdbRow();
+//    writeIdbTrackGrid();
+//    writeIdbGCellGrid();
+//    writeIdbVia();
+////    writeComponent();
+//    writeIdbRegion();
+//    writeIdbSlot();
 
     return true;
 } // writeChip2Edadb
@@ -147,6 +148,7 @@ int32_t DefWriteEdadb::writeIdbDie(void) {
 } // writeIdbDie
 
 
+#if 0
 int32_t DefWriteEdadb::writeIdbRow(void) {
     IdbLayout* layout = _def_service->get_layout();
     IdbRows* rows = layout->get_rows();
@@ -268,8 +270,56 @@ int32_t DefWriteEdadb::writeIdbVia(void) {
 
     return kDbSuccess;
 } // writeIdbVia
+#endif 
 
 
+#if 0
+int32_t DefWriteEdadb::writeComponent(void) {
+    edadb::DbMap< edadb::Shadow<idb::IdbInstance> > instance_map;
+    instance_map.init();
+
+#if EDADB_OUTPUT_DEBUG
+    std::cout << "[DefWriteEdadb] insert IdbInstance object to edadb" << std::endl;
+#endif 
+
+    IdbDesign* design = _def_service->get_design();  // Def
+    IdbInstanceList* instance_list = design->get_instance_list();
+    if (instance_list == nullptr) {
+      std::cout << "Write COMPONENTS error..." << std::endl;
+      return kDbFail;
+    }
+  
+    if (instance_list->get_num() == 0) {
+      std::cout << "No COMPONENT To Write..." << std::endl;
+      return kDbFail;
+    }
+
+    vector<idb::IdbInstance*>& inst_vec = instance_list->get_instance_list();
+    vector<edadb::Shadow<idb::IdbInstance>*> inst_sd_vec;
+    inst_sd_vec.reserve(inst_vec.size());
+    for (auto &instance : inst_vec) {
+        edadb::Shadow<idb::IdbInstance>* inst_sd = new edadb::Shadow<idb::IdbInstance>();
+        inst_sd->toShadow( instance );
+        inst_sd_vec.emplace_back( inst_sd );
+    }
+
+    if (!edadb::insertVector(instance_map, inst_sd_vec)) {
+        std::cerr << "DefWriteEdadb::writeComponent failed to insertVector" << std::endl;
+        return kDbFail;
+    }
+
+    for (auto& inst_sd : inst_sd_vec) {
+        delete inst_sd;
+        inst_sd = nullptr;
+    }
+    inst_sd_vec.clear();
+
+    return kDbSuccess;
+} // writeComponent
+#endif 
+
+
+#if 0
 int32_t DefWriteEdadb::writeIdbRegion(void) {
     IdbDesign* design = _def_service->get_design();  // def
     IdbRegionList* region_list = design->get_region_list();
@@ -315,8 +365,7 @@ int32_t DefWriteEdadb::writeIdbSlot(void) {
 
     return kDbSuccess;
 } // writeIdbSlot
-
-
+#endif 
 
 
 #if 0

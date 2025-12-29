@@ -85,7 +85,11 @@ class IdbHalo : public IdbObject
 
   // operator
 
+#if EDADB_ENABLE
+ public:
+#else
  private:
+#endif 
   int32_t _extend_left;
   int32_t _extend_right;
   int32_t _extend_top;
@@ -129,7 +133,11 @@ class IdbRouteHalo
 
   // operator
 
+#if EDADB_ENABLE
+ public:
+#else
  private:
+#endif
   int32_t _route_distance;
   IdbLayer* _layer_bottom;
   IdbLayer* _layer_top;

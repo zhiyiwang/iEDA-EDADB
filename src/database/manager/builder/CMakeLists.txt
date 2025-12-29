@@ -22,7 +22,8 @@ else()
 
 endif()
 
-target_link_libraries(IdbBuilder def_service def_builder lef_service lef_builder verilog_builder gds_builder json_builder)
+##target_link_libraries(IdbBuilder def_service def_builder lef_service lef_builder verilog_builder gds_builder json_builder)
+target_link_libraries(IdbBuilder def_service def_builder lef_service lef_builder verilog_builder gds_builder json_builder db_edadb)
 
 target_include_directories(IdbBuilder 
     PUBLIC 

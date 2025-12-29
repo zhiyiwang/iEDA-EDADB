@@ -4,7 +4,9 @@
  * @author Zhiyi Wang
  */
 
-#include "macro.h"
+#include "edadb_core.h"
+#include "edadb_shadow.h"
+#include "edadb_schema.h"
 
 
 namespace edadb {
@@ -51,18 +53,21 @@ void initPrimKeys(void) {
     edadb::Cpp2SqlTypeTrait<idb::IdbBusBitChars>::hasPrimKey = false;
 
     edadb::Cpp2SqlTypeTrait<idb::IdbCoordinate<int32_t>>::hasPrimKey = false;
+    edadb::Cpp2SqlTypeTrait<edadb::Shadow<idb::IdbCoordinate<int32_t>>>::hasPrimKey = false;
     edadb::Cpp2SqlTypeTrait<idb::IdbRect>::hasPrimKey = false;
 
-    edadb::Cpp2SqlTypeTrait<idb::IdbTrack>::hasPrimKey = false;
-    edadb::Cpp2SqlTypeTrait<idb::IdbGCellGrid>::hasPrimKey = false;
-
-    edadb::Cpp2SqlTypeTrait<idb::IdbViaMasterGenerate>::hasPrimKey = false;
-    edadb::Cpp2SqlTypeTrait<idb::IdbViaMaster>::hasPrimKey = false;
-
-//    edadb::Cpp2SqlTypeTrait<idb::IdbSpecialNetEdgeSegment>::hasPrimKey = false;
+//-    edadb::Cpp2SqlTypeTrait<idb::IdbTrack>::hasPrimKey = false;
+//-    edadb::Cpp2SqlTypeTrait<idb::IdbGCellGrid>::hasPrimKey = false;
+//-
+//-    edadb::Cpp2SqlTypeTrait<idb::IdbViaMasterGenerate>::hasPrimKey = false;
+//-    edadb::Cpp2SqlTypeTrait<idb::IdbViaMaster>::hasPrimKey = false;
+//-
+//-    edadb::Cpp2SqlTypeTrait<idb::IdbHalo>::hasPrimKey = false;
+//-    edadb::Cpp2SqlTypeTrait<edadb::Shadow<idb::IdbRouteHalo>>::hasPrimKey = false;
+//-
+//-//    edadb::Cpp2SqlTypeTrait<idb::IdbSpecialNetEdgeSegment>::hasPrimKey = false;
 
 } // initPrimKeys
-
 
 
 template <typename T>
@@ -82,38 +87,25 @@ int createTable(void) {
 } // createTable
 
 
+#define EDADB_CREATE_TABLE(T)                                     \
+    do {                                                              \
+        if (edadb::createTable<T>() < 0) {                            \
+            std::fprintf(stderr, "[EDADB] createTable failed: %s\n",  \
+                         typeid(T).name());                           \
+            return -1;                                                \
+        }                                                             \
+    } while (0)
+
 int createAllTables(void) {
-    if (createTable<idb::IdbDesign>() < 0) {
-        return -1;
-    }
-
-    if (createTable<edadb::Shadow<idb::IdbDie>>() < 0) {
-        return -1;
-    }
-
-    if (createTable<idb::IdbRow>() < 0) {
-        return -1;
-    }
-
-    if (createTable<idb::IdbRegion>() < 0) {
-        return -1;
-    }
-
-    if (createTable<idb::IdbSlot>() < 0) {
-        return -1;
-    }
-
-    if (createTable< edadb::Shadow<idb::IdbTrackGrid> >() < 0) {
-        return -1;
-    }
-
-    if (createTable<idb::IdbGCellGrid>() < 0) {
-        return -1;
-    }
-
-    if (createTable< edadb::Shadow<idb::IdbVia> >() < 0) {
-        return -1;
-    }
+    EDADB_CREATE_TABLE(idb::IdbDesign);
+    EDADB_CREATE_TABLE(edadb::Shadow<idb::IdbDie>);
+//    EDADB_CREATE_TABLE(idb::IdbRow);
+//    EDADB_CREATE_TABLE(idb::IdbRegion);
+//    EDADB_CREATE_TABLE(idb::IdbSlot);
+//    EDADB_CREATE_TABLE(edadb::Shadow<idb::IdbTrackGrid>);
+//    EDADB_CREATE_TABLE(idb::IdbGCellGrid);
+//    EDADB_CREATE_TABLE(edadb::Shadow<idb::IdbVia>);
+////    EDADB_CREATE_TABLE(edadb::Shadow<idb::IdbInstance>);
 
     return 0;
 } // createAllTables
