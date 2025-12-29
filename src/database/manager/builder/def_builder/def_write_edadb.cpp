@@ -61,8 +61,8 @@ bool DefWriteEdadb::writeDb2Edadb(const char* edadb_path) {
 bool DefWriteEdadb::writeChip2Edadb() {
     writeIdbDesign();
     writeIdbDie();
-//    writeIdbRow();
-//    writeIdbTrackGrid();
+    writeIdbRow();
+    writeIdbTrackGrid();
 //    writeIdbGCellGrid();
 //    writeIdbVia();
 ////    writeComponent();
@@ -148,7 +148,6 @@ int32_t DefWriteEdadb::writeIdbDie(void) {
 } // writeIdbDie
 
 
-#if 0
 int32_t DefWriteEdadb::writeIdbRow(void) {
     IdbLayout* layout = _def_service->get_layout();
     IdbRows* rows = layout->get_rows();
@@ -202,6 +201,7 @@ int32_t DefWriteEdadb::writeIdbTrackGrid(void) {
 } // writeIdbTrackGrid
 
 
+#if 0
 int32_t DefWriteEdadb::writeIdbGCellGrid(void) {
     IdbLayout* layout = _def_service->get_layout();  // Lef
     IdbGCellGridList* gcell_grid_list = layout->get_gcell_grid_list();

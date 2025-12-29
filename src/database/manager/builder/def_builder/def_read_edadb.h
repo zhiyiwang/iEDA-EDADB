@@ -47,9 +47,9 @@ protected:
 protected:
     bool readIdbDesign(void);
     bool readIdbDie(void);
-//    bool readIdbTrackGrid(void);
+    bool readIdbRow(void);
+    bool readIdbTrackGrid(void);
 //    bool readIdbGCellGrid(void);
-//    bool readIdbRow(void);
 //    bool readIdbRegion(void);
 //    bool readIdbSlot(void);
 //    bool readIdbVia(void);

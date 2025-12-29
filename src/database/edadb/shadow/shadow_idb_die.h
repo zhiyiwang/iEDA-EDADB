@@ -3,6 +3,7 @@
  * @brief This file contains shadow class definition for IdbDie
  * @author Zhiyi Wang
  */
+
 #pragma once
 
 #include "edadb.h"

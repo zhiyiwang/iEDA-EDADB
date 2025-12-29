@@ -234,37 +234,32 @@ bool DefReadEdadb::createDbByDef(const char* path) {
 
 
 
+#define CHECK_READ(call, msg)                     \
+    do {                                          \
+        if (!(call)) {                            \
+            std::cerr << (msg) << std::endl;      \
+            return false;                         \
+        }                                         \
+    } while (0)
+
+
 bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
 #if EDADB_OUTPUT_DEBUG
     std::cout << "DEADB: Def read to EDADB database : " << edadb_path << std::endl;
 #endif
 
     //////// read iEDA Idb classes from edadb database ////////////////////////
+    CHECK_READ(readIdbDesign(), "DefReadEdadb::createDbByEdadb failed to read IdbDesign!");
+    CHECK_READ(readIdbDie(), "DefReadEdadb::createDbByEdadb failed to read IdbDie!");
+    CHECK_READ(readIdbRow(), "DefReadEdadb::createDbByEdadb failed to read IdbRow!");
+    CHECK_READ(readIdbTrackGrid(), "DefReadEdadb::createDbByEdadb failed to read readIdbTrackGrid!");
 
-    if (!readIdbDesign()) {
-        std::cerr << "DefReadEdadb::createDbByEdadb failed to read IdbDesign!" << std::endl;
-        return false;
-    }
 
-    if (!readIdbDie()) {
-        std::cerr << "DefReadEdadb::createDbByEdadb failed to read IdbDie!" << std::endl;
-        return false;
-    }
-
-//    if (!readIdbRow()) {
-//        std::cerr << "DefReadEdadb::createDbByEdadb failed to read IdbRow!" << std::endl;
-//        return false;
-//    }
-//
 //    if (!readIdbRegion()) {
 //        std::cerr << "DefReadEdadb::createDbByEdadb failed to read IdbRegion!" << std::endl;
 //        return false;
 //    }
 //
-//    if (!readIdbTrackGrid()) {
-//        std::cerr << "DefReadEdadb::createDbByEdadb failed to read IdbTrackGrid!" << std::endl;
-//        return false;
-//    }
 //
 //    if (!readIdbGCellGrid()) {
 //        std::cerr << "DefReadEdadb::createDbByEdadb failed to read IdbGCellGridList!" << std::endl;
@@ -344,7 +339,6 @@ bool DefReadEdadb::readIdbDie(void) {
 } // readIdbDie
 
 
-#if 0
 bool DefReadEdadb::readIdbRow(void) {
     edadb::DbMap<idb::IdbRow> row_map;
     row_map.init();
@@ -390,6 +384,55 @@ bool DefReadEdadb::readIdbRow(void) {
 } // readIdbRow
 
 
+bool DefReadEdadb::readIdbTrackGrid(void) {
+    edadb::DbMap<edadb::Shadow<idb::IdbTrackGrid>> track_grid_map;
+    track_grid_map.init();
+    const std::string table_name = track_grid_map.getTableName();
+    if (!edadb::tableExists(table_name)) {
+        // no track grid table, return true
+        std::cout << "EDADB DefReadEdadb::readIdbTrackGrid: no table " << table_name << " exists." << std::endl;
+        return true;
+    }
+
+    IdbLayout* layout = _def_service->get_layout();  
+    IdbLayers* layers = layout->get_layers();
+    IdbTrackGridList* track_grid_list = layout->get_track_grid_list();
+
+    int got = 0;
+    edadb::DbMapReader<edadb::Shadow<idb::IdbTrackGrid>>* rd = nullptr;
+    while (true) {
+        edadb::Shadow<idb::IdbTrackGrid> track_grid_sd;
+        got = edadb::read2Scan<edadb::Shadow<idb::IdbTrackGrid>>(rd, track_grid_map, &track_grid_sd);
+        if (got == 0) {
+            break;
+        }
+        else if (got < 0) {
+            std::cout << "DefReadEdadb::readIdbTrackGrid failed to read!" << std::endl;
+            return false;
+        }
+        IdbTrackGrid* track_grid = track_grid_list->add_track_grid(nullptr);
+        track_grid_sd.fromShadow(track_grid);
+
+        for ( auto& layer_name_sd : track_grid_sd._layer_name_vec_sd ) {
+            IdbLayer* layer = layers->find_layer( layer_name_sd.str );
+            if ( layer != nullptr ) {
+                track_grid->add_layer_list( layer );
+                if (layer->is_routing()) {
+                    IdbLayerRouting* routing_layer = dynamic_cast<IdbLayerRouting*>(layer);
+                    routing_layer->add_track_grid(track_grid);
+                }
+            }
+            else {
+                std::cerr << "DefReadEdadb::readIdbTrackGrid failed to find layer: " << layer_name_sd.str << std::endl;
+            }
+        } // for layer names
+    } // while
+
+    return true;
+} // readIdbTrackGrid
+
+
+#if 0
 bool DefReadEdadb::readIdbRegion(void) {
     edadb::DbMap<idb::IdbRegion> region_map;
     region_map.init();
@@ -462,55 +505,8 @@ bool DefReadEdadb::readIdbSlot(void) {
 #endif
 
 
+
 #if 0
-bool DefReadEdadb::readIdbTrackGrid(void) {
-    edadb::DbMap<edadb::Shadow<idb::IdbTrackGrid>> track_grid_map;
-    track_grid_map.init();
-    const std::string table_name = track_grid_map.getTableName();
-    if (!edadb::tableExists(table_name)) {
-        // no track grid table, return true
-        std::cout << "EDADB DefReadEdadb::readIdbTrackGrid: no table " << table_name << " exists." << std::endl;
-        return true;
-    }
-
-    IdbLayout* layout = _def_service->get_layout();  
-    IdbLayers* layers = layout->get_layers();
-    IdbTrackGridList* track_grid_list = layout->get_track_grid_list();
-
-    int got = 0;
-    edadb::DbMapReader<edadb::Shadow<idb::IdbTrackGrid>>* rd = nullptr;
-    while (true) {
-        edadb::Shadow<idb::IdbTrackGrid> track_grid_sd;
-        got = edadb::read2Scan<edadb::Shadow<idb::IdbTrackGrid>>(rd, track_grid_map, &track_grid_sd);
-        if (got == 0) {
-            break;
-        }
-        else if (got < 0) {
-            std::cout << "DefReadEdadb::readIdbTrackGrid failed to read!" << std::endl;
-            return false;
-        }
-        IdbTrackGrid* track_grid = track_grid_list->add_track_grid(nullptr);
-        track_grid_sd.fromShadow(track_grid);
-
-        for ( auto& layer_name_sd : track_grid_sd._layer_name_vec_sd ) {
-            IdbLayer* layer = layers->find_layer( layer_name_sd.str );
-            if ( layer != nullptr ) {
-                track_grid->add_layer_list( layer );
-                if (layer->is_routing()) {
-                    IdbLayerRouting* routing_layer = dynamic_cast<IdbLayerRouting*>(layer);
-                    routing_layer->add_track_grid(track_grid);
-                }
-            }
-            else {
-                std::cerr << "DefReadEdadb::readIdbTrackGrid failed to find layer: " << layer_name_sd.str << std::endl;
-            }
-        } // for layer names
-    } // while
-
-    return true;
-} // readIdbTrackGrid
-
-
 bool DefReadEdadb::readIdbGCellGrid(void) {
     edadb::DbMap<idb::IdbGCellGrid> gcell_grid_map;
     gcell_grid_map.init();
