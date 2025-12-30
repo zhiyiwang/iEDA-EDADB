@@ -253,6 +253,8 @@ bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
     CHECK_READ(readIdbDie(), "DefReadEdadb::createDbByEdadb failed to read IdbDie!");
     CHECK_READ(readIdbRow(), "DefReadEdadb::createDbByEdadb failed to read IdbRow!");
     CHECK_READ(readIdbTrackGrid(), "DefReadEdadb::createDbByEdadb failed to read readIdbTrackGrid!");
+    CHECK_READ(readIdbGCellGrid(), "DefReadEdadb::createDbByEdadb failed to read IdbGCellGrid!");
+    CHECK_READ(readIdbVia(), "DefReadEdadb::createDbByEdadb failed to read IdbVia!");
 
 
 //    if (!readIdbRegion()) {
@@ -260,16 +262,6 @@ bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
 //        return false;
 //    }
 //
-//
-//    if (!readIdbGCellGrid()) {
-//        std::cerr << "DefReadEdadb::createDbByEdadb failed to read IdbGCellGridList!" << std::endl;
-//        return false;
-//    }
-//
-//    if (!readIdbVia()) {
-//        std::cerr << "DefReadEdadb::createDbByEdadb failed to read IdbVia!" << std::endl;
-//        return false;
-//    }
 //
 //    if (!readComponent()) {
 //        std::cerr << "DefReadEdadb::createDbByEdadb failed to read IdbInstance!" << std::endl;
@@ -432,81 +424,6 @@ bool DefReadEdadb::readIdbTrackGrid(void) {
 } // readIdbTrackGrid
 
 
-#if 0
-bool DefReadEdadb::readIdbRegion(void) {
-    edadb::DbMap<idb::IdbRegion> region_map;
-    region_map.init();
-
-    // check if region table exists
-    const std::string table_name = region_map.getTableName();
-    if (!edadb::tableExists(table_name)) {
-        // no region table, return true
-        std::cout << "EDADB DefReadEdadb::readIdbRegion: no table " << table_name << " exists." << std::endl;
-        return true;
-    }
-
-    IdbDesign* design = _def_service->get_design();  // def
-    IdbRegionList* region_list = design->get_region_list();
-    
-    int got = 0;
-    edadb::DbMapReader<idb::IdbRegion>* rd = nullptr;
-    while (true) {
-        idb::IdbRegion* def_region = new idb::IdbRegion();
-        got = edadb::read2Scan<idb::IdbRegion>(rd, region_map, def_region);
-        if (got == 0) {
-            delete def_region;
-            break;
-        }
-        else if (got < 0) {
-            std::cout << "DefReadEdadb::readIdbRegion failed to read!" << std::endl;
-            return false;
-        }
-        region_list->add_region(def_region);
-    } // while
-
-    return true;
-} // readIdbRegion
-
-
-bool DefReadEdadb::readIdbSlot(void) {
-    edadb::DbMap<idb::IdbSlot> slot_map;
-    slot_map.init();
-
-    // check if slot table exists
-    const std::string table_name = slot_map.getTableName();
-    if (!edadb::tableExists(table_name)) {
-        // no slot table, return true
-        std::cout << "EDADB DefReadEdadb::readIdbSlot: no table " << table_name << " exists." << std::endl;
-        return true;
-    }
-
-    int got = 0;
-    edadb::DbMapReader<idb::IdbSlot>* rd = nullptr;
-
-    IdbDesign* design = _def_service->get_design();  // def
-    IdbSlotList* slot_list = design->get_slot_list();
-    while (true) {
-        IdbSlot* slot = new IdbSlot();
-        got = edadb::read2Scan<idb::IdbSlot>(rd, slot_map, slot);
-        if (got == 0) {
-            delete slot;
-            break;
-        }
-        else if (got < 0) {
-            std::cout << "DefReadEdadb::readIdbSlot failed to read!" << std::endl;
-            return false;
-        }
-
-        slot_list->_slot_list.emplace_back(slot);
-        slot_list->_num++;
-    }
-    return true;
-} // readIdbSlot
-#endif
-
-
-
-#if 0
 bool DefReadEdadb::readIdbGCellGrid(void) {
     edadb::DbMap<idb::IdbGCellGrid> gcell_grid_map;
     gcell_grid_map.init();
@@ -693,7 +610,81 @@ bool DefReadEdadb::readIdbVia(void) {
 
     return true;
 } // readIdbVia
-#endif 
+
+
+
+#if 0
+bool DefReadEdadb::readIdbRegion(void) {
+    edadb::DbMap<idb::IdbRegion> region_map;
+    region_map.init();
+
+    // check if region table exists
+    const std::string table_name = region_map.getTableName();
+    if (!edadb::tableExists(table_name)) {
+        // no region table, return true
+        std::cout << "EDADB DefReadEdadb::readIdbRegion: no table " << table_name << " exists." << std::endl;
+        return true;
+    }
+
+    IdbDesign* design = _def_service->get_design();  // def
+    IdbRegionList* region_list = design->get_region_list();
+    
+    int got = 0;
+    edadb::DbMapReader<idb::IdbRegion>* rd = nullptr;
+    while (true) {
+        idb::IdbRegion* def_region = new idb::IdbRegion();
+        got = edadb::read2Scan<idb::IdbRegion>(rd, region_map, def_region);
+        if (got == 0) {
+            delete def_region;
+            break;
+        }
+        else if (got < 0) {
+            std::cout << "DefReadEdadb::readIdbRegion failed to read!" << std::endl;
+            return false;
+        }
+        region_list->add_region(def_region);
+    } // while
+
+    return true;
+} // readIdbRegion
+
+
+bool DefReadEdadb::readIdbSlot(void) {
+    edadb::DbMap<idb::IdbSlot> slot_map;
+    slot_map.init();
+
+    // check if slot table exists
+    const std::string table_name = slot_map.getTableName();
+    if (!edadb::tableExists(table_name)) {
+        // no slot table, return true
+        std::cout << "EDADB DefReadEdadb::readIdbSlot: no table " << table_name << " exists." << std::endl;
+        return true;
+    }
+
+    int got = 0;
+    edadb::DbMapReader<idb::IdbSlot>* rd = nullptr;
+
+    IdbDesign* design = _def_service->get_design();  // def
+    IdbSlotList* slot_list = design->get_slot_list();
+    while (true) {
+        IdbSlot* slot = new IdbSlot();
+        got = edadb::read2Scan<idb::IdbSlot>(rd, slot_map, slot);
+        if (got == 0) {
+            delete slot;
+            break;
+        }
+        else if (got < 0) {
+            std::cout << "DefReadEdadb::readIdbSlot failed to read!" << std::endl;
+            return false;
+        }
+
+        slot_list->_slot_list.emplace_back(slot);
+        slot_list->_num++;
+    }
+    return true;
+} // readIdbSlot
+#endif
+
 
 
 #if 0

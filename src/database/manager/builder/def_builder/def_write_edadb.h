@@ -32,10 +32,10 @@ protected:
     int32_t writeIdbDie(void);
     int32_t writeIdbRow(void);
     int32_t writeIdbTrackGrid(void);
-//    int32_t writeIdbGCellGrid(void);
+    int32_t writeIdbGCellGrid(void);
+    int32_t writeIdbVia(void);
 //    int32_t writeIdbRegion(void);
 //    int32_t writeIdbSlot(void);
-//    int32_t writeIdbVia(void);
 ////    int32_t writeComponent(void);
 
 

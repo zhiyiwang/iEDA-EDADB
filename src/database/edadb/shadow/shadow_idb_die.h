@@ -10,8 +10,8 @@
 #include "database/data/design/db_layout/IdbDie.h"
 #include "shadow_idb_geometry.h"
 
-namespace edadb {
 
+namespace edadb {
 template<>
 class Shadow<idb::IdbDie> {
 public:

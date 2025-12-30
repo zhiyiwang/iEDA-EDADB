@@ -49,10 +49,10 @@ protected:
     bool readIdbDie(void);
     bool readIdbRow(void);
     bool readIdbTrackGrid(void);
-//    bool readIdbGCellGrid(void);
+    bool readIdbGCellGrid(void);
+    bool readIdbVia(void);
 //    bool readIdbRegion(void);
 //    bool readIdbSlot(void);
-//    bool readIdbVia(void);
 //    bool readComponent(void);
 
 //    bool readSpecialNet(void);
