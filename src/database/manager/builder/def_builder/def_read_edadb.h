@@ -51,9 +51,10 @@ protected:
     bool readIdbTrackGrid(void);
     bool readIdbGCellGrid(void);
     bool readIdbVia(void);
-//    bool readIdbRegion(void);
-//    bool readIdbSlot(void);
+
 //    bool readComponent(void);
+    bool readIdbRegion(void);
+    bool readIdbSlot(void);
 
 //    bool readSpecialNet(void);
 

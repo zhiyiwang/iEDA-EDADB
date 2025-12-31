@@ -67,18 +67,18 @@ TABLE4CLASS(edadb::Shadow<idb::IdbVia>, "iViaSD", (_name_sd, _master_instance_sd
 
 
 
-
-//#include "../data/design/db_design/IdbRegion.h"
-//TABLE4CLASS_WVEC(idb::IdbRegion, "iRegion", (_name, _type), (_boudary_list));
-//
-//#include "../data/design/db_design/IdbSlot.h"
-//TABLE4CLASS_WVEC(idb::IdbSlot, "iSlot", (_layer_name),(_rect_list));
-//
+#include "database/data/design/db_design/IdbRegion.h"
+TABLE4CLASS_WVEC(idb::IdbRegion, "iRegion", (_name, _type), (_boudary_list));
 
 
+#include "database/data/design/db_design/IdbSlot.h"
+TABLE4CLASS_WVEC(idb::IdbSlot, "iSlot", (_layer_name), (_rect_list));
 
-//
-//
+
+
+
+
+
 //#include "../data/design/db_design/IdbHalo.h"
 //TABLE4CLASS(idb::IdbHalo, "iHalo", (_extend_left, _extend_right, _extend_top, _extend_bottom, _is_soft));
 //

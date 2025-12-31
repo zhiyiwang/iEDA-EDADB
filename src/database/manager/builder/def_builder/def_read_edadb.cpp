@@ -255,13 +255,10 @@ bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
     CHECK_READ(readIdbTrackGrid(), "DefReadEdadb::createDbByEdadb failed to read readIdbTrackGrid!");
     CHECK_READ(readIdbGCellGrid(), "DefReadEdadb::createDbByEdadb failed to read IdbGCellGrid!");
     CHECK_READ(readIdbVia(), "DefReadEdadb::createDbByEdadb failed to read IdbVia!");
+    CHECK_READ(readIdbRegion(), "DefReadEdadb::createDbByEdadb failed to read IdbRegion!");
+    CHECK_READ(readIdbSlot(), "DefReadEdadb::createDbByEdadb failed to read IdbSlot!");
 
 
-//    if (!readIdbRegion()) {
-//        std::cerr << "DefReadEdadb::createDbByEdadb failed to read IdbRegion!" << std::endl;
-//        return false;
-//    }
-//
 //
 //    if (!readComponent()) {
 //        std::cerr << "DefReadEdadb::createDbByEdadb failed to read IdbInstance!" << std::endl;
@@ -613,7 +610,7 @@ bool DefReadEdadb::readIdbVia(void) {
 
 
 
-#if 0
+
 bool DefReadEdadb::readIdbRegion(void) {
     edadb::DbMap<idb::IdbRegion> region_map;
     region_map.init();
@@ -683,7 +680,6 @@ bool DefReadEdadb::readIdbSlot(void) {
     }
     return true;
 } // readIdbSlot
-#endif
 
 
 

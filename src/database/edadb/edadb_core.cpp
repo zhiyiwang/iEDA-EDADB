@@ -105,9 +105,9 @@ int createAllTables(void) {
     EDADB_CREATE_TABLE(idb::IdbGCellGrid);
     EDADB_CREATE_TABLE(edadb::Shadow<idb::IdbVia>);
 
-//    EDADB_CREATE_TABLE(idb::IdbRegion);
-//    EDADB_CREATE_TABLE(idb::IdbSlot);
 ////    EDADB_CREATE_TABLE(edadb::Shadow<idb::IdbInstance>);
+    EDADB_CREATE_TABLE(idb::IdbRegion);
+    EDADB_CREATE_TABLE(idb::IdbSlot);
 
     return 0;
 } // createAllTables
