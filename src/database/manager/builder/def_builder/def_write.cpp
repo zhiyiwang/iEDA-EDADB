@@ -214,17 +214,17 @@ bool DefWrite::writeChip()
   write_track_grid();  //
   write_gcell_grid();  //
   write_via();         //
-  write_component(); //
+  write_component();   //
   write_pin();
   write_blockage();
-  write_region(); //  
-  write_slot(); // 
+  write_region();     //  
+  write_slot();       // 
   write_group();
   write_fill();
   write_special_net();
   write_net();
 
-  write_end(); //
+  write_end();        //
 
   return true;
 }

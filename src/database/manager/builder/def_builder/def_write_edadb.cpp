@@ -65,8 +65,8 @@ bool DefWriteEdadb::writeChip2Edadb() {
     writeIdbTrackGrid();
     writeIdbGCellGrid();
     writeIdbVia();
+    writeIdbInstance();
 
-////    writeComponent();
     writeIdbRegion();
     writeIdbSlot();
 
@@ -272,8 +272,7 @@ int32_t DefWriteEdadb::writeIdbVia(void) {
 } // writeIdbVia
 
 
-#if 0
-int32_t DefWriteEdadb::writeComponent(void) {
+int32_t DefWriteEdadb::writeIdbInstance(void) {
     edadb::DbMap< edadb::Shadow<idb::IdbInstance> > instance_map;
     instance_map.init();
 
@@ -314,8 +313,10 @@ int32_t DefWriteEdadb::writeComponent(void) {
     inst_sd_vec.clear();
 
     return kDbSuccess;
-} // writeComponent
-#endif 
+} // writeIdbInstance
+
+
+
 
 
 int32_t DefWriteEdadb::writeIdbRegion(void) {

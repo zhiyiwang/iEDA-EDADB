@@ -12,6 +12,7 @@
 #include "shadow/shadow_idb_layer_shape.h"
 #include "shadow/shadow_idb_via_master.h"
 #include "shadow/shadow_idb_via.h"
+#include "shadow/shadow_idb_halo.h"
 
 
 
@@ -23,90 +24,6 @@
 // #include "../data/design/db_layout/IdbLayer.h"
 // 
 
-// 
-// #if 0
-// #include "../data/design/db_design/IdbHalo.h"
-// namespace edadb {
-// template<>
-// class Shadow<idb::IdbRouteHalo> {
-// public:
-//     void toShadow(idb::IdbRouteHalo* obj) {
-//         _route_distance_sd = obj->get_route_distance();
-//         _layer_bottom_name_sd = obj->get_layer_bottom() ? obj->get_layer_bottom()->get_name() : "";
-//         _layer_top_name_sd = obj->get_layer_top() ? obj->get_layer_top()->get_name() : "";
-//     }
-//     void fromShadow(idb::IdbRouteHalo* obj) {
-//         obj->set_route_distance( _route_distance_sd );
-//         // use layer name to lookup layer during def read
-//     }
-// 
-// public:
-//     int32_t _route_distance_sd = 0;
-//     std::string _layer_bottom_name_sd;
-//     std::string _layer_top_name_sd;
-// }; // shadow IdbRouteHalo
-// } // namespace edadb
-// 
-// 
-// #include "../data/design/db_design/IdbInstance.h"
-// namespace edadb {
-// template<>
-// class Shadow<idb::IdbInstance>  {
-// public:
-//     void toShadow(idb::IdbInstance* obj) {
-//         _name_sd = obj->get_name();
-//         _cell_master_name_sd = obj->get_cell_master() ? obj->get_cell_master()->get_name() : "";
-// 
-//         // assign to write, no need to deep copy
-//         _type_sd = obj->get_type();
-//         _status_sd = obj->get_status();
-//         _orient_sd = obj->get_orient();
-//         _weight_sd = obj->get_weight();
-//         _coordinate_sd = obj->get_coordinate();
-//         if ( obj->has_halo() ) {
-//             _halo_sd = obj->get_halo();
-//         }
-//         if ( obj->has_route_halo() ) {
-//             _route_halo_sd.toShadow( obj->get_route_halo() );
-//         }
-//         _region_name_sd = obj->get_region() ? obj->get_region()->get_name() : "";
-//     }
-// 
-//     void fromShadow(idb::IdbInstance* obj) {
-//         obj->set_name( _name_sd );
-//         obj->set_type( _type_sd );
-//         obj->set_status( _status_sd );
-//         obj->set_orient( _orient_sd );
-//         obj->set_weight( _weight_sd );
-//         // use cell master name to lookup during def read
-//         *(obj->get_coordinate()) = _coordinate_sd;
-//         
-//         obj->set_halo( _halo_sd );
-//         _halo_sd = nullptr; // avoid double free
-// 
-//         if ( obj->has_route_halo() ) {
-//             _route_halo_sd.fromShadow( obj->get_route_halo() );
-//         }
-//         // use region name to lookup during def read
-//     }
-// 
-// public:
-//     std::string _name_sd;
-//     std::string _cell_master_name_sd;
-//     idb::IdbInstanceType _type_sd;
-//     idb::IdbPlacementStatus _status_sd;
-//     idb::IdbOrient _orient_sd;
-//     int32_t _weight_sd;
-// 
-//     idb::IdbCoordinate<int32_t>* _coordinate_sd;
-//     idb::IdbHalo *_halo_sd = nullptr;
-//     Shadow<idb::IdbRouteHalo>* _route_halo_sd = nullptr;
-//     std::string _region_name_sd;
-// }; // Shadow IdbInstance
-// 
-// } // namespace edadb
-// #endif 
-// 
 // 
 // 
 // #if 0
