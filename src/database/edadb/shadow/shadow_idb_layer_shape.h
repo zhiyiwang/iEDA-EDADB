@@ -16,11 +16,28 @@ namespace edadb {
 template<>
 class Shadow<idb::IdbLayerShape> {
 public:
+    Shadow<idb::IdbLayerShape>() = default;
+    ~Shadow<idb::IdbLayerShape>() {
+        // clean up rect list
+        for (auto rect : _rect_list_sd) {
+            delete rect; rect = nullptr;
+        }
+        _rect_list_sd.clear();
+    }
+public:
     void toShadow(idb::IdbLayerShape* obj) {
         _layer_name_sd = obj->get_layer() ? obj->get_layer()->get_name() : "";
         _type_sd = obj->get_type();
-        // assign to write, no need to deep copy
-        _rect_list_sd = obj->get_rect_list(); 
+
+        // deep copy
+        for (auto& rect : obj->get_rect_list()) {
+            idb::IdbRect* rect_sd = new idb::IdbRect();
+            rect_sd->set_low_x(rect->get_low_x());
+            rect_sd->set_low_y(rect->get_low_y());
+            rect_sd->set_high_x(rect->get_high_x());
+            rect_sd->set_high_y(rect->get_high_y());
+            _rect_list_sd.push_back(rect_sd);
+        }
     }
 
     void fromShadow(idb::IdbLayerShape* obj) {
@@ -28,8 +45,26 @@ public:
 
         auto& rect_list = obj->get_rect_list();
         assert(rect_list.empty());
-        rect_list.swap(_rect_list_sd);
+
+        // deep copy
+        for (auto& rect_sd : _rect_list_sd) {
+            idb::IdbRect* rect = new idb::IdbRect();
+            rect->set_low_x(rect_sd->get_low_x());
+            rect->set_low_y(rect_sd->get_low_y());
+            rect->set_high_x(rect_sd->get_high_x());
+            rect->set_high_y(rect_sd->get_high_y());
+            rect_list.push_back(rect);
+        }
     }
+
+    void print(void) {
+        std::cout << "Shadow<idb::IdbLayerShape> : layer_name = " << _layer_name_sd << ", type = " << static_cast<uint32_t>(_type_sd)
+                  << ", rect_list size = " << _rect_list_sd.size() << std::endl;
+        for (auto& rect : _rect_list_sd) {
+            std::cout << "  Rect: (" << rect->get_low_x() << ", " << rect->get_low_y() << ") - ("
+                      << rect->get_high_x() << ", " << rect->get_high_y() << ")" << std::endl;
+        }
+    } // print
 
 public:
     std::string _layer_name_sd;

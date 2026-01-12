@@ -66,6 +66,7 @@ bool DefWriteEdadb::writeChip2Edadb() {
     writeIdbGCellGrid();
     writeIdbVia();
     writeIdbInstance();
+    writeIdbPin();
 
     writeIdbRegion();
     writeIdbSlot();
@@ -317,6 +318,36 @@ int32_t DefWriteEdadb::writeIdbInstance(void) {
 
 
 
+int32_t DefWriteEdadb::writeIdbPin(void) {
+    edadb::DbMap< edadb::Shadow<idb::IdbPin> > pin_map;
+    pin_map.init();
+
+    IdbDesign* design = _def_service->get_design();
+    IdbPins* pin_list = design->get_io_pin_list();
+    if (pin_list == nullptr) {
+      std::cout << "Write PINS error..." << std::endl;
+      return kDbFail;
+    }
+
+    vector<edadb::Shadow<idb::IdbPin>*> pin_sd_vec;
+    for (auto& pin : pin_list->get_pin_list()) {
+        edadb::Shadow<idb::IdbPin>* pin_sd = new edadb::Shadow<idb::IdbPin>();
+        pin_sd->toShadow( pin );
+        pin_sd_vec.emplace_back( pin_sd );
+    }
+
+    if (!edadb::insertVector(pin_map, pin_sd_vec)) {
+        std::cerr << "DefWriteEdadb::writeIdbPin failed to insertVector" << std::endl;
+        return kDbFail;
+    }
+
+    for (auto& pin_sd : pin_sd_vec) {
+        delete pin_sd;
+        pin_sd = nullptr;
+    }
+
+    return kDbSuccess;
+} // writeIdbPin
 
 
 int32_t DefWriteEdadb::writeIdbRegion(void) {

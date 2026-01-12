@@ -22,6 +22,11 @@ int init2read(const char* edadb_path) {
 
     initPrimKeys();
 
+    if (initAllTables(false) < 0) {
+        std::cerr << "Error: failed to initAllTables in edadb database" << std::endl;
+        return -1; 
+    }
+
     return 0;
 } // init2read
 
@@ -37,8 +42,8 @@ int init2write(const char* edadb_path) {
 
     initPrimKeys();
 
-    if (createAllTables() < 0) {
-        std::cerr << "Error: failed to createAllTables in edadb database" << std::endl;
+    if (initAllTables(true) < 0) {
+        std::cerr << "Error: failed to initAllTables in edadb database" << std::endl;
         return -1;
     }
 
@@ -66,49 +71,52 @@ void initPrimKeys(void) {
     edadb::Cpp2SqlTypeTrait<idb::IdbHalo>::hasPrimKey = false;
     edadb::Cpp2SqlTypeTrait<edadb::Shadow<idb::IdbRouteHalo>>::hasPrimKey = false;
 
-
 //-//    edadb::Cpp2SqlTypeTrait<idb::IdbSpecialNetEdgeSegment>::hasPrimKey = false;
 
 } // initPrimKeys
 
 
 template <typename T>
-int createTable(void) {
+int createTable(bool crt_tab) {
 #if EDADB_OUTPUT_DEBUG
     std::cout << "[EDADB]: create "<< T::static_table_name << " table in edadb database" << std::endl;
 #endif
     edadb::DbMap<T> table_map;
-    table_map.init();
 
-    if (!edadb::createTable(table_map)) {
-        std::cerr << "DefWriteEdadb::writeIdbDesign failed to createTable" << std::endl;
-        return -1;
-    }
+    if (!crt_tab) {
+        table_map.init();
+    } else {
+        if (!edadb::createTable(table_map)) {
+            std::cerr << "DefWriteEdadb::writeIdbDesign failed to createTable" << std::endl;
+            return -1;
+        }
+    } // if-else
 
     return 0;
 } // createTable
 
 
-#define EDADB_CREATE_TABLE(T)                                     \
-    do {                                                              \
-        if (edadb::createTable<T>() < 0) {                            \
+#define EDADB_INIT_TABLE(T, CTR_TBL)          \
+    do {                                      \
+        if (edadb::createTable<T>(CTR_TBL) < 0){                      \
             std::fprintf(stderr, "[EDADB] createTable failed: %s\n",  \
                          typeid(T).name());                           \
             return -1;                                                \
         }                                                             \
     } while (0)
 
-int createAllTables(void) {
-    EDADB_CREATE_TABLE(idb::IdbDesign);
-    EDADB_CREATE_TABLE(edadb::Shadow<idb::IdbDie>);
-    EDADB_CREATE_TABLE(idb::IdbRow);
-    EDADB_CREATE_TABLE(edadb::Shadow<idb::IdbTrackGrid>);
-    EDADB_CREATE_TABLE(idb::IdbGCellGrid);
-    EDADB_CREATE_TABLE(edadb::Shadow<idb::IdbVia>);
-    EDADB_CREATE_TABLE(edadb::Shadow<idb::IdbInstance>);
+int initAllTables(bool crt_tab) {
+    EDADB_INIT_TABLE(idb::IdbDesign, crt_tab);
+    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbDie>, crt_tab);
+    EDADB_INIT_TABLE(idb::IdbRow, crt_tab);
+    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbTrackGrid>, crt_tab);
+    EDADB_INIT_TABLE(idb::IdbGCellGrid, crt_tab);
+    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbVia>, crt_tab);
+    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbInstance>, crt_tab);
+    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbPin>, crt_tab);
 
-    EDADB_CREATE_TABLE(idb::IdbRegion);
-    EDADB_CREATE_TABLE(idb::IdbSlot);
+    EDADB_INIT_TABLE(idb::IdbRegion, crt_tab);
+    EDADB_INIT_TABLE(idb::IdbSlot, crt_tab);
 
     return 0;
 } // createAllTables

@@ -214,8 +214,8 @@ bool DefWrite::writeChip()
   write_track_grid();  //
   write_gcell_grid();  //
   write_via();         //
-  write_component();   //
-  write_pin();
+  write_component();   // 
+  write_pin();         //
   write_blockage();
   write_region();     //  
   write_slot();       // 

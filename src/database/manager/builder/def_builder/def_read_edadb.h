@@ -52,6 +52,7 @@ protected:
     bool readIdbGCellGrid(void);
     bool readIdbVia(void);
     bool readIdbInstance(void);
+    bool readIdbPin(void);
 
     bool readIdbRegion(void);
     bool readIdbSlot(void);

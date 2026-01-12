@@ -29,18 +29,22 @@ int init2write(const char* edadb_path);
  */
 void initPrimKeys(void);
 
+
 /**
- * @brief Create a database table for the specified iEDA class type.
+ * @brief init database table for all iEDA class type.
+ * @param crt_tab create table or not
  * @return 0 success; <0 fail
  */
-template <typename T>
-int createTable(void);
+int initAllTables(bool crt_tab = true);
+
 
 /**
  * @brief Create a database table for the specified iEDA class type.
+ * @param crt_tab create table or not
  * @return 0 success; <0 fail
  */
-int createAllTables(void);
+template <typename T>
+int createTable(bool crt_tab);
 
 } // namespace edadb
 

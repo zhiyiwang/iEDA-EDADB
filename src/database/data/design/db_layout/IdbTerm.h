@@ -142,8 +142,11 @@ class IdbPort
     return nullptr;
   }
 
-// private:
+#if EDADB_ENABLE
+private:
+#else
 public:
+#endif 
   vector<IdbLayerShape*> _layer_shape_list;
   vector<IdbVia*> _via_list;
   // IdbLayer* _layer;
@@ -227,9 +230,9 @@ class IdbTerm
   // operator
 
 #if EDADB_ENABLE
-private:
-#else
 public:
+#else
+private:
 #endif 
   string _name;
   IdbConnectDirection _direction;

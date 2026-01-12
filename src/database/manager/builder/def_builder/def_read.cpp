@@ -1671,6 +1671,7 @@ int32_t DefRead::parse_pin(defiPin* def_pin)
 
     io_term->set_has_port(false);
 
+
     // Support Layer
     if (def_pin->hasLayer()) {
       IdbPort* port = io_term->add_port(nullptr);
