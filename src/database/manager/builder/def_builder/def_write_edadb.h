@@ -34,7 +34,7 @@ protected:
     int32_t writeIdbTrackGrid(void);
     int32_t writeIdbGCellGrid(void);
     int32_t writeIdbVia(void);
-    int32_t writeIdbInstance(void); // DefWrite::write_component
+    int32_t writeIdbInstance(void); 
     int32_t writeIdbPin(void);
 
     int32_t writeIdbRegion(void);

@@ -77,13 +77,13 @@ TABLE4CLASS(edadb::Shadow<idb::IdbInstance>, "iInstSD", (_name_sd, _type_sd, _st
 
 
 #include "shadow/shadow_idb_port.h"
-TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbPort>, "iPortSD", (primary_key, _placement_status_sd, _class_sd, _orient_sd, _coordinate_sd), (_layer_shape_list_sd));
+TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbPort>, "iPortSD", (primary_key, _class_sd, _orient_sd, _placement_status_sd, _coordinate_sd), (_layer_shape_list_sd));
 
 #include "shadow/shadow_idb_term.h"
 TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbTerm>, "iTermSD", (_name_sd, _direction_sd, _type_sd, _shape_sd, _placement_status_sd, _has_port_sd, _is_special_net_sd, _is_instance_sd), (_port_list_sd));
 
 #include "shadow/shadow_idb_pin.h"
-TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbPin>, "iPinSD", (_pin_name_sd, _net_name_sd, _io_term_sd, _orient_sd, _is_io_pin_sd, _average_coordinate_sd, _location_sd), (_layer_shape_list_sd));
+TABLE4CLASS(edadb::Shadow<idb::IdbPin>, "iPinSD", (_pin_name_sd, _net_name_sd, _io_term_sd, _average_coordinate_sd, _location_sd, _orient_sd, _is_io_pin_sd, _is_special_net_sd, _layer_num_sd));
 
 
 #include "database/data/design/db_design/IdbRegion.h"

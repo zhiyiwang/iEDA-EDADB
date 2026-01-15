@@ -15,6 +15,22 @@ namespace edadb {
 template<>
 class Shadow<idb::IdbInstance>  {
 public:
+    ~Shadow<idb::IdbInstance>(void) {
+        if (_coordinate_sd_owner) {
+            delete _coordinate_sd;
+            _coordinate_sd = nullptr;
+        }
+
+        // _halo_sd ownership get from / moved to IdbInstance 
+
+        if (_route_halo_sd != nullptr) {
+            delete _route_halo_sd;
+            _route_halo_sd = nullptr;
+        }
+    }
+
+
+public:
     void toShadow(idb::IdbInstance* obj) {
         _name_sd = obj->get_name();
         _cell_master_name_sd = obj->get_cell_master() ? obj->get_cell_master()->get_name() : "";
@@ -26,10 +42,13 @@ public:
 
         // assign to write, no need to deep copy
         _coordinate_sd = obj->get_coordinate();
+        _coordinate_sd_owner = false;
+
         if ( obj->has_halo() ) {
             _halo_sd = obj->get_halo();
         }
         if ( obj->has_route_halo() ) {
+            _route_halo_sd = new Shadow<idb::IdbRouteHalo>();
             _route_halo_sd->toShadow( obj->get_route_halo() );
         }
         _region_name_sd = obj->get_region() ? obj->get_region()->get_name() : "";
@@ -41,13 +60,18 @@ public:
         obj->set_status( _status_sd );
         obj->set_orient( _orient_sd );
         obj->set_weight( _weight_sd );
+
         // use cell master name to lookup during def read
         obj->set_coodinate( *_coordinate_sd );
+        _coordinate_sd_owner = true;
         
         if (_halo_sd != nullptr) {
             obj->set_halo( _halo_sd );
-            _halo_sd = nullptr; // avoid double free
+            _halo_sd = nullptr; // move ownership, avoid double free
         }
+
+        // DefReadEdadb::readIdbInstance 
+        //   will create new IdbRouteHalo object if _route_halo_sd is not nullptr
 
         // use region name to lookup during def read
     }
@@ -60,7 +84,8 @@ public:
     idb::IdbPlacementStatus _status_sd;
     idb::IdbOrient _orient_sd;
     int32_t _weight_sd;
-    idb::IdbCoordinate<int32_t>* _coordinate_sd;
+    idb::IdbCoordinate<int32_t>* _coordinate_sd; // ctor always allocated
+    bool _coordinate_sd_owner = true;
 
     idb::IdbHalo *_halo_sd = nullptr;
     /**

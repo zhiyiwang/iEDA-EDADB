@@ -15,13 +15,16 @@ namespace edadb {
 template<>
 class Shadow<idb::IdbDie> {
 public:
-    Shadow (): primary_key(next_primary_key++) {}
-    ~Shadow() {
+    Shadow<idb::IdbDie>(void): primary_key(next_primary_key++) {}
+    ~Shadow<idb::IdbDie>(void) {
         for (auto& point_shadow : points_sd) {
             delete point_shadow;
         }
         points_sd.clear();
     }
+
+    Shadow<idb::IdbDie>(const Shadow& other) = delete;
+    Shadow<idb::IdbDie>& operator=(const Shadow& other) = delete;
     
 public:
     void fromShadow(idb::IdbDie* obj) {

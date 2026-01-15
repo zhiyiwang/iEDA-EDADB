@@ -16,8 +16,10 @@ public:
     void toShadow(idb::IdbRouteHalo* obj) {
         _route_distance_sd = obj->get_route_distance();
 
-        _layer_bottom_name_sd = obj->get_layer_bottom() ? obj->get_layer_bottom()->get_name() : "";
-        _layer_top_name_sd = obj->get_layer_top() ? obj->get_layer_top()->get_name() : "";
+        _layer_bottom_name_sd = obj->get_layer_bottom() ?
+                obj->get_layer_bottom()->get_name() : "";
+        _layer_top_name_sd = obj->get_layer_top() ?
+                obj->get_layer_top()->get_name() : "";
     }
     void fromShadow(idb::IdbRouteHalo* obj) {
         obj->set_route_distance( _route_distance_sd );

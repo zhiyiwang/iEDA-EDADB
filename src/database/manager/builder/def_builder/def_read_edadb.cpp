@@ -13,6 +13,7 @@ DefReadEdadb::DefReadEdadb(IdbDefService* def_service) : DefRead(def_service)
 }
 
 
+
 bool DefReadEdadb::createDbFromEdadb(const char* edadb_path, const char* path)
 {
     if (_def_service == nullptr) {
@@ -254,10 +255,11 @@ bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
     CHECK_READ(readIdbTrackGrid(), "DefReadEdadb::createDbByEdadb failed to read readIdbTrackGrid!");
     CHECK_READ(readIdbGCellGrid(), "DefReadEdadb::createDbByEdadb failed to read IdbGCellGrid!");
     CHECK_READ(readIdbVia(), "DefReadEdadb::createDbByEdadb failed to read IdbVia!");
-    CHECK_READ(readIdbRegion(), "DefReadEdadb::createDbByEdadb failed to read IdbRegion!");
-    CHECK_READ(readIdbSlot(), "DefReadEdadb::createDbByEdadb failed to read IdbSlot!");
     CHECK_READ(readIdbInstance(), "DefReadEdadb::createDbByEdadb failed to read IdbInstance!");
     CHECK_READ(readIdbPin(), "DefReadEdadb::createDbByEdadb failed to read IdbPin!");
+
+    CHECK_READ(readIdbRegion(), "DefReadEdadb::createDbByEdadb failed to read IdbRegion!");
+    CHECK_READ(readIdbSlot(), "DefReadEdadb::createDbByEdadb failed to read IdbSlot!");
 
 
 
@@ -324,6 +326,7 @@ bool DefReadEdadb::readIdbDie(void) {
 } // readIdbDie
 
 
+
 bool DefReadEdadb::readIdbRow(void) {
     edadb::DbMap<idb::IdbRow> row_map;
     row_map.init();
@@ -367,6 +370,7 @@ bool DefReadEdadb::readIdbRow(void) {
 
     return true;
 } // readIdbRow
+
 
 
 bool DefReadEdadb::readIdbTrackGrid(void) {
@@ -417,6 +421,7 @@ bool DefReadEdadb::readIdbTrackGrid(void) {
 } // readIdbTrackGrid
 
 
+
 bool DefReadEdadb::readIdbGCellGrid(void) {
     edadb::DbMap<idb::IdbGCellGrid> gcell_grid_map;
     gcell_grid_map.init();
@@ -451,6 +456,7 @@ bool DefReadEdadb::readIdbGCellGrid(void) {
 
     return true;
 } // readIdbGCellGrid
+
 
 
 bool DefReadEdadb::readIdbVia(void) {
@@ -605,6 +611,7 @@ bool DefReadEdadb::readIdbVia(void) {
 } // readIdbVia
 
 
+
 bool DefReadEdadb::readIdbInstance(void) {
     IdbDesign* design = _def_service->get_design();  // Def
     IdbLayout* layout = _def_service->get_layout();  // Lef
@@ -685,6 +692,7 @@ bool DefReadEdadb::readIdbInstance(void) {
 } // readIdbInstance
 
 
+
 bool DefReadEdadb::readIdbPin(void) {
     edadb::DbMap<edadb::Shadow<idb::IdbPin>> pin_map;
     pin_map.init();
@@ -716,15 +724,18 @@ bool DefReadEdadb::readIdbPin(void) {
             break;
         }
 
-        // create IdbPin instance from shadow and add to pin_list
-        IdbPin* pin = new IdbPin();
-        pin_sd.fromShadow(pin);
-        pin_list->add_pin_list(pin);
+        edadb::Shadow<idb::IdbTerm>* term_sd = pin_sd._io_term_sd;
+        assert(term_sd != nullptr);
 
-        idb::IdbTerm *term = pin->get_term();
-        edadb::Shadow<idb::IdbTerm>& term_sd = pin_sd._io_term_sd;
-        if (term_sd._has_port_sd) {
-            for (edadb::Shadow<idb::IdbPort>* port_sd : term_sd._port_list_sd) {
+        // create IdbPin instance from shadow and add to pin_list
+        IdbPin* pin = pin_list->add_pin_list(nullptr);
+        pin_sd.fromShadow(pin);
+
+        // created by pin_sd.fromShadow
+        idb::IdbTerm *term = pin->get_term(); 
+
+        if (term_sd->_has_port_sd) {
+            for (edadb::Shadow<idb::IdbPort>* port_sd : term_sd->_port_list_sd) {
                 IdbPort* port = term->add_port(nullptr);
                 port_sd->fromShadow(port);
 
@@ -739,6 +750,9 @@ bool DefReadEdadb::readIdbPin(void) {
                     layer_shape_sd->fromShadow(layer_shape);
                     layer_shape->set_layer(layer);
                 } // for layer shapes
+
+                if (!port->get_layer_shape().empty())
+                    port->set_io_bounding_box();
             } // for ports
 
             pin->set_port_layer_shape();
@@ -748,12 +762,17 @@ bool DefReadEdadb::readIdbPin(void) {
             int32_t bounding_box_ur_x = INT_MIN;
             int32_t bounding_box_ur_y = INT_MIN;
 
-            if (!pin_sd._layer_shape_list_sd.empty()) {
+            uint32_t layer_num = pin_sd._layer_num_sd;
+            if (layer_num > 0) {
                 IdbPort* port = term->add_port(nullptr);
 
                 int32_t coordinate_x = 0;
                 int32_t coordinate_y = 0;
-                for (auto& layer_shape_sd : pin_sd._layer_shape_list_sd) {
+                for (uint32_t i = 0; i < layer_num; ++i) {
+                    edadb::Shadow<idb::IdbPort>* port_sd = term_sd->_port_list_sd.at(i);
+                    assert(port_sd->_layer_shape_list_sd.size() == 1);
+                    edadb::Shadow<idb::IdbLayerShape>* layer_shape_sd = 
+                            port_sd->_layer_shape_list_sd.at(0);
                     IdbLayerShape* layer_shape = port->add_layer_shape();
                     layer_shape_sd->fromShadow(layer_shape);
 
@@ -779,10 +798,10 @@ bool DefReadEdadb::readIdbPin(void) {
                     coordinate_y += mid_y;
                 } // for layer shapes
 
-                if (!port->get_layer_shape().empty()) {
+                if (layer_num > 0) {
                     term->set_average_position(
-                        coordinate_x / port->get_layer_shape().size(),
-                        coordinate_y / port->get_layer_shape().size());
+                        coordinate_x / (layer_num * 2),
+                        coordinate_y / (layer_num * 2));
                     term->set_bounding_box(
                         bounding_box_ll_x, bounding_box_ll_y,
                         bounding_box_ur_x, bounding_box_ur_y);
@@ -790,14 +809,15 @@ bool DefReadEdadb::readIdbPin(void) {
                     return kDbSuccess;
                 }
 
-//                // set pin bounding box
-//                pin->set_bounding_box();
+                // set pin bounding box
+                pin->set_bounding_box();
             } // if 
         } // if _has_port
     } // while
 
     return true;
 } // readIdbPin
+
 
 
 bool DefReadEdadb::readIdbRegion(void) {
@@ -833,6 +853,7 @@ bool DefReadEdadb::readIdbRegion(void) {
 
     return true;
 } // readIdbRegion
+
 
 
 bool DefReadEdadb::readIdbSlot(void) {
