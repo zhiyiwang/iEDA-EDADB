@@ -74,12 +74,12 @@ bool DefReadEdadb::createDbByDef(const char* path) {
 //--    defrSetPinEndCbk(pinsEndCallback);
 //--    defrSetStartPinsCbk(pinsBeginCallback);
 //--    defrSetBlockageCbk(blockageCallback);
+//--    defrSetGroupCbk(groupCallback);
 
 // todo 
     defrSetFillStartCbk(fillsCallback);
     defrSetFillCbk(fillCallback);
 
-    defrSetGroupCbk(groupCallback);
     defrSetNetStartCbk(netBeginCallback);
     defrSetNetCbk(netCallback);
     defrSetNetEndCbk(netEndCallback);
@@ -259,6 +259,7 @@ bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
     CHECK_READ(readIdbBlockage(), "DefReadEdadb::createDbByEdadb failed to read IdbBlockage!");
     CHECK_READ(readIdbRegion(), "DefReadEdadb::createDbByEdadb failed to read IdbRegion!");
     CHECK_READ(readIdbSlot(), "DefReadEdadb::createDbByEdadb failed to read IdbSlot!");
+    CHECK_READ(readIdbGroup(), "DefReadEdadb::createDbByEdadb failed to read IdbGroup!");
 
 
 
@@ -893,7 +894,7 @@ bool DefReadEdadb::readIdbBlockage(void) {
     } // while
 
     return true;
-} // readIdb
+} // readIdbBlockage
 
 
 
@@ -967,6 +968,48 @@ bool DefReadEdadb::readIdbSlot(void) {
     }
     return true;
 } // readIdbSlot
+
+
+
+bool DefReadEdadb::readIdbGroup(void) {
+    edadb::DbMap<edadb::Shadow<idb::IdbGroup>> group_map;
+    group_map.init();
+
+    // check if group table exists
+    const std::string table_name = group_map.getTableName();
+    if (!edadb::tableExists(table_name)) {
+        // no group table, return true
+        std::cout << "EDADB DefReadEdadb::readIdbGroup: no table " << table_name << " exists." << std::endl;
+        return true;
+    }
+
+    IdbDesign* design = _def_service->get_design();  // def
+    IdbRegionList* region_list = design->get_region_list();
+//    IdbInstanceList* instance_list = design->get_instance_list();
+    IdbGroupList* group_list = design->get_group_list();
+
+    int got = 0;
+    edadb::DbMapReader<edadb::Shadow<idb::IdbGroup>>* rd_sd = nullptr;
+    while (true) {
+        edadb::Shadow<idb::IdbGroup> group_sd;
+        got = edadb::read2Scan<edadb::Shadow<idb::IdbGroup>>(rd_sd, group_map, &group_sd);
+        if (got < 0) {
+            std::cout << "DefReadEdadb::readIdbGroup failed to read!" << std::endl;
+            return false;
+        }
+        else if (got == 0) {
+            break;
+        }
+
+        // create IdbGroup instance from shadow and add to group_list
+        IdbGroup* group = group_list->add_group(group_sd._group_name_sd);
+        group_sd.fromShadow(group);
+
+        group->set_region(region_list->find_region(group_sd._region_name_sd));
+    } // while
+
+    return true;
+} // readIdbGroup
 
 
 

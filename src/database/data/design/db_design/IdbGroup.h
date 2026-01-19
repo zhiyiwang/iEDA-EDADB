@@ -58,10 +58,15 @@ class IdbGroup
   void set_region(IdbRegion* region) { _region = region; }
   void add_instance(IdbInstance* instance) { _instance_list->add_instance(instance); }
 
+#if EDADB_ENABLE
+public:
+#else
  private:
+#endif
+
   std::string _group_name;
-  IdbRegion* _region;
-  IdbInstanceList* _instance_list;
+  IdbRegion* _region; 
+  IdbInstanceList* _instance_list; 
 };
 
 class IdbGroupList

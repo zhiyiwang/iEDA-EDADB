@@ -56,6 +56,7 @@ protected:
     bool readIdbBlockage(void);
     bool readIdbRegion(void);
     bool readIdbSlot(void);
+    bool readIdbGroup(void);
 
 //    bool readSpecialNet(void);
 

@@ -98,6 +98,9 @@ TABLE4CLASS_WVEC(idb::IdbRegion, "iRegion", (_name, _type), (_boudary_list));
 TABLE4CLASS_WVEC(idb::IdbSlot, "iSlot", (_layer_name), (_rect_list));
 
 
+#include "shadow/shadow_idb_group.h"
+TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbGroup>, "iGroupSD", (_group_name_sd, _region_name_sd), (_instance_name_vec_sd));
+
 
 
 //#if 0
