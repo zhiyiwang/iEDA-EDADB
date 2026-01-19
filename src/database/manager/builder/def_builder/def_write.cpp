@@ -216,9 +216,9 @@ bool DefWrite::writeChip()
   write_via();         //
   write_component();   // 
   write_pin();         // 
-  write_blockage();
-  write_region();     //  
-  write_slot();       // 
+  write_blockage();    
+  write_region();      //  
+  write_slot();        // 
   write_group();
   write_fill();
   write_special_net();
@@ -600,7 +600,6 @@ int32_t DefWrite::write_blockage()
   }
 
   writestr("BLOCKAGES %d ;\n", blockage_list->get_num());
-
   for (IdbBlockage* blockage : blockage_list->get_blockage_list()) {
     if (blockage->get_type() == IdbBlockage::IdbBlockageType::kRoutingBlockage) {
       IdbRoutingBlockage* routing_blockage = dynamic_cast<IdbRoutingBlockage*>(blockage);

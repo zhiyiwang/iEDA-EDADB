@@ -105,6 +105,7 @@ int createTable(bool crt_tab) {
         }                                                             \
     } while (0)
 
+
 int initAllTables(bool crt_tab) {
     EDADB_INIT_TABLE(idb::IdbDesign, crt_tab);
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbDie>, crt_tab);
@@ -114,7 +115,7 @@ int initAllTables(bool crt_tab) {
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbVia>, crt_tab);
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbInstance>, crt_tab);
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbPin>, crt_tab);
-
+    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbBlockage>, crt_tab);
     EDADB_INIT_TABLE(idb::IdbRegion, crt_tab);
     EDADB_INIT_TABLE(idb::IdbSlot, crt_tab);
 

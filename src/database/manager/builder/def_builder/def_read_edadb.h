@@ -53,7 +53,7 @@ protected:
     bool readIdbVia(void);
     bool readIdbInstance(void);
     bool readIdbPin(void);
-
+    bool readIdbBlockage(void);
     bool readIdbRegion(void);
     bool readIdbSlot(void);
 

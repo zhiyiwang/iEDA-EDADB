@@ -86,11 +86,11 @@ class IdbBlockage
   // function
 
  private:
-  std::string _instance_name;
-  IdbInstance* _instance;
-  bool _is_pushdown;
-  IdbBlockageType _type;
-  std::vector<IdbRect*> _rect_list;
+  std::string _instance_name; // 
+  IdbInstance* _instance;     // check null
+  bool _is_pushdown;          //
+  IdbBlockageType _type;      //
+  std::vector<IdbRect*> _rect_list; // 
 };
 
 class IdbRoutingBlockage : public IdbBlockage
@@ -118,14 +118,14 @@ class IdbRoutingBlockage : public IdbBlockage
   void set_effective_width(int32_t width) { _effective_width = width; }
 
  private:
-  std::string _layer_name;
+  std::string _layer_name;    //
   IdbLayer* _layer;
-  int32_t _min_spacing;
-  int32_t _effective_width;
-  bool _is_slots;
-  bool _is_fills;
+  int32_t _min_spacing;       //
+  int32_t _effective_width;   //
+  bool _is_slots;             //
+  bool _is_fills;             //
   /*Indicates that the blockage only blocks signal net routing, and does not block power or ground net routing.*/
-  bool _is_except_pgnet;
+  bool _is_except_pgnet;      //
 };
 
 class IdbPlacementBlockage : public IdbBlockage
@@ -146,9 +146,9 @@ class IdbPlacementBlockage : public IdbBlockage
   void set_max_density(double max_density) { _max_density = max_density; }
 
  private:
-  double _max_density;
-  bool _is_soft;
-  bool _is_partial;
+  double _max_density; //
+  bool _is_soft;       //
+  bool _is_partial;    //
 };
 
 class IdbBlockageList

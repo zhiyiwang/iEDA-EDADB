@@ -73,10 +73,9 @@ bool DefReadEdadb::createDbByDef(const char* path) {
 //--    defrSetPinCbk(pinCallback);
 //--    defrSetPinEndCbk(pinsEndCallback);
 //--    defrSetStartPinsCbk(pinsBeginCallback);
+//--    defrSetBlockageCbk(blockageCallback);
 
 // todo 
-    defrSetBlockageCbk(blockageCallback);
-
     defrSetFillStartCbk(fillsCallback);
     defrSetFillCbk(fillCallback);
 
@@ -257,7 +256,7 @@ bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
     CHECK_READ(readIdbVia(), "DefReadEdadb::createDbByEdadb failed to read IdbVia!");
     CHECK_READ(readIdbInstance(), "DefReadEdadb::createDbByEdadb failed to read IdbInstance!");
     CHECK_READ(readIdbPin(), "DefReadEdadb::createDbByEdadb failed to read IdbPin!");
-
+    CHECK_READ(readIdbBlockage(), "DefReadEdadb::createDbByEdadb failed to read IdbBlockage!");
     CHECK_READ(readIdbRegion(), "DefReadEdadb::createDbByEdadb failed to read IdbRegion!");
     CHECK_READ(readIdbSlot(), "DefReadEdadb::createDbByEdadb failed to read IdbSlot!");
 
@@ -817,6 +816,84 @@ bool DefReadEdadb::readIdbPin(void) {
 
     return true;
 } // readIdbPin
+
+
+
+bool DefReadEdadb::readIdbBlockage(void) {
+    edadb::DbMap<edadb::Shadow<idb::IdbBlockage>> blockage_map;
+    blockage_map.init();
+
+    // check if blockage table exists
+    const std::string table_name = blockage_map.getTableName();
+    if (!edadb::tableExists(table_name)) {
+        // no blockage table, return true
+        std::cout << "EDADB DefReadEdadb::readIdbBlockage: no table " << table_name << " exists." << std::endl;
+        return true;
+    }
+
+
+    IdbDesign* design = _def_service->get_design();  // Def
+    IdbBlockageList* blockage_list = design->get_blockage_list();
+    IdbInstanceList* instance_list = design->get_instance_list();
+    IdbLayout* layout = _def_service->get_layout();  // Lef
+    IdbLayers* layer_list = layout->get_layers();
+
+    int got = 0;
+    edadb::DbMapReader<edadb::Shadow<idb::IdbBlockage>>* rd_sd = nullptr;
+    while (true) {
+        edadb::Shadow<idb::IdbBlockage> blockage_sd;
+        got = edadb::read2Scan<edadb::Shadow<idb::IdbBlockage>>(rd_sd, blockage_map, &blockage_sd);
+        if (got < 0) {
+            std::cout << "DefReadEdadb::readIdbBlockage failed to read!" << std::endl;
+            return false;
+        }
+        else if (got == 0) {
+            break;
+        }
+
+        if (blockage_sd._type_sd == idb::IdbBlockage::IdbBlockageType::kRoutingBlockage) {
+            IdbRoutingBlockage* routing_blockage = blockage_list->add_blockage_routing(blockage_sd._layer_name_sd);
+            blockage_sd.fromShadow(routing_blockage);
+
+            routing_blockage->set_layer(layer_list->find_layer(blockage_sd._layer_name_sd));
+
+            if (!blockage_sd._instance_name_sd.empty()) {
+                IdbInstance* inst = instance_list->find_instance(blockage_sd._instance_name_sd);
+                if (inst == nullptr) {
+                    std::cerr << "DefReadEdadb::readIdbBlockage failed to find instance: " << blockage_sd._instance_name_sd << std::endl;
+                    continue;
+                }
+            }
+
+            for (auto& rect : blockage_sd._rect_list_sd) {
+                routing_blockage->add_rect(
+                    rect.get_low_x (), rect.get_low_y (),
+                    rect.get_high_x(), rect.get_high_y());
+            } // for 
+        }
+        else {
+            // placement blockage
+            IdbPlacementBlockage* placement_blockage = blockage_list->add_blockage_placement();
+            blockage_sd.fromShadow(placement_blockage);
+
+            if (!blockage_sd._instance_name_sd.empty()) {
+                IdbInstance* inst = instance_list->find_instance(blockage_sd._instance_name_sd);
+                if (inst == nullptr) {
+                    std::cerr << "DefReadEdadb::readIdbBlockage failed to find instance: " << blockage_sd._instance_name_sd << std::endl;
+                    continue;
+                }
+            }
+
+            for (auto& rect : blockage_sd._rect_list_sd) {
+                placement_blockage->add_rect(
+                    rect.get_low_x (), rect.get_low_y (),
+                    rect.get_high_x(), rect.get_high_y());
+            } // for
+        } // if instance or global
+    } // while
+
+    return true;
+} // readIdb
 
 
 

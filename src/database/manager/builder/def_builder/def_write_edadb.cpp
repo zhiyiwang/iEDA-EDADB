@@ -67,7 +67,7 @@ bool DefWriteEdadb::writeChip2Edadb() {
     writeIdbVia();
     writeIdbInstance();
     writeIdbPin();
-
+    writeIdbBlockage();
     writeIdbRegion();
     writeIdbSlot();
 
@@ -348,6 +348,40 @@ int32_t DefWriteEdadb::writeIdbPin(void) {
 
     return kDbSuccess;
 } // writeIdbPin
+
+
+
+int32_t DefWriteEdadb::writeIdbBlockage(void) {
+    IdbDesign* design = _def_service->get_design();
+    IdbBlockageList* blockage_list = design->get_blockage_list();
+    if (blockage_list == nullptr) {
+      std::cout << "Write BLOCKAGES error..." << std::endl;
+      return kDbFail;
+    }
+
+    edadb::DbMap< edadb::Shadow<idb::IdbBlockage> > blockage_map;
+    blockage_map.init();
+
+    vector<edadb::Shadow<idb::IdbBlockage>*> blockage_sd_vec;
+    for (auto& blockage : blockage_list->get_blockage_list()) {
+        edadb::Shadow<idb::IdbBlockage>* blockage_sd = new edadb::Shadow<idb::IdbBlockage>();
+        blockage_sd->toShadow( blockage );
+        blockage_sd_vec.emplace_back( blockage_sd );
+    }
+
+    if (!edadb::insertVector(blockage_map, blockage_sd_vec)) {
+        std::cerr << "DefWriteEdadb::writeIdbBlockage failed to insertVector" << std::endl;
+        return kDbFail;
+    }
+
+    for (auto& blockage_sd : blockage_sd_vec) {
+        delete blockage_sd;
+        blockage_sd = nullptr;
+    }
+
+    return kDbSuccess;
+} // writeIdbBlockage
+
 
 
 int32_t DefWriteEdadb::writeIdbRegion(void) {

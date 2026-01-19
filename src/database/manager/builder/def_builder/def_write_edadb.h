@@ -36,7 +36,7 @@ protected:
     int32_t writeIdbVia(void);
     int32_t writeIdbInstance(void); 
     int32_t writeIdbPin(void);
-
+    int32_t writeIdbBlockage(void);
     int32_t writeIdbRegion(void);
     int32_t writeIdbSlot(void);
 
