@@ -8,6 +8,13 @@
 
 #include "edadb_shadow.h"
 
+namespace __probe {
+  using X = ::boost::fusion::traits::tag_of<int>; 
+}
+
+namespace __probe2 {
+  using Y = boost::fusion::traits::tag_of<int>; 
+}
 
 #include "database/data/design/db_layout/IdbUnits.h"
 TABLE4CLASS(idb::IdbUnits, "iUnits", (_nanoseconds, _picofarads, _ohms, _milliwatts, _milliamps, _volts, _micron_dbu, _megahertz));
@@ -101,6 +108,13 @@ TABLE4CLASS_WVEC(idb::IdbSlot, "iSlot", (_layer_name), (_rect_list));
 #include "shadow/shadow_idb_group.h"
 TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbGroup>, "iGroupSD", (_group_name_sd, _region_name_sd), (_instance_name_vec_sd));
 
+
+#include "shadow/shadow_idb_fill.h"
+TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbFillLayer>, "iFillLayerSD", (primary_key, _layer_name_sd), (_rect_list_sd));
+
+TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbFillVia>, "iFillViaSD", (primary_key, _via_name_sd), (_coordinate_list_sd));
+
+TABLE4CLASS(edadb::Shadow<idb::IdbFill>, "iFillSD", (primary_key, _type_sd, _layer_sd, _via_sd));
 
 
 //#if 0

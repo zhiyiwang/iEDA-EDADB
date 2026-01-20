@@ -70,6 +70,8 @@ bool DefWriteEdadb::writeChip2Edadb() {
     writeIdbBlockage();
     writeIdbRegion();
     writeIdbSlot();
+    writeIdbGroup();
+    writeIdbFill();
 
     return true;
 } // writeChip2Edadb
@@ -469,6 +471,44 @@ int32_t DefWriteEdadb::writeIdbGroup(void) {
     return kDbSuccess;
 } // writeIdbGroup
 
+
+
+int32_t DefWriteEdadb::writeIdbFill(void) {
+    IdbDesign* design = _def_service->get_design();  // def
+    IdbFillList* fill_list = design->get_fill_list();
+    if (fill_list == nullptr) {
+      std::cout << "Write FILLS error..." << std::endl;
+      return kDbFail;
+    }
+
+    if (fill_list->get_num_fill() == 0) {
+      std::cout << "No FILL To Write..." << std::endl;
+      return kDbFail;
+    }
+
+    edadb::DbMap< edadb::Shadow<idb::IdbFill> > fill_map;
+    fill_map.init();
+
+    vector<edadb::Shadow<idb::IdbFill>*> fill_sd_vec; 
+    for (auto& fill : fill_list->get_fill_list()) {
+        edadb::Shadow<idb::IdbFill>* fill_sd = new edadb::Shadow<idb::IdbFill>();
+        fill_sd->toShadow( fill );
+        fill_sd_vec.emplace_back( fill_sd );
+    }
+
+    if (!edadb::insertVector(fill_map, fill_sd_vec)) {
+        std::cerr << "DefWriteEdadb::writeIdbFill failed to insertVector" << std::endl;
+        return kDbFail;
+    }
+
+    for (auto& fill_sd : fill_sd_vec) {
+        delete fill_sd;
+        fill_sd = nullptr;
+    }
+    fill_sd_vec.clear();
+
+    return kDbSuccess;
+} // writeIdbFill
 
 
 

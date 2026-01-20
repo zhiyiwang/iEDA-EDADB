@@ -119,6 +119,7 @@ int initAllTables(bool crt_tab) {
     EDADB_INIT_TABLE(idb::IdbRegion, crt_tab);
     EDADB_INIT_TABLE(idb::IdbSlot, crt_tab);
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbGroup>, crt_tab);
+    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbFillLayer>, crt_tab);
 
     return 0;
 } // createAllTables

@@ -118,7 +118,11 @@ class IdbFill
 
   // operator
 
+#if EDADB_ENABLE
+public:
+#else
  private:
+#endif 
   IdbFillType _type;
   IdbFillLayer* _layer;
   IdbFillVia* _via;

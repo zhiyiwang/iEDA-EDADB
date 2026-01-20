@@ -75,11 +75,11 @@ bool DefReadEdadb::createDbByDef(const char* path) {
 //--    defrSetStartPinsCbk(pinsBeginCallback);
 //--    defrSetBlockageCbk(blockageCallback);
 //--    defrSetGroupCbk(groupCallback);
+//--    defrSetFillStartCbk(fillsCallback);
+//--    defrSetFillCbk(fillCallback);
+
 
 // todo 
-    defrSetFillStartCbk(fillsCallback);
-    defrSetFillCbk(fillCallback);
-
     defrSetNetStartCbk(netBeginCallback);
     defrSetNetCbk(netCallback);
     defrSetNetEndCbk(netEndCallback);
@@ -260,6 +260,7 @@ bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
     CHECK_READ(readIdbRegion(), "DefReadEdadb::createDbByEdadb failed to read IdbRegion!");
     CHECK_READ(readIdbSlot(), "DefReadEdadb::createDbByEdadb failed to read IdbSlot!");
     CHECK_READ(readIdbGroup(), "DefReadEdadb::createDbByEdadb failed to read IdbGroup!");
+    CHECK_READ(readIdbFill(), "DefReadEdadb::createDbByEdadb failed to read IdbFill!");
 
 
 
@@ -1010,6 +1011,66 @@ bool DefReadEdadb::readIdbGroup(void) {
 
     return true;
 } // readIdbGroup
+
+
+bool DefReadEdadb::readIdbFill(void) {
+    edadb::DbMap< edadb::Shadow<idb::IdbFill> > fill_map;
+    fill_map.init();
+
+    // check if group table exists
+    const std::string table_name = fill_map.getTableName();
+    if (!edadb::tableExists(table_name)) {
+        // no group table, return true
+        std::cout << "EDADB DefReadEdadb::readIdbFill: no table " << table_name << " exists." << std::endl;
+        return true;
+    }
+
+
+    IdbDesign* design = _def_service->get_design();  // def
+    IdbLayout* layout = _def_service->get_layout();  // lef
+    IdbLayers* layer_list = layout->get_layers();
+    IdbFillList* fill_list = design->get_fill_list();
+    
+    int got = 0;
+    edadb::DbMapReader< edadb::Shadow<idb::IdbFill> >* rd_sd = nullptr;
+    while (true) {
+        edadb::Shadow<idb::IdbFill> fill_sd;
+        got = edadb::read2Scan<edadb::Shadow<idb::IdbFill>>(rd_sd, fill_map, &fill_sd);
+        if (got < 0) {
+            std::cout << "DefReadEdadb::readIdbFill failed to read!" << std::endl;
+            return false;
+        }
+        else if (got == 0) {
+            break;
+        }
+
+        if (fill_sd._layer_sd != nullptr) {
+            IdbLayer* layer = layer_list->find_layer(fill_sd._layer_sd->_layer_name_sd);
+            if (layer == nullptr) {
+                std::cerr << "DefReadEdadb::readIdbFill failed to find layer: " << fill_sd._layer_sd->_layer_name_sd << std::endl;
+                continue;
+            }
+
+            IdbFillLayer* fill_layer = fill_list->add_fill_layer(layer);
+            fill_sd._layer_sd->fromShadow(fill_layer);
+        }
+
+        if (fill_sd._via_sd != nullptr) {
+            IdbVias* via_list_def = design->get_via_list();
+            IdbVia* via = via_list_def->find_via(fill_sd._via_sd->_via_name_sd);
+            if (via == nullptr) {
+                IdbVias* via_list_lef = layout->get_via_list();
+                via = via_list_lef->find_via(fill_sd._via_sd->_via_name_sd);
+            }
+
+            IdbVia* via_new = via->clone();
+            IdbFillVia* fill_via = fill_list->add_fill_via(via_new);
+            fill_sd._via_sd->fromShadow(fill_via);
+        }
+    } // while
+    
+    return kDbSuccess;
+} // readIdbFill
 
 
 

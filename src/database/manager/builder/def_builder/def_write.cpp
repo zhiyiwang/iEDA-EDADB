@@ -220,7 +220,7 @@ bool DefWrite::writeChip()
   write_region();      //  
   write_slot();        // 
   write_group();       //
-  write_fill();
+  write_fill();        //
   write_special_net();
   write_net();
 

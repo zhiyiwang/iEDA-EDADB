@@ -57,6 +57,7 @@ protected:
     bool readIdbRegion(void);
     bool readIdbSlot(void);
     bool readIdbGroup(void);
+    bool readIdbFill(void);
 
 //    bool readSpecialNet(void);
 
