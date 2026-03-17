@@ -45,6 +45,7 @@ protected:
     bool createDbByEdadb(const char* edadb_path);
 
 protected:
+#if 0
     bool readIdbDesign(void);
     bool readIdbDie(void);
     bool readIdbRow(void);
@@ -58,6 +59,7 @@ protected:
     bool readIdbSlot(void);
     bool readIdbGroup(void);
     bool readIdbFill(void);
+#endif
 
 //    bool readSpecialNet(void);
 

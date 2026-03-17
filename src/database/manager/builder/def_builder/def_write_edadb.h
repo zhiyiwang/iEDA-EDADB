@@ -28,6 +28,7 @@ protected: // writer
     bool writeLef2Edadb();
  
 protected:
+#if 0
     int32_t writeIdbDesign(void);
     int32_t writeIdbDie(void);
     int32_t writeIdbRow(void);
@@ -41,6 +42,7 @@ protected:
     int32_t writeIdbSlot(void);
     int32_t writeIdbGroup(void);
     int32_t writeIdbFill(void);
+#endif
 
 
 
