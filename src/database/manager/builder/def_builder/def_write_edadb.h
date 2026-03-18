@@ -27,8 +27,8 @@ protected: // writer
     bool writeLef2Edadb();
  
 protected:
-#if 0
     int32_t writeIdbDesign(void);
+#if 0
     int32_t writeIdbDie(void);
     int32_t writeIdbRow(void);
     int32_t writeIdbTrackGrid(void);

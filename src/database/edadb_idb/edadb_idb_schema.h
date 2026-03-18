@@ -16,16 +16,16 @@ namespace __probe2 {
   using Y = boost::fusion::traits::tag_of<int>; 
 }
 
-//--#include "database/data/design/db_layout/IdbUnits.h"
-//--TABLE4CLASS(idb::IdbUnits, "iUnits", (_nanoseconds, _picofarads, _ohms, _milliwatts, _milliamps, _volts, _micron_dbu, _megahertz));
-//--
-//--#include "database/data/design/db_design/IdbBusBitChars.h"
-//--TABLE4CLASS(idb::IdbBusBitChars, "iBusBitChars", (_left_delimiter, _right_delimiter));
-//--
-//--#include "database/data/design/IdbDesign.h"
-//--TABLE4CLASS(idb::IdbDesign, "iDesign", (_design_name, _version, _units, _bus_bit_chars));
-//--
-//--
+#include "database/data/design/db_layout/IdbUnits.h"
+TABLE4CLASS(idb::IdbUnits, "iUnits", (_nanoseconds, _picofarads, _ohms, _milliwatts, _milliamps, _volts, _micron_dbu, _megahertz));
+
+#include "database/data/design/db_design/IdbBusBitChars.h"
+TABLE4CLASS(idb::IdbBusBitChars, "iBusBitChars", (_left_delimiter, _right_delimiter));
+
+#include "database/data/design/IdbDesign.h"
+TABLE4CLASS(idb::IdbDesign, "iDesign", (_design_name, _version, _units, _bus_bit_chars));
+
+
 //--#include "database/basic/geometry/IdbGeometry.h"
 //--// single coordinate point
 //--TABLE4CLASS(idb::IdbCoordinate<int32_t>, "iCoord", (_x, _y));

@@ -44,8 +44,8 @@ protected:
     bool createDbByEdadb(const char* edadb_path);
 
 protected:
-#if 0
     bool readIdbDesign(void);
+#if 0
     bool readIdbDie(void);
     bool readIdbRow(void);
     bool readIdbTrackGrid(void);

@@ -54,10 +54,10 @@ bool DefReadEdadb::createDbByDef(const char* path) {
     defrInitSession();
 
 //-- done
-    defrSetVersionStrCbk(versionCallback);
-    defrSetDesignCbk(designCallback);
-    defrSetBusBitCbk(busBitCharsCallBack);
-    defrSetUnitsCbk(unitsCallback);
+//    defrSetVersionStrCbk(versionCallback);
+//    defrSetDesignCbk(designCallback);
+//    defrSetBusBitCbk(busBitCharsCallBack);
+//    defrSetUnitsCbk(unitsCallback);
     defrSetDieAreaCbk(dieAreaCallback);
     defrSetGcellGridCbk(gcellGridCallback);
     defrSetRowCbk(rowCallback);
@@ -246,9 +246,9 @@ bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
     std::cout << "DEADB: Def read to EDADB database : " << edadb_path << std::endl;
 #endif
 
-#if 0
     //////// read iEDA Idb classes from edadb database ////////////////////////
     CHECK_READ(readIdbDesign(), "DefReadEdadb::createDbByEdadb failed to read IdbDesign!");
+#if 0
     CHECK_READ(readIdbDie(), "DefReadEdadb::createDbByEdadb failed to read IdbDie!");
     CHECK_READ(readIdbRow(), "DefReadEdadb::createDbByEdadb failed to read IdbRow!");
     CHECK_READ(readIdbTrackGrid(), "DefReadEdadb::createDbByEdadb failed to read readIdbTrackGrid!");
@@ -279,35 +279,35 @@ bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
 
 
 
-//--bool DefReadEdadb::readIdbDesign() {
-//--    edadb::DbMap<idb::IdbDesign> design_map;
-//--    design_map.init();
-//--
-//--    idb::IdbDesign got;
-//--    edadb::DbMapReader<idb::IdbDesign>* rd = nullptr;
-//--    if (edadb::read2Scan<idb::IdbDesign>(rd, design_map, &got) <= 0) {
-//--        std::cout << "DefReadEdadb::readIdbDesign failed to read!" << std::endl;
-//--        return false;
-//--    } // if 
-//--
-//--    IdbDesign* design = _def_service->get_design();
-//--    design->set_design_name(got.get_design_name());
-//--    design->set_version(got.get_version());
-//--
-//--    // update the design pointer members
-//--    delete design->get_units();
-//--    design->set_units(got.get_units());
-//--    got.set_units(nullptr);
-//--
-//--    delete design->get_bus_bit_chars();
-//--    design->set_bus_bit_chars( got.get_bus_bit_chars() );
-//--    got.set_bus_bit_chars(nullptr);
-//--
-//--    return true;
-//--} // readIdbDesign
-//--
-//--
-//--
+bool DefReadEdadb::readIdbDesign() {
+    edadb::DbMap<idb::IdbDesign> design_map;
+    design_map.init();
+
+    idb::IdbDesign got;
+    edadb::DbMapReader<idb::IdbDesign>* rd = nullptr;
+    if (edadb::read2Scan<idb::IdbDesign>(rd, design_map, &got) <= 0) {
+        std::cout << "DefReadEdadb::readIdbDesign failed to read!" << std::endl;
+        return false;
+    } // if 
+
+    IdbDesign* design = _def_service->get_design();
+    design->set_design_name(got.get_design_name());
+    design->set_version(got.get_version());
+
+    // update the design pointer members
+    delete design->get_units();
+    design->set_units(got.get_units());
+    got.set_units(nullptr);
+
+    delete design->get_bus_bit_chars();
+    design->set_bus_bit_chars( got.get_bus_bit_chars() );
+    got.set_bus_bit_chars(nullptr);
+
+    return true;
+} // readIdbDesign
+
+
+
 //--bool DefReadEdadb::readIdbDie(void) {
 //--    IdbLayout* layout = _def_service->get_layout();
 //--    IdbDie* die = layout->get_die();

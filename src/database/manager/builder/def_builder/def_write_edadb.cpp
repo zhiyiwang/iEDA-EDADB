@@ -59,8 +59,8 @@ bool DefWriteEdadb::writeDb2Edadb(const char* edadb_path) {
 
 
 bool DefWriteEdadb::writeChip2Edadb() {
-#if 0
     writeIdbDesign();
+#if 0
     writeIdbDie();
     writeIdbRow();
     writeIdbTrackGrid();
@@ -80,7 +80,7 @@ bool DefWriteEdadb::writeChip2Edadb() {
 
 
 bool DefWriteEdadb::writeDbSynthesis2Edadb() {
-//    writeIdbDesign();
+    writeIdbDesign();
 
     return true;
 } // writeDbSynthesis2Edadb
@@ -94,40 +94,40 @@ bool DefWriteEdadb::writeLef2Edadb() {
 
 
 
-//--int32_t DefWriteEdadb::writeIdbDesign() {
-//--    IdbDesign* design = _def_service->get_design();
-//--    IdbUnits* def_units = design->get_units();
-//--    IdbUnits* lef_units = design->get_layout()->get_units();
-//--    if (def_units == nullptr && lef_units == nullptr) {
-//--      std::cout << "Write UNITS error..." << std::endl;
-//--      return kDbFail;
-//--    }
-//--
-//--    uint32_t def_microns = def_units->get_micron_dbu() > 0 ?
-//--        def_units->get_micron_dbu() : lef_units->get_micron_dbu();
-//--    if (def_microns <= 0) {
-//--      std::cout << "Write UNITS error..." << std::endl;
-//--  
-//--      return kDbFail;
-//--    }
-//--
-//--
-//--    edadb::DbMap<idb::IdbDesign> design_map;
-//--    design_map.init();
-//--
-//--    // insert object
-//--#if EDADB_OUTPUT_DEBUG
-//--    std::cout << "[DefWriteEdadb] insert IdbDesign object to edadb database" << std::endl;
-//--#endif 
-//--    if (!edadb::insertObject(design_map, design)) {
-//--        std::cerr << "DefWriteEdadb::writeIdbDesign failed to insertObject" << std::endl;
-//--        return kDbFail;
-//--    }
-//--
-//--    return kDbSuccess;
-//--} // writeIdbDesign
-//--
-//--
+int32_t DefWriteEdadb::writeIdbDesign() {
+    IdbDesign* design = _def_service->get_design();
+    IdbUnits* def_units = design->get_units();
+    IdbUnits* lef_units = design->get_layout()->get_units();
+    if (def_units == nullptr && lef_units == nullptr) {
+      std::cout << "Write UNITS error..." << std::endl;
+      return kDbFail;
+    }
+
+    uint32_t def_microns = def_units->get_micron_dbu() > 0 ?
+        def_units->get_micron_dbu() : lef_units->get_micron_dbu();
+    if (def_microns <= 0) {
+      std::cout << "Write UNITS error..." << std::endl;
+  
+      return kDbFail;
+    }
+
+
+    edadb::DbMap<idb::IdbDesign> design_map;
+    design_map.init();
+
+    // insert object
+#if EDADB_OUTPUT_DEBUG
+    std::cout << "[DefWriteEdadb] insert IdbDesign object to edadb database" << std::endl;
+#endif 
+    if (!edadb::insertObject(design_map, design)) {
+        std::cerr << "DefWriteEdadb::writeIdbDesign failed to insertObject" << std::endl;
+        return kDbFail;
+    }
+
+    return kDbSuccess;
+} // writeIdbDesign
+
+
 //--int32_t DefWriteEdadb::writeIdbDie(void) {
 //--    IdbLayout* layout = _def_service->get_layout();
 //--    IdbDie* die = layout->get_die();
