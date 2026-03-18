@@ -7,8 +7,6 @@
 #pragma once
 
 #include "edadb.h"
-#include "edadb_idb_schema.h"
-#include "edadb_idb_shadow.h"
 
 //////// global init function ////////////////////////////////////////
 namespace edadb {

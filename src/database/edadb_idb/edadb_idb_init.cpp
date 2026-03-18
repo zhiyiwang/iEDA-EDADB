@@ -5,6 +5,8 @@
  */
 
 #include "edadb_idb_init.h"
+#include "edadb_idb_schema.h"
+#include "edadb_idb_shadow.h"
 
 
 namespace edadb {
@@ -109,9 +111,9 @@ int createTable(bool crt_tab) {
 int initAllTables(bool crt_tab) {
     EDADB_INIT_TABLE(idb::IdbDesign, crt_tab);
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbDie>, crt_tab);
+    EDADB_INIT_TABLE(idb::IdbRow, crt_tab);
 
 #if 0
-    EDADB_INIT_TABLE(idb::IdbRow, crt_tab);
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbTrackGrid>, crt_tab);
     EDADB_INIT_TABLE(idb::IdbGCellGrid, crt_tab);
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbVia>, crt_tab);

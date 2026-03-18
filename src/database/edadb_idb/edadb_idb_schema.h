@@ -29,9 +29,9 @@ TABLE4CLASS(idb::IdbDesign, "iDesign", (_design_name, _version, _units, _bus_bit
 #include "shadow/shadow_idb_geometry.h"
 TABLE4SHADOW(idb::IdbCoordinate<int32_t>);
 TABLE4CLASS (edadb::Shadow<idb::IdbCoordinate<int32_t>>, "iCoordSD", (_vec_idx, _x_sd, _y_sd));
-//--TABLE4CLASS(idb::IdbCoordinate<int32_t>, "iCoord", (_x, _y));
-//--// vector coordinate points 
-//--TABLE4CLASS(edadb::Shadow<idb::IdbCoordinate<int32_t>>, "iCoordSD", (_vidx, _x_sd, _y_sd));
+//DIS--TABLE4CLASS(idb::IdbCoordinate<int32_t>, "iCoord", (_x, _y));
+//DIS--// vector coordinate points 
+//DIS--TABLE4CLASS(edadb::Shadow<idb::IdbCoordinate<int32_t>>, "iCoordSD", (_vidx, _x_sd, _y_sd));
 
 
 #include "shadow/shadow_idb_die.h"
@@ -41,14 +41,14 @@ TABLE4CLASS_WVEC (edadb::Shadow<idb::IdbDie>, "iDieSD", (primary_key), (points_s
 
 //--#include "database/basic/geometry/IdbGeometry.h"
 //--TABLE4CLASS(idb::IdbRect, "IdbRect", (_lx, _ly, _hx, _hy));
-//--
-//--#include "database/data/design/db_layout/IdbSite.h"
-//--TABLE4CLASS(idb::IdbSite, "iSite", (_name, _width, _heigtht, _b_overlap, _site_class, _symmetry, _orient, _type));
-//--
-//--#include "database/data/design/db_layout/IdbRow.h"
-//--TABLE4CLASS(idb::IdbRow, "iRow", (_name, _site, _original_coordinate, _row_num_x, _row_num_y, _step_x, _step_y));
-//--
-//--
+
+#include "database/data/design/db_layout/IdbSite.h"
+TABLE4CLASS(idb::IdbSite, "iSite", (_name, _width, _heigtht, _b_overlap, _site_class, _symmetry, _orient, _type));
+
+#include "database/data/design/db_layout/IdbRow.h"
+TABLE4CLASS(idb::IdbRow, "iRow", (_name, _site, _original_coordinate, _row_num_x, _row_num_y, _step_x, _step_y));
+
+
 //--#include "database/data/design/db_design/IdbTrackGrid.h"
 //--TABLE4CLASS(idb::IdbTrack, "iTrack", (_start, _direction, _pitch));
 //--

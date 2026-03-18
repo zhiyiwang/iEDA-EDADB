@@ -59,8 +59,8 @@ bool DefReadEdadb::createDbByDef(const char* path) {
 //    defrSetBusBitCbk(busBitCharsCallBack);
 //    defrSetUnitsCbk(unitsCallback);
 //    defrSetDieAreaCbk(dieAreaCallback);
+//    defrSetRowCbk(rowCallback);
     defrSetGcellGridCbk(gcellGridCallback);
-    defrSetRowCbk(rowCallback);
     defrSetViaStartCbk(viaBeginCallback);
     defrSetRegionCbk(regionCallback);
     defrSetSlotCbk(slotsCallback);
@@ -249,9 +249,9 @@ bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
     //////// read iEDA Idb classes from edadb database ////////////////////////
     CHECK_READ(readIdbDesign(), "DefReadEdadb::createDbByEdadb failed to read IdbDesign!");
     CHECK_READ(readIdbDie(), "DefReadEdadb::createDbByEdadb failed to read IdbDie!");
+    CHECK_READ(readIdbRow(), "DefReadEdadb::createDbByEdadb failed to read IdbRow!");
 
 #if 0
-    CHECK_READ(readIdbRow(), "DefReadEdadb::createDbByEdadb failed to read IdbRow!");
     CHECK_READ(readIdbTrackGrid(), "DefReadEdadb::createDbByEdadb failed to read readIdbTrackGrid!");
     CHECK_READ(readIdbGCellGrid(), "DefReadEdadb::createDbByEdadb failed to read IdbGCellGrid!");
     CHECK_READ(readIdbVia(), "DefReadEdadb::createDbByEdadb failed to read IdbVia!");
@@ -334,52 +334,52 @@ bool DefReadEdadb::readIdbDie(void) {
 
 
 
-//--bool DefReadEdadb::readIdbRow(void) {
-//--    edadb::DbMap<idb::IdbRow> row_map;
-//--    row_map.init();
-//--    if (!row_map.tableExists(row_map.getTableName())) {
-//--        // no row table, return true
-//--        std::cout << "EDADB DefReadEdadb::readIdbRow: no table " << row_map.getTableName() << " exists." << std::endl;
-//--        return true;
-//--    }
-//--
-//--    IdbLayout* layout = _def_service->get_layout();  // Lef
-//--    IdbSites* sites = layout->get_sites();
-//--    IdbRows* rows = layout->get_rows();
-//--
-//--    int got = 0;
-//--    edadb::DbMapReader<idb::IdbRow>* rd = nullptr;
-//--    while (true) {
-//--        IdbRow *row = new IdbRow();
-//--        got = edadb::readNext<idb::IdbRow>(rd, row_map, row);
-//--        if (got == 0) {
-//--            delete row;
-//--            break;
-//--        }
-//--        else if (got < 0) {
-//--            std::cout << "DefReadEdadb::readIdbRow failed to read!" << std::endl;
-//--            return false;
-//--        }
-//--
-//--        row->set_bounding_box();
-//--
-//--        // update global sites from reading row
-//--        IdbSite* site = row->get_site();
-//--        std::string site_name = site->get_name();
-//--        IdbSite* lef_site = sites->find_site(site_name);
-//--        if (lef_site == nullptr) {
-//--            // IdbSite in site list only has name 
-//--            lef_site = sites->add_site_list(site_name);
-//--        }
-//--
-//--        rows->add_row_list(row);
-//--    } // while 
-//--
-//--    return true;
-//--} // readIdbRow
-//--
-//--
-//--
+bool DefReadEdadb::readIdbRow(void) {
+    edadb::DbMap<idb::IdbRow> row_map;
+    row_map.init();
+    if (!row_map.tableExists(row_map.getTableName())) {
+        // no row table, return true
+        std::cout << "EDADB DefReadEdadb::readIdbRow: no table " << row_map.getTableName() << " exists." << std::endl;
+        return true;
+    }
+
+    IdbLayout* layout = _def_service->get_layout();  // Lef
+    IdbSites* sites = layout->get_sites();
+    IdbRows* rows = layout->get_rows();
+
+    int got = 0;
+    edadb::DbMapReader<idb::IdbRow>* rd = nullptr;
+    while (true) {
+        IdbRow *row = new IdbRow();
+        got = edadb::readNext<idb::IdbRow>(rd, row_map, row);
+        if (got == 0) {
+            delete row;
+            break;
+        }
+        else if (got < 0) {
+            std::cout << "DefReadEdadb::readIdbRow failed to read!" << std::endl;
+            return false;
+        }
+
+        row->set_bounding_box();
+
+        // update global sites from reading row
+        IdbSite* site = row->get_site();
+        std::string site_name = site->get_name();
+        IdbSite* lef_site = sites->find_site(site_name);
+        if (lef_site == nullptr) {
+            // IdbSite in site list only has name 
+            lef_site = sites->add_site_list(site_name);
+        }
+
+        rows->add_row_list(row);
+    } // while 
+
+    return true;
+} // readIdbRow
+
+
+
 //--bool DefReadEdadb::readIdbTrackGrid(void) {
 //--    edadb::DbMap<edadb::Shadow<idb::IdbTrackGrid>> track_grid_map;
 //--    track_grid_map.init();

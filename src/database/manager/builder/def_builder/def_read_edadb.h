@@ -46,9 +46,9 @@ protected:
 protected:
     bool readIdbDesign(void);
     bool readIdbDie(void);
+    bool readIdbRow(void);
 
 #if 0
-    bool readIdbRow(void);
     bool readIdbTrackGrid(void);
     bool readIdbGCellGrid(void);
     bool readIdbVia(void);
