@@ -6,6 +6,6 @@
 
 #pragma once
 
-#include "edadb_shadow.h"
-#include "edadb_schema.h"
-#include "edadb_core.h"
+#include "edadb_idb_init.h"
+#include "edadb_idb_schema.h"
+#include "edadb_idb_shadow.h"

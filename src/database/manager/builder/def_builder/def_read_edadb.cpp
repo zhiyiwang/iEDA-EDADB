@@ -54,28 +54,28 @@ bool DefReadEdadb::createDbByDef(const char* path) {
     defrInitSession();
 
 //-- done
-//--    defrSetVersionStrCbk(versionCallback);
-//--    defrSetDesignCbk(designCallback);
-//--    defrSetBusBitCbk(busBitCharsCallBack);
-//--    defrSetUnitsCbk(unitsCallback);
-//--    defrSetDieAreaCbk(dieAreaCallback);
-//--    defrSetGcellGridCbk(gcellGridCallback);
-//--    defrSetRowCbk(rowCallback);
-//--    defrSetViaStartCbk(viaBeginCallback);
-//--    defrSetRegionCbk(regionCallback);
-//--    defrSetSlotCbk(slotsCallback);
-//--    defrSetViaCbk(viaCallback);
-//--    defrSetTrackCbk(trackGridCallback);
-//--    defrSetComponentCbk(componentsCallback);
-//--    defrSetComponentStartCbk(componentNumberCallback);
-//--    defrSetComponentEndCbk(componentEndCallback);
-//--    defrSetPinCbk(pinCallback);
-//--    defrSetPinEndCbk(pinsEndCallback);
-//--    defrSetStartPinsCbk(pinsBeginCallback);
-//--    defrSetBlockageCbk(blockageCallback);
-//--    defrSetGroupCbk(groupCallback);
-//--    defrSetFillStartCbk(fillsCallback);
-//--    defrSetFillCbk(fillCallback);
+    defrSetVersionStrCbk(versionCallback);
+    defrSetDesignCbk(designCallback);
+    defrSetBusBitCbk(busBitCharsCallBack);
+    defrSetUnitsCbk(unitsCallback);
+    defrSetDieAreaCbk(dieAreaCallback);
+    defrSetGcellGridCbk(gcellGridCallback);
+    defrSetRowCbk(rowCallback);
+    defrSetViaStartCbk(viaBeginCallback);
+    defrSetRegionCbk(regionCallback);
+    defrSetSlotCbk(slotsCallback);
+    defrSetViaCbk(viaCallback);
+    defrSetTrackCbk(trackGridCallback);
+    defrSetComponentCbk(componentsCallback);
+    defrSetComponentStartCbk(componentNumberCallback);
+    defrSetComponentEndCbk(componentEndCallback);
+    defrSetPinCbk(pinCallback);
+    defrSetPinEndCbk(pinsEndCallback);
+    defrSetStartPinsCbk(pinsBeginCallback);
+    defrSetBlockageCbk(blockageCallback);
+    defrSetGroupCbk(groupCallback);
+    defrSetFillStartCbk(fillsCallback);
+    defrSetFillCbk(fillCallback);
 
 
 // todo 

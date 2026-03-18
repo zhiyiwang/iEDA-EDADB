@@ -8,8 +8,7 @@
 #pragma once
 
 #include "def_read.h"
-#include "edadb.h"
-#include "../../../edadb/edadb_api.h"
+#include "../../../edadb_idb/edadb_idb.h"
 
 namespace idb {
 

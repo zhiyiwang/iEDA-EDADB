@@ -4,9 +4,7 @@
  * @author Zhiyi Wang
  */
 
-#include "edadb_core.h"
-#include "edadb_shadow.h"
-#include "edadb_schema.h"
+#include "edadb_idb_init.h"
 
 
 namespace edadb {
@@ -52,6 +50,7 @@ int init2write(const char* edadb_path) {
 
 
 void initPrimKeys(void) {
+#if 0
     edadb::Cpp2SqlTypeTrait<edadb::CppStrings>::hasPrimKey = false;
 
     edadb::Cpp2SqlTypeTrait<idb::IdbUnits>::hasPrimKey = false;
@@ -70,6 +69,7 @@ void initPrimKeys(void) {
 
     edadb::Cpp2SqlTypeTrait<idb::IdbHalo>::hasPrimKey = false;
     edadb::Cpp2SqlTypeTrait<edadb::Shadow<idb::IdbRouteHalo>>::hasPrimKey = false;
+#endif 
 
 //-//    edadb::Cpp2SqlTypeTrait<idb::IdbSpecialNetEdgeSegment>::hasPrimKey = false;
 
@@ -107,6 +107,7 @@ int createTable(bool crt_tab) {
 
 
 int initAllTables(bool crt_tab) {
+#if 0
     EDADB_INIT_TABLE(idb::IdbDesign, crt_tab);
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbDie>, crt_tab);
     EDADB_INIT_TABLE(idb::IdbRow, crt_tab);
@@ -120,6 +121,7 @@ int initAllTables(bool crt_tab) {
     EDADB_INIT_TABLE(idb::IdbSlot, crt_tab);
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbGroup>, crt_tab);
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbFillLayer>, crt_tab);
+#endif
 
     return 0;
 } // createAllTables

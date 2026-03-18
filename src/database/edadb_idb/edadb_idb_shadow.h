@@ -6,16 +6,16 @@
 
 #pragma once
 
-#include "shadow/shadow_idb_geometry.h"
-#include "shadow/shadow_idb_die.h"
-#include "shadow/shadow_idb_track_grid.h"
-#include "shadow/shadow_idb_layer_shape.h"
-#include "shadow/shadow_idb_via_master.h"
-#include "shadow/shadow_idb_via.h"
-#include "shadow/shadow_idb_halo.h"
-#include "shadow/shadow_idb_blockage.h"
-#include "shadow/shadow_idb_group.h"
-#include "shadow/shadow_idb_fill.h"
+//--#include "shadow/shadow_idb_geometry.h"
+//--#include "shadow/shadow_idb_die.h"
+//--#include "shadow/shadow_idb_track_grid.h"
+//--#include "shadow/shadow_idb_layer_shape.h"
+//--#include "shadow/shadow_idb_via_master.h"
+//--#include "shadow/shadow_idb_via.h"
+//--#include "shadow/shadow_idb_halo.h"
+//--#include "shadow/shadow_idb_blockage.h"
+//--#include "shadow/shadow_idb_group.h"
+//--#include "shadow/shadow_idb_fill.h"
 
 
 
