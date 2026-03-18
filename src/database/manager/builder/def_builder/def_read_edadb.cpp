@@ -9,8 +9,7 @@
 namespace idb {
 
 DefReadEdadb::DefReadEdadb(IdbDefService* def_service) : DefRead(def_service)
-{
-}
+{}
 
 
 
