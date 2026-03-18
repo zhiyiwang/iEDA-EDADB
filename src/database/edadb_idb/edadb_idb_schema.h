@@ -26,18 +26,21 @@ TABLE4CLASS(idb::IdbBusBitChars, "iBusBitChars", (_left_delimiter, _right_delimi
 TABLE4CLASS(idb::IdbDesign, "iDesign", (_design_name, _version, _units, _bus_bit_chars));
 
 
-//--#include "database/basic/geometry/IdbGeometry.h"
-//--// single coordinate point
+#include "shadow/shadow_idb_geometry.h"
+TABLE4SHADOW(idb::IdbCoordinate<int32_t>);
+TABLE4CLASS (edadb::Shadow<idb::IdbCoordinate<int32_t>>, "iCoordSD", (_vec_idx, _x_sd, _y_sd));
 //--TABLE4CLASS(idb::IdbCoordinate<int32_t>, "iCoord", (_x, _y));
-//--TABLE4CLASS(idb::IdbRect, "IdbRect", (_lx, _ly, _hx, _hy));
-//--
-//--#include "shadow/shadow_idb_geometry.h"
 //--// vector coordinate points 
 //--TABLE4CLASS(edadb::Shadow<idb::IdbCoordinate<int32_t>>, "iCoordSD", (_vidx, _x_sd, _y_sd));
-//--
-//--#include "database/data/design/db_layout/IdbDie.h"
-//--TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbDie>, "iDieSD", (primary_key), (points_sd));
-//--
+
+
+#include "shadow/shadow_idb_die.h"
+TABLE4SHADOW_WVEC(idb::IdbDie);
+TABLE4CLASS_WVEC (edadb::Shadow<idb::IdbDie>, "iDieSD", (primary_key), (points_sd));
+
+
+//--#include "database/basic/geometry/IdbGeometry.h"
+//--TABLE4CLASS(idb::IdbRect, "IdbRect", (_lx, _ly, _hx, _hy));
 //--
 //--#include "database/data/design/db_layout/IdbSite.h"
 //--TABLE4CLASS(idb::IdbSite, "iSite", (_name, _width, _heigtht, _b_overlap, _site_class, _symmetry, _orient, _type));

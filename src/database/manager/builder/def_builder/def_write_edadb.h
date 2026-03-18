@@ -28,8 +28,8 @@ protected: // writer
  
 protected:
     int32_t writeIdbDesign(void);
-#if 0
     int32_t writeIdbDie(void);
+#if 0
     int32_t writeIdbRow(void);
     int32_t writeIdbTrackGrid(void);
     int32_t writeIdbGCellGrid(void);

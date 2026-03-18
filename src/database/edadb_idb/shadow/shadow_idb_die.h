@@ -15,53 +15,34 @@ namespace edadb {
 template<>
 class Shadow<idb::IdbDie> {
 public:
-    Shadow<idb::IdbDie>(void): primary_key(next_primary_key++) {}
-    ~Shadow<idb::IdbDie>(void) {
-        for (auto& point_shadow : points_sd) {
-            delete point_shadow;
-        }
-        points_sd.clear();
-    }
-
-    Shadow<idb::IdbDie>(const Shadow& other) = delete;
-    Shadow<idb::IdbDie>& operator=(const Shadow& other) = delete;
+    Shadow <idb::IdbDie>(void) : primary_key(next_primary_key++) {}
+    ~Shadow<idb::IdbDie>(void) { points_sd.clear(); }
     
 public:
-    void fromShadow(idb::IdbDie* obj) {
+    void toShadow(idb::IdbDie* obj, const uint32_t* idx_ptr = nullptr) {
+        assert( points_sd.empty() );
+
+        // assign to write, no need to deep copy
+        points_sd = obj->get_points();
+
+        // DbmapWriter will write the vector element one by one from points_sd.
+        // Each element will store the vector index in the database automatically,
+        // so no need to handle the vector index here.
+    } // toShadow
+
+    void fromShadow(idb::IdbDie* obj, uint32_t* idx_ptr = nullptr) {
         auto& points = obj->get_points();
         assert(points.empty());
 
-        uint64_t num = points_sd.size();
-        points.resize(num, nullptr);
-
-        for (uint64_t cnt = 0, idx = 0; cnt < num; ++cnt) {
-            idb::IdbCoordinate<int32_t>* point = new idb::IdbCoordinate<int32_t>();
-            points_sd[cnt]->fromShadow(idx, point);
-            assert(points[idx] == nullptr);
-            points[idx] = point;
-        } // for
-
-        for (auto& point_shadow : points_sd) {
-            delete point_shadow;
-        }
-        points_sd.clear();
+        // swap the shadow vector with the object's vector,
+        // so that we can avoid deep copy and reuse the shadow vector's memory for write.
+        points_sd.swap(points); 
     } // fromShadow 
-
-    void toShadow(idb::IdbDie* obj) {
-        assert( points_sd.empty() );
-
-        auto &points = obj->get_points();
-        for (uint64_t idx = 0; idx < points.size(); ++idx) {
-            Shadow<idb::IdbCoordinate<int32_t>>* point_shadow = 
-                    new Shadow<idb::IdbCoordinate<int32_t>>();
-            point_shadow->toShadow(idx, points[idx]);
-            points_sd.emplace_back( point_shadow );
-        } // for
-    } // toShadow
 
 public:
     uint64_t primary_key = 0;
-    std::vector< Shadow<idb::IdbCoordinate<int32_t>>* > points_sd;
+    std::vector< idb::IdbCoordinate<int32_t>* > points_sd;
+
 private:
     static inline uint64_t next_primary_key = 1;
 };  // idb::IdbDie

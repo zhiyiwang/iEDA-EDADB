@@ -58,7 +58,7 @@ bool DefReadEdadb::createDbByDef(const char* path) {
 //    defrSetDesignCbk(designCallback);
 //    defrSetBusBitCbk(busBitCharsCallBack);
 //    defrSetUnitsCbk(unitsCallback);
-    defrSetDieAreaCbk(dieAreaCallback);
+//    defrSetDieAreaCbk(dieAreaCallback);
     defrSetGcellGridCbk(gcellGridCallback);
     defrSetRowCbk(rowCallback);
     defrSetViaStartCbk(viaBeginCallback);
@@ -248,8 +248,9 @@ bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
 
     //////// read iEDA Idb classes from edadb database ////////////////////////
     CHECK_READ(readIdbDesign(), "DefReadEdadb::createDbByEdadb failed to read IdbDesign!");
-#if 0
     CHECK_READ(readIdbDie(), "DefReadEdadb::createDbByEdadb failed to read IdbDie!");
+
+#if 0
     CHECK_READ(readIdbRow(), "DefReadEdadb::createDbByEdadb failed to read IdbRow!");
     CHECK_READ(readIdbTrackGrid(), "DefReadEdadb::createDbByEdadb failed to read readIdbTrackGrid!");
     CHECK_READ(readIdbGCellGrid(), "DefReadEdadb::createDbByEdadb failed to read IdbGCellGrid!");
@@ -285,7 +286,7 @@ bool DefReadEdadb::readIdbDesign() {
 
     idb::IdbDesign got;
     edadb::DbMapReader<idb::IdbDesign>* rd = nullptr;
-    if (edadb::read2Scan<idb::IdbDesign>(rd, design_map, &got) <= 0) {
+    if (edadb::readNext<idb::IdbDesign>(rd, design_map, &got) <= 0) {
         std::cout << "DefReadEdadb::readIdbDesign failed to read!" << std::endl;
         return false;
     } // if 
@@ -308,31 +309,31 @@ bool DefReadEdadb::readIdbDesign() {
 
 
 
-//--bool DefReadEdadb::readIdbDie(void) {
-//--    IdbLayout* layout = _def_service->get_layout();
-//--    IdbDie* die = layout->get_die();
-//--    if (die == nullptr) {
-//--        std::cerr << "DefReadEdadb::IdbDie failed, die is nullptr!" << std::endl;
-//--        return false;
-//--    }
-//--
-//--    assert(die->get_points().empty());
-//--
-//--    edadb::Shadow<idb::IdbDie> die_sd;
-//--    edadb::DbMap< edadb::Shadow<idb::IdbDie> > die_sd_map;
-//--    die_sd_map.init();
-//--    edadb::DbMapReader< edadb::Shadow<idb::IdbDie> >* die_sd_rd = nullptr;
-//--    if ((edadb::read2Scan<edadb::Shadow<idb::IdbDie>>(die_sd_rd, die_sd_map, &die_sd)) <= 0) {
-//--        std::cout << "DefReadEdadb::readIdbDie failed to read!" << std::endl;
-//--        return false;
-//--    }
-//--    die_sd.fromShadow(die);
-//--
-//--    return true;
-//--} // readIdbDie
-//--
-//--
-//--
+bool DefReadEdadb::readIdbDie(void) {
+    IdbLayout* layout = _def_service->get_layout();
+    IdbDie* die = layout->get_die();
+    if (die == nullptr) {
+        std::cerr << "DefReadEdadb::IdbDie failed, die is nullptr!" << std::endl;
+        return false;
+    }
+
+    assert(die->get_points().empty());
+
+    edadb::Shadow<idb::IdbDie> die_sd;
+    edadb::DbMap< edadb::Shadow<idb::IdbDie> > die_sd_map;
+    die_sd_map.init();
+    edadb::DbMapReader< edadb::Shadow<idb::IdbDie> >* die_sd_rd = nullptr;
+    if ((edadb::readNext<edadb::Shadow<idb::IdbDie>>(die_sd_rd, die_sd_map, &die_sd)) <= 0) {
+        std::cout << "DefReadEdadb::readIdbDie failed to read!" << std::endl;
+        return false;
+    }
+    die_sd.fromShadow(die);
+
+    return true;
+} // readIdbDie
+
+
+
 //--bool DefReadEdadb::readIdbRow(void) {
 //--    edadb::DbMap<idb::IdbRow> row_map;
 //--    row_map.init();
@@ -350,7 +351,7 @@ bool DefReadEdadb::readIdbDesign() {
 //--    edadb::DbMapReader<idb::IdbRow>* rd = nullptr;
 //--    while (true) {
 //--        IdbRow *row = new IdbRow();
-//--        got = edadb::read2Scan<idb::IdbRow>(rd, row_map, row);
+//--        got = edadb::readNext<idb::IdbRow>(rd, row_map, row);
 //--        if (got == 0) {
 //--            delete row;
 //--            break;
@@ -397,7 +398,7 @@ bool DefReadEdadb::readIdbDesign() {
 //--    edadb::DbMapReader<edadb::Shadow<idb::IdbTrackGrid>>* rd = nullptr;
 //--    while (true) {
 //--        edadb::Shadow<idb::IdbTrackGrid> track_grid_sd;
-//--        got = edadb::read2Scan<edadb::Shadow<idb::IdbTrackGrid>>(rd, track_grid_map, &track_grid_sd);
+//--        got = edadb::readNext<edadb::Shadow<idb::IdbTrackGrid>>(rd, track_grid_map, &track_grid_sd);
 //--        if (got == 0) {
 //--            break;
 //--        }
@@ -448,7 +449,7 @@ bool DefReadEdadb::readIdbDesign() {
 //--    edadb::DbMapReader<idb::IdbGCellGrid>* rd = nullptr;
 //--    while (true) {
 //--        IdbGCellGrid* gcell_grid = new IdbGCellGrid();
-//--        got = edadb::read2Scan<idb::IdbGCellGrid>(rd, gcell_grid_map, gcell_grid);
+//--        got = edadb::readNext<idb::IdbGCellGrid>(rd, gcell_grid_map, gcell_grid);
 //--        if (got == 0) {
 //--            delete gcell_grid;
 //--            break;
@@ -480,7 +481,7 @@ bool DefReadEdadb::readIdbDesign() {
 //--    edadb::DbMapReader< edadb::Shadow<idb::IdbVia> >* rd_sd = nullptr;
 //--    while (true) {
 //--        edadb::Shadow<idb::IdbVia> via_sd;
-//--        got = edadb::read2Scan<edadb::Shadow<idb::IdbVia>>(rd_sd, via_map, &via_sd);
+//--        got = edadb::readNext<edadb::Shadow<idb::IdbVia>>(rd_sd, via_map, &via_sd);
 //--        if (got < 0) {
 //--            std::cout << "DefReadEdadb::readIdbVia failed to read!" << std::endl;
 //--            return false;
@@ -637,7 +638,7 @@ bool DefReadEdadb::readIdbDesign() {
 //--    edadb::DbMapReader< edadb::Shadow<idb::IdbInstance>>* rd_sd = nullptr;
 //--    while (true) {
 //--        edadb::Shadow<idb::IdbInstance> inst_sd;
-//--        got = edadb::read2Scan<edadb::Shadow<idb::IdbInstance>>(rd_sd, inst_map, &inst_sd);
+//--        got = edadb::readNext<edadb::Shadow<idb::IdbInstance>>(rd_sd, inst_map, &inst_sd);
 //--        if (got < 0) {
 //--            std::cout << "DefReadEdadb::readComponent failed to read!" << std::endl;
 //--            return false;
@@ -721,7 +722,7 @@ bool DefReadEdadb::readIdbDesign() {
 //--    edadb::DbMapReader<edadb::Shadow<idb::IdbPin>>* rd_sd = nullptr;
 //--    while (true) {
 //--        edadb::Shadow<idb::IdbPin> pin_sd;
-//--        got = edadb::read2Scan<edadb::Shadow<idb::IdbPin>>(rd_sd, pin_map, &pin_sd);
+//--        got = edadb::readNext<edadb::Shadow<idb::IdbPin>>(rd_sd, pin_map, &pin_sd);
 //--        if (got < 0) {
 //--            std::cout << "DefReadEdadb::readIdbPin failed to read!" << std::endl;
 //--            return false;
@@ -849,7 +850,7 @@ bool DefReadEdadb::readIdbDesign() {
 //--    edadb::DbMapReader<edadb::Shadow<idb::IdbBlockage>>* rd_sd = nullptr;
 //--    while (true) {
 //--        edadb::Shadow<idb::IdbBlockage> blockage_sd;
-//--        got = edadb::read2Scan<edadb::Shadow<idb::IdbBlockage>>(rd_sd, blockage_map, &blockage_sd);
+//--        got = edadb::readNext<edadb::Shadow<idb::IdbBlockage>>(rd_sd, blockage_map, &blockage_sd);
 //--        if (got < 0) {
 //--            std::cout << "DefReadEdadb::readIdbBlockage failed to read!" << std::endl;
 //--            return false;
@@ -923,7 +924,7 @@ bool DefReadEdadb::readIdbDesign() {
 //--    edadb::DbMapReader<idb::IdbRegion>* rd = nullptr;
 //--    while (true) {
 //--        idb::IdbRegion* def_region = new idb::IdbRegion();
-//--        got = edadb::read2Scan<idb::IdbRegion>(rd, region_map, def_region);
+//--        got = edadb::readNext<idb::IdbRegion>(rd, region_map, def_region);
 //--        if (got == 0) {
 //--            delete def_region;
 //--            break;
@@ -959,7 +960,7 @@ bool DefReadEdadb::readIdbDesign() {
 //--    IdbSlotList* slot_list = design->get_slot_list();
 //--    while (true) {
 //--        IdbSlot* slot = new IdbSlot();
-//--        got = edadb::read2Scan<idb::IdbSlot>(rd, slot_map, slot);
+//--        got = edadb::readNext<idb::IdbSlot>(rd, slot_map, slot);
 //--        if (got == 0) {
 //--            delete slot;
 //--            break;
@@ -998,7 +999,7 @@ bool DefReadEdadb::readIdbDesign() {
 //--    edadb::DbMapReader<edadb::Shadow<idb::IdbGroup>>* rd_sd = nullptr;
 //--    while (true) {
 //--        edadb::Shadow<idb::IdbGroup> group_sd;
-//--        got = edadb::read2Scan<edadb::Shadow<idb::IdbGroup>>(rd_sd, group_map, &group_sd);
+//--        got = edadb::readNext<edadb::Shadow<idb::IdbGroup>>(rd_sd, group_map, &group_sd);
 //--        if (got < 0) {
 //--            std::cout << "DefReadEdadb::readIdbGroup failed to read!" << std::endl;
 //--            return false;
@@ -1040,7 +1041,7 @@ bool DefReadEdadb::readIdbDesign() {
 //--    edadb::DbMapReader< edadb::Shadow<idb::IdbFill> >* rd_sd = nullptr;
 //--    while (true) {
 //--        edadb::Shadow<idb::IdbFill> fill_sd;
-//--        got = edadb::read2Scan<edadb::Shadow<idb::IdbFill>>(rd_sd, fill_map, &fill_sd);
+//--        got = edadb::readNext<edadb::Shadow<idb::IdbFill>>(rd_sd, fill_map, &fill_sd);
 //--        if (got < 0) {
 //--            std::cout << "DefReadEdadb::readIdbFill failed to read!" << std::endl;
 //--            return false;
@@ -1094,7 +1095,7 @@ bool DefReadEdadb::readSpecialNet(void) {
     edadb::DbMapReader<SpecialNetShadw>* rd_sd = nullptr;
     while (true) {
         SpecialNetShadw special_net_sd;
-        got = edadb::read2Scan<SpecialNetShadw>(rd_sd, special_net_map, &special_net_sd);
+        got = edadb::readNext<SpecialNetShadw>(rd_sd, special_net_map, &special_net_sd);
         if (got < 0) {
             std::cout << "DefReadEdadb::readSpecialNet failed to read!" << std::endl;
             return false;

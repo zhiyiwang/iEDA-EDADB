@@ -60,8 +60,8 @@ bool DefWriteEdadb::writeDb2Edadb(const char* edadb_path) {
 
 bool DefWriteEdadb::writeChip2Edadb() {
     writeIdbDesign();
-#if 0
     writeIdbDie();
+#if 0
     writeIdbRow();
     writeIdbTrackGrid();
     writeIdbGCellGrid();
@@ -128,32 +128,32 @@ int32_t DefWriteEdadb::writeIdbDesign() {
 } // writeIdbDesign
 
 
-//--int32_t DefWriteEdadb::writeIdbDie(void) {
-//--    IdbLayout* layout = _def_service->get_layout();
-//--    IdbDie* die = layout->get_die();
-//--    if (die == nullptr) {
-//--       std::cout << "Write DIE error..." << std::endl;
-//--       return kDbFail;
-//--    }
-//--
-//--    edadb::DbMap< edadb::Shadow<idb::IdbDie> > die_sd_map;
-//--    die_sd_map.init();
-//--
-//--    // insert object
-//--#if EDADB_OUTPUT_DEBUG
-//--    std::cout << "[DefWriteEdadb] insert IdbDie object to edadb database" << std::endl;
-//--#endif
-//--    edadb::Shadow<idb::IdbDie> die_sd;
-//--    die_sd.toShadow(die);
-//--    if (!edadb::insertObject(die_sd_map, &die_sd)) {
-//--        std::cerr << "DefWriteEdadb::writeIdbDie failed to insertObject" << std::endl;
-//--        return kDbFail;
-//--    }
-//--
-//--    return kDbSuccess;
-//--} // writeIdbDie
-//--
-//--
+int32_t DefWriteEdadb::writeIdbDie(void) {
+    IdbLayout* layout = _def_service->get_layout();
+    IdbDie* die = layout->get_die();
+    if (die == nullptr) {
+       std::cout << "Write DIE error..." << std::endl;
+       return kDbFail;
+    }
+
+    edadb::DbMap< edadb::Shadow<idb::IdbDie> > die_sd_map;
+    die_sd_map.init();
+
+    // insert object
+#if EDADB_OUTPUT_DEBUG
+    std::cout << "[DefWriteEdadb] insert IdbDie object to edadb database" << std::endl;
+#endif
+    edadb::Shadow<idb::IdbDie> die_sd;
+    die_sd.toShadow(die);
+    if (!edadb::insertObject(die_sd_map, &die_sd)) {
+        std::cerr << "DefWriteEdadb::writeIdbDie failed to insertObject" << std::endl;
+        return kDbFail;
+    }
+
+    return kDbSuccess;
+} // writeIdbDie
+
+
 //--int32_t DefWriteEdadb::writeIdbRow(void) {
 //--    IdbLayout* layout = _def_service->get_layout();
 //--    IdbRows* rows = layout->get_rows();
