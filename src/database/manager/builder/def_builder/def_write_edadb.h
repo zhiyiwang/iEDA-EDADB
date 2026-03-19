@@ -30,8 +30,8 @@ protected:
     int32_t writeIdbDesign(void);
     int32_t writeIdbDie(void);
     int32_t writeIdbRow(void);
-#if 0
     int32_t writeIdbTrackGrid(void);
+#if 0
     int32_t writeIdbGCellGrid(void);
     int32_t writeIdbVia(void);
     int32_t writeIdbInstance(void); 

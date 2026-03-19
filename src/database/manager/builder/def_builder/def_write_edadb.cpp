@@ -62,9 +62,8 @@ bool DefWriteEdadb::writeChip2Edadb() {
     writeIdbDesign();
     writeIdbDie();
     writeIdbRow();
-
-#if 0
     writeIdbTrackGrid();
+#if 0
     writeIdbGCellGrid();
     writeIdbVia();
     writeIdbInstance();
@@ -176,38 +175,38 @@ int32_t DefWriteEdadb::writeIdbRow(void) {
 } // writeIdbRow
 
 
-//--int32_t DefWriteEdadb::writeIdbTrackGrid(void) {
-//--    IdbLayout* layout = _def_service->get_layout();
-//--    IdbTrackGridList* track_grid_list = layout->get_track_grid_list();
-//--    if (track_grid_list == nullptr) {
-//--        std::cout << "Write Track Grid error..." << std::endl;
-//--        return kDbFail;
-//--    }
-//--
-//--    edadb::DbMap<edadb::Shadow<idb::IdbTrackGrid>> track_grid_map;
-//--    track_grid_map.init();
-//--    
-//--    vector<edadb::Shadow<idb::IdbTrackGrid>*> track_grid_sd_vec;
-//--    for (auto& track_grid : track_grid_list->get_track_grid_list()) {
-//--        edadb::Shadow<idb::IdbTrackGrid>* track_grid_sd = new edadb::Shadow<idb::IdbTrackGrid>();
-//--        track_grid_sd->toShadow( track_grid );
-//--        track_grid_sd_vec.emplace_back( track_grid_sd );
-//--    }
-//--
-//--    if (!edadb::insertVector(track_grid_map, track_grid_sd_vec)) {
-//--        std::cerr << "DefWriteEdadb::writeIdbTrackGrid failed to insertVector" << std::endl;
-//--        return kDbFail;
-//--    }
-//--
-//--    for (auto& track_grid_sd : track_grid_sd_vec) {
-//--        delete track_grid_sd;
-//--        track_grid_sd = nullptr;
-//--    }
-//--
-//--    return kDbSuccess;
-//--} // writeIdbTrackGrid
-//--
-//--
+int32_t DefWriteEdadb::writeIdbTrackGrid(void) {
+    IdbLayout* layout = _def_service->get_layout();
+    IdbTrackGridList* track_grid_list = layout->get_track_grid_list();
+    if (track_grid_list == nullptr) {
+        std::cout << "Write Track Grid error..." << std::endl;
+        return kDbFail;
+    }
+
+    edadb::DbMap< edadb::Shadow<idb::IdbTrackGrid> > track_grid_map;
+    track_grid_map.init();
+    
+    vector<edadb::Shadow<idb::IdbTrackGrid>*> track_grid_sd_vec;
+    for (auto& track_grid : track_grid_list->get_track_grid_list()) {
+        edadb::Shadow<idb::IdbTrackGrid>* track_grid_sd = new edadb::Shadow<idb::IdbTrackGrid>();
+        track_grid_sd->toShadow( track_grid );
+        track_grid_sd_vec.emplace_back( track_grid_sd );
+    }
+
+    if (!edadb::insertVector(track_grid_map, track_grid_sd_vec)) {
+        std::cerr << "DefWriteEdadb::writeIdbTrackGrid failed to insertVector" << std::endl;
+        return kDbFail;
+    }
+
+    for (auto& track_grid_sd : track_grid_sd_vec) {
+        delete track_grid_sd;
+        track_grid_sd = nullptr;
+    }
+
+    return kDbSuccess;
+} // writeIdbTrackGrid
+
+
 //--int32_t DefWriteEdadb::writeIdbGCellGrid(void) {
 //--    IdbLayout* layout = _def_service->get_layout();  // Lef
 //--    IdbGCellGridList* gcell_grid_list = layout->get_gcell_grid_list();

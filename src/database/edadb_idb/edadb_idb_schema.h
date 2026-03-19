@@ -49,13 +49,14 @@ TABLE4CLASS(idb::IdbSite, "iSite", (_name, _width, _heigtht, _b_overlap, _site_c
 TABLE4CLASS(idb::IdbRow, "iRow", (_name, _site, _original_coordinate, _row_num_x, _row_num_y, _step_x, _step_y));
 
 
-//--#include "database/data/design/db_design/IdbTrackGrid.h"
-//--TABLE4CLASS(idb::IdbTrack, "iTrack", (_start, _direction, _pitch));
-//--
-//--#include "shadow/shadow_idb_track_grid.h"
-//--TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbTrackGrid>, "iTrackGridSD", (primary_key, _track_num_sd, _track_sd), (_layer_name_vec_sd));
-//--
-//--
+#include "database/data/design/db_design/IdbTrackGrid.h"
+TABLE4CLASS(idb::IdbTrack, "iTrack", (_start, _direction, _pitch));
+
+#include "shadow/shadow_idb_track_grid.h"
+TABLE4SHADOW(idb::IdbTrackGrid);
+TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbTrackGrid>, "iTrackGridSD", (primary_key, _track_num_sd, _track_sd), (_layer_name_vec_sd));
+
+
 //--#include "database/data/design/db_layout/IdbGCellGrid.h"
 //--TABLE4CLASS(idb::IdbGCellGrid, "iGCellGrid", (_direction, _start, _num, _space));
 //--
