@@ -61,7 +61,7 @@ bool DefReadEdadb::createDbByDef(const char* path) {
 //    defrSetDieAreaCbk(dieAreaCallback);
 //    defrSetRowCbk(rowCallback);
 //    defrSetTrackCbk(trackGridCallback);
-    defrSetGcellGridCbk(gcellGridCallback);
+//    defrSetGcellGridCbk(gcellGridCallback);
     defrSetViaStartCbk(viaBeginCallback);
     defrSetRegionCbk(regionCallback);
     defrSetSlotCbk(slotsCallback);
@@ -251,9 +251,8 @@ bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
     CHECK_READ(readIdbDie(), "DefReadEdadb::createDbByEdadb failed to read IdbDie!");
     CHECK_READ(readIdbRow(), "DefReadEdadb::createDbByEdadb failed to read IdbRow!");
     CHECK_READ(readIdbTrackGrid(), "DefReadEdadb::createDbByEdadb failed to read readIdbTrackGrid!");
-
-#if 0
     CHECK_READ(readIdbGCellGrid(), "DefReadEdadb::createDbByEdadb failed to read IdbGCellGrid!");
+#if 0
     CHECK_READ(readIdbVia(), "DefReadEdadb::createDbByEdadb failed to read IdbVia!");
     CHECK_READ(readIdbInstance(), "DefReadEdadb::createDbByEdadb failed to read IdbInstance!");
     CHECK_READ(readIdbPin(), "DefReadEdadb::createDbByEdadb failed to read IdbPin!");
@@ -430,43 +429,43 @@ bool DefReadEdadb::readIdbTrackGrid(void) {
 
 
 
-//--bool DefReadEdadb::readIdbGCellGrid(void) {
-//--    edadb::DbMap<idb::IdbGCellGrid> gcell_grid_map;
-//--    gcell_grid_map.init();
-//--
-//--    // check if gcell grid table exists
-//--    const std::string table_name = gcell_grid_map.getTableName();
-//--    if (!edadb::tableExists(table_name)) {
-//--        // no gcell grid table, return true
-//--        // TODO: output when debug
-//--        std::cout << "EDADB DefReadEdadb::readIdbGCellGrid: no table " << table_name << " exists." << std::endl;
-//--        return true;
-//--    }
-//--
-//--    IdbLayout* layout = _def_service->get_layout();  // Lefri
-//--    IdbGCellGridList* gcell_grid_list = layout->get_gcell_grid_list();
-//--
-//--    int got = 0;
-//--    edadb::DbMapReader<idb::IdbGCellGrid>* rd = nullptr;
-//--    while (true) {
-//--        IdbGCellGrid* gcell_grid = new IdbGCellGrid();
-//--        got = edadb::readNext<idb::IdbGCellGrid>(rd, gcell_grid_map, gcell_grid);
-//--        if (got == 0) {
-//--            delete gcell_grid;
-//--            break;
-//--        }
-//--        else if (got < 0) {
-//--            std::cout << "DefReadEdadb::readIdbGCellGrid failed to read!" << std::endl;
-//--            return false;
-//--        }
-//--        gcell_grid_list->add_gcell_grid(gcell_grid);
-//--    } // while
-//--
-//--    return true;
-//--} // readIdbGCellGrid
-//--
-//--
-//--
+bool DefReadEdadb::readIdbGCellGrid(void) {
+    edadb::DbMap<idb::IdbGCellGrid> gcell_grid_map;
+    gcell_grid_map.init();
+
+    // check if gcell grid table exists
+    const std::string table_name = gcell_grid_map.getTableName();
+    if (!edadb::tableExists(table_name)) {
+        // no gcell grid table, return true
+        // TODO: output when debug
+        std::cout << "EDADB DefReadEdadb::readIdbGCellGrid: no table " << table_name << " exists." << std::endl;
+        return true;
+    }
+
+    IdbLayout* layout = _def_service->get_layout();  // Lefri
+    IdbGCellGridList* gcell_grid_list = layout->get_gcell_grid_list();
+
+    int got = 0;
+    edadb::DbMapReader<idb::IdbGCellGrid>* rd = nullptr;
+    while (true) {
+        IdbGCellGrid* gcell_grid = new IdbGCellGrid();
+        got = edadb::readNext<idb::IdbGCellGrid>(rd, gcell_grid_map, gcell_grid);
+        if (got == 0) {
+            delete gcell_grid;
+            break;
+        }
+        else if (got < 0) {
+            std::cout << "DefReadEdadb::readIdbGCellGrid failed to read!" << std::endl;
+            return false;
+        }
+        gcell_grid_list->add_gcell_grid(gcell_grid);
+    } // while
+
+    return true;
+} // readIdbGCellGrid
+
+
+
 //--bool DefReadEdadb::readIdbVia(void) {
 //--    IdbDesign* design = _def_service->get_design();  // Def
 //--    IdbLayout* layout = _def_service->get_layout();  // Lef

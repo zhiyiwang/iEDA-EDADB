@@ -61,10 +61,10 @@ void initPrimKeys(void) {
 
     edadb::Cpp2SqlTypeTrait<idb::IdbTrack>::hasPrimKey = false;
 
+    edadb::Cpp2SqlTypeTrait<idb::IdbGCellGrid>::hasPrimKey = false;
+
 #if 0
 //    edadb::Cpp2SqlTypeTrait<idb::IdbRect>::hasPrimKey = false;
-
-    edadb::Cpp2SqlTypeTrait<idb::IdbGCellGrid>::hasPrimKey = false;
 
     edadb::Cpp2SqlTypeTrait<idb::IdbViaMasterGenerate>::hasPrimKey = false;
     edadb::Cpp2SqlTypeTrait<idb::IdbViaMaster>::hasPrimKey = false;
@@ -113,9 +113,9 @@ int initAllTables(bool crt_tab) {
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbDie>, crt_tab);
     EDADB_INIT_TABLE(idb::IdbRow, crt_tab);
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbTrackGrid>, crt_tab);
+    EDADB_INIT_TABLE(idb::IdbGCellGrid, crt_tab);
 
 #if 0
-    EDADB_INIT_TABLE(idb::IdbGCellGrid, crt_tab);
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbVia>, crt_tab);
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbInstance>, crt_tab);
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbPin>, crt_tab);

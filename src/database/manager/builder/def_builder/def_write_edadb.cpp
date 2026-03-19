@@ -63,8 +63,8 @@ bool DefWriteEdadb::writeChip2Edadb() {
     writeIdbDie();
     writeIdbRow();
     writeIdbTrackGrid();
-#if 0
     writeIdbGCellGrid();
+#if 0
     writeIdbVia();
     writeIdbInstance();
     writeIdbPin();
@@ -207,30 +207,30 @@ int32_t DefWriteEdadb::writeIdbTrackGrid(void) {
 } // writeIdbTrackGrid
 
 
-//--int32_t DefWriteEdadb::writeIdbGCellGrid(void) {
-//--    IdbLayout* layout = _def_service->get_layout();  // Lef
-//--    IdbGCellGridList* gcell_grid_list = layout->get_gcell_grid_list();
-//--    if (gcell_grid_list == nullptr) {
-//--        std::cout << "Write GCELLGRID error..." << std::endl;
-//--        return kDbFail;
-//--    }
-//--  
-//--    if (gcell_grid_list->get_gcell_grid_num() <= 0) {
-//--        std::cout << "No GCELLGRID..." << std::endl;
-//--        return kDbFail;
-//--    }
-//--
-//--    edadb::DbMap< idb::IdbGCellGrid > gcell_grid_map;
-//--    gcell_grid_map.init();
-//--    if (!edadb::insertVector(gcell_grid_map, gcell_grid_list->get_gcell_grid_list())) {
-//--        std::cerr << "DefWriteEdadb::writeIdbGCellGrid failed to insertVector" << std::endl;
-//--        return kDbFail;
-//--    }
-//--
-//--    return kDbSuccess;
-//--} // writeIdbGCellGrid
-//--
-//--
+int32_t DefWriteEdadb::writeIdbGCellGrid(void) {
+    IdbLayout* layout = _def_service->get_layout();  // Lef
+    IdbGCellGridList* gcell_grid_list = layout->get_gcell_grid_list();
+    if (gcell_grid_list == nullptr) {
+        std::cout << "Write GCELLGRID error..." << std::endl;
+        return kDbFail;
+    }
+  
+    if (gcell_grid_list->get_gcell_grid_num() <= 0) {
+        std::cout << "No GCELLGRID..." << std::endl;
+        return kDbFail;
+    }
+
+    edadb::DbMap< idb::IdbGCellGrid > gcell_grid_map;
+    gcell_grid_map.init();
+    if (!edadb::insertVector(gcell_grid_map, gcell_grid_list->get_gcell_grid_list())) {
+        std::cerr << "DefWriteEdadb::writeIdbGCellGrid failed to insertVector" << std::endl;
+        return kDbFail;
+    }
+
+    return kDbSuccess;
+} // writeIdbGCellGrid
+
+
 //--int32_t DefWriteEdadb::writeIdbVia(void) {
 //--    IdbDesign* design = _def_service->get_design();  // Def
 //--    IdbVias* via_list = design->get_via_list();
