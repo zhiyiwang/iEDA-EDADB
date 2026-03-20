@@ -64,8 +64,8 @@ bool DefWriteEdadb::writeChip2Edadb() {
     writeIdbRow();
     writeIdbTrackGrid();
     writeIdbGCellGrid();
-#if 0
     writeIdbVia();
+#if 0
     writeIdbInstance();
     writeIdbPin();
     writeIdbBlockage();
@@ -231,52 +231,39 @@ int32_t DefWriteEdadb::writeIdbGCellGrid(void) {
 } // writeIdbGCellGrid
 
 
-//--int32_t DefWriteEdadb::writeIdbVia(void) {
-//--    IdbDesign* design = _def_service->get_design();  // Def
-//--    IdbVias* via_list = design->get_via_list();
-//--    if (via_list == nullptr) {
-//--      std::cout << "Write VIAS error" << std::endl;
-//--      return kDbFail;
-//--    }
-//--
-//--    if (via_list->get_num_via() == 0) {
-//--      std::cout << "No VIAS To Write..." << std::endl;
-//--      return kDbFail;
-//--    }
-//--
-//--
-//--    edadb::DbMap< edadb::Shadow<idb::IdbVia> > via_map;
-//--    via_map.init();
-//--
-//--    // insert object in vector to edadb
-//--#if EDADB_OUTPUT_DEBUG
-//--    std::cout << "[DefWriteEdadb] insert IdbVia object to edadb database" << std::endl;
-//--#endif
-//--
-//--    vector<IdbVia*>& via_vec = via_list->get_via_list();
-//--    vector<edadb::Shadow<idb::IdbVia>*> via_sd_vec;
-//--    via_sd_vec.reserve( via_vec.size() );
-//--    for (auto& via : via_vec) {
-//--        edadb::Shadow<idb::IdbVia>* via_sd = new edadb::Shadow<idb::IdbVia>();
-//--        via_sd->toShadow( via );
-//--        via_sd_vec.emplace_back( via_sd );
-//--    }
-//--
-//--    if (!edadb::insertVector(via_map, via_sd_vec)) {
-//--        std::cerr << "DefWriteEdadb::writeIdbVia failed to insertVector" << std::endl;
-//--        return kDbFail;
-//--    }
-//--
-//--    for (auto& via_sd : via_sd_vec) {
-//--        delete via_sd;
-//--        via_sd = nullptr;
-//--    }
-//--    via_sd_vec.clear();
-//--
-//--    return kDbSuccess;
-//--} // writeIdbVia
-//--
-//--
+int32_t DefWriteEdadb::writeIdbVia(void) {
+    IdbDesign* design = _def_service->get_design();  // Def
+    IdbVias* via_list = design->get_via_list();
+    if (via_list == nullptr) {
+      std::cout << "Write VIAS error" << std::endl;
+      return kDbFail;
+    }
+
+    if (via_list->get_num_via() == 0) {
+      std::cout << "No VIAS To Write..." << std::endl;
+      return kDbFail;
+    }
+
+
+    edadb::DbMap< idb::IdbVia > via_map;
+    via_map.init();
+
+    // insert object in vector to edadb
+#if EDADB_OUTPUT_DEBUG
+    std::cout << "[DefWriteEdadb] insert IdbVia object to edadb database" << std::endl;
+#endif
+
+    vector<IdbVia*>& via_vec = via_list->get_via_list();
+
+    if (!edadb::insertVector(via_map, via_vec)) {
+        std::cerr << "DefWriteEdadb::writeIdbVia failed to insertVector" << std::endl;
+        return kDbFail;
+    }
+
+    return kDbSuccess;
+} // writeIdbVia
+
+
 //--int32_t DefWriteEdadb::writeIdbInstance(void) {
 //--    edadb::DbMap< edadb::Shadow<idb::IdbInstance> > instance_map;
 //--    instance_map.init();

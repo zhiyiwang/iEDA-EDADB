@@ -32,8 +32,8 @@ protected:
     int32_t writeIdbRow(void);
     int32_t writeIdbTrackGrid(void);
     int32_t writeIdbGCellGrid(void);
-#if 0
     int32_t writeIdbVia(void);
+#if 0
     int32_t writeIdbInstance(void); 
     int32_t writeIdbPin(void);
     int32_t writeIdbBlockage(void);

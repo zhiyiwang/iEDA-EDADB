@@ -17,7 +17,7 @@ class Shadow<idb::IdbTrackGrid> {
 public:
     Shadow(): primary_key(next_primary_key++) {}
 public:
-    void toShadow(idb::IdbTrackGrid* obj, const uint32_t* idx_ptr = nullptr) {
+    bool toShadow(idb::IdbTrackGrid* obj, const uint32_t* idx_ptr = nullptr) {
         assert(obj != nullptr);
         assert(idx_ptr == nullptr);
 
@@ -30,9 +30,10 @@ public:
             layer_name_sd.str = layer->get_name();
             _layer_name_vec_sd.emplace_back( layer_name_sd );
         }
-    }
+        return true;
+    } // toShadow
 
-    void fromShadow(idb::IdbTrackGrid* obj, uint32_t* idx_ptr = nullptr) {
+    bool fromShadow(idb::IdbTrackGrid* obj, uint32_t* idx_ptr = nullptr) {
         assert(obj != nullptr);
         assert(idx_ptr == nullptr);
 
@@ -41,7 +42,8 @@ public:
         assert( obj->get_layer_list().empty() );
 
         // use layer name to lookup layer during def read
-    }
+        return true;
+    } // fromShadow
 
 public:
     uint64_t primary_key = 0;

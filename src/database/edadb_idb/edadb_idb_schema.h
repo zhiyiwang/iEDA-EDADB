@@ -39,9 +39,6 @@ TABLE4SHADOW_WVEC(idb::IdbDie);
 TABLE4CLASS_WVEC (edadb::Shadow<idb::IdbDie>, "iDieSD", (primary_key), (points_sd));
 
 
-//--#include "database/basic/geometry/IdbGeometry.h"
-//--TABLE4CLASS(idb::IdbRect, "IdbRect", (_lx, _ly, _hx, _hy));
-
 #include "database/data/design/db_layout/IdbSite.h"
 TABLE4CLASS(idb::IdbSite, "iSite", (_name, _width, _heigtht, _b_overlap, _site_class, _symmetry, _orient, _type));
 
@@ -53,30 +50,36 @@ TABLE4CLASS(idb::IdbRow, "iRow", (_name, _site, _original_coordinate, _row_num_x
 TABLE4CLASS(idb::IdbTrack, "iTrack", (_start, _direction, _pitch));
 
 #include "shadow/shadow_idb_track_grid.h"
-TABLE4SHADOW(idb::IdbTrackGrid);
-TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbTrackGrid>, "iTrackGridSD", (primary_key, _track_num_sd, _track_sd), (_layer_name_vec_sd));
+TABLE4SHADOW_WVEC(idb::IdbTrackGrid);
+TABLE4CLASS_WVEC (edadb::Shadow<idb::IdbTrackGrid>, "iTrackGridSD", (primary_key, _track_num_sd, _track_sd), (_layer_name_vec_sd));
 
 
 #include "database/data/design/db_layout/IdbGCellGrid.h"
 TABLE4CLASS(idb::IdbGCellGrid, "iGCellGrid", (_direction, _start, _num, _space));
 
 
-//--#include "shadow/shadow_idb_via_master.h"
-//--TABLE4EXTERNALCLASS(idb::IdbViaMasterGenerate, "iViaMasterGenerateSD", (_rule_name_sd,  _cut_size_x_sd, _cut_size_y_sd, _cut_spacing_x_sd, _cut_spacing_y_sd, _enclosure_bottom_x_sd, _enclosure_bottom_y_sd, _enclosure_top_x_sd, _enclosure_top_y_sd, _num_cut_rows_sd, _num_cut_cols_sd, _original_offset_x_sd, _original_offset_y_sd, _offset_bottom_x_sd, _offset_bottom_y_sd, _offset_top_x_sd, _offset_top_y_sd, _layer_bottom_name_sd, _layer_cut_name_sd, _layer_top_name_sd, _pattern_name_sd));
-//--
-//--#include "shadow/shadow_idb_layer_shape.h"
-//--TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbLayerShape>, "iLayerShapeSD", (_layer_name_sd, _type_sd), (_rect_list_sd));
-//--
-//--//--EDADB_IGNORE: no need to define as a table: store the underlayer member directly
-//--//--TABLE4CLASS(edadb::Shadow<idb::IdbViaMasterFixed>, "iViaMasterFixedSD", (primary_key, _layer_shape_sd));
-//--
-//--#include "shadow/shadow_idb_via_master.h"
-//--TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbViaMaster>, "iViaMasterSD", (_name_sd, _type_sd, _master_generate_sd), (fixed_layer_shape_list_sd));
-//--
-//--#include "shadow/shadow_idb_via.h"
-//--TABLE4CLASS(edadb::Shadow<idb::IdbVia>, "iViaSD", (_name_sd, _master_instance_sd));
-//--
-//--
+#include "shadow/shadow_idb_via_master.h"
+TABLE4SHADOW(idb::IdbViaMasterGenerate);
+TABLE4CLASS (edadb::Shadow<idb::IdbViaMasterGenerate>, "iViaMasterGenerateSD", (_rule_name_sd,  _cut_size_x_sd, _cut_size_y_sd, _cut_spacing_x_sd, _cut_spacing_y_sd, _enclosure_bottom_x_sd, _enclosure_bottom_y_sd, _enclosure_top_x_sd, _enclosure_top_y_sd, _num_cut_rows_sd, _num_cut_cols_sd, _original_offset_x_sd, _original_offset_y_sd, _offset_bottom_x_sd, _offset_bottom_y_sd, _offset_top_x_sd, _offset_top_y_sd, _layer_bottom_name_sd, _layer_cut_name_sd, _layer_top_name_sd, _pattern_name_sd));
+
+#include "database/basic/geometry/IdbGeometry.h"
+TABLE4CLASS(idb::IdbRect, "IdbRect", (_lx, _ly, _hx, _hy));
+
+#include "shadow/shadow_idb_layer_shape.h"
+TABLE4SHADOW_WVEC(idb::IdbLayerShape);
+TABLE4CLASS_WVEC (edadb::Shadow<idb::IdbLayerShape>, "iLayerShapeSD", (_layer_name_sd, _type_sd), (_rect_list_sd));
+
+//--EDADB_IGNORE: no need to define as a table: store the underlayer member directly
+//--TABLE4CLASS(edadb::Shadow<idb::IdbViaMasterFixed>, "iViaMasterFixedSD", (primary_key, _layer_shape_sd));
+
+#include "shadow/shadow_idb_via_master.h"
+TABLE4SHADOW_WVEC(idb::IdbViaMaster);
+TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbViaMaster>, "iViaMasterSD", (_name_sd, _type_sd, _master_generate_sd), (fixed_layer_shape_list_sd));
+
+#include "database/data/design/db_design/IdbVias.h"
+TABLE4CLASS(idb::IdbVia, "iVia", (_name, _master_instanced));
+
+
 //--#include "database/data/design/db_design/IdbHalo.h"
 //--TABLE4CLASS(idb::IdbHalo, "iHalo", (_extend_left, _extend_right, _extend_top, _extend_bottom, _is_soft));
 //--

@@ -25,7 +25,7 @@ public:
         for (auto& rect : other._rect_list_sd) {
             _rect_list_sd.push_back(new idb::IdbRect(rect));
         }
-    }
+    } // copy ctor
 
     Shadow<idb::IdbLayerShape>& operator=(const Shadow& other) {
         if (this != &other) {
@@ -42,7 +42,7 @@ public:
             }
         }
         return *this;
-    }
+    } // copy assignment operator
 
     ~Shadow<idb::IdbLayerShape>(void) {
         // clean up rect list
@@ -53,7 +53,7 @@ public:
     }
 
 public:
-    void toShadow(idb::IdbLayerShape* obj) {
+    bool toShadow(idb::IdbLayerShape* obj, const uint32_t* idx_ptr = nullptr) {
         _layer_name_sd = obj->get_layer() ? obj->get_layer()->get_name() : "";
         _type_sd = obj->get_type();
 
@@ -63,10 +63,17 @@ public:
             // use ctor: IdbRect(IdbRect* rect) 
             _rect_list_sd.push_back(new idb::IdbRect(rect));
         }
-    }
 
-    void fromShadow(idb::IdbLayerShape* obj) {
-        // use _layer_name_sd to lookup IdbLayerShape instance
+        return true;
+    } // toShadow
+
+    bool fromShadow(idb::IdbLayerShape* obj, uint32_t* idx_ptr = nullptr) {
+        idb::IdbLayer* layer = idb::EdadbIdbHelper::findIdbLayerByName(_layer_name_sd);
+        if (layer == nullptr) {
+            std::cerr << "edadb::Shadow<idb::IdbLayerShape>::fromShadow error: cannot find layer for layer shape: " << _layer_name_sd << std::endl;
+            return false;
+        }
+        obj->set_layer(layer); 
 
         obj->_type = _type_sd;
 
@@ -77,21 +84,14 @@ public:
         for (auto& rect_sd : _rect_list_sd) {
             rect_list.push_back(new idb::IdbRect(rect_sd));
         }
-    }
-
-//    void print(void) {
-//        std::cout << "Shadow<idb::IdbLayerShape> : layer_name = " << _layer_name_sd << ", type = " << static_cast<uint32_t>(_type_sd)
-//                  << ", rect_list size = " << _rect_list_sd.size() << std::endl;
-//        for (auto& rect : _rect_list_sd) {
-//            std::cout << "  Rect: (" << rect->get_low_x() << ", " << rect->get_low_y() << ") - ("
-//                      << rect->get_high_x() << ", " << rect->get_high_y() << ")" << std::endl;
-//        }
-//    } // print
+        return true;
+    } // fromShadow
 
 public:
     std::string _layer_name_sd;
     idb::IdbLayerShapeType _type_sd;
     std::vector<idb::IdbRect*> _rect_list_sd;
 }; // idb::IdbLayerShape
+
 } // namespace edadb
 
