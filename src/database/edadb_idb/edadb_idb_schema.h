@@ -60,7 +60,7 @@ TABLE4CLASS(idb::IdbGCellGrid, "iGCellGrid", (_direction, _start, _num, _space))
 
 #include "shadow/shadow_idb_via_master.h"
 TABLE4SHADOW(idb::IdbViaMasterGenerate);
-TABLE4CLASS (edadb::Shadow<idb::IdbViaMasterGenerate>, "iViaMasterGenerateSD", (_rule_name_sd,  _cut_size_x_sd, _cut_size_y_sd, _cut_spacing_x_sd, _cut_spacing_y_sd, _enclosure_bottom_x_sd, _enclosure_bottom_y_sd, _enclosure_top_x_sd, _enclosure_top_y_sd, _num_cut_rows_sd, _num_cut_cols_sd, _original_offset_x_sd, _original_offset_y_sd, _offset_bottom_x_sd, _offset_bottom_y_sd, _offset_top_x_sd, _offset_top_y_sd, _layer_bottom_name_sd, _layer_cut_name_sd, _layer_top_name_sd, _pattern_name_sd));
+TABLE4CLASS(edadb::Shadow<idb::IdbViaMasterGenerate>, "iViaMasterGenerateSD", (_rule_name_sd,  _cut_size_x_sd, _cut_size_y_sd, _cut_spacing_x_sd, _cut_spacing_y_sd, _enclosure_bottom_x_sd, _enclosure_bottom_y_sd, _enclosure_top_x_sd, _enclosure_top_y_sd, _num_cut_rows_sd, _num_cut_cols_sd, _original_offset_x_sd, _original_offset_y_sd, _offset_bottom_x_sd, _offset_bottom_y_sd, _offset_top_x_sd, _offset_top_y_sd, _layer_bottom_name_sd, _layer_cut_name_sd, _layer_top_name_sd, _pattern_name_sd));
 
 #include "database/basic/geometry/IdbGeometry.h"
 TABLE4CLASS(idb::IdbRect, "IdbRect", (_lx, _ly, _hx, _hy));
@@ -76,8 +76,11 @@ TABLE4CLASS_WVEC (edadb::Shadow<idb::IdbLayerShape>, "iLayerShapeSD", (_layer_na
 TABLE4SHADOW_WVEC(idb::IdbViaMaster);
 TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbViaMaster>, "iViaMasterSD", (_name_sd, _type_sd, _master_generate_sd), (fixed_layer_shape_list_sd));
 
+//TABLE4SHADOW(idb::IdbViaMaster);
+//TABLE4CLASS(edadb::Shadow<idb::IdbViaMaster>, "iViaMasterSD", (_name_sd, _type_sd, _master_generate_sd));
+
 #include "database/data/design/db_design/IdbVias.h"
-TABLE4CLASS(idb::IdbVia, "iVia", (_name, _master_instanced));
+TABLE4CLASS(idb::IdbVia, "iVia", (_name, _master_instance));
 
 
 //--#include "database/data/design/db_design/IdbHalo.h"

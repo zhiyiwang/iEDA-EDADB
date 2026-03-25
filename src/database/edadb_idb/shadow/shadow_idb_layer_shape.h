@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include "edadb.h"
 #include "database/basic/geometry/IdbLayerShape.h"
+#include "../edadb_idb_helper.h"
 #include "shadow_idb_geometry.h"
 
 
@@ -68,7 +69,7 @@ public:
     } // toShadow
 
     bool fromShadow(idb::IdbLayerShape* obj, uint32_t* idx_ptr = nullptr) {
-        idb::IdbLayer* layer = idb::EdadbIdbHelper::findIdbLayerByName(_layer_name_sd);
+        idb::IdbLayer* layer = EdadbIdbHelper::findIdbLayerByName(_layer_name_sd);
         if (layer == nullptr) {
             std::cerr << "edadb::Shadow<idb::IdbLayerShape>::fromShadow error: cannot find layer for layer shape: " << _layer_name_sd << std::endl;
             return false;

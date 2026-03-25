@@ -65,23 +65,23 @@ public:
         obj->set_offset_top(_offset_top_x_sd, _offset_top_y_sd);
 
         // NOTE: set layer and pattern instance by looking up with name in shadow
-        IdbLayer* layer_bottom = edadb::EdadbIdbHelper::findIdbLayerByName(_layer_bottom_name_sd);
+        idb::IdbLayer* layer_bottom = edadb::EdadbIdbHelper::findIdbLayerByName(_layer_bottom_name_sd);
         if (layer_bottom == nullptr) {
             std::cout << "edadb::Shadow<idb::IdbViaMasterGenerate>::fromShadow error: cannot find layer for via master generate: " << _layer_bottom_name_sd << std::endl;
         }
-        obj->set_layer_bottom(dynamic_cast<IdbLayerRouting*>(layer_bottom));
+        obj->set_layer_bottom(dynamic_cast<idb::IdbLayerRouting*>(layer_bottom));
 
-        IdbLayer* layer_cut = edadb::EdadbIdbHelper::findIdbLayerByName(_layer_cut_name_sd);
+        idb::IdbLayer* layer_cut = edadb::EdadbIdbHelper::findIdbLayerByName(_layer_cut_name_sd);
         if (layer_cut == nullptr) {
             std::cout << "edadb::Shadow<idb::IdbViaMasterGenerate>::fromShadow error: cannot find layer for via master generate: " << _layer_cut_name_sd << std::endl;
         }
-        obj->set_layer_cut(dynamic_cast<IdbLayerCut*>(layer_cut));
+        obj->set_layer_cut(dynamic_cast<idb::IdbLayerCut*>(layer_cut));
 
-        IdbLayer* layer_top = edadb::EdadbIdbHelper::findIdbLayerByName(_layer_top_name_sd);
+        idb::IdbLayer* layer_top = edadb::EdadbIdbHelper::findIdbLayerByName(_layer_top_name_sd);
         if (layer_top == nullptr) {
             std::cout << "edadb::Shadow<idb::IdbViaMasterGenerate>::fromShadow error: cannot find layer for via master generate: " << _layer_top_name_sd << std::endl;
         }
-        obj->set_layer_top(dynamic_cast<IdbLayerRouting*>(layer_top));
+        obj->set_layer_top(dynamic_cast<idb::IdbLayerRouting*>(layer_top));
 
         // use pattern name string to create and set pattern instance 
         obj->set_patttern(_pattern_name_sd);
@@ -129,7 +129,7 @@ public:
         _type_sd = obj->get_type();
         _master_generate_sd.toShadow( obj->get_master_generate() );
 
-        for (IdbViaMasterFixed* &fixed : obj->get_master_fixed_list() ) {
+        for (idb::IdbViaMasterFixed* &fixed : obj->get_master_fixed_list() ) {
             // directly write IdbViaMasterFixed::IdbLayerShape* _layer_shape to database
             // no need to write IdbViaMasterFixed and deep copy
             fixed_layer_shape_list_sd.emplace_back( fixed->get_layer_shape() );
@@ -151,15 +151,15 @@ public:
         int32_t max_x = INT_MIN;
         int32_t max_y = INT_MIN;
  
-        // set fixed_layer_shape_list_sd to IdbViaMasterFixed
+        // set fixed_layer_shape_list_sd to idb::IdbViaMasterFixed
         for (idb::IdbLayerShape* &fixed_layer_shape : fixed_layer_shape_list_sd) {
-            std::string &layer_name = fixed_layer_shape->get_layer()->get_name();
-            IdbViaMasterFixed* master_fixed = obj->add_fixed(layer_name);
+            const std::string layer_name = fixed_layer_shape->get_layer()->get_name();
+            idb::IdbViaMasterFixed* master_fixed = obj->add_fixed(layer_name);
             delete master_fixed->get_layer_shape(); // delete default layer shape
             // fetch and set the layer shape for fixed_layer_shape_list_sd 
             master_fixed->set_layer_shape(fixed_layer_shape); 
 
-            std::vector<IdbRect*>& rect_list = fixed_layer_shape->get_rect_list();
+            std::vector<idb::IdbRect*>& rect_list = fixed_layer_shape->get_rect_list();
             assert(rect_list.size() == 1);
             idb::IdbRect* rect = rect_list.at(0);
             int32_t ll_x = rect->get_low_x();
@@ -168,8 +168,8 @@ public:
             int32_t ur_y = rect->get_high_y();
             master_fixed->add_rect(ll_x, ll_y, ur_x, ur_y);
 
-            IdbLayer* layer = fixed_layer_shape->get_layer();
-            if (layer->get_type() == IdbLayerType::kLayerCut) {
+            idb::IdbLayer* layer = fixed_layer_shape->get_layer();
+            if (layer->get_type() == idb::IdbLayerType::kLayerCut) {
                 min_x = std::min(min_x, ll_x);
                 min_y = std::min(min_y, ll_y);
                 max_x = std::max(max_x, ur_x);
@@ -180,7 +180,7 @@ public:
             obj->set_via_shape();
         } // for 
         
-        // all IdbLayerShape instances is owned by IdbViaMaster after fromShadow
+        // all idb::IdbLayerShape instances is owned by idb::IdbViaMaster after fromShadow
         fixed_layer_shape_list_sd.clear(); 
 
         return true;
@@ -190,7 +190,7 @@ public:
     std::string _name_sd;
     idb::IdbViaMaster::IdbViaMasterType _type_sd;
 
-    // Since we always need to use Shadow<idb::IdbViaMaster> to omit IdbLayerShape,
+    // Since we always need to use Shadow<idb::IdbViaMaster> to omit idb::IdbLayerShape,
     // we directly use Shadow<idb::IdbViaMasterGenerate> instead of IdbViaMasterGenerate
     Shadow<idb::IdbViaMasterGenerate> _master_generate_sd;
 

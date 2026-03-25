@@ -6,7 +6,8 @@
 
 #pragma once
 
-#include "def_read_edadb.h"
+#include "def_service.h"
+#include "IdbViaRule.h"
 
 namespace edadb {
 
@@ -35,10 +36,6 @@ public:
     }
 
     static idb::IdbDefService* getIdbDefService() {
-        if (s_def_service == nullptr) {
-            std::cout << "EdabIdbHelper Error: getIdbDefService s_def_service is nullptr";
-            std::cout << std::endl;
-        }
         return s_def_service;
     }
 
@@ -47,6 +44,7 @@ public:
         if (s_def_service == nullptr) {
             std::cout << "EdabIdbHelper Error: getIdbViaRuleList s_def_service is nullptr";
             std::cout << std::endl;
+            assert(s_def_service != nullptr);
             return nullptr;
         }
         return s_def_service->get_layout()->get_via_rule_list();
@@ -67,6 +65,7 @@ public:
         if (s_def_service == nullptr) {
             std::cout << "EdabIdbHelper Error: getIdbLayers s_def_service is nullptr";
             std::cout << std::endl;
+            assert(s_def_service != nullptr);
             return nullptr;
         }
         return s_def_service->get_layout()->get_layers();
@@ -85,7 +84,7 @@ public:
 
 public:
     // helper function to build def from edadb database
-    static idb::IdbDefService* s_def_service = nullptr;
+    static idb::IdbDefService* s_def_service;
 }; // class EdadbIdbHelper
 
 

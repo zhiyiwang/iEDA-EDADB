@@ -62,10 +62,10 @@ bool DefReadEdadb::createDbByDef(const char* path) {
 //    defrSetRowCbk(rowCallback);
 //    defrSetTrackCbk(trackGridCallback);
 //    defrSetGcellGridCbk(gcellGridCallback);
-    defrSetViaStartCbk(viaBeginCallback);
+//    defrSetViaStartCbk(viaBeginCallback);
+//    defrSetViaCbk(viaCallback);
     defrSetRegionCbk(regionCallback);
     defrSetSlotCbk(slotsCallback);
-    defrSetViaCbk(viaCallback);
     defrSetComponentCbk(componentsCallback);
     defrSetComponentStartCbk(componentNumberCallback);
     defrSetComponentEndCbk(componentEndCallback);
@@ -467,6 +467,15 @@ bool DefReadEdadb::readIdbGCellGrid(void) {
 
 
 bool DefReadEdadb::readIdbVia(void) {
+    idb::IdbDefService* idb_def_service = edadb::EdadbIdbHelper::getIdbDefService();
+    if (idb_def_service == nullptr) {
+        edadb::EdadbIdbHelper::setIdbDefService(_def_service);
+    }
+    else if (edadb::EdadbIdbHelper::getIdbDefService() != _def_service) {
+        std::cerr << "DefReadEdadb::readIdbVia failed, IdbDefService not consistent!" << std::endl;
+        return false;
+    }
+
     IdbDesign* design = _def_service->get_design();  // Def
     IdbLayout* layout = _def_service->get_layout();  // Lef
     IdbViaRuleList* _rule_list = layout->get_via_rule_list();
@@ -499,19 +508,19 @@ bool DefReadEdadb::readIdbVia(void) {
         {
             IdbViaMasterGenerate* master_generate = master_instance->get_master_generate();
             
-            std::string &rule_name = master_generate->get_rule_name();
+            const std::string rule_name = master_generate->get_rule_name();
             IdbViaRuleGenerate* via_rule = _rule_list->find_via_rule_generate(rule_name);
             assert(via_rule != nullptr);
             master_generate->set_rule_generate(via_rule);
 
             // build core cut shape
             vector<IdbRect*> cut_rect_list = master_generate->get_cut_rect_list();
-            int32_t num_rows = master_generate->get_num_cut_rows();
-            int32_t num_cols = master_generate->get_num_cut_cols();
+            int32_t num_rows = master_generate->get_cut_rows();
+            int32_t num_cols = master_generate->get_cut_cols();
             int32_t cutsize_x = master_generate->get_cut_size_x();
             int32_t cutsize_y = master_generate->get_cut_size_y();
-            int32_t cut_spacing_x = master_generate->get_cut_spacing_x();
-            int32_t cut_spacing_y = master_generate->get_cut_spacing_y();
+            int32_t cut_spacing_x = master_generate->get_cut_spcing_x();
+            int32_t cut_spacing_y = master_generate->get_cut_spcing_y();
             int32_t original_offset_x = master_generate->get_original_offset_x();
             int32_t original_offset_y = master_generate->get_original_offset_y();
               
