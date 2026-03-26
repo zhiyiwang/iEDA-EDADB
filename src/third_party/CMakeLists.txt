@@ -14,7 +14,3 @@ if(BUILD_GUI)
 add_subdirectory(tcl_qt)
 endif()
 
-
-#### [USE_EDADB]
-## Zhiyi: add edadb https://github.com/zhiyiwang/edadb/ as third_party 
-add_subdirectory(edadb)

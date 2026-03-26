@@ -1,4 +1,7 @@
 add_subdirectory(basic)
 add_subdirectory(manager)
 add_subdirectory(data)
-add_subdirectory(edadb_idb)
+
+#### [USE_EDADB]
+## Zhiyi: add edadb support in database
+add_subdirectory(edadb)

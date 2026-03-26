@@ -10,7 +10,7 @@
 
 
 [submodule "src/third_party/edadb"]
-	path = src/third_party/edadb
+	path = src/database/edadb/core
 	url = ../edadb.git
-	branch = main
+	branch = shadow-non-owning
 

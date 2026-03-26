@@ -17,12 +17,10 @@ target_include_directories(def_builder
         ${HOME_DATABASE}/manager/service/def_service
         ${HOME_DATABASE}/manager/service/lef_service
         ${HOME_UTILITY}/string
-##edadb
-##        ${PROJECT_SOURCE_DIR}/src/database/edadb
-##        ${PROJECT_SOURCE_DIR}/src/third_party/edadb/include
-        ${HOME_DATABASE}/edadb
-        ${HOME_THIRDPARTY}/edadb/include
-##edadb
+## USE_EDADB
+        ${HOME_DATABASE}/edadb/idb
+        ${HOME_DATABASE}/edadb/core/include
+## USE_EDADB
 )
 
 target_include_directories(def_builder 

@@ -8,7 +8,7 @@
 #pragma once
 
 #include "def_write.h"
-#include "../../../edadb_idb/edadb_idb.h"
+#include "edadb_idb.h"
 
 namespace idb {
 

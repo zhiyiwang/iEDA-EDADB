@@ -8,10 +8,10 @@ else()
 endif()
 
 target_include_directories(db_edadb PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR} # src/database/edadb
     ${PROJECT_SOURCE_DIR}/src # src
-    ${HOME_DATABASE}/edadb_idb # src/database/edadb_idb
-    ${HOME_THIRDPARTY}/edadb/include 
+#    ${HOME_DATABASE}/edadb/idb # src/database/edadb/idb
+    ${CMAKE_CURRENT_SOURCE_DIR} # src/database/edadb/idb
+    ${HOME_DATABASE}/edadb/core/include # src/database/edadb/core/include
 
     ## edadb_idb_helper
     ${HOME_DATABASE}/manager/builder
