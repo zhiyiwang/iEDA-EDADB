@@ -24,6 +24,7 @@ public:
     */
     bool toShadow(idb::IdbViaMasterGenerate* obj, const uint32_t* idx_ptr = nullptr) {
         _rule_name_sd = obj->get_rule_name();
+std::cout << "Shadow<idb::IdbViaMasterGenerate>::toShadow: _rule_name_sd = " << _rule_name_sd << std::endl;
         _cut_size_x_sd = obj->get_cut_size_x();
         _cut_size_y_sd = obj->get_cut_size_y();
         _cut_spacing_x_sd = obj->get_cut_spcing_x ();
@@ -45,6 +46,7 @@ public:
         _layer_cut_name_sd = obj->get_layer_cut() ? obj->get_layer_cut()->get_name() : "";
         _layer_top_name_sd = obj->get_layer_top() ? obj->get_layer_top()->get_name() : "";
         _pattern_name_sd = obj->get_patttern() ? obj->get_patttern()->get_pattern_string() : "";
+std::cout << "Shadow<idb::IdbViaMasterGenerate>::toShadow: _pattern_name_sd = " << _pattern_name_sd << std::endl;
 
         return true;
     } // toShadow
@@ -55,6 +57,14 @@ public:
      */
     bool fromShadow(idb::IdbViaMasterGenerate* obj, uint32_t* idx_ptr = nullptr) {
         obj->set_rule_name(_rule_name_sd);
+std::cout << "Shadow<idb::IdbViaMasterGenerate>::fromShadow: _rule_name_sd = " << _rule_name_sd << std::endl;
+        idb::IdbViaRuleGenerate* via_rule = edadb::EdadbIdbHelper::findIdbViaRuleGenerateByName(_rule_name_sd);
+        if (via_rule == nullptr) {
+            std::cout << "edadb::Shadow<idb::IdbViaMasterGenerate>::fromShadow error: cannot find via rule for via master generate: " << _rule_name_sd << std::endl;
+            abort();
+        }
+        obj->set_rule_generate(via_rule);
+
         obj->set_cut_size(_cut_size_x_sd, _cut_size_y_sd);
         obj->set_cut_spacing(_cut_spacing_x_sd, _cut_spacing_y_sd);
         obj->set_enclosure_bottom(_enclosure_bottom_x_sd, _enclosure_bottom_y_sd);
@@ -71,11 +81,12 @@ public:
         }
         obj->set_layer_bottom(dynamic_cast<idb::IdbLayerRouting*>(layer_bottom));
 
-        idb::IdbLayer* layer_cut = edadb::EdadbIdbHelper::findIdbLayerByName(_layer_cut_name_sd);
+        idb::IdbLayerCut* layer_cut = dynamic_cast<idb::IdbLayerCut*>(edadb::EdadbIdbHelper::findIdbLayerByName(_layer_cut_name_sd));
         if (layer_cut == nullptr) {
             std::cout << "edadb::Shadow<idb::IdbViaMasterGenerate>::fromShadow error: cannot find layer for via master generate: " << _layer_cut_name_sd << std::endl;
         }
-        obj->set_layer_cut(dynamic_cast<idb::IdbLayerCut*>(layer_cut));
+        layer_cut->set_via_rule(via_rule); 
+        obj->set_layer_cut(layer_cut);
 
         idb::IdbLayer* layer_top = edadb::EdadbIdbHelper::findIdbLayerByName(_layer_top_name_sd);
         if (layer_top == nullptr) {
@@ -85,6 +96,30 @@ public:
 
         // use pattern name string to create and set pattern instance 
         obj->set_patttern(_pattern_name_sd);
+
+
+        // build core cut shape for via master generate if pattern exist, since cut array must follow the pattern rule
+        vector<idb::IdbRect*> cut_rect_list = obj->get_cut_rect_list();
+
+        int32_t cut_width_total = _num_cut_cols_sd * _cut_size_x_sd + (_num_cut_cols_sd - 1) * _cut_spacing_x_sd;
+        int32_t cut_height_total = _num_cut_rows_sd * _cut_size_y_sd + (_num_cut_rows_sd - 1) * _cut_spacing_y_sd;
+
+        int32_t ll_x_min = (-cut_width_total / 2) + _original_offset_x_sd;
+        int32_t ll_y_min = (-cut_height_total / 2) + _original_offset_y_sd;
+        for (int32_t i = 0; i < _num_cut_rows_sd; ++i) {
+            for (int32_t j = 0; j < _num_cut_cols_sd; j++) {
+                /// if pattern exist, cut shape must obey the pattern rule
+                if (nullptr != obj->get_patttern() && !obj->is_pattern_cut_exist(i, j)) {
+                    continue;
+                }
+                int32_t ll_x = ll_x_min + j * (_cut_size_x_sd + _cut_spacing_x_sd);
+                int32_t ll_y = ll_y_min + i * (_cut_size_y_sd + _cut_spacing_y_sd);
+                int32_t ur_x = ll_x + _cut_size_x_sd;
+                int32_t ur_y = ll_y + _cut_size_y_sd;
+                obj->add_cut_rect(ll_x, ll_y, ur_x, ur_y);
+            }
+        }
+        obj->set_cut_bouding_rect(ll_x_min, ll_y_min, ll_x_min + cut_width_total, ll_y_min + cut_height_total);
 
         return true;
     } // fromShadow
