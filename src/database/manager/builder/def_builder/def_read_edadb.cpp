@@ -15,13 +15,15 @@ DefReadEdadb::DefReadEdadb(IdbDefService* def_service) : DefRead(def_service)
 
 bool DefReadEdadb::createDbFromEdadb(const char* edadb_path, const char* path)
 {
+    std::cout << "[EDADB-IDB] DefReadEdadb::createDbFromEdadb edadb_path="
+              << edadb_path << " def_path=" << path << std::endl;
     if (_def_service == nullptr) {
         std::cerr << "Error: DefReadEdadb::_def_service is nullptr" << std::endl;
         return false;
     }
 
-    if (edadb::init2read(edadb_path) < 0) {
-        std::cerr << "Error: DefReadEdadb::createDbFromEdadb failed to init2read!" << std::endl;
+    if (edadb_adapter::initReadDb(edadb_path) < 0) {
+        std::cerr << "Error: DefReadEdadb::createDbFromEdadb failed to initReadDb!" << std::endl;
         return false;
     }
 
@@ -35,6 +37,7 @@ bool DefReadEdadb::createDbFromEdadb(const char* edadb_path, const char* path)
         return false;
     }
 
+    std::cout << "[EDADB-IDB] DefReadEdadb::createDbFromEdadb completed" << std::endl;
   
     return true;
 } // createDbFromEdadb
@@ -42,6 +45,8 @@ bool DefReadEdadb::createDbFromEdadb(const char* edadb_path, const char* path)
 
 
 bool DefReadEdadb::createDbByDef(const char* path) {
+    std::cout << "[EDADB-IDB] createDbByDef restore iDB from DEF text path="
+              << path << std::endl;
     FILE* f = fopen(path, "r");
     if (f == NULL) {
       std::cerr << "Open def file failed..." << std::endl;
@@ -53,17 +58,16 @@ bool DefReadEdadb::createDbByDef(const char* path) {
 
     defrInitSession();
 
-//-- done
-//    defrSetVersionStrCbk(versionCallback);
-//    defrSetBusBitCbk(busBitCharsCallBack);
-//    defrSetUnitsCbk(unitsCallback);
-//    defrSetDesignCbk(designCallback);
-//    defrSetDieAreaCbk(dieAreaCallback);
-//    defrSetRowCbk(rowCallback);
-//    defrSetTrackCbk(trackGridCallback);
-//    defrSetGcellGridCbk(gcellGridCallback);
-//    defrSetViaStartCbk(viaBeginCallback);
-//    defrSetViaCbk(viaCallback);
+    defrSetVersionStrCbk(versionCallback);
+    defrSetBusBitCbk(busBitCharsCallBack);
+    defrSetUnitsCbk(unitsCallback);
+    defrSetDesignCbk(designCallback);
+    defrSetDieAreaCbk(dieAreaCallback);
+    defrSetRowCbk(rowCallback);
+    defrSetTrackCbk(trackGridCallback);
+    defrSetGcellGridCbk(gcellGridCallback);
+    defrSetViaStartCbk(viaBeginCallback);
+    defrSetViaCbk(viaCallback);
     defrSetRegionCbk(regionCallback);
     defrSetSlotCbk(slotsCallback);
     defrSetComponentCbk(componentsCallback);
@@ -78,7 +82,7 @@ bool DefReadEdadb::createDbByDef(const char* path) {
     defrSetFillCbk(fillCallback);
 
 
-// todo 
+//EDADB_TODO: nets still come from DEF text while EDADB net persistence is not implemented.
     defrSetNetStartCbk(netBeginCallback);
     defrSetNetCbk(netCallback);
     defrSetNetEndCbk(netEndCallback);
@@ -242,18 +246,21 @@ bool DefReadEdadb::createDbByDef(const char* path) {
 
 
 bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
-#if EDADB_OUTPUT_DEBUG
-    std::cout << "DEADB: Def read to EDADB database : " << edadb_path << std::endl;
-#endif
+    std::cout << "[EDADB-IDB] createDbByEdadb empty framework path="
+              << edadb_path << std::endl;
+    std::cout << "[EDADB-IDB] createDbByEdadb readIdbXXX disabled; DEF callbacks rebuild iDB"
+              << std::endl;
 
-    //////// read iEDA Idb classes from edadb database ////////////////////////
+    //////// iEDA Idb class reads are disabled for the empty C framework. //////
+#if 0  //EDADB_TODO: restore these basic EDADB reads after porting readIdbXXX to the DbTableOp API.
     CHECK_READ(readIdbDesign(), "DefReadEdadb::createDbByEdadb failed to read IdbDesign!");
     CHECK_READ(readIdbDie(), "DefReadEdadb::createDbByEdadb failed to read IdbDie!");
     CHECK_READ(readIdbRow(), "DefReadEdadb::createDbByEdadb failed to read IdbRow!");
     CHECK_READ(readIdbTrackGrid(), "DefReadEdadb::createDbByEdadb failed to read readIdbTrackGrid!");
     CHECK_READ(readIdbGCellGrid(), "DefReadEdadb::createDbByEdadb failed to read IdbGCellGrid!");
     CHECK_READ(readIdbVia(), "DefReadEdadb::createDbByEdadb failed to read IdbVia!");
-#if 0
+#endif
+#if 0  //EDADB_TODO: restore extended EDADB reads after enabling their schema/shadow coverage.
     CHECK_READ(readIdbInstance(), "DefReadEdadb::createDbByEdadb failed to read IdbInstance!");
     CHECK_READ(readIdbPin(), "DefReadEdadb::createDbByEdadb failed to read IdbPin!");
     CHECK_READ(readIdbBlockage(), "DefReadEdadb::createDbByEdadb failed to read IdbBlockage!");
@@ -279,6 +286,43 @@ bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
 
 
 
+bool DefReadEdadb::readIdbDesign() {
+    //EDADB_TODO: temporary stub; port the preserved implementation below to DbTableOp.
+    std::cout << "[EDADB-IDB] readIdbDesign skipped" << std::endl;
+    return true;
+}
+
+bool DefReadEdadb::readIdbDie(void) {
+    //EDADB_TODO: temporary stub; port the preserved implementation below to DbTableOp.
+    std::cout << "[EDADB-IDB] readIdbDie skipped" << std::endl;
+    return true;
+}
+
+bool DefReadEdadb::readIdbRow(void) {
+    //EDADB_TODO: temporary stub; port the preserved implementation below to DbTableOp.
+    std::cout << "[EDADB-IDB] readIdbRow skipped" << std::endl;
+    return true;
+}
+
+bool DefReadEdadb::readIdbTrackGrid(void) {
+    //EDADB_TODO: temporary stub; port the preserved implementation below to DbTableOp.
+    std::cout << "[EDADB-IDB] readIdbTrackGrid skipped" << std::endl;
+    return true;
+}
+
+bool DefReadEdadb::readIdbGCellGrid(void) {
+    //EDADB_TODO: temporary stub; port the preserved implementation below to DbTableOp.
+    std::cout << "[EDADB-IDB] readIdbGCellGrid skipped" << std::endl;
+    return true;
+}
+
+bool DefReadEdadb::readIdbVia(void) {
+    //EDADB_TODO: temporary stub; port the preserved implementation below to DbTableOp.
+    std::cout << "[EDADB-IDB] readIdbVia skipped" << std::endl;
+    return true;
+}
+
+#if 0  //EDADB_TODO: keep the old DbMap-based read implementations for stepwise DbTableOp porting.
 bool DefReadEdadb::readIdbDesign() {
     edadb::DbMap<idb::IdbDesign> design_map;
     design_map.init();
@@ -562,6 +606,7 @@ bool DefReadEdadb::readIdbVia(void) {
 
     return true;
 } // readIdbVia
+#endif
 
 
 
@@ -1026,7 +1071,7 @@ bool DefReadEdadb::readIdbVia(void) {
 
 
 
-#if 0
+#if 0  //EDADB_TODO: restore special-net EDADB read when net/special-net persistence is implemented.
 bool DefReadEdadb::readSpecialNet(void) {
     IdbDesign* design = _def_service->get_design();  // Def
     IdbPins* io_pin_list = design->get_io_pin_list();

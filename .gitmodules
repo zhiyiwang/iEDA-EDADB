@@ -9,8 +9,7 @@
 	branch = main
 
 
-[submodule "src/third_party/edadb"]
+[submodule "src/database/edadb/core"]
 	path = src/database/edadb/core
 	url = ../edadb.git
-	branch = shadow-non-owning
-
+	branch = main

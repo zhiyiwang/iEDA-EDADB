@@ -6,9 +6,30 @@
 
 #pragma once
 
+#include "edadb.h"
+
+namespace edadb {
+
+class CppStrings {
+public:
+    std::string str;
+};
+
+} // namespace edadb
+
+//EDADB_TODO: Re-enable this utility table mapping when a shadow schema uses
+// edadb::CppStrings again.
+#if 0
+TABLE4CLASS(edadb::CppStrings, "CppStr", (str));
+#endif
+
+//EDADB_TODO: Re-enable these shadow aggregations together with the matching
+// readIdbXXX/writeIdbXXX paths and schema TABLE4* registrations.
+#if 0
 #include "shadow/shadow_idb_geometry.h"
 #include "shadow/shadow_idb_die.h"
 #include "shadow/shadow_idb_track_grid.h"
+#endif
 
 
 //--#include "shadow/shadow_idb_layer_shape.h"

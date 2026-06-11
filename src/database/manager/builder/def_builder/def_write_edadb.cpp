@@ -15,13 +15,15 @@ DefWriteEdadb::DefWriteEdadb(IdbDefService* def_service, DefWriteType type) : De
 
 
 bool DefWriteEdadb::writeDb2Edadb(const char* edadb_path) {
+    std::cout << "[EDADB-IDB] DefWriteEdadb::writeDb2Edadb edadb_path="
+              << edadb_path << " type=" << static_cast<int>(_type) << std::endl;
     if (_def_service == nullptr) {
         std::cerr << "Error: DefWriteEdadb::_def_service is nullptr" << std::endl;
         return false;
     }
 
-    if (edadb::init2write(edadb_path) < 0) {
-        std::cerr << "Error: DefWriteEdadb::writeDb2Edadb failed to init2write!" << std::endl;
+    if (edadb_adapter::initWriteDb(edadb_path) < 0) {
+        std::cerr << "Error: DefWriteEdadb::writeDb2Edadb failed to initWriteDb!" << std::endl;
         return false;
     } 
 
@@ -44,7 +46,7 @@ bool DefWriteEdadb::writeDb2Edadb(const char* edadb_path) {
         break;
       }
       case DefWriteType::kLef: {
-        // todo 
+        //EDADB_TODO: implement LEF-to-EDADB persistence when LEF schema is defined.
         writeLef2Edadb();
         break;
       }
@@ -54,18 +56,23 @@ bool DefWriteEdadb::writeDb2Edadb(const char* edadb_path) {
         break;
       }
     }
+    std::cout << "[EDADB-IDB] DefWriteEdadb::writeDb2Edadb completed" << std::endl;
     return true;
 } // writeDbToEdadb
 
 
 bool DefWriteEdadb::writeChip2Edadb() {
+    std::cout << "[EDADB-IDB] writeChip2Edadb empty framework; writeIdbXXX disabled"
+              << std::endl;
+#if 0  //EDADB_TODO: restore these basic EDADB writes after porting writeIdbXXX to the DbTableOp API.
     writeIdbDesign();
     writeIdbDie();
     writeIdbRow();
     writeIdbTrackGrid();
     writeIdbGCellGrid();
     writeIdbVia();
-#if 0
+#endif
+#if 0  //EDADB_TODO: restore extended EDADB writes after enabling their schema/shadow coverage.
     writeIdbInstance();
     writeIdbPin();
     writeIdbBlockage();
@@ -80,7 +87,11 @@ bool DefWriteEdadb::writeChip2Edadb() {
 
 
 bool DefWriteEdadb::writeDbSynthesis2Edadb() {
+    std::cout << "[EDADB-IDB] writeDbSynthesis2Edadb empty framework; writeIdbDesign disabled"
+              << std::endl;
+#if 0  //EDADB_TODO: restore synthesis design write after DbTableOp writeIdbDesign is ready.
     writeIdbDesign();
+#endif
 
     return true;
 } // writeDbSynthesis2Edadb
@@ -94,6 +105,43 @@ bool DefWriteEdadb::writeLef2Edadb() {
 
 
 
+int32_t DefWriteEdadb::writeIdbDesign() {
+    //EDADB_TODO: temporary stub; port the preserved implementation below to DbTableOp.
+    std::cout << "[EDADB-IDB] writeIdbDesign skipped" << std::endl;
+    return kDbSuccess;
+}
+
+int32_t DefWriteEdadb::writeIdbDie(void) {
+    //EDADB_TODO: temporary stub; port the preserved implementation below to DbTableOp.
+    std::cout << "[EDADB-IDB] writeIdbDie skipped" << std::endl;
+    return kDbSuccess;
+}
+
+int32_t DefWriteEdadb::writeIdbRow(void) {
+    //EDADB_TODO: temporary stub; port the preserved implementation below to DbTableOp.
+    std::cout << "[EDADB-IDB] writeIdbRow skipped" << std::endl;
+    return kDbSuccess;
+}
+
+int32_t DefWriteEdadb::writeIdbTrackGrid(void) {
+    //EDADB_TODO: temporary stub; port the preserved implementation below to DbTableOp.
+    std::cout << "[EDADB-IDB] writeIdbTrackGrid skipped" << std::endl;
+    return kDbSuccess;
+}
+
+int32_t DefWriteEdadb::writeIdbGCellGrid(void) {
+    //EDADB_TODO: temporary stub; port the preserved implementation below to DbTableOp.
+    std::cout << "[EDADB-IDB] writeIdbGCellGrid skipped" << std::endl;
+    return kDbSuccess;
+}
+
+int32_t DefWriteEdadb::writeIdbVia(void) {
+    //EDADB_TODO: temporary stub; port the preserved implementation below to DbTableOp.
+    std::cout << "[EDADB-IDB] writeIdbVia skipped" << std::endl;
+    return kDbSuccess;
+}
+
+#if 0  //EDADB_TODO: keep the old DbMap-based write implementations for stepwise DbTableOp porting.
 int32_t DefWriteEdadb::writeIdbDesign() {
     IdbDesign* design = _def_service->get_design();
     IdbUnits* def_units = design->get_units();
@@ -262,6 +310,7 @@ int32_t DefWriteEdadb::writeIdbVia(void) {
 
     return kDbSuccess;
 } // writeIdbVia
+#endif
 
 
 //--int32_t DefWriteEdadb::writeIdbInstance(void) {
@@ -501,7 +550,7 @@ int32_t DefWriteEdadb::writeIdbVia(void) {
 //--
 
 
-#if 0
+#if 0  //EDADB_TODO: restore special-net EDADB write when net/special-net persistence is implemented.
 int32_t DefWriteEdadb::writeSpecialNet(void) {
     IdbSpecialNetList* special_net_list = _def_service->get_design()->get_special_net_list();
     if (special_net_list == nullptr || special_net_list->get_num() == 0) {

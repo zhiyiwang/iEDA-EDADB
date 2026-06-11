@@ -16,6 +16,10 @@ namespace __probe2 {
   using Y = boost::fusion::traits::tag_of<int>; 
 }
 
+//EDADB_TODO: C currently keeps EDADB as an empty framework. Re-enable each
+// schema group only when the corresponding readIdbXXX/writeIdbXXX implementation
+// has been ported to the EDADB DbTableOp API.
+#if 0
 #include "database/data/design/db_layout/IdbUnits.h"
 TABLE4CLASS(idb::IdbUnits, "iUnits", (_nanoseconds, _picofarads, _ohms, _milliwatts, _milliamps, _volts, _micron_dbu, _megahertz));
 
@@ -81,6 +85,7 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbViaMaster>, "iViaMasterSD", (_name_sd, _t
 
 #include "database/data/design/db_design/IdbVias.h"
 TABLE4CLASS(idb::IdbVia, "iVia", (_name, _master_instance));
+#endif  //EDADB_TODO: end currently disabled basic iDB object schema.
 
 
 //--#include "database/data/design/db_design/IdbHalo.h"

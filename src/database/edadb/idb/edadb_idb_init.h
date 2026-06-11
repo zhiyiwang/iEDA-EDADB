@@ -6,8 +6,6 @@
 
 #pragma once
 
-#include "edadb.h"
-
 //////// global init function ////////////////////////////////////////
 namespace edadb {
 
@@ -44,7 +42,22 @@ int initAllTables(bool crt_tab = true);
  * @return 0 success; <0 fail
  */
 template <typename T>
-int createTable(bool crt_tab);
+int initTable(bool crt_tab);
 
 } // namespace edadb
 
+namespace idb::edadb_adapter {
+
+/**
+ * @brief Stable iEDA adapter entry for opening EDADB in read mode.
+ * @return 0 success; <0 fail
+ */
+int initReadDb(const char* edadb_path);
+
+/**
+ * @brief Stable iEDA adapter entry for opening EDADB in write mode.
+ * @return 0 success; <0 fail
+ */
+int initWriteDb(const char* edadb_path);
+
+} // namespace idb::edadb_adapter
