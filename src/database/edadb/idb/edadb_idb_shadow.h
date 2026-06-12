@@ -22,10 +22,10 @@ TABLE4CLASS(idb::edadb_adapter::CppStrings, "CppStr", (str));
 #include "shadow/shadow_idb_geometry.h"
 #include "shadow/shadow_idb_die.h"
 #include "shadow/shadow_idb_track_grid.h"
+#include "shadow/shadow_idb_layer_shape.h"
+#include "shadow/shadow_idb_via_master.h"
 
 
-//--#include "shadow/shadow_idb_layer_shape.h"
-//--#include "shadow/shadow_idb_via_master.h"
 //--#include "shadow/shadow_idb_via.h"
 //--#include "shadow/shadow_idb_halo.h"
 //--#include "shadow/shadow_idb_blockage.h"

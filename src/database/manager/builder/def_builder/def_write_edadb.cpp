@@ -65,7 +65,7 @@ bool DefWriteEdadb::writeDb2Edadb(const char* edadb_path) {
 
 
 bool DefWriteEdadb::writeChip2Edadb() {
-    std::cout << "[EDADB-IDB] writeChip2Edadb Design/Die/Row/TrackGrid/GCell enabled; other writeIdbXXX disabled"
+    std::cout << "[EDADB-IDB] writeChip2Edadb Design/Die/Row/TrackGrid/GCell/Via enabled; other writeIdbXXX disabled"
               << std::endl;
     if (writeIdbDesign() != kDbSuccess) {
         return false;
@@ -82,9 +82,9 @@ bool DefWriteEdadb::writeChip2Edadb() {
     if (writeIdbGCellGrid() != kDbSuccess) {
         return false;
     }
-#if 0  //EDADB_TODO: restore these basic EDADB writes after porting writeIdbXXX to the DbTableOp API.
-    writeIdbVia();
-#endif
+    if (writeIdbVia() != kDbSuccess) {
+        return false;
+    }
 #if 0  //EDADB_TODO: restore extended EDADB writes after enabling their schema/shadow coverage.
     writeIdbInstance();
     writeIdbPin();
@@ -255,8 +255,31 @@ int32_t DefWriteEdadb::writeIdbGCellGrid(void) {
 }
 
 int32_t DefWriteEdadb::writeIdbVia(void) {
-    //EDADB_TODO: temporary stub; port the preserved implementation below to DbTableOp.
-    std::cout << "[EDADB-IDB] writeIdbVia skipped" << std::endl;
+    IdbDesign* design = _def_service->get_design();  // Def
+    if (design == nullptr) {
+        std::cerr << "[EDADB-IDB] writeIdbVia failed: design is nullptr" << std::endl;
+        return kDbFail;
+    }
+
+    IdbVias* via_list = design->get_via_list();
+    if (via_list == nullptr) {
+      std::cout << "Write VIAS error" << std::endl;
+      return kDbFail;
+    }
+
+    vector<IdbVia*>& via_vec = via_list->get_via_list();
+    std::cout << "[EDADB-IDB] writeIdbVia insert via_count="
+              << via_vec.size() << std::endl;
+
+    if (via_vec.empty()) {
+      return kDbSuccess;
+    }
+
+    if (!edadb::insertVector<idb::IdbVia>(via_vec)) {
+        std::cerr << "DefWriteEdadb::writeIdbVia failed to insertVector" << std::endl;
+        return kDbFail;
+    }
+
     return kDbSuccess;
 }
 

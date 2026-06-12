@@ -74,8 +74,10 @@ bool DefReadEdadb::createDbByDef(const char* path) {
 #endif
 
     // Other object families still come from DEF text callbacks.
+#if 0  //EDADB_TODO: VIAS are restored from EDADB together with Design/Die/Row/Track/GCell.
     defrSetViaStartCbk(viaBeginCallback);
     defrSetViaCbk(viaCallback);
+#endif
     defrSetRegionCbk(regionCallback);
     defrSetSlotCbk(slotsCallback);
     defrSetComponentCbk(componentsCallback);
@@ -252,7 +254,7 @@ bool DefReadEdadb::createDbByDef(const char* path) {
 
 
 bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
-    std::cout << "[EDADB-IDB] createDbByEdadb Design/Die/Row/TrackGrid/GCell enabled path="
+    std::cout << "[EDADB-IDB] createDbByEdadb Design/Die/Row/TrackGrid/GCell/Via enabled path="
               << edadb_path << std::endl;
     std::cout << "[EDADB-IDB] createDbByEdadb other readIdbXXX disabled; DEF callbacks rebuild remaining iDB"
               << std::endl;
@@ -262,9 +264,9 @@ bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
     CHECK_READ(readIdbRow(), "DefReadEdadb::createDbByEdadb failed to read IdbRow!");
     CHECK_READ(readIdbTrackGrid(), "DefReadEdadb::createDbByEdadb failed to read readIdbTrackGrid!");
     CHECK_READ(readIdbGCellGrid(), "DefReadEdadb::createDbByEdadb failed to read IdbGCellGrid!");
+    CHECK_READ(readIdbVia(), "DefReadEdadb::createDbByEdadb failed to read IdbVia!");
 
 #if 0  //EDADB_TODO: restore disabled object reads after their schema/shadow/write/read paths are enabled.
-    CHECK_READ(readIdbVia(), "DefReadEdadb::createDbByEdadb failed to read IdbVia!");
     CHECK_READ(readIdbInstance(), "DefReadEdadb::createDbByEdadb failed to read IdbInstance!");
     CHECK_READ(readIdbPin(), "DefReadEdadb::createDbByEdadb failed to read IdbPin!");
     CHECK_READ(readIdbBlockage(), "DefReadEdadb::createDbByEdadb failed to read IdbBlockage!");
@@ -495,8 +497,47 @@ bool DefReadEdadb::readIdbGCellGrid(void) {
 }
 
 bool DefReadEdadb::readIdbVia(void) {
-    //EDADB_TODO: temporary stub; port the preserved implementation below to DbTableOp.
-    std::cout << "[EDADB-IDB] readIdbVia skipped" << std::endl;
+    idb::IdbDefService* idb_def_service = edadb_adapter::EdadbIdbHelper::getIdbDefService();
+    if (idb_def_service == nullptr) {
+        edadb_adapter::EdadbIdbHelper::setIdbDefService(_def_service);
+    } else if (edadb_adapter::EdadbIdbHelper::getIdbDefService() != _def_service) {
+        std::cerr << "DefReadEdadb::readIdbVia failed, IdbDefService not consistent!" << std::endl;
+        return false;
+    }
+
+    IdbDesign* design = _def_service->get_design();  // Def
+    if (design == nullptr) {
+        std::cerr << "DefReadEdadb::readIdbVia failed, design is nullptr!" << std::endl;
+        return false;
+    }
+
+    IdbVias* via_list = design->get_via_list();
+    if (via_list == nullptr) {
+        std::cerr << "DefReadEdadb::readIdbVia failed, via_list is nullptr!" << std::endl;
+        return false;
+    }
+
+    auto via_reader = edadb::makeReadAllOp<idb::IdbVia>();
+    int32_t via_count = 0;
+    while (true) {
+        IdbVia* via_inst = new IdbVia();
+        const int read_count = edadb::readNext<idb::IdbVia>(via_reader, via_inst);
+        if (read_count == 0) {
+            delete via_inst;
+            break;
+        }
+        if (read_count < 0) {
+            delete via_inst;
+            std::cout << "DefReadEdadb::readIdbVia failed to read!" << std::endl;
+            return false;
+        }
+
+        via_list->add_via(via_inst);
+        ++via_count;
+    }
+
+    std::cout << "[EDADB-IDB] readIdbVia restored via_count="
+              << via_count << std::endl;
     return true;
 }
 

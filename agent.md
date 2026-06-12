@@ -33,7 +33,9 @@ Do not run the full physical-design flow unless requested.
 Notes:
 
 - A must not be described as using `src/third_party/edadb`; that is B’s layout.
-- C starts from A’s layout and updates EDADB core toward `main`.
+- C starts from A’s layout and is the current development line.
+- B is reference-only for old DEF/EDADB mappings; do not copy shadow-transitive behavior into C.
+- `IdbVia` is enabled in C after re-audit with the new EDADB implicit member StoreType path.
 - EDADB `8a4e3bf` = `293c162` plus local CMake fix for embedding EDADB as an iEDA submodule.
 
 ## Current C Milestone
@@ -50,8 +52,10 @@ Active persistence groups:
 - `writeIdbRow()` / `readIdbRow()` are enabled directly on `IdbRow`.
 - `writeIdbTrackGrid()` / `readIdbTrackGrid()` are enabled through `edadb::Shadow<idb::IdbTrackGrid>`.
 - `writeIdbGCellGrid()` / `readIdbGCellGrid()` are enabled directly on `IdbGCellGrid`.
+- `writeIdbVia()` / `readIdbVia()` are enabled directly on root `IdbVia`.
 - `iDesign` stores `IdbUnits` and `IdbBusBitChars` as inline columns.
 - `iTrackGridSD` stores track grid scalar data and owns vector child rows for layer names.
+- `iVia` stores generated via fields inline through EDADB member StoreType conversion; no `Shadow<IdbVia>` is defined.
 - Disabled matching DEF parser callbacks in `DefReadEdadb::createDbByDef()`:
   - `defrSetVersionStrCbk`
   - `defrSetDesignCbk`
@@ -61,6 +65,8 @@ Active persistence groups:
   - `defrSetRowCbk`
   - `defrSetTrackCbk`
   - `defrSetGcellGridCbk`
+  - `defrSetViaStartCbk`
+  - `defrSetViaCbk`
 - Other object families still come from DEF text callbacks.
 
 Validation:
@@ -77,18 +83,22 @@ Validation:
 - Demo logs show `readIdbTrackGrid restored track_grid_count=12 layer_ref_count=12`.
 - Demo logs show `writeIdbGCellGrid insert gcell_grid_count=0`.
 - Demo logs show `readIdbGCellGrid restored gcell_grid_count=0`.
+- Demo logs show `writeIdbVia insert via_count=4`.
+- Demo logs show `readIdbVia restored via_count=4`.
 - SQLite content check: `select _design_name, _version, _units__micron_dbu, char(_bus_bit_chars__left_delimiter), char(_bus_bit_chars__right_delimiter) from iDesign;` returns `gcd|5.8|1000|[|]`.
 - SQLite die check: `iDieSD` has 1 row and `iDieSD_points_sd_iCoordSD` has 2 rows: `(0,0)` and `(149960,150128)`.
 - SQLite row check: `select count(*) from iRow;` returns `39`.
 - SQLite track-grid check: `select count(*) from iTrackGridSD;` returns `12`.
 - SQLite gcell check: `select count(*) from iGCellGrid;` returns `0`.
+- SQLite via check: `select count(*) from iVia;` returns `4`.
+- SQLite via key check: `iVia` contains `via_1600x480`, `via2_1600x480`, `via3_1600x480`, `via4_1600x1600` with expected VIARULE/layer/ROWCOL fields.
 - Final demo message: `Input def and output def are the same.`
 
 Current behavior:
 
-- `edadb_write` writes the Design, Die, Row, TrackGrid, and GCell groups to EDADB.
-- `edadb_read` reads the Design, Die, Row, TrackGrid, and GCell groups from EDADB.
-- DEF text callbacks rebuild via/instance/pin/blockage/region/slot/group/fill/net/special-net.
+- `edadb_write` writes the Design, Die, Row, TrackGrid, GCell, and Via groups to EDADB.
+- `edadb_read` reads the Design, Die, Row, TrackGrid, GCell, and Via groups from EDADB.
+- DEF text callbacks rebuild instance/pin/blockage/region/slot/group/fill/net/special-net.
 - Disabled `readIdbXXX()` / `writeIdbXXX()` bodies are preserved under `#if 0 //EDADB_TODO`.
 
 Important rule:
@@ -100,13 +110,14 @@ Important rule:
 - Before implementing each `readIdbXXX()`, read the matching `DefRead::parse_xxx()` implementation and keep the same object rebuild and callback-disable semantics.
 - EDADB should persist the values that normal DEF write would output. If iDB holds a missing/default value but `DefWrite` would output a fallback value, the adapter may canonicalize active iDB to that output value before insertion.
 - Do not persist derived/cache fields if the normal parser recomputes them, such as bounding boxes, area, polygon caches, reverse layer links, or list counters.
-- Define a shadow class when direct `TABLE4CLASS` cannot express the intended storage view clearly: vector child rows need a stable root key, raw pointers must be replaced by names/keys, only a smaller DEF semantic subset should be persisted, or readback must rebuild objects through helper lookups.
-- Do not make EDADB implicitly replace iDB classes for adapter-only semantics. If storage differs from iDB ownership or DEF semantics, make the conversion explicit in `src/database/edadb/idb/shadow`.
+- Define the minimum shadow needed for a storage view: root iDB classes stay direct when EDADB can convert their members implicitly; use shadow only for member pointer-to-name/key conversion, vector ownership, synthetic keys, reduced DEF views, or helper-based rebuilds.
+- Do not add wrapper shadows such as `Shadow<IdbVia>` when `TABLE4CLASS(idb::IdbVia, ...)` plus member StoreType conversion is enough.
 - Keep adapter code direct and close to the existing `def_write/read_edadb` style. Do not use hidden raw-pointer swaps or temporary ownership tricks when a simple explicit update is enough.
 - For owning raw-pointer iDB objects such as `IdbDesign`, do not use `edadb::readAll(std::vector<T>&)` unless copy/move ownership is safe. Use a cursor op (`makeReadAllOp()` + `readNext()`) and transfer ownership as in the original DbMap implementation.
 - `readIdbDesign()` currently uses a temporary `got` object as a safe buffer. Directly reading into active `design` is closer to original iEDA reuse semantics, but it risks EDADB NULL inline pointer columns clearing active pointers.
 - `IdbTrackGrid` uses shadow because `_layer_name_vec_sd` is a vector child table and needs the shadow root `primary_key` to group layer names by track grid. Do not hide this grouping as an implicit EDADB replacement.
 - `IdbGCellGrid` does not use shadow because DEF read/write uses only scalar fields: direction, start, count, and step.
+- `IdbVia` does not use a root shadow. Its `_master_instance` is converted by EDADB through the member type's StoreType; only `IdbViaMaster` / `IdbLayerShape` keep minimal member-level shadow views for layer-name lookup and fixed/generate geometry rebuild.
 - After each migration, run the concise Adapter Correctness Audit in `edadb_readme.md`.
 
 ## C Namespace / API Boundary
@@ -252,5 +263,5 @@ NET and SPECIALNET are not implemented yet.
 
 Current implementation target:
 
-- Design / units / busbit, die, row, track, and gcell are active for the current demo milestone.
-- Next target should be `writeIdbVia()` / `readIdbVia()` using the same old-code-first migration rule.
+- Design / units / busbit, die, row, track, gcell, and via are active for the current demo milestone.
+- Next object family is TBD; keep using the old-code-first migration rule.
