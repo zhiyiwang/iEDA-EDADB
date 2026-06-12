@@ -124,11 +124,19 @@ int32_t DefWriteEdadb::writeIdbDesign() {
         return kDbFail;
     }
 
-    const int32_t def_micron_dbu = def_units == nullptr ? -1 : def_units->get_micron_dbu();
-    const int32_t lef_micron_dbu = lef_units == nullptr ? -1 : lef_units->get_micron_dbu();
-    const int32_t micron_dbu = def_micron_dbu > 0 ? def_micron_dbu : lef_micron_dbu;
+    int32_t micron_dbu = def_units->get_micron_dbu() > 0
+                              ? def_units->get_micron_dbu()
+                              : lef_units->get_micron_dbu();
     if (micron_dbu <= 0) {
         std::cout << "Write UNITS error..." << std::endl;
+        return kDbFail;
+    }
+    if (def_units->get_micron_dbu() <= 0) {
+        def_units->set_microns_dbu(micron_dbu);
+    }
+
+    if (design->get_bus_bit_chars() == nullptr) {
+        std::cout << "Write BUSBITCHARS error..." << std::endl;
         return kDbFail;
     }
 

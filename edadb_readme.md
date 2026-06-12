@@ -205,6 +205,7 @@ Current write state:
 - `initWriteDb()` is active.
 - `writeChip2Edadb()` calls `writeIdbDesign()`.
 - `writeIdbDesign()` uses the current EDADB API: `edadb::insertObject<idb::IdbDesign>(design)`.
+- `writeIdbDesign()` follows `DefWrite::write_units()` style: use DEF units when valid, otherwise use LEF units, and update active `design->_units` to the effective DBU before EDADB insert.
 - EDADB creates physical table `iDesign`; `IdbUnits` and `IdbBusBitChars` are inline columns inside `iDesign`.
 - Other `writeIdbXXX()` calls are disabled under `//EDADB_TODO`.
 
@@ -227,12 +228,14 @@ Current read state:
 - `createDbByEdadb()` calls `readIdbDesign()`.
 - `readIdbDesign()` uses the current EDADB cursor API: `makeReadAllOp<idb::IdbDesign>()` + `readNext()`.
 - `readIdbDesign()` follows the old DbMap implementation semantics: transfer owned `_units` and `_bus_bit_chars` pointers into the active `IdbDesign`, then null them in the temporary object.
+- The temporary `got` object is a safe buffer. Reading directly into active `design` would better match original iEDA object reuse, but EDADB NULL inline pointer columns could clear active pointers, so keep the buffered style for now.
 - `createDbByDef()` disables version/design/units/busbit callbacks and restores all remaining object families from DEF text.
 
 Important ownership note:
 
 - Avoid `edadb::readAll(std::vector<T>&)` for owning raw-pointer iDB classes such as `IdbDesign` unless copy/move ownership is explicitly safe.
 - Prefer cursor readback for these classes, because it matches the original EDADB implementation style and avoids shallow-copy lifetime hazards.
+- Implement adapter code in the direct style of `DefWrite` / `DefRead`: read the original writer/parser first, persist the values normal DEF output would use, and avoid hidden raw-pointer swaps or temporary ownership tricks.
 
 ## How To Extend Persistence
 

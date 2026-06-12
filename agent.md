@@ -75,7 +75,12 @@ Important rule:
 
 - If an object family read/write is disabled, its schema/init/shadow must stay disabled too.
 - Do not delete dormant code. Keep it under `//EDADB_TODO` for later restoration.
+- Before implementing each `writeIdbXXX()`, read the matching `DefWrite::write_xxx()` implementation and keep the same object, field, fallback, and call-order semantics.
+- Before implementing each `readIdbXXX()`, read the matching `DefRead::parse_xxx()` implementation and keep the same object rebuild and callback-disable semantics.
+- EDADB should persist the values that normal DEF write would output. If iDB holds a missing/default value but `DefWrite` would output a fallback value, the adapter may canonicalize active iDB to that output value before insertion.
+- Keep adapter code direct and close to the existing `def_write/read_edadb` style. Do not use hidden raw-pointer swaps or temporary ownership tricks when a simple explicit update is enough.
 - For owning raw-pointer iDB objects such as `IdbDesign`, do not use `edadb::readAll(std::vector<T>&)` unless copy/move ownership is safe. Use a cursor op (`makeReadAllOp()` + `readNext()`) and transfer ownership as in the original DbMap implementation.
+- `readIdbDesign()` currently uses a temporary `got` object as a safe buffer. Directly reading into active `design` is closer to original iEDA reuse semantics, but it risks EDADB NULL inline pointer columns clearing active pointers.
 
 ## C Namespace / API Boundary
 
