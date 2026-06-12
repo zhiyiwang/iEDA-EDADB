@@ -69,7 +69,7 @@ public:
     } // toShadow
 
     bool fromShadow(idb::IdbLayerShape* obj, uint32_t* idx_ptr = nullptr) {
-        idb::IdbLayer* layer = EdadbIdbHelper::findIdbLayerByName(_layer_name_sd);
+        idb::IdbLayer* layer = idb::edadb_adapter::EdadbIdbHelper::findIdbLayerByName(_layer_name_sd);
         if (layer == nullptr) {
             std::cerr << "edadb::Shadow<idb::IdbLayerShape>::fromShadow error: cannot find layer for layer shape: " << _layer_name_sd << std::endl;
             return false;
@@ -95,4 +95,3 @@ public:
 }; // idb::IdbLayerShape
 
 } // namespace edadb
-

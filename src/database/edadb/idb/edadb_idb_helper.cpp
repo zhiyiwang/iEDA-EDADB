@@ -6,6 +6,6 @@
 
 #include "edadb_idb_helper.h"
 
-namespace edadb {
+namespace idb::edadb_adapter {
     idb::IdbDefService* EdadbIdbHelper::s_def_service = nullptr;
-} // namespace edadb
+} // namespace idb::edadb_adapter

@@ -26,7 +26,7 @@ public:
         _track_sd = *(obj->get_track());
         _layer_name_vec_sd.clear();
         for ( auto& layer : obj->get_layer_list() ) {
-            edadb::CppStrings layer_name_sd;
+            idb::edadb_adapter::CppStrings layer_name_sd;
             layer_name_sd.str = layer->get_name();
             _layer_name_vec_sd.emplace_back( layer_name_sd );
         }
@@ -49,13 +49,12 @@ public:
     uint64_t primary_key = 0;
     uint32_t _track_num_sd = 0;
     idb::IdbTrack _track_sd;
-    vector<edadb::CppStrings> _layer_name_vec_sd;
+    vector<idb::edadb_adapter::CppStrings> _layer_name_vec_sd;
 
 private:
     static inline uint64_t next_primary_key = 1;
 }; // shadow IdbTrackGrid
 
 } // namespace edadb
-
 
 

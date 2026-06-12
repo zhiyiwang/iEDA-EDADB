@@ -58,7 +58,7 @@ std::cout << "Shadow<idb::IdbViaMasterGenerate>::toShadow: _pattern_name_sd = " 
     bool fromShadow(idb::IdbViaMasterGenerate* obj, uint32_t* idx_ptr = nullptr) {
         obj->set_rule_name(_rule_name_sd);
 std::cout << "Shadow<idb::IdbViaMasterGenerate>::fromShadow: _rule_name_sd = " << _rule_name_sd << std::endl;
-        idb::IdbViaRuleGenerate* via_rule = edadb::EdadbIdbHelper::findIdbViaRuleGenerateByName(_rule_name_sd);
+        idb::IdbViaRuleGenerate* via_rule = idb::edadb_adapter::EdadbIdbHelper::findIdbViaRuleGenerateByName(_rule_name_sd);
         if (via_rule == nullptr) {
             std::cout << "edadb::Shadow<idb::IdbViaMasterGenerate>::fromShadow error: cannot find via rule for via master generate: " << _rule_name_sd << std::endl;
             abort();
@@ -75,20 +75,20 @@ std::cout << "Shadow<idb::IdbViaMasterGenerate>::fromShadow: _rule_name_sd = " <
         obj->set_offset_top(_offset_top_x_sd, _offset_top_y_sd);
 
         // NOTE: set layer and pattern instance by looking up with name in shadow
-        idb::IdbLayer* layer_bottom = edadb::EdadbIdbHelper::findIdbLayerByName(_layer_bottom_name_sd);
+        idb::IdbLayer* layer_bottom = idb::edadb_adapter::EdadbIdbHelper::findIdbLayerByName(_layer_bottom_name_sd);
         if (layer_bottom == nullptr) {
             std::cout << "edadb::Shadow<idb::IdbViaMasterGenerate>::fromShadow error: cannot find layer for via master generate: " << _layer_bottom_name_sd << std::endl;
         }
         obj->set_layer_bottom(dynamic_cast<idb::IdbLayerRouting*>(layer_bottom));
 
-        idb::IdbLayerCut* layer_cut = dynamic_cast<idb::IdbLayerCut*>(edadb::EdadbIdbHelper::findIdbLayerByName(_layer_cut_name_sd));
+        idb::IdbLayerCut* layer_cut = dynamic_cast<idb::IdbLayerCut*>(idb::edadb_adapter::EdadbIdbHelper::findIdbLayerByName(_layer_cut_name_sd));
         if (layer_cut == nullptr) {
             std::cout << "edadb::Shadow<idb::IdbViaMasterGenerate>::fromShadow error: cannot find layer for via master generate: " << _layer_cut_name_sd << std::endl;
         }
         layer_cut->set_via_rule(via_rule); 
         obj->set_layer_cut(layer_cut);
 
-        idb::IdbLayer* layer_top = edadb::EdadbIdbHelper::findIdbLayerByName(_layer_top_name_sd);
+        idb::IdbLayer* layer_top = idb::edadb_adapter::EdadbIdbHelper::findIdbLayerByName(_layer_top_name_sd);
         if (layer_top == nullptr) {
             std::cout << "edadb::Shadow<idb::IdbViaMasterGenerate>::fromShadow error: cannot find layer for via master generate: " << _layer_top_name_sd << std::endl;
         }
@@ -237,4 +237,3 @@ public:
 }; // IdbViaMaster
 
 } // namespace edadb
-

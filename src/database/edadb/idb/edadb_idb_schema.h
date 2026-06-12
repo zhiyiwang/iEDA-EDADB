@@ -19,7 +19,6 @@ namespace __probe2 {
 //EDADB_TODO: C currently keeps EDADB as an empty framework. Re-enable each
 // schema group only when the corresponding readIdbXXX/writeIdbXXX implementation
 // has been ported to the EDADB DbTableOp API.
-#if 0
 #include "database/data/design/db_layout/IdbUnits.h"
 TABLE4CLASS(idb::IdbUnits, "iUnits", (_nanoseconds, _picofarads, _ohms, _milliwatts, _milliamps, _volts, _micron_dbu, _megahertz));
 
@@ -29,7 +28,9 @@ TABLE4CLASS(idb::IdbBusBitChars, "iBusBitChars", (_left_delimiter, _right_delimi
 #include "database/data/design/IdbDesign.h"
 TABLE4CLASS(idb::IdbDesign, "iDesign", (_design_name, _version, _units, _bus_bit_chars));
 
-
+//EDADB_TODO: restore geometry/die/row/track/gcell/via schema groups after their
+// readIdbXXX/writeIdbXXX implementations are ported to the EDADB DbTableOp API.
+#if 0
 #include "shadow/shadow_idb_geometry.h"
 TABLE4SHADOW(idb::IdbCoordinate<int32_t>);
 TABLE4CLASS (edadb::Shadow<idb::IdbCoordinate<int32_t>>, "iCoordSD", (_vec_idx, _x_sd, _y_sd));

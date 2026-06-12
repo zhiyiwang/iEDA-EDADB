@@ -10,26 +10,16 @@
 #include "edadb_idb_shadow.h"
 
 
-namespace edadb {
-
-int init2read(const char* edadb_path) {
-    return idb::edadb_adapter::initReadDb(edadb_path);
-} // init2read
-
-
-int init2write(const char* edadb_path) {
-    return idb::edadb_adapter::initWriteDb(edadb_path);
-} // init2write
-
+namespace idb::edadb_adapter {
 
 void initPrimKeys(void) {
-//EDADB_TODO: C currently does not register iDB object schemas; restore these
-// primary-key rules together with the matching schema/read/write path.
-#if 0
-    edadb::Cpp2SqlTypeTrait<edadb::CppStrings>::hasPrimKey = false;
-
     edadb::Cpp2SqlTypeTrait<idb::IdbUnits>::hasPrimKey = false;
     edadb::Cpp2SqlTypeTrait<idb::IdbBusBitChars>::hasPrimKey = false;
+
+//EDADB_TODO: restore these primary-key rules together with the matching
+// schema/read/write path.
+#if 0
+    edadb::Cpp2SqlTypeTrait<idb::edadb_adapter::CppStrings>::hasPrimKey = false;
 
     edadb::Cpp2SqlTypeTrait<edadb::Shadow<idb::IdbCoordinate<int32_t>>>::hasPrimKey = false;
 
@@ -79,7 +69,7 @@ int initTable(bool crt_tab) {
 
 #define EDADB_INIT_TABLE(T, CTR_TBL)          \
     do {                                      \
-        if (edadb::initTable<T>(CTR_TBL) < 0){                        \
+        if (initTable<T>(CTR_TBL) < 0){                               \
             std::fprintf(stderr, "[EDADB] createTable failed: %s\n",  \
                          typeid(T).name());                           \
             return -1;                                                \
@@ -91,11 +81,12 @@ int initAllTables(bool crt_tab) {
 #if EDADB_OUTPUT_DEBUG
     std::cout << "[EDADB-IDB] initAllTables create=" << (crt_tab ? "true" : "false") << std::endl;
 #endif
-    std::cout << "[EDADB-IDB] initAllTables empty framework; no iDB object tables registered"
+    std::cout << "[EDADB-IDB] initAllTables register Design group only"
               << std::endl;
 
-#if 0  //EDADB_TODO: restore these basic tables when read/write paths are ported to DbTableOp.
     EDADB_INIT_TABLE(idb::IdbDesign, crt_tab);
+
+#if 0  //EDADB_TODO: restore these basic tables when read/write paths are ported to DbTableOp.
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbDie>, crt_tab);
     EDADB_INIT_TABLE(idb::IdbRow, crt_tab);
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbTrackGrid>, crt_tab);
@@ -118,11 +109,6 @@ int initAllTables(bool crt_tab) {
 
 
 
-} // namespace edadb
-
-
-namespace idb::edadb_adapter {
-
 int initReadDb(const char* edadb_path) {
     std::cout << "[EDADB-IDB] initReadDb path=" << edadb_path << std::endl;
     std::cout << "[EDADB-IDB] core api=DbTableOp commit-target=293c162" << std::endl;
@@ -131,9 +117,9 @@ int initReadDb(const char* edadb_path) {
         return -1; 
     }
 
-    edadb::initPrimKeys();
+    initPrimKeys();
 
-    if (edadb::initAllTables(false) < 0) {
+    if (initAllTables(false) < 0) {
         std::cerr << "Error: failed to initAllTables in edadb database" << std::endl;
         return -1; 
     }
@@ -150,9 +136,9 @@ int initWriteDb(const char* edadb_path) {
         return -1;
     }
 
-    edadb::initPrimKeys();
+    initPrimKeys();
 
-    if (edadb::initAllTables(true) < 0) {
+    if (initAllTables(true) < 0) {
         std::cerr << "Error: failed to initAllTables in edadb database" << std::endl;
         return -1;
     }

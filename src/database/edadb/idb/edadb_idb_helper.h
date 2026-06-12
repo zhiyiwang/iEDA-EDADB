@@ -9,7 +9,7 @@
 #include "def_service.h"
 #include "IdbViaRule.h"
 
-namespace edadb {
+namespace idb::edadb_adapter {
 
 class EdadbIdbHelper {
 private:
@@ -88,4 +88,4 @@ public:
 }; // class EdadbIdbHelper
 
 
-} // namespace edadb
+} // namespace idb::edadb_adapter

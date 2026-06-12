@@ -5,6 +5,8 @@
 
 #include "def_read_edadb.h"
 
+#include "edadb.h"
+#include "edadb_idb_schema.h"
 
 namespace idb {
 
@@ -58,10 +60,14 @@ bool DefReadEdadb::createDbByDef(const char* path) {
 
     defrInitSession();
 
+//EDADB_TODO: Design/Units/BusBit now come from EDADB readIdbDesign().
+#if 0
     defrSetVersionStrCbk(versionCallback);
     defrSetBusBitCbk(busBitCharsCallBack);
     defrSetUnitsCbk(unitsCallback);
     defrSetDesignCbk(designCallback);
+#endif
+//EDADB_TODO: use def read callbacks to restore iDB data from text DEF file
     defrSetDieAreaCbk(dieAreaCallback);
     defrSetRowCbk(rowCallback);
     defrSetTrackCbk(trackGridCallback);
@@ -246,14 +252,14 @@ bool DefReadEdadb::createDbByDef(const char* path) {
 
 
 bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
-    std::cout << "[EDADB-IDB] createDbByEdadb empty framework path="
+    std::cout << "[EDADB-IDB] createDbByEdadb Design enabled path="
               << edadb_path << std::endl;
-    std::cout << "[EDADB-IDB] createDbByEdadb readIdbXXX disabled; DEF callbacks rebuild iDB"
+    std::cout << "[EDADB-IDB] createDbByEdadb other readIdbXXX disabled; DEF callbacks rebuild remaining iDB"
               << std::endl;
 
     //////// iEDA Idb class reads are disabled for the empty C framework. //////
-#if 0  //EDADB_TODO: restore these basic EDADB reads after porting readIdbXXX to the DbTableOp API.
     CHECK_READ(readIdbDesign(), "DefReadEdadb::createDbByEdadb failed to read IdbDesign!");
+#if 0  //EDADB_TODO: restore these basic EDADB reads after porting readIdbXXX to the DbTableOp API.
     CHECK_READ(readIdbDie(), "DefReadEdadb::createDbByEdadb failed to read IdbDie!");
     CHECK_READ(readIdbRow(), "DefReadEdadb::createDbByEdadb failed to read IdbRow!");
     CHECK_READ(readIdbTrackGrid(), "DefReadEdadb::createDbByEdadb failed to read readIdbTrackGrid!");
@@ -287,8 +293,40 @@ bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
 
 
 bool DefReadEdadb::readIdbDesign() {
-    //EDADB_TODO: temporary stub; port the preserved implementation below to DbTableOp.
-    std::cout << "[EDADB-IDB] readIdbDesign skipped" << std::endl;
+    auto design_reader = edadb::makeReadAllOp<idb::IdbDesign>();
+
+    idb::IdbDesign got;
+    const int read_count = edadb::readNext<idb::IdbDesign>(design_reader, &got);
+    if (read_count <= 0) {
+        std::cout << "DefReadEdadb::readIdbDesign failed to read!" << std::endl;
+        return false;
+    }
+
+    IdbDesign* design = _def_service->get_design();
+    if (design == nullptr) {
+        std::cerr << "[EDADB-IDB] readIdbDesign failed: design is nullptr" << std::endl;
+        return false;
+    }
+
+    design->set_design_name(got.get_design_name());
+    design->set_version(got.get_version());
+
+    // update the design pointer members
+    delete design->get_units();
+    design->set_units(got.get_units());
+    got.set_units(nullptr);
+
+    delete design->get_bus_bit_chars();
+    design->set_bus_bit_chars(got.get_bus_bit_chars());
+    got.set_bus_bit_chars(nullptr);
+
+    std::cout << "[EDADB-IDB] readIdbDesign restored name="
+              << design->get_design_name()
+              << " version=" << design->get_version()
+              << " micron_dbu="
+              << (design->get_units() == nullptr ? -1 : design->get_units()->get_micron_dbu())
+              << std::endl;
+
     return true;
 }
 
@@ -511,11 +549,11 @@ bool DefReadEdadb::readIdbGCellGrid(void) {
 
 
 bool DefReadEdadb::readIdbVia(void) {
-    idb::IdbDefService* idb_def_service = edadb::EdadbIdbHelper::getIdbDefService();
+    idb::IdbDefService* idb_def_service = edadb_adapter::EdadbIdbHelper::getIdbDefService();
     if (idb_def_service == nullptr) {
-        edadb::EdadbIdbHelper::setIdbDefService(_def_service);
+        edadb_adapter::EdadbIdbHelper::setIdbDefService(_def_service);
     }
-    else if (edadb::EdadbIdbHelper::getIdbDefService() != _def_service) {
+    else if (edadb_adapter::EdadbIdbHelper::getIdbDefService() != _def_service) {
         std::cerr << "DefReadEdadb::readIdbVia failed, IdbDefService not consistent!" << std::endl;
         return false;
     }

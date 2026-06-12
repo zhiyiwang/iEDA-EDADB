@@ -7,6 +7,9 @@
 
 #include "def_write_edadb.h"
 
+#include "edadb.h"
+#include "edadb_idb_schema.h"
+
 
 namespace idb {
 
@@ -62,10 +65,12 @@ bool DefWriteEdadb::writeDb2Edadb(const char* edadb_path) {
 
 
 bool DefWriteEdadb::writeChip2Edadb() {
-    std::cout << "[EDADB-IDB] writeChip2Edadb empty framework; writeIdbXXX disabled"
+    std::cout << "[EDADB-IDB] writeChip2Edadb Design enabled; other writeIdbXXX disabled"
               << std::endl;
+    if (writeIdbDesign() != kDbSuccess) {
+        return false;
+    }
 #if 0  //EDADB_TODO: restore these basic EDADB writes after porting writeIdbXXX to the DbTableOp API.
-    writeIdbDesign();
     writeIdbDie();
     writeIdbRow();
     writeIdbTrackGrid();
@@ -87,11 +92,11 @@ bool DefWriteEdadb::writeChip2Edadb() {
 
 
 bool DefWriteEdadb::writeDbSynthesis2Edadb() {
-    std::cout << "[EDADB-IDB] writeDbSynthesis2Edadb empty framework; writeIdbDesign disabled"
+    std::cout << "[EDADB-IDB] writeDbSynthesis2Edadb Design enabled"
               << std::endl;
-#if 0  //EDADB_TODO: restore synthesis design write after DbTableOp writeIdbDesign is ready.
-    writeIdbDesign();
-#endif
+    if (writeIdbDesign() != kDbSuccess) {
+        return false;
+    }
 
     return true;
 } // writeDbSynthesis2Edadb
@@ -106,8 +111,37 @@ bool DefWriteEdadb::writeLef2Edadb() {
 
 
 int32_t DefWriteEdadb::writeIdbDesign() {
-    //EDADB_TODO: temporary stub; port the preserved implementation below to DbTableOp.
-    std::cout << "[EDADB-IDB] writeIdbDesign skipped" << std::endl;
+    IdbDesign* design = _def_service->get_design();
+    if (design == nullptr) {
+        std::cerr << "[EDADB-IDB] writeIdbDesign failed: design is nullptr" << std::endl;
+        return kDbFail;
+    }
+
+    IdbUnits* def_units = design->get_units();
+    IdbUnits* lef_units = design->get_layout() == nullptr ? nullptr : design->get_layout()->get_units();
+    if (def_units == nullptr && lef_units == nullptr) {
+        std::cout << "Write UNITS error..." << std::endl;
+        return kDbFail;
+    }
+
+    const int32_t def_micron_dbu = def_units == nullptr ? -1 : def_units->get_micron_dbu();
+    const int32_t lef_micron_dbu = lef_units == nullptr ? -1 : lef_units->get_micron_dbu();
+    const int32_t micron_dbu = def_micron_dbu > 0 ? def_micron_dbu : lef_micron_dbu;
+    if (micron_dbu <= 0) {
+        std::cout << "Write UNITS error..." << std::endl;
+        return kDbFail;
+    }
+
+    std::cout << "[EDADB-IDB] writeIdbDesign insert name="
+              << design->get_design_name()
+              << " version=" << design->get_version()
+              << " micron_dbu=" << micron_dbu << std::endl;
+
+    if (!edadb::insertObject<idb::IdbDesign>(design)) {
+        std::cerr << "DefWriteEdadb::writeIdbDesign failed to insertObject" << std::endl;
+        return kDbFail;
+    }
+
     return kDbSuccess;
 }
 

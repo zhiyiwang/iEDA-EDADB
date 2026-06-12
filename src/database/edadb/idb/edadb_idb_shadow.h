@@ -8,19 +8,19 @@
 
 #include "edadb.h"
 
-namespace edadb {
+namespace idb::edadb_adapter {
 
 class CppStrings {
 public:
     std::string str;
 };
 
-} // namespace edadb
+} // namespace idb::edadb_adapter
 
 //EDADB_TODO: Re-enable this utility table mapping when a shadow schema uses
-// edadb::CppStrings again.
+// idb::edadb_adapter::CppStrings again.
 #if 0
-TABLE4CLASS(edadb::CppStrings, "CppStr", (str));
+TABLE4CLASS(idb::edadb_adapter::CppStrings, "CppStr", (str));
 #endif
 
 //EDADB_TODO: Re-enable these shadow aggregations together with the matching
@@ -156,7 +156,7 @@ TABLE4CLASS(edadb::CppStrings, "CppStr", (str));
 //         _pin_list_sd.clear();
 //         _instance_list_sd.clear();
 //         for ( auto& pin : obj->get_pin_list() ) {
-//             CppStrings* pin_name_sd = new CppStrings();
+//             idb::edadb_adapter::CppStrings* pin_name_sd = new idb::edadb_adapter::CppStrings();
 //             pin_name_sd->str = pin->get_name();
 //             _pin_name_list_sd.emplace_back( pin_name_sd );
 //             _pin_list_sd.emplace_back( pin );
@@ -205,7 +205,7 @@ TABLE4CLASS(edadb::CppStrings, "CppStr", (str));
 //     * then add pin to _instance_pin_list 
 //     * and add instance to _instance_list
 //     */
-//    std::vector< edadb::CppStrings* > _pin_name_list_sd;
+//    std::vector< idb::edadb_adapter::CppStrings* > _pin_name_list_sd;
 //    std::vector< idb::IdbPin* > _io_pin_list_sd;
 // 
 //    std::vector< idb::IdbPin* > _instance_list_sd; // pins from instances

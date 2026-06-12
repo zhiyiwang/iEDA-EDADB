@@ -25,4 +25,6 @@ target_include_directories(db_edadb PUBLIC
     ${HOME_DATABASE}/data/design/db_layout
     ${HOME_DATABASE}/manager/service/def_service
     ${HOME_DATABASE}/manager/service/lef_service
-) 
+)
+
+target_link_libraries(db_edadb PUBLIC edadb)
