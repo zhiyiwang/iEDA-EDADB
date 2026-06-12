@@ -41,9 +41,6 @@ TABLE4SHADOW_WVEC(idb::IdbDie);
 TABLE4CLASS_WVEC (edadb::Shadow<idb::IdbDie>, "iDieSD", (primary_key), (points_sd));
 
 
-//EDADB_TODO: restore row/track/gcell/via schema groups after their
-// readIdbXXX/writeIdbXXX implementations are ported to the EDADB DbTableOp API.
-#if 0
 #include "database/data/design/db_layout/IdbSite.h"
 TABLE4CLASS(idb::IdbSite, "iSite", (_name, _width, _heigtht, _b_overlap, _site_class, _symmetry, _orient, _type));
 
@@ -51,6 +48,9 @@ TABLE4CLASS(idb::IdbSite, "iSite", (_name, _width, _heigtht, _b_overlap, _site_c
 TABLE4CLASS(idb::IdbRow, "iRow", (_name, _site, _original_coordinate, _row_num_x, _row_num_y, _step_x, _step_y));
 
 
+//EDADB_TODO: restore track/gcell/via schema groups after their
+// readIdbXXX/writeIdbXXX implementations are ported to the EDADB DbTableOp API.
+#if 0
 #include "database/data/design/db_design/IdbTrackGrid.h"
 TABLE4CLASS(idb::IdbTrack, "iTrack", (_start, _direction, _pitch));
 

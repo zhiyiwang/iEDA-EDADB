@@ -65,7 +65,7 @@ bool DefWriteEdadb::writeDb2Edadb(const char* edadb_path) {
 
 
 bool DefWriteEdadb::writeChip2Edadb() {
-    std::cout << "[EDADB-IDB] writeChip2Edadb Design/Die enabled; other writeIdbXXX disabled"
+    std::cout << "[EDADB-IDB] writeChip2Edadb Design/Die/Row enabled; other writeIdbXXX disabled"
               << std::endl;
     if (writeIdbDesign() != kDbSuccess) {
         return false;
@@ -73,8 +73,10 @@ bool DefWriteEdadb::writeChip2Edadb() {
     if (writeIdbDie() != kDbSuccess) {
         return false;
     }
+    if (writeIdbRow() != kDbSuccess) {
+        return false;
+    }
 #if 0  //EDADB_TODO: restore these basic EDADB writes after porting writeIdbXXX to the DbTableOp API.
-    writeIdbRow();
     writeIdbTrackGrid();
     writeIdbGCellGrid();
     writeIdbVia();
@@ -178,8 +180,22 @@ int32_t DefWriteEdadb::writeIdbDie(void) {
 }
 
 int32_t DefWriteEdadb::writeIdbRow(void) {
-    //EDADB_TODO: temporary stub; port the preserved implementation below to DbTableOp.
-    std::cout << "[EDADB-IDB] writeIdbRow skipped" << std::endl;
+    IdbLayout* layout = _def_service->get_layout();
+    IdbRows* rows = layout->get_rows();
+    if (rows == nullptr) {
+      std::cout << "Write ROWS error..." << std::endl;
+      return kDbFail;
+    }
+
+    vector<IdbRow*>& row_vec = rows->get_row_list();
+    std::cout << "[EDADB-IDB] writeIdbRow insert row_count="
+              << row_vec.size() << std::endl;
+
+    if (!edadb::insertVector<idb::IdbRow>(row_vec)) {
+        std::cerr << "DefWriteEdadb::writeIdbRow failed to insertVector" << std::endl;
+        return kDbFail;
+    }
+
     return kDbSuccess;
 }
 

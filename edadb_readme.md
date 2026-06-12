@@ -11,12 +11,12 @@ In this branch, the goal is not yet full object persistence. The current goal is
 - iEDA can open/init an EDADB database.
 - iEDA exposes Tcl commands `edadb_write` and `edadb_read`.
 - The demo can run DEF → EDADB write → EDADB read → DEF.
-- The Design and Die groups are persisted through EDADB.
+- The Design, Die, and Row groups are persisted through EDADB.
 - The final DEF roundtrip matches the input DEF.
 
 Current limitation:
 
-- Only Design / Units / BusBit and Die are written to and read from EDADB.
+- Only Design / Units / BusBit, Die, and Row are written to and read from EDADB.
 - Other iDB object families still rebuild from the original DEF text.
 
 This is intentional for the C init code base.
@@ -162,11 +162,11 @@ Start from the iEDA executable entry, then follow the Tcl command path into EDAD
 
 13. `src/database/manager/builder/def_builder/def_write_edadb.*`
     - EDADB write framework
-    - currently writes Design / Units / BusBit and Die
+    - currently writes Design / Units / BusBit, Die, and Row
 
 14. `src/database/manager/builder/def_builder/def_read_edadb.*`
     - EDADB read framework
-    - currently reads Design / Units / BusBit and Die from EDADB
+    - currently reads Design / Units / BusBit, Die, and Row from EDADB
     - rebuilds remaining iDB object families from DEF text
 
 15. `src/database/edadb/idb/edadb_idb_init.*`
@@ -203,12 +203,14 @@ edadb_write
 Current write state:
 
 - `initWriteDb()` is active.
-- `writeChip2Edadb()` calls `writeIdbDesign()` and `writeIdbDie()`.
+- `writeChip2Edadb()` calls `writeIdbDesign()`, `writeIdbDie()`, and `writeIdbRow()`.
 - `writeIdbDesign()` uses the current EDADB API: `edadb::insertObject<idb::IdbDesign>(design)`.
 - `writeIdbDesign()` follows `DefWrite::write_units()` style: use DEF units when valid, otherwise use LEF units, and update active `design->_units` to the effective DBU before EDADB insert.
 - `writeIdbDie()` follows `DefWrite::write_die()` style: persist the die point list through `edadb::Shadow<idb::IdbDie>`.
+- `writeIdbRow()` follows `DefWrite::write_row()` style: persist each row's name, site, origin, DO/BY count, and STEP values directly as `IdbRow`.
 - EDADB creates physical table `iDesign`; `IdbUnits` and `IdbBusBitChars` are inline columns inside `iDesign`.
 - EDADB creates physical table `iDieSD` plus vector child rows for die coordinates.
+- EDADB creates physical table `iRow`; `IdbSite` and original coordinate are inline row columns.
 - Other `writeIdbXXX()` calls are disabled under `//EDADB_TODO`.
 
 Read path:
@@ -227,12 +229,13 @@ edadb_read
 Current read state:
 
 - `initReadDb()` is active.
-- `createDbByEdadb()` calls `readIdbDesign()` and `readIdbDie()`.
+- `createDbByEdadb()` calls `readIdbDesign()`, `readIdbDie()`, and `readIdbRow()`.
 - `readIdbDesign()` uses the current EDADB cursor API: `makeReadAllOp<idb::IdbDesign>()` + `readNext()`.
 - `readIdbDesign()` follows the old DbMap implementation semantics: transfer owned `_units` and `_bus_bit_chars` pointers into the active `IdbDesign`, then null them in the temporary object.
 - The temporary `got` object is a safe buffer. Reading directly into active `design` would better match original iEDA object reuse, but EDADB NULL inline pointer columns could clear active pointers, so keep the buffered style for now.
 - `readIdbDie()` reads `edadb::Shadow<idb::IdbDie>` and rebuilds the active die through `IdbDie::add_point()` plus `set_bounding_box()`, matching `DefRead::parse_die()`.
-- `createDbByDef()` disables version/design/units/busbit/die callbacks and restores all remaining object families from DEF text.
+- `readIdbRow()` reads `IdbRow` directly, then rebuilds each row's site from LEF site clone and calls `set_bounding_box()`, matching `DefRead::parse_row()`.
+- `createDbByDef()` disables version/design/units/busbit/die/row callbacks and restores all remaining object families from DEF text.
 
 Important ownership note:
 
@@ -268,7 +271,7 @@ Important compatibility rule:
 - For an enabled `readIdbXXX()` object family, disable the matching `defrSetXXXCbk` callbacks.
 - This prevents duplicate object creation and makes the test prove that the enabled object family really comes from EDADB.
 
-Active targets: design / units / busbit and die.
+Active targets: design / units / busbit, die, and row.
 
 Mapping for these targets:
 
@@ -276,6 +279,9 @@ Mapping for these targets:
 | --- | --- | --- |
 | `writeIdbDesign()` / `readIdbDesign()` | `defrSetVersionStrCbk`, `defrSetDesignCbk`, `defrSetUnitsCbk`, `defrSetBusBitCbk` | `write_version`, `write_design`, `write_units`, `write_busbit_char` |
 | `writeIdbDie()` / `readIdbDie()` | `defrSetDieAreaCbk` | `write_die` |
+| `writeIdbRow()` / `readIdbRow()` | `defrSetRowCbk` | `write_row` |
+
+Row does not currently need a shadow class. `IdbRow::_name` is the root table primary key, so EDADB can attach inline `IdbSite` and original-coordinate columns directly. `IdbDie` needed shadow because its coordinate vector requires a synthetic root `primary_key` for child rows.
 
 Physical DB shape after this target:
 
@@ -321,6 +327,9 @@ Expected current result:
 - logs show `readIdbDesign restored name=gcd version=5.8 micron_dbu=1000`
 - logs show `writeIdbDie insert point_count=2`
 - logs show `readIdbDie restored point_count=2`
+- logs show `writeIdbRow insert row_count=39`
+- logs show `readIdbRow restored row_count=39`
 - SQLite `iDesign` row contains `gcd|5.8|1000|[|]`
 - SQLite `iDieSD_points_sd_iCoordSD` contains `(0,0)` and `(149960,150128)`
+- SQLite `iRow` row count is `39`
 - final message says input DEF and output DEF are the same

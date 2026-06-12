@@ -60,19 +60,18 @@ bool DefReadEdadb::createDbByDef(const char* path) {
 
     defrInitSession();
 
-//EDADB_TODO: Design/Units/BusBit now come from EDADB readIdbDesign().
+//EDADB_TODO: these callbacks are disabled because the corresponding objects
+// are restored from EDADB in createDbByEdadb().
 #if 0
     defrSetVersionStrCbk(versionCallback);
     defrSetBusBitCbk(busBitCharsCallBack);
     defrSetUnitsCbk(unitsCallback);
     defrSetDesignCbk(designCallback);
-#endif
-//EDADB_TODO: Design/Units/BusBit/Die now come from EDADB readIdbXXX().
-#if 0
     defrSetDieAreaCbk(dieAreaCallback);
-#endif
-//EDADB_TODO: use def read callbacks to restore iDB data from text DEF file
     defrSetRowCbk(rowCallback);
+#endif
+
+    // Other object families still come from DEF text callbacks.
     defrSetTrackCbk(trackGridCallback);
     defrSetGcellGridCbk(gcellGridCallback);
     defrSetViaStartCbk(viaBeginCallback);
@@ -90,14 +89,12 @@ bool DefReadEdadb::createDbByDef(const char* path) {
     defrSetFillStartCbk(fillsCallback);
     defrSetFillCbk(fillCallback);
 
-
-//EDADB_TODO: nets still come from DEF text while EDADB net persistence is not implemented.
+    // Nets still come from DEF text while EDADB net persistence is not implemented.
     defrSetNetStartCbk(netBeginCallback);
     defrSetNetCbk(netCallback);
     defrSetNetEndCbk(netEndCallback);
     defrSetAddPathToNet();
 
-//-- working on 
     defrSetSNetStartCbk(specialNetBeginCallback);
     defrSetSNetCbk(specialNetCallback);
     defrSetSNetEndCbk(specialNetEndCallback);
@@ -255,21 +252,19 @@ bool DefReadEdadb::createDbByDef(const char* path) {
 
 
 bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
-    std::cout << "[EDADB-IDB] createDbByEdadb Design/Die enabled path="
+    std::cout << "[EDADB-IDB] createDbByEdadb Design/Die/Row enabled path="
               << edadb_path << std::endl;
     std::cout << "[EDADB-IDB] createDbByEdadb other readIdbXXX disabled; DEF callbacks rebuild remaining iDB"
               << std::endl;
 
-    //////// iEDA Idb class reads are disabled for the empty C framework. //////
     CHECK_READ(readIdbDesign(), "DefReadEdadb::createDbByEdadb failed to read IdbDesign!");
     CHECK_READ(readIdbDie(), "DefReadEdadb::createDbByEdadb failed to read IdbDie!");
-#if 0  //EDADB_TODO: restore these basic EDADB reads after porting readIdbXXX to the DbTableOp API.
     CHECK_READ(readIdbRow(), "DefReadEdadb::createDbByEdadb failed to read IdbRow!");
+
+#if 0  //EDADB_TODO: restore disabled object reads after their schema/shadow/write/read paths are enabled.
     CHECK_READ(readIdbTrackGrid(), "DefReadEdadb::createDbByEdadb failed to read readIdbTrackGrid!");
     CHECK_READ(readIdbGCellGrid(), "DefReadEdadb::createDbByEdadb failed to read IdbGCellGrid!");
     CHECK_READ(readIdbVia(), "DefReadEdadb::createDbByEdadb failed to read IdbVia!");
-#endif
-#if 0  //EDADB_TODO: restore extended EDADB reads after enabling their schema/shadow coverage.
     CHECK_READ(readIdbInstance(), "DefReadEdadb::createDbByEdadb failed to read IdbInstance!");
     CHECK_READ(readIdbPin(), "DefReadEdadb::createDbByEdadb failed to read IdbPin!");
     CHECK_READ(readIdbBlockage(), "DefReadEdadb::createDbByEdadb failed to read IdbBlockage!");
@@ -362,8 +357,53 @@ bool DefReadEdadb::readIdbDie(void) {
 }
 
 bool DefReadEdadb::readIdbRow(void) {
-    //EDADB_TODO: temporary stub; port the preserved implementation below to DbTableOp.
-    std::cout << "[EDADB-IDB] readIdbRow skipped" << std::endl;
+    IdbLayout* layout = _def_service->get_layout();
+    IdbSites* sites = layout->get_sites();
+    IdbRows* rows = layout->get_rows();
+    if (sites == nullptr || rows == nullptr) {
+        std::cerr << "DefReadEdadb::readIdbRow failed, sites or rows is nullptr!" << std::endl;
+        return false;
+    }
+
+    rows->reset();
+
+    auto row_reader = edadb::makeReadAllOp<idb::IdbRow>();
+    int32_t row_count = 0;
+    while (true) {
+        IdbRow* row = new IdbRow();
+        const int read_count = edadb::readNext<idb::IdbRow>(row_reader, row);
+        if (read_count == 0) {
+            delete row;
+            break;
+        }
+        if (read_count < 0) {
+            delete row;
+            std::cout << "DefReadEdadb::readIdbRow failed to read!" << std::endl;
+            return false;
+        }
+
+        IdbSite* row_site = row->get_site();
+        if (row_site == nullptr) {
+            delete row;
+            std::cerr << "DefReadEdadb::readIdbRow failed, row site is nullptr!" << std::endl;
+            return false;
+        }
+
+        std::string site_name = row_site->get_name();
+        IdbOrient site_orient = row_site->get_orient();
+        IdbSite* lef_site = sites->find_site(site_name);
+        IdbSite* site = lef_site == nullptr ? row_site->clone() : lef_site->clone();
+        site->set_orient(site_orient);
+        row->set_site(site);
+        row->set_orient(site_orient);
+        row->set_bounding_box();
+
+        rows->add_row_list(row);
+        ++row_count;
+    }
+
+    std::cout << "[EDADB-IDB] readIdbRow restored row_count="
+              << row_count << std::endl;
     return true;
 }
 
