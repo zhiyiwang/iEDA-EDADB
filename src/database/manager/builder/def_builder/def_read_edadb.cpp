@@ -69,11 +69,11 @@ bool DefReadEdadb::createDbByDef(const char* path) {
     defrSetDesignCbk(designCallback);
     defrSetDieAreaCbk(dieAreaCallback);
     defrSetRowCbk(rowCallback);
+    defrSetTrackCbk(trackGridCallback);
+    defrSetGcellGridCbk(gcellGridCallback);
 #endif
 
     // Other object families still come from DEF text callbacks.
-    defrSetTrackCbk(trackGridCallback);
-    defrSetGcellGridCbk(gcellGridCallback);
     defrSetViaStartCbk(viaBeginCallback);
     defrSetViaCbk(viaCallback);
     defrSetRegionCbk(regionCallback);
@@ -252,7 +252,7 @@ bool DefReadEdadb::createDbByDef(const char* path) {
 
 
 bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
-    std::cout << "[EDADB-IDB] createDbByEdadb Design/Die/Row enabled path="
+    std::cout << "[EDADB-IDB] createDbByEdadb Design/Die/Row/TrackGrid/GCell enabled path="
               << edadb_path << std::endl;
     std::cout << "[EDADB-IDB] createDbByEdadb other readIdbXXX disabled; DEF callbacks rebuild remaining iDB"
               << std::endl;
@@ -260,10 +260,10 @@ bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
     CHECK_READ(readIdbDesign(), "DefReadEdadb::createDbByEdadb failed to read IdbDesign!");
     CHECK_READ(readIdbDie(), "DefReadEdadb::createDbByEdadb failed to read IdbDie!");
     CHECK_READ(readIdbRow(), "DefReadEdadb::createDbByEdadb failed to read IdbRow!");
-
-#if 0  //EDADB_TODO: restore disabled object reads after their schema/shadow/write/read paths are enabled.
     CHECK_READ(readIdbTrackGrid(), "DefReadEdadb::createDbByEdadb failed to read readIdbTrackGrid!");
     CHECK_READ(readIdbGCellGrid(), "DefReadEdadb::createDbByEdadb failed to read IdbGCellGrid!");
+
+#if 0  //EDADB_TODO: restore disabled object reads after their schema/shadow/write/read paths are enabled.
     CHECK_READ(readIdbVia(), "DefReadEdadb::createDbByEdadb failed to read IdbVia!");
     CHECK_READ(readIdbInstance(), "DefReadEdadb::createDbByEdadb failed to read IdbInstance!");
     CHECK_READ(readIdbPin(), "DefReadEdadb::createDbByEdadb failed to read IdbPin!");
@@ -408,14 +408,89 @@ bool DefReadEdadb::readIdbRow(void) {
 }
 
 bool DefReadEdadb::readIdbTrackGrid(void) {
-    //EDADB_TODO: temporary stub; port the preserved implementation below to DbTableOp.
-    std::cout << "[EDADB-IDB] readIdbTrackGrid skipped" << std::endl;
+    IdbLayout* layout = _def_service->get_layout();
+    IdbLayers* layers = layout->get_layers();
+    IdbTrackGridList* track_grid_list = layout->get_track_grid_list();
+    if (layers == nullptr || track_grid_list == nullptr) {
+        std::cerr << "DefReadEdadb::readIdbTrackGrid failed, layers or track_grid_list is nullptr!" << std::endl;
+        return false;
+    }
+
+    track_grid_list->reset();
+
+    auto track_grid_reader = edadb::makeReadAllOp<edadb::Shadow<idb::IdbTrackGrid>>();
+    int32_t track_grid_count = 0;
+    int32_t layer_ref_count = 0;
+    while (true) {
+        edadb::Shadow<idb::IdbTrackGrid> track_grid_sd;
+        const int read_count = edadb::readNext<edadb::Shadow<idb::IdbTrackGrid>>(track_grid_reader, &track_grid_sd);
+        if (read_count == 0) {
+            break;
+        }
+        if (read_count < 0) {
+            std::cout << "DefReadEdadb::readIdbTrackGrid failed to read!" << std::endl;
+            return false;
+        }
+
+        IdbTrackGrid* track_grid = track_grid_list->add_track_grid(nullptr);
+        track_grid_sd.fromShadow(track_grid);
+
+        for (auto& layer_name_sd : track_grid_sd._layer_name_vec_sd) {
+            IdbLayer* layer = layers->find_layer(layer_name_sd.str);
+            if (layer == nullptr) {
+                std::cerr << "DefReadEdadb::readIdbTrackGrid failed to find layer: "
+                          << layer_name_sd.str << std::endl;
+                return false;
+            }
+
+            track_grid->add_layer_list(layer);
+            if (layer->is_routing()) {
+                IdbLayerRouting* routing_layer = dynamic_cast<IdbLayerRouting*>(layer);
+                routing_layer->add_track_grid(track_grid);
+            }
+            ++layer_ref_count;
+        }
+
+        ++track_grid_count;
+    }
+
+    std::cout << "[EDADB-IDB] readIdbTrackGrid restored track_grid_count="
+              << track_grid_count
+              << " layer_ref_count=" << layer_ref_count << std::endl;
     return true;
 }
 
 bool DefReadEdadb::readIdbGCellGrid(void) {
-    //EDADB_TODO: temporary stub; port the preserved implementation below to DbTableOp.
-    std::cout << "[EDADB-IDB] readIdbGCellGrid skipped" << std::endl;
+    IdbLayout* layout = _def_service->get_layout();  // Lef
+    IdbGCellGridList* gcell_grid_list = layout->get_gcell_grid_list();
+    if (gcell_grid_list == nullptr) {
+        std::cerr << "DefReadEdadb::readIdbGCellGrid failed, gcell_grid_list is nullptr!" << std::endl;
+        return false;
+    }
+
+    gcell_grid_list->clear();
+
+    auto gcell_grid_reader = edadb::makeReadAllOp<idb::IdbGCellGrid>();
+    int32_t gcell_grid_count = 0;
+    while (true) {
+        IdbGCellGrid* gcell_grid = new IdbGCellGrid();
+        const int read_count = edadb::readNext<idb::IdbGCellGrid>(gcell_grid_reader, gcell_grid);
+        if (read_count == 0) {
+            delete gcell_grid;
+            break;
+        }
+        if (read_count < 0) {
+            delete gcell_grid;
+            std::cout << "DefReadEdadb::readIdbGCellGrid failed to read!" << std::endl;
+            return false;
+        }
+
+        gcell_grid_list->add_gcell_grid(gcell_grid);
+        ++gcell_grid_count;
+    }
+
+    std::cout << "[EDADB-IDB] readIdbGCellGrid restored gcell_grid_count="
+              << gcell_grid_count << std::endl;
     return true;
 }
 

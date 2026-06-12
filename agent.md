@@ -43,16 +43,24 @@ Commit:
 - iEDA: `99afe9c71 edadb: initialize idb adapter code base`
 - EDADB submodule: `8a4e3bf build: support embedding edadb as submodule`
 
-Design persistence update:
+Active persistence groups:
 
 - `writeIdbDesign()` / `readIdbDesign()` are enabled.
-- Enabled EDADB schema group: `IdbDesign`, `IdbUnits`, `IdbBusBitChars`.
-- Current physical DB creates one root table, `iDesign`; `IdbUnits` and `IdbBusBitChars` are stored as inline columns such as `_units__micron_dbu` and `_bus_bit_chars__left_delimiter`.
+- `writeIdbDie()` / `readIdbDie()` are enabled through `edadb::Shadow<idb::IdbDie>`.
+- `writeIdbRow()` / `readIdbRow()` are enabled directly on `IdbRow`.
+- `writeIdbTrackGrid()` / `readIdbTrackGrid()` are enabled through `edadb::Shadow<idb::IdbTrackGrid>`.
+- `writeIdbGCellGrid()` / `readIdbGCellGrid()` are enabled directly on `IdbGCellGrid`.
+- `iDesign` stores `IdbUnits` and `IdbBusBitChars` as inline columns.
+- `iTrackGridSD` stores track grid scalar data and owns vector child rows for layer names.
 - Disabled matching DEF parser callbacks in `DefReadEdadb::createDbByDef()`:
   - `defrSetVersionStrCbk`
   - `defrSetDesignCbk`
   - `defrSetUnitsCbk`
   - `defrSetBusBitCbk`
+  - `defrSetDieAreaCbk`
+  - `defrSetRowCbk`
+  - `defrSetTrackCbk`
+  - `defrSetGcellGridCbk`
 - Other object families still come from DEF text callbacks.
 
 Validation:
@@ -63,30 +71,42 @@ Validation:
 - Demo logs show `readIdbDesign restored name=gcd version=5.8 micron_dbu=1000`.
 - Demo logs show `writeIdbDie insert point_count=2`.
 - Demo logs show `readIdbDie restored point_count=2`.
-- Demo logs should show `writeIdbRow insert row_count=39`.
-- Demo logs should show `readIdbRow restored row_count=39`.
+- Demo logs show `writeIdbRow insert row_count=39`.
+- Demo logs show `readIdbRow restored row_count=39`.
+- Demo logs show `writeIdbTrackGrid insert track_grid_count=12`.
+- Demo logs show `readIdbTrackGrid restored track_grid_count=12 layer_ref_count=12`.
+- Demo logs show `writeIdbGCellGrid insert gcell_grid_count=0`.
+- Demo logs show `readIdbGCellGrid restored gcell_grid_count=0`.
 - SQLite content check: `select _design_name, _version, _units__micron_dbu, char(_bus_bit_chars__left_delimiter), char(_bus_bit_chars__right_delimiter) from iDesign;` returns `gcd|5.8|1000|[|]`.
 - SQLite die check: `iDieSD` has 1 row and `iDieSD_points_sd_iCoordSD` has 2 rows: `(0,0)` and `(149960,150128)`.
-- SQLite row check: `select count(*) from iRow;` should return `39`.
+- SQLite row check: `select count(*) from iRow;` returns `39`.
+- SQLite track-grid check: `select count(*) from iTrackGridSD;` returns `12`.
+- SQLite gcell check: `select count(*) from iGCellGrid;` returns `0`.
 - Final demo message: `Input def and output def are the same.`
 
 Current behavior:
 
-- `edadb_write` writes the Design, Die, and Row groups to EDADB.
-- `edadb_read` reads the Design, Die, and Row groups from EDADB.
-- DEF text callbacks rebuild track/gcell/via/instance/pin/blockage/region/slot/group/fill/net/special-net.
+- `edadb_write` writes the Design, Die, Row, TrackGrid, and GCell groups to EDADB.
+- `edadb_read` reads the Design, Die, Row, TrackGrid, and GCell groups from EDADB.
+- DEF text callbacks rebuild via/instance/pin/blockage/region/slot/group/fill/net/special-net.
 - Disabled `readIdbXXX()` / `writeIdbXXX()` bodies are preserved under `#if 0 //EDADB_TODO`.
 
 Important rule:
 
 - If an object family read/write is disabled, its schema/init/shadow must stay disabled too.
 - Do not delete dormant code. Keep it under `//EDADB_TODO` for later restoration.
+- To migrate one object family from DEF callbacks to EDADB, first identify the exact DEF writer/parser pair, then map only fields that are written by DEF or required to rebuild those written fields.
 - Before implementing each `writeIdbXXX()`, read the matching `DefWrite::write_xxx()` implementation and keep the same object, field, fallback, and call-order semantics.
 - Before implementing each `readIdbXXX()`, read the matching `DefRead::parse_xxx()` implementation and keep the same object rebuild and callback-disable semantics.
 - EDADB should persist the values that normal DEF write would output. If iDB holds a missing/default value but `DefWrite` would output a fallback value, the adapter may canonicalize active iDB to that output value before insertion.
+- Do not persist derived/cache fields if the normal parser recomputes them, such as bounding boxes, area, polygon caches, reverse layer links, or list counters.
+- Define a shadow class when direct `TABLE4CLASS` cannot express the intended storage view clearly: vector child rows need a stable root key, raw pointers must be replaced by names/keys, only a smaller DEF semantic subset should be persisted, or readback must rebuild objects through helper lookups.
+- Do not make EDADB implicitly replace iDB classes for adapter-only semantics. If storage differs from iDB ownership or DEF semantics, make the conversion explicit in `src/database/edadb/idb/shadow`.
 - Keep adapter code direct and close to the existing `def_write/read_edadb` style. Do not use hidden raw-pointer swaps or temporary ownership tricks when a simple explicit update is enough.
 - For owning raw-pointer iDB objects such as `IdbDesign`, do not use `edadb::readAll(std::vector<T>&)` unless copy/move ownership is safe. Use a cursor op (`makeReadAllOp()` + `readNext()`) and transfer ownership as in the original DbMap implementation.
 - `readIdbDesign()` currently uses a temporary `got` object as a safe buffer. Directly reading into active `design` is closer to original iEDA reuse semantics, but it risks EDADB NULL inline pointer columns clearing active pointers.
+- `IdbTrackGrid` uses shadow because `_layer_name_vec_sd` is a vector child table and needs the shadow root `primary_key` to group layer names by track grid. Do not hide this grouping as an implicit EDADB replacement.
+- `IdbGCellGrid` does not use shadow because DEF read/write uses only scalar fields: direction, start, count, and step.
 
 ## C Namespace / API Boundary
 
@@ -223,12 +243,13 @@ Planned object order:
 - design / units / busbit
 - die
 - row
-- track / gcell
+- track
+- gcell
 - via / via-master / layer-shape
 
 NET and SPECIALNET are not implemented yet.
 
 Current implementation target:
 
-- Design / units / busbit, die, and row are active for the current demo milestone.
-- Next target should be `writeIdbTrackGrid()` / `readIdbTrackGrid()` or `writeIdbGCellGrid()` / `readIdbGCellGrid()` using the same old-code-first migration rule.
+- Design / units / busbit, die, row, track, and gcell are active for the current demo milestone.
+- Next target should be `writeIdbVia()` / `readIdbVia()` using the same old-code-first migration rule.

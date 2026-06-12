@@ -65,7 +65,7 @@ bool DefWriteEdadb::writeDb2Edadb(const char* edadb_path) {
 
 
 bool DefWriteEdadb::writeChip2Edadb() {
-    std::cout << "[EDADB-IDB] writeChip2Edadb Design/Die/Row enabled; other writeIdbXXX disabled"
+    std::cout << "[EDADB-IDB] writeChip2Edadb Design/Die/Row/TrackGrid/GCell enabled; other writeIdbXXX disabled"
               << std::endl;
     if (writeIdbDesign() != kDbSuccess) {
         return false;
@@ -76,9 +76,13 @@ bool DefWriteEdadb::writeChip2Edadb() {
     if (writeIdbRow() != kDbSuccess) {
         return false;
     }
+    if (writeIdbTrackGrid() != kDbSuccess) {
+        return false;
+    }
+    if (writeIdbGCellGrid() != kDbSuccess) {
+        return false;
+    }
 #if 0  //EDADB_TODO: restore these basic EDADB writes after porting writeIdbXXX to the DbTableOp API.
-    writeIdbTrackGrid();
-    writeIdbGCellGrid();
     writeIdbVia();
 #endif
 #if 0  //EDADB_TODO: restore extended EDADB writes after enabling their schema/shadow coverage.
@@ -200,14 +204,53 @@ int32_t DefWriteEdadb::writeIdbRow(void) {
 }
 
 int32_t DefWriteEdadb::writeIdbTrackGrid(void) {
-    //EDADB_TODO: temporary stub; port the preserved implementation below to DbTableOp.
-    std::cout << "[EDADB-IDB] writeIdbTrackGrid skipped" << std::endl;
+    IdbLayout* layout = _def_service->get_layout();
+    IdbTrackGridList* track_grid_list = layout->get_track_grid_list();
+    if (track_grid_list == nullptr) {
+        std::cout << "Write Track Grid error..." << std::endl;
+        return kDbFail;
+    }
+
+    vector<edadb::Shadow<idb::IdbTrackGrid>> track_grid_sd_vec;
+    vector<IdbTrackGrid*>& track_grid_vec = track_grid_list->get_track_grid_list();
+    track_grid_sd_vec.reserve(track_grid_vec.size());
+    for (auto& track_grid : track_grid_vec) {
+        track_grid_sd_vec.emplace_back();
+        track_grid_sd_vec.back().toShadow(track_grid);
+    }
+
+    std::cout << "[EDADB-IDB] writeIdbTrackGrid insert track_grid_count="
+              << track_grid_sd_vec.size() << std::endl;
+
+    if (!edadb::insertVector<edadb::Shadow<idb::IdbTrackGrid>>(track_grid_sd_vec)) {
+        std::cerr << "DefWriteEdadb::writeIdbTrackGrid failed to insertVector" << std::endl;
+        return kDbFail;
+    }
+
     return kDbSuccess;
 }
 
 int32_t DefWriteEdadb::writeIdbGCellGrid(void) {
-    //EDADB_TODO: temporary stub; port the preserved implementation below to DbTableOp.
-    std::cout << "[EDADB-IDB] writeIdbGCellGrid skipped" << std::endl;
+    IdbLayout* layout = _def_service->get_layout();  // Lef
+    IdbGCellGridList* gcell_grid_list = layout->get_gcell_grid_list();
+    if (gcell_grid_list == nullptr) {
+        std::cout << "Write GCELLGRID error..." << std::endl;
+        return kDbFail;
+    }
+
+    vector<IdbGCellGrid*>& gcell_grid_vec = gcell_grid_list->get_gcell_grid_list();
+    std::cout << "[EDADB-IDB] writeIdbGCellGrid insert gcell_grid_count="
+              << gcell_grid_vec.size() << std::endl;
+
+    if (gcell_grid_vec.empty()) {
+        return kDbSuccess;
+    }
+
+    if (!edadb::insertVector<idb::IdbGCellGrid>(gcell_grid_vec)) {
+        std::cerr << "DefWriteEdadb::writeIdbGCellGrid failed to insertVector" << std::endl;
+        return kDbFail;
+    }
+
     return kDbSuccess;
 }
 

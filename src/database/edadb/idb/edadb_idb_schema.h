@@ -48,9 +48,8 @@ TABLE4CLASS(idb::IdbSite, "iSite", (_name, _width, _heigtht, _b_overlap, _site_c
 TABLE4CLASS(idb::IdbRow, "iRow", (_name, _site, _original_coordinate, _row_num_x, _row_num_y, _step_x, _step_y));
 
 
-//EDADB_TODO: restore track/gcell/via schema groups after their
+//EDADB_TODO: restore via schema groups after their
 // readIdbXXX/writeIdbXXX implementations are ported to the EDADB DbTableOp API.
-#if 0
 #include "database/data/design/db_design/IdbTrackGrid.h"
 TABLE4CLASS(idb::IdbTrack, "iTrack", (_start, _direction, _pitch));
 
@@ -63,6 +62,7 @@ TABLE4CLASS_WVEC (edadb::Shadow<idb::IdbTrackGrid>, "iTrackGridSD", (primary_key
 TABLE4CLASS(idb::IdbGCellGrid, "iGCellGrid", (_direction, _start, _num, _space));
 
 
+#if 0
 #include "shadow/shadow_idb_via_master.h"
 TABLE4SHADOW(idb::IdbViaMasterGenerate);
 TABLE4CLASS(edadb::Shadow<idb::IdbViaMasterGenerate>, "iViaMasterGenerateSD", (_rule_name_sd,  _cut_size_x_sd, _cut_size_y_sd, _cut_spacing_x_sd, _cut_spacing_y_sd, _enclosure_bottom_x_sd, _enclosure_bottom_y_sd, _enclosure_top_x_sd, _enclosure_top_y_sd, _num_cut_rows_sd, _num_cut_cols_sd, _original_offset_x_sd, _original_offset_y_sd, _offset_bottom_x_sd, _offset_bottom_y_sd, _offset_top_x_sd, _offset_top_y_sd, _layer_bottom_name_sd, _layer_cut_name_sd, _layer_top_name_sd, _pattern_name_sd));
