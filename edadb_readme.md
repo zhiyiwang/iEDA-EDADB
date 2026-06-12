@@ -312,6 +312,16 @@ Important compatibility rule:
 - For an enabled `readIdbXXX()` object family, disable the matching `defrSetXXXCbk` callbacks.
 - This prevents duplicate object creation and makes the test prove that the enabled object family really comes from EDADB.
 
+## Adapter Correctness Audit
+
+After each migration, check:
+
+- **Schema**: Persist only DEF-emitted fields or fields needed to rebuild them; do not store parser-derived caches.
+- **Shadow**: Use shadow only for vector ownership, synthetic keys, pointer-to-name/key conversion, reduced DEF views, or helper-based rebuilds.
+- **Write**: Match `DefWrite::write_xxx()` for source object, null/empty handling, fallback values, and emitted fields.
+- **Read**: Match `DefRead::parse_xxx()` rebuild semantics and disable the corresponding DEF callback.
+- **Runtime**: Run only the canonical demo, check write/read logs, inspect SQLite counts/key columns, and record uncovered cases.
+
 Active targets: design / units / busbit, die, row, track grid, and gcell grid.
 
 Mapping for these targets:

@@ -107,6 +107,7 @@ Important rule:
 - `readIdbDesign()` currently uses a temporary `got` object as a safe buffer. Directly reading into active `design` is closer to original iEDA reuse semantics, but it risks EDADB NULL inline pointer columns clearing active pointers.
 - `IdbTrackGrid` uses shadow because `_layer_name_vec_sd` is a vector child table and needs the shadow root `primary_key` to group layer names by track grid. Do not hide this grouping as an implicit EDADB replacement.
 - `IdbGCellGrid` does not use shadow because DEF read/write uses only scalar fields: direction, start, count, and step.
+- After each migration, run the concise Adapter Correctness Audit in `edadb_readme.md`.
 
 ## C Namespace / API Boundary
 
