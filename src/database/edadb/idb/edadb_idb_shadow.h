@@ -23,11 +23,12 @@ public:
 TABLE4CLASS(idb::edadb_adapter::CppStrings, "CppStr", (str));
 #endif
 
+#include "shadow/shadow_idb_geometry.h"
+#include "shadow/shadow_idb_die.h"
+
 //EDADB_TODO: Re-enable these shadow aggregations together with the matching
 // readIdbXXX/writeIdbXXX paths and schema TABLE4* registrations.
 #if 0
-#include "shadow/shadow_idb_geometry.h"
-#include "shadow/shadow_idb_die.h"
 #include "shadow/shadow_idb_track_grid.h"
 #endif
 

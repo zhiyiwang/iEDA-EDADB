@@ -61,14 +61,17 @@ Validation:
 - Canonical demo passed on 2026-06-12.
 - Demo logs show `writeIdbDesign insert name=gcd version=5.8 micron_dbu=1000`.
 - Demo logs show `readIdbDesign restored name=gcd version=5.8 micron_dbu=1000`.
+- Demo logs show `writeIdbDie insert point_count=2`.
+- Demo logs show `readIdbDie restored point_count=2`.
 - SQLite content check: `select _design_name, _version, _units__micron_dbu, char(_bus_bit_chars__left_delimiter), char(_bus_bit_chars__right_delimiter) from iDesign;` returns `gcd|5.8|1000|[|]`.
+- SQLite die check: `iDieSD` has 1 row and `iDieSD_points_sd_iCoordSD` has 2 rows: `(0,0)` and `(149960,150128)`.
 - Final demo message: `Input def and output def are the same.`
 
 Current behavior:
 
-- `edadb_write` writes only the Design group to EDADB.
-- `edadb_read` reads only the Design group from EDADB.
-- DEF text callbacks rebuild die/row/track/gcell/via/instance/pin/blockage/region/slot/group/fill/net/special-net.
+- `edadb_write` writes the Design and Die groups to EDADB.
+- `edadb_read` reads the Design and Die groups from EDADB.
+- DEF text callbacks rebuild row/track/gcell/via/instance/pin/blockage/region/slot/group/fill/net/special-net.
 - Disabled `readIdbXXX()` / `writeIdbXXX()` bodies are preserved under `#if 0 //EDADB_TODO`.
 
 Important rule:
@@ -142,8 +145,8 @@ src/database/edadb/idb/
 - iEDA-side adapter layer.
 - `edadb_idb_init.*`: open DB, init primary-key policy, init tables.
 - `edadb_idb_helper.*`: stores/accesses `IdbDefService`; layer/via-rule lookup helpers.
-- `edadb_idb_schema.h`: iDB/shadow table mappings; Design group enabled, others dormant.
-- `edadb_idb_shadow.h`: shadow aggregation; currently dormant for non-Design families.
+- `edadb_idb_schema.h`: iDB/shadow table mappings; Design and Die groups enabled, others dormant.
+- `edadb_idb_shadow.h`: shadow aggregation; geometry/die enabled, other shadows dormant.
 - `shadow/*`: per-class iDB ↔ shadow conversion definitions for later restoration.
 - `docs/*`: DEF/LEF parsing and ORM notes.
 
@@ -224,5 +227,5 @@ NET and SPECIALNET are not implemented yet.
 
 Current implementation target:
 
-- Design / units / busbit is complete for the current demo milestone.
-- Next target should be `writeIdbDie()` / `readIdbDie()` using the same old-code-first migration rule.
+- Design / units / busbit and die are active for the current demo milestone.
+- Next target should be `writeIdbRow()` / `readIdbRow()` using the same old-code-first migration rule.

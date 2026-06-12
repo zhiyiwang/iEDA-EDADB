@@ -81,13 +81,13 @@ int initAllTables(bool crt_tab) {
 #if EDADB_OUTPUT_DEBUG
     std::cout << "[EDADB-IDB] initAllTables create=" << (crt_tab ? "true" : "false") << std::endl;
 #endif
-    std::cout << "[EDADB-IDB] initAllTables register Design group only"
+    std::cout << "[EDADB-IDB] initAllTables register Design/Die groups"
               << std::endl;
 
     EDADB_INIT_TABLE(idb::IdbDesign, crt_tab);
+    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbDie>, crt_tab);
 
 #if 0  //EDADB_TODO: restore these basic tables when read/write paths are ported to DbTableOp.
-    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbDie>, crt_tab);
     EDADB_INIT_TABLE(idb::IdbRow, crt_tab);
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbTrackGrid>, crt_tab);
     EDADB_INIT_TABLE(idb::IdbGCellGrid, crt_tab);

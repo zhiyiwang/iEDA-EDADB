@@ -35,9 +35,11 @@ public:
         auto& points = obj->get_points();
         assert(points.empty());
 
-        // swap the shadow vector with the object's vector,
-        // so that we can avoid deep copy and reuse the shadow vector's memory for write.
-        points_sd.swap(points); 
+        for (auto* point : points_sd) {
+            obj->add_point(point);
+        }
+        points_sd.clear();
+        obj->set_bounding_box();
         return true;
     } // fromShadow 
 

@@ -67,8 +67,11 @@ bool DefReadEdadb::createDbByDef(const char* path) {
     defrSetUnitsCbk(unitsCallback);
     defrSetDesignCbk(designCallback);
 #endif
-//EDADB_TODO: use def read callbacks to restore iDB data from text DEF file
+//EDADB_TODO: Design/Units/BusBit/Die now come from EDADB readIdbXXX().
+#if 0
     defrSetDieAreaCbk(dieAreaCallback);
+#endif
+//EDADB_TODO: use def read callbacks to restore iDB data from text DEF file
     defrSetRowCbk(rowCallback);
     defrSetTrackCbk(trackGridCallback);
     defrSetGcellGridCbk(gcellGridCallback);
@@ -252,15 +255,15 @@ bool DefReadEdadb::createDbByDef(const char* path) {
 
 
 bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
-    std::cout << "[EDADB-IDB] createDbByEdadb Design enabled path="
+    std::cout << "[EDADB-IDB] createDbByEdadb Design/Die enabled path="
               << edadb_path << std::endl;
     std::cout << "[EDADB-IDB] createDbByEdadb other readIdbXXX disabled; DEF callbacks rebuild remaining iDB"
               << std::endl;
 
     //////// iEDA Idb class reads are disabled for the empty C framework. //////
     CHECK_READ(readIdbDesign(), "DefReadEdadb::createDbByEdadb failed to read IdbDesign!");
-#if 0  //EDADB_TODO: restore these basic EDADB reads after porting readIdbXXX to the DbTableOp API.
     CHECK_READ(readIdbDie(), "DefReadEdadb::createDbByEdadb failed to read IdbDie!");
+#if 0  //EDADB_TODO: restore these basic EDADB reads after porting readIdbXXX to the DbTableOp API.
     CHECK_READ(readIdbRow(), "DefReadEdadb::createDbByEdadb failed to read IdbRow!");
     CHECK_READ(readIdbTrackGrid(), "DefReadEdadb::createDbByEdadb failed to read readIdbTrackGrid!");
     CHECK_READ(readIdbGCellGrid(), "DefReadEdadb::createDbByEdadb failed to read IdbGCellGrid!");
@@ -331,8 +334,30 @@ bool DefReadEdadb::readIdbDesign() {
 }
 
 bool DefReadEdadb::readIdbDie(void) {
-    //EDADB_TODO: temporary stub; port the preserved implementation below to DbTableOp.
-    std::cout << "[EDADB-IDB] readIdbDie skipped" << std::endl;
+    IdbLayout* layout = _def_service->get_layout();
+    IdbDie* die = layout->get_die();
+    if (die == nullptr) {
+        std::cerr << "DefReadEdadb::IdbDie failed, die is nullptr!" << std::endl;
+        return false;
+    }
+
+    die->reset();
+
+    auto die_reader = edadb::makeReadAllOp<edadb::Shadow<idb::IdbDie>>();
+    edadb::Shadow<idb::IdbDie> die_sd;
+    const int read_count = edadb::readNext<edadb::Shadow<idb::IdbDie>>(die_reader, &die_sd);
+    if (read_count <= 0) {
+        std::cout << "DefReadEdadb::readIdbDie failed to read!" << std::endl;
+        return false;
+    }
+
+    if (!die_sd.fromShadow(die)) {
+        std::cerr << "DefReadEdadb::readIdbDie failed to restore shadow" << std::endl;
+        return false;
+    }
+
+    std::cout << "[EDADB-IDB] readIdbDie restored point_count="
+              << die->get_points().size() << std::endl;
     return true;
 }
 

@@ -65,13 +65,15 @@ bool DefWriteEdadb::writeDb2Edadb(const char* edadb_path) {
 
 
 bool DefWriteEdadb::writeChip2Edadb() {
-    std::cout << "[EDADB-IDB] writeChip2Edadb Design enabled; other writeIdbXXX disabled"
+    std::cout << "[EDADB-IDB] writeChip2Edadb Design/Die enabled; other writeIdbXXX disabled"
               << std::endl;
     if (writeIdbDesign() != kDbSuccess) {
         return false;
     }
+    if (writeIdbDie() != kDbSuccess) {
+        return false;
+    }
 #if 0  //EDADB_TODO: restore these basic EDADB writes after porting writeIdbXXX to the DbTableOp API.
-    writeIdbDie();
     writeIdbRow();
     writeIdbTrackGrid();
     writeIdbGCellGrid();
@@ -154,8 +156,24 @@ int32_t DefWriteEdadb::writeIdbDesign() {
 }
 
 int32_t DefWriteEdadb::writeIdbDie(void) {
-    //EDADB_TODO: temporary stub; port the preserved implementation below to DbTableOp.
-    std::cout << "[EDADB-IDB] writeIdbDie skipped" << std::endl;
+    IdbLayout* layout = _def_service->get_layout();
+    IdbDie* die = layout->get_die();
+    if (die == nullptr) {
+       std::cout << "Write DIE error..." << std::endl;
+       return kDbFail;
+    }
+
+    edadb::Shadow<idb::IdbDie> die_sd;
+    die_sd.toShadow(die);
+
+    std::cout << "[EDADB-IDB] writeIdbDie insert point_count="
+              << die->get_points().size() << std::endl;
+
+    if (!edadb::insertObject<edadb::Shadow<idb::IdbDie>>(&die_sd)) {
+        std::cerr << "DefWriteEdadb::writeIdbDie failed to insertObject" << std::endl;
+        return kDbFail;
+    }
+
     return kDbSuccess;
 }
 

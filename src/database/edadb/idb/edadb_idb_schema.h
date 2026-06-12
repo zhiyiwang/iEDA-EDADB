@@ -28,9 +28,6 @@ TABLE4CLASS(idb::IdbBusBitChars, "iBusBitChars", (_left_delimiter, _right_delimi
 #include "database/data/design/IdbDesign.h"
 TABLE4CLASS(idb::IdbDesign, "iDesign", (_design_name, _version, _units, _bus_bit_chars));
 
-//EDADB_TODO: restore geometry/die/row/track/gcell/via schema groups after their
-// readIdbXXX/writeIdbXXX implementations are ported to the EDADB DbTableOp API.
-#if 0
 #include "shadow/shadow_idb_geometry.h"
 TABLE4SHADOW(idb::IdbCoordinate<int32_t>);
 TABLE4CLASS (edadb::Shadow<idb::IdbCoordinate<int32_t>>, "iCoordSD", (_vec_idx, _x_sd, _y_sd));
@@ -44,6 +41,9 @@ TABLE4SHADOW_WVEC(idb::IdbDie);
 TABLE4CLASS_WVEC (edadb::Shadow<idb::IdbDie>, "iDieSD", (primary_key), (points_sd));
 
 
+//EDADB_TODO: restore row/track/gcell/via schema groups after their
+// readIdbXXX/writeIdbXXX implementations are ported to the EDADB DbTableOp API.
+#if 0
 #include "database/data/design/db_layout/IdbSite.h"
 TABLE4CLASS(idb::IdbSite, "iSite", (_name, _width, _heigtht, _b_overlap, _site_class, _symmetry, _orient, _type));
 
