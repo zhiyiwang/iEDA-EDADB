@@ -23,11 +23,8 @@ void initPrimKeys(void) {
 
     edadb::Cpp2SqlTypeTrait<idb::IdbRect>::hasPrimKey = false;
     edadb::Cpp2SqlTypeTrait<idb::IdbViaMaster>::hasPrimKey = false;
-
-#if 0  //EDADB_TODO: restore these primary-key rules when the corresponding shadow classes are enabled.
     edadb::Cpp2SqlTypeTrait<idb::IdbHalo>::hasPrimKey = false;
     edadb::Cpp2SqlTypeTrait<edadb::Shadow<idb::IdbRouteHalo>>::hasPrimKey = false;
-#endif 
 
 //-//    edadb::Cpp2SqlTypeTrait<idb::IdbSpecialNetEdgeSegment>::hasPrimKey = false;
 
@@ -73,7 +70,7 @@ int initAllTables(bool crt_tab) {
 #if EDADB_OUTPUT_DEBUG
     std::cout << "[EDADB-IDB] initAllTables create=" << (crt_tab ? "true" : "false") << std::endl;
 #endif
-    std::cout << "[EDADB-IDB] initAllTables register Design/Die/Row/TrackGrid/GCell/Via groups"
+    std::cout << "[EDADB-IDB] initAllTables register Design/Die/Row/TrackGrid/GCell/Via/Instance groups"
               << std::endl;
 
     EDADB_INIT_TABLE(idb::IdbDesign, crt_tab);
@@ -83,12 +80,13 @@ int initAllTables(bool crt_tab) {
     EDADB_INIT_TABLE(idb::IdbGCellGrid, crt_tab);
 
     EDADB_INIT_TABLE(idb::IdbVia, crt_tab);
-
-#if 0  //EDADB_TODO: enable these tables when instance/pin/blockage/fill persistence is restored.
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbInstance>, crt_tab);
+
+#if 0  //EDADB_TODO: enable these tables one object family at a time after Instance.
+    EDADB_INIT_TABLE(idb::IdbRegion, crt_tab);
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbPin>, crt_tab);
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbBlockage>, crt_tab);
-    EDADB_INIT_TABLE(idb::IdbRegion, crt_tab);
+
     EDADB_INIT_TABLE(idb::IdbSlot, crt_tab);
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbGroup>, crt_tab);
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbFillLayer>, crt_tab);

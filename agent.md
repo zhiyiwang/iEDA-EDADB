@@ -53,9 +53,11 @@ Active persistence groups:
 - `writeIdbTrackGrid()` / `readIdbTrackGrid()` are enabled through `edadb::Shadow<idb::IdbTrackGrid>`.
 - `writeIdbGCellGrid()` / `readIdbGCellGrid()` are enabled directly on `IdbGCellGrid`.
 - `writeIdbVia()` / `readIdbVia()` are enabled directly on root `IdbVia`.
+- `writeIdbInstance()` / `readIdbInstance()` are enabled through `edadb::Shadow<idb::IdbInstance>`.
 - `iDesign` stores `IdbUnits` and `IdbBusBitChars` as inline columns.
 - `iTrackGridSD` stores track grid scalar data and owns vector child rows for layer names.
 - `iVia` stores generated via fields inline through EDADB member StoreType conversion; no `Shadow<IdbVia>` is defined.
+- `iInstSD` stores DEF COMPONENT fields: instance name, cell master name, source/type, placement status, orient, weight, coordinate, HALO, ROUTEHALO, and region name.
 - Disabled matching DEF parser callbacks in `DefReadEdadb::createDbByDef()`:
   - `defrSetVersionStrCbk`
   - `defrSetDesignCbk`
@@ -67,6 +69,9 @@ Active persistence groups:
   - `defrSetGcellGridCbk`
   - `defrSetViaStartCbk`
   - `defrSetViaCbk`
+  - `defrSetComponentCbk`
+  - `defrSetComponentStartCbk`
+  - `defrSetComponentEndCbk`
 - Other object families still come from DEF text callbacks.
 
 Validation:
@@ -92,13 +97,16 @@ Validation:
 - SQLite gcell check: `select count(*) from iGCellGrid;` returns `0`.
 - SQLite via check: `select count(*) from iVia;` returns `4`.
 - SQLite via key check: `iVia` contains `via_1600x480`, `via2_1600x480`, `via3_1600x480`, `via4_1600x1600` with expected VIARULE/layer/ROWCOL fields.
+- Demo logs on 2026-06-15 show `writeIdbInstance insert instance_count=1458`.
+- Demo logs on 2026-06-15 show `readIdbInstance restored instance_count=1458`.
+- SQLite instance check: `select count(*) from iInstSD;` returns `1458`.
 - Final demo message: `Input def and output def are the same.`
 
 Current behavior:
 
-- `edadb_write` writes the Design, Die, Row, TrackGrid, GCell, and Via groups to EDADB.
-- `edadb_read` reads the Design, Die, Row, TrackGrid, GCell, and Via groups from EDADB.
-- DEF text callbacks rebuild instance/pin/blockage/region/slot/group/fill/net/special-net.
+- `edadb_write` writes the Design, Die, Row, TrackGrid, GCell, Via, and Instance groups to EDADB.
+- `edadb_read` reads the Design, Die, Row, TrackGrid, GCell, Via, and Instance groups from EDADB.
+- DEF text callbacks rebuild pin/blockage/region/slot/group/fill/net/special-net.
 - Disabled `readIdbXXX()` / `writeIdbXXX()` bodies are preserved under `#if 0 //EDADB_TODO`.
 
 Important rule:
@@ -118,6 +126,8 @@ Important rule:
 - `IdbTrackGrid` uses shadow because `_layer_name_vec_sd` is a vector child table and needs the shadow root `primary_key` to group layer names by track grid. Do not hide this grouping as an implicit EDADB replacement.
 - `IdbGCellGrid` does not use shadow because DEF read/write uses only scalar fields: direction, start, count, and step.
 - `IdbVia` does not use a root shadow. Its `_master_instance` is converted by EDADB through the member type's StoreType; only `IdbViaMaster` / `IdbLayerShape` keep minimal member-level shadow views for layer-name lookup and fixed/generate geometry rebuild.
+- `IdbInstance` uses shadow because DEF COMPONENT persistence stores a reduced view and must convert pointers to names: cell master, region, route-halo layers. Readback resolves those names and uses normal iDB setters.
+- Next targets: `IdbPin`, `IdbBlockage`, `IdbRegion`, `IdbSlot`, `IdbGroup`, `IdbFill`, `SpecialNet`, `Net`, one commit per target.
 - After each migration, run the concise Adapter Correctness Audit in `edadb_readme.md`.
 
 ## C Namespace / API Boundary

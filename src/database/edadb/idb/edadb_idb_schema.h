@@ -86,32 +86,31 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbViaMaster>, "iViaMasterSD", (_name_sd, _t
 TABLE4CLASS(idb::IdbVia, "iVia", (_name, _master_instance));
 
 
-//--#include "database/data/design/db_design/IdbHalo.h"
-//--TABLE4CLASS(idb::IdbHalo, "iHalo", (_extend_left, _extend_right, _extend_top, _extend_bottom, _is_soft));
-//--
-//--#include "shadow/shadow_idb_halo.h"
-//--TABLE4CLASS(edadb::Shadow<idb::IdbRouteHalo>, "iRouteHaloSD", (_route_distance_sd, _layer_bottom_name_sd, _layer_top_name_sd));
-//--
-//--#include "shadow/shadow_idb_instance.h"
-//--TABLE4CLASS(edadb::Shadow<idb::IdbInstance>, "iInstSD", (_name_sd, _type_sd, _status_sd, _orient_sd, _weight_sd, _cell_master_name_sd, _coordinate_sd, _halo_sd, _route_halo_sd, _region_name_sd));
-//--
-//--
-//--#include "shadow/shadow_idb_port.h"
-//--TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbPort>, "iPortSD", (primary_key, _class_sd, _orient_sd, _placement_status_sd, _coordinate_sd), (_layer_shape_list_sd));
-//--
-//--#include "shadow/shadow_idb_term.h"
-//--TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbTerm>, "iTermSD", (_name_sd, _direction_sd, _type_sd, _shape_sd, _placement_status_sd, _has_port_sd, _is_special_net_sd, _is_instance_sd), (_port_list_sd));
-//--
-//--#include "shadow/shadow_idb_pin.h"
-//--TABLE4CLASS(edadb::Shadow<idb::IdbPin>, "iPinSD", (_pin_name_sd, _net_name_sd, _io_term_sd, _average_coordinate_sd, _location_sd, _orient_sd, _is_io_pin_sd, _is_special_net_sd, _layer_num_sd));
-//--
-//--
-//--#include "shadow/shadow_idb_blockage.h"
-//--TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbBlockage>, "iBlockageSD", (primary_key, _instance_name_sd, _is_pushdown_sd, _type_sd, _layer_name_sd, _min_spacing_sd, _effective_width_sd, _is_slots_sd, _is_fills_sd, _is_except_pgnet_sd, _is_soft_sd, _is_partial_sd, _max_density_sd), (_rect_list_sd));
-//--
-//--
-//--#include "database/data/design/db_design/IdbRegion.h"
-//--TABLE4CLASS_WVEC(idb::IdbRegion, "iRegion", (_name, _type), (_boudary_list));
+#include "database/data/design/db_design/IdbHalo.h"
+TABLE4CLASS(idb::IdbHalo, "iHalo", (_extend_left, _extend_right, _extend_top, _extend_bottom, _is_soft));
+
+#include "shadow/shadow_idb_halo.h"
+TABLE4CLASS(edadb::Shadow<idb::IdbRouteHalo>, "iRouteHaloSD", (_route_distance_sd, _layer_bottom_name_sd, _layer_top_name_sd));
+
+#include "shadow/shadow_idb_instance.h"
+TABLE4CLASS(edadb::Shadow<idb::IdbInstance>, "iInstSD", (_name_sd, _type_sd, _status_sd, _orient_sd, _weight_sd, _cell_master_name_sd, _coordinate_sd, _halo_sd, _route_halo_sd, _region_name_sd));
+
+#if 0  //EDADB_TODO: enable Pin/Blockage/Region schema after Instance is validated.
+#include "shadow/shadow_idb_port.h"
+TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbPort>, "iPortSD", (primary_key, _class_sd, _orient_sd, _placement_status_sd, _coordinate_sd), (_layer_shape_list_sd));
+
+#include "shadow/shadow_idb_term.h"
+TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbTerm>, "iTermSD", (_name_sd, _direction_sd, _type_sd, _shape_sd, _placement_status_sd, _has_port_sd, _is_special_net_sd, _is_instance_sd), (_port_list_sd));
+
+#include "shadow/shadow_idb_pin.h"
+TABLE4CLASS(edadb::Shadow<idb::IdbPin>, "iPinSD", (_pin_name_sd, _net_name_sd, _io_term_sd, _average_coordinate_sd, _location_sd, _orient_sd, _is_io_pin_sd, _is_special_net_sd, _layer_num_sd));
+
+#include "shadow/shadow_idb_blockage.h"
+TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbBlockage>, "iBlockageSD", (primary_key, _instance_name_sd, _is_pushdown_sd, _type_sd, _layer_name_sd, _min_spacing_sd, _effective_width_sd, _is_slots_sd, _is_fills_sd, _is_except_pgnet_sd, _is_soft_sd, _is_partial_sd, _max_density_sd), (_rect_list_sd));
+
+#include "database/data/design/db_design/IdbRegion.h"
+TABLE4CLASS_WVEC(idb::IdbRegion, "iRegion", (_name, _type), (_boudary_list));
+#endif
 //--
 //--
 //--#include "database/data/design/db_design/IdbSlot.h"

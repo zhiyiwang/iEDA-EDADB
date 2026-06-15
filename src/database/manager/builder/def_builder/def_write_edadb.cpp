@@ -65,7 +65,7 @@ bool DefWriteEdadb::writeDb2Edadb(const char* edadb_path) {
 
 
 bool DefWriteEdadb::writeChip2Edadb() {
-    std::cout << "[EDADB-IDB] writeChip2Edadb Design/Die/Row/TrackGrid/GCell/Via enabled; other writeIdbXXX disabled"
+    std::cout << "[EDADB-IDB] writeChip2Edadb Design/Die/Row/TrackGrid/GCell/Via/Instance enabled; other writeIdbXXX disabled"
               << std::endl;
     if (writeIdbDesign() != kDbSuccess) {
         return false;
@@ -85,11 +85,19 @@ bool DefWriteEdadb::writeChip2Edadb() {
     if (writeIdbVia() != kDbSuccess) {
         return false;
     }
-#if 0  //EDADB_TODO: restore extended EDADB writes after enabling their schema/shadow coverage.
-    writeIdbInstance();
-    writeIdbPin();
-    writeIdbBlockage();
-    writeIdbRegion();
+    if (writeIdbInstance() != kDbSuccess) {
+        return false;
+    }
+#if 0  //EDADB_TODO: enable one object family at a time after Instance.
+    if (writeIdbPin() != kDbSuccess) {
+        return false;
+    }
+    if (writeIdbBlockage() != kDbSuccess) {
+        return false;
+    }
+    if (writeIdbRegion() != kDbSuccess) {
+        return false;
+    }
     writeIdbSlot();
     writeIdbGroup();
     writeIdbFill();
@@ -282,6 +290,166 @@ int32_t DefWriteEdadb::writeIdbVia(void) {
 
     return kDbSuccess;
 }
+
+int32_t DefWriteEdadb::writeIdbInstance(void) {
+    IdbDesign* design = _def_service->get_design();  // Def
+    if (design == nullptr) {
+        std::cerr << "[EDADB-IDB] writeIdbInstance failed: design is nullptr" << std::endl;
+        return kDbFail;
+    }
+
+    IdbInstanceList* instance_list = design->get_instance_list();
+    if (instance_list == nullptr) {
+      std::cout << "Write COMPONENTS error..." << std::endl;
+      return kDbFail;
+    }
+
+    vector<IdbInstance*>& inst_vec = instance_list->get_instance_list();
+    std::cout << "[EDADB-IDB] writeIdbInstance insert instance_count="
+              << inst_vec.size() << std::endl;
+
+    if (inst_vec.empty()) {
+      return kDbSuccess;
+    }
+
+    vector<edadb::Shadow<idb::IdbInstance>*> inst_sd_vec;
+    inst_sd_vec.reserve(inst_vec.size());
+    for (auto& instance : inst_vec) {
+        auto* inst_sd = new edadb::Shadow<idb::IdbInstance>();
+        inst_sd->toShadow(instance);
+        inst_sd_vec.emplace_back(inst_sd);
+    }
+
+    bool ok = edadb::insertVector<edadb::Shadow<idb::IdbInstance>>(inst_sd_vec);
+    for (auto& inst_sd : inst_sd_vec) {
+        delete inst_sd;
+        inst_sd = nullptr;
+    }
+
+    if (!ok) {
+        std::cerr << "DefWriteEdadb::writeIdbInstance failed to insertVector" << std::endl;
+        return kDbFail;
+    }
+
+    return kDbSuccess;
+}
+
+#if 0  //EDADB_TODO: enable one object family at a time after Instance.
+int32_t DefWriteEdadb::writeIdbPin(void) {
+    IdbDesign* design = _def_service->get_design();
+    if (design == nullptr) {
+        std::cerr << "[EDADB-IDB] writeIdbPin failed: design is nullptr" << std::endl;
+        return kDbFail;
+    }
+
+    IdbPins* pin_list = design->get_io_pin_list();
+    if (pin_list == nullptr) {
+      std::cout << "Write PINS error..." << std::endl;
+      return kDbFail;
+    }
+
+    vector<IdbPin*>& pin_vec = pin_list->get_pin_list();
+    std::cout << "[EDADB-IDB] writeIdbPin insert pin_count="
+              << pin_vec.size() << std::endl;
+
+    if (pin_vec.empty()) {
+      return kDbSuccess;
+    }
+
+    vector<edadb::Shadow<idb::IdbPin>*> pin_sd_vec;
+    pin_sd_vec.reserve(pin_vec.size());
+    for (auto& pin : pin_vec) {
+        auto* pin_sd = new edadb::Shadow<idb::IdbPin>();
+        pin_sd->toShadow(pin);
+        pin_sd_vec.emplace_back(pin_sd);
+    }
+
+    bool ok = edadb::insertVector<edadb::Shadow<idb::IdbPin>>(pin_sd_vec);
+    for (auto& pin_sd : pin_sd_vec) {
+        delete pin_sd;
+        pin_sd = nullptr;
+    }
+
+    if (!ok) {
+        std::cerr << "DefWriteEdadb::writeIdbPin failed to insertVector" << std::endl;
+        return kDbFail;
+    }
+
+    return kDbSuccess;
+}
+
+int32_t DefWriteEdadb::writeIdbBlockage(void) {
+    IdbDesign* design = _def_service->get_design();
+    if (design == nullptr) {
+        std::cerr << "[EDADB-IDB] writeIdbBlockage failed: design is nullptr" << std::endl;
+        return kDbFail;
+    }
+
+    IdbBlockageList* blockage_list = design->get_blockage_list();
+    if (blockage_list == nullptr) {
+      std::cout << "Write BLOCKAGES error..." << std::endl;
+      return kDbFail;
+    }
+
+    vector<IdbBlockage*> blockage_vec = blockage_list->get_blockage_list();
+    std::cout << "[EDADB-IDB] writeIdbBlockage insert blockage_count="
+              << blockage_vec.size() << std::endl;
+
+    if (blockage_vec.empty()) {
+      return kDbSuccess;
+    }
+
+    vector<edadb::Shadow<idb::IdbBlockage>*> blockage_sd_vec;
+    blockage_sd_vec.reserve(blockage_vec.size());
+    for (auto& blockage : blockage_vec) {
+        auto* blockage_sd = new edadb::Shadow<idb::IdbBlockage>();
+        blockage_sd->toShadow(blockage);
+        blockage_sd_vec.emplace_back(blockage_sd);
+    }
+
+    bool ok = edadb::insertVector<edadb::Shadow<idb::IdbBlockage>>(blockage_sd_vec);
+    for (auto& blockage_sd : blockage_sd_vec) {
+        delete blockage_sd;
+        blockage_sd = nullptr;
+    }
+
+    if (!ok) {
+        std::cerr << "DefWriteEdadb::writeIdbBlockage failed to insertVector" << std::endl;
+        return kDbFail;
+    }
+
+    return kDbSuccess;
+}
+
+int32_t DefWriteEdadb::writeIdbRegion(void) {
+    IdbDesign* design = _def_service->get_design();  // def
+    if (design == nullptr) {
+        std::cerr << "[EDADB-IDB] writeIdbRegion failed: design is nullptr" << std::endl;
+        return kDbFail;
+    }
+
+    IdbRegionList* region_list = design->get_region_list();
+    if (region_list == nullptr) {
+      std::cout << "Write REGIONS error..." << std::endl;
+      return kDbFail;
+    }
+
+    vector<IdbRegion*>& region_vec = region_list->get_region_list();
+    std::cout << "[EDADB-IDB] writeIdbRegion insert region_count="
+              << region_vec.size() << std::endl;
+
+    if (region_vec.empty()) {
+      return kDbSuccess;
+    }
+
+    if (!edadb::insertVector<idb::IdbRegion>(region_vec)) {
+        std::cerr << "DefWriteEdadb::writeIdbRegion failed to insertVector" << std::endl;
+        return kDbFail;
+    }
+
+    return kDbSuccess;
+}
+#endif
 
 #if 0  //EDADB_TODO: keep the old DbMap-based write implementations for stepwise DbTableOp porting.
 int32_t DefWriteEdadb::writeIdbDesign() {

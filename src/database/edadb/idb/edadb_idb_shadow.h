@@ -24,11 +24,18 @@ TABLE4CLASS(idb::edadb_adapter::CppStrings, "CppStr", (str));
 #include "shadow/shadow_idb_track_grid.h"
 #include "shadow/shadow_idb_layer_shape.h"
 #include "shadow/shadow_idb_via_master.h"
+#include "shadow/shadow_idb_halo.h"
+#include "shadow/shadow_idb_instance.h"
+
+#if 0  //EDADB_TODO: enable these shadows one object family at a time after Instance.
+#include "shadow/shadow_idb_port.h"
+#include "shadow/shadow_idb_term.h"
+#include "shadow/shadow_idb_pin.h"
+#include "shadow/shadow_idb_blockage.h"
+#endif
 
 
 //--#include "shadow/shadow_idb_via.h"
-//--#include "shadow/shadow_idb_halo.h"
-//--#include "shadow/shadow_idb_blockage.h"
 //--#include "shadow/shadow_idb_group.h"
 //--#include "shadow/shadow_idb_fill.h"
 

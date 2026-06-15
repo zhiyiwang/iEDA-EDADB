@@ -84,7 +84,7 @@ public:
     idb::IdbPlacementStatus _status_sd;
     idb::IdbOrient _orient_sd;
     int32_t _weight_sd;
-    idb::IdbCoordinate<int32_t>* _coordinate_sd; // ctor always allocated
+    idb::IdbCoordinate<int32_t>* _coordinate_sd = nullptr; // allocated by EDADB read or borrowed from iDB write
     bool _coordinate_sd_owner = true;
 
     idb::IdbHalo *_halo_sd = nullptr;

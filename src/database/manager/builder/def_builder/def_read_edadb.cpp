@@ -73,20 +73,20 @@ bool DefReadEdadb::createDbByDef(const char* path) {
     defrSetGcellGridCbk(gcellGridCallback);
 #endif
 
-    // Other object families still come from DEF text callbacks.
-#if 0  //EDADB_TODO: VIAS are restored from EDADB together with Design/Die/Row/Track/GCell.
+    // VIAS and COMPONENTS are restored from EDADB.
+#if 0
     defrSetViaStartCbk(viaBeginCallback);
     defrSetViaCbk(viaCallback);
-#endif
-    defrSetRegionCbk(regionCallback);
-    defrSetSlotCbk(slotsCallback);
     defrSetComponentCbk(componentsCallback);
     defrSetComponentStartCbk(componentNumberCallback);
     defrSetComponentEndCbk(componentEndCallback);
+#endif
+    defrSetRegionCbk(regionCallback);
     defrSetPinCbk(pinCallback);
     defrSetPinEndCbk(pinsEndCallback);
     defrSetStartPinsCbk(pinsBeginCallback);
     defrSetBlockageCbk(blockageCallback);
+    defrSetSlotCbk(slotsCallback);
     defrSetGroupCbk(groupCallback);
     defrSetFillStartCbk(fillsCallback);
     defrSetFillCbk(fillCallback);
@@ -254,7 +254,7 @@ bool DefReadEdadb::createDbByDef(const char* path) {
 
 
 bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
-    std::cout << "[EDADB-IDB] createDbByEdadb Design/Die/Row/TrackGrid/GCell/Via enabled path="
+    std::cout << "[EDADB-IDB] createDbByEdadb Design/Die/Row/TrackGrid/GCell/Via/Instance enabled path="
               << edadb_path << std::endl;
     std::cout << "[EDADB-IDB] createDbByEdadb other readIdbXXX disabled; DEF callbacks rebuild remaining iDB"
               << std::endl;
@@ -265,12 +265,12 @@ bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
     CHECK_READ(readIdbTrackGrid(), "DefReadEdadb::createDbByEdadb failed to read readIdbTrackGrid!");
     CHECK_READ(readIdbGCellGrid(), "DefReadEdadb::createDbByEdadb failed to read IdbGCellGrid!");
     CHECK_READ(readIdbVia(), "DefReadEdadb::createDbByEdadb failed to read IdbVia!");
-
-#if 0  //EDADB_TODO: restore disabled object reads after their schema/shadow/write/read paths are enabled.
     CHECK_READ(readIdbInstance(), "DefReadEdadb::createDbByEdadb failed to read IdbInstance!");
+
+#if 0  //EDADB_TODO: enable one object family at a time after Instance.
+    CHECK_READ(readIdbRegion(), "DefReadEdadb::createDbByEdadb failed to read IdbRegion!");
     CHECK_READ(readIdbPin(), "DefReadEdadb::createDbByEdadb failed to read IdbPin!");
     CHECK_READ(readIdbBlockage(), "DefReadEdadb::createDbByEdadb failed to read IdbBlockage!");
-    CHECK_READ(readIdbRegion(), "DefReadEdadb::createDbByEdadb failed to read IdbRegion!");
     CHECK_READ(readIdbSlot(), "DefReadEdadb::createDbByEdadb failed to read IdbSlot!");
     CHECK_READ(readIdbGroup(), "DefReadEdadb::createDbByEdadb failed to read IdbGroup!");
     CHECK_READ(readIdbFill(), "DefReadEdadb::createDbByEdadb failed to read IdbFill!");
@@ -540,6 +540,292 @@ bool DefReadEdadb::readIdbVia(void) {
               << via_count << std::endl;
     return true;
 }
+
+#if 0  //EDADB_TODO: enable one object family at a time after Instance.
+bool DefReadEdadb::readIdbRegion(void) {
+    IdbDesign* design = _def_service->get_design();  // def
+    if (design == nullptr) {
+        std::cerr << "DefReadEdadb::readIdbRegion failed, design is nullptr!" << std::endl;
+        return false;
+    }
+
+    IdbRegionList* region_list = design->get_region_list();
+    if (region_list == nullptr) {
+        std::cerr << "DefReadEdadb::readIdbRegion failed, region_list is nullptr!" << std::endl;
+        return false;
+    }
+
+    auto region_reader = edadb::makeReadAllOp<idb::IdbRegion>();
+    int32_t region_count = 0;
+    while (true) {
+        IdbRegion* region = new IdbRegion();
+        const int read_count = edadb::readNext<idb::IdbRegion>(region_reader, region);
+        if (read_count == 0) {
+            delete region;
+            break;
+        }
+        if (read_count < 0) {
+            delete region;
+            std::cout << "DefReadEdadb::readIdbRegion failed to read!" << std::endl;
+            return false;
+        }
+
+        region_list->add_region(region);
+        ++region_count;
+    }
+
+    std::cout << "[EDADB-IDB] readIdbRegion restored region_count="
+              << region_count << std::endl;
+    return true;
+}
+#endif
+
+bool DefReadEdadb::readIdbInstance(void) {
+    IdbDesign* design = _def_service->get_design();  // Def
+    IdbLayout* layout = _def_service->get_layout();  // Lef
+    if (design == nullptr || layout == nullptr) {
+        std::cerr << "DefReadEdadb::readIdbInstance failed, design or layout is nullptr!" << std::endl;
+        return false;
+    }
+
+    IdbLayers* layer_list = layout->get_layers();
+    IdbRegionList* region_list = design->get_region_list();
+    IdbInstanceList* instance_list = design->get_instance_list();
+    IdbCellMasterList* master_list = layout->get_cell_master_list();
+    if (layer_list == nullptr || region_list == nullptr || instance_list == nullptr || master_list == nullptr) {
+        std::cerr << "DefReadEdadb::readIdbInstance failed, required list is nullptr!" << std::endl;
+        return false;
+    }
+
+    instance_list->reset();
+
+    auto inst_reader = edadb::makeReadAllOp<edadb::Shadow<idb::IdbInstance>>();
+    int32_t instance_count = 0;
+    while (true) {
+        edadb::Shadow<idb::IdbInstance> inst_sd;
+        const int read_count = edadb::readNext<edadb::Shadow<idb::IdbInstance>>(inst_reader, &inst_sd);
+        if (read_count == 0) {
+            break;
+        }
+        if (read_count < 0) {
+            std::cout << "DefReadEdadb::readIdbInstance failed to read!" << std::endl;
+            return false;
+        }
+
+        IdbInstance* inst = new IdbInstance();
+        if (nullptr == _cur_cell_master || _cur_cell_master->get_name() != inst_sd._cell_master_name_sd) {
+            _cur_cell_master = master_list->find_cell_master(inst_sd._cell_master_name_sd);
+        }
+        if (_cur_cell_master == nullptr) {
+            delete inst;
+            std::cerr << "DefReadEdadb::readIdbInstance failed to find cell master: "
+                      << inst_sd._cell_master_name_sd << std::endl;
+            return false;
+        }
+        inst->set_cell_master(_cur_cell_master);
+
+        inst_sd.fromShadow(inst);
+
+        if (!inst_sd._region_name_sd.empty()) {
+            IdbRegion* region = region_list->find_region(inst_sd._region_name_sd);
+            if (region != nullptr) {
+                inst->set_region(region);
+                region->add_instance(inst);
+            }
+        }
+
+        if (inst_sd._route_halo_sd != nullptr) {
+            IdbRouteHalo* route_halo = inst->set_route_halo(nullptr);
+            inst_sd._route_halo_sd->fromShadow(route_halo);
+            route_halo->set_layer_bottom(layer_list->find_layer(inst_sd._route_halo_sd->_layer_bottom_name_sd));
+            route_halo->set_layer_top(layer_list->find_layer(inst_sd._route_halo_sd->_layer_top_name_sd));
+        }
+
+        instance_list->add_instance(inst);
+        ++instance_count;
+
+        if (instance_list->get_num() % 1000 == 0) {
+            std::cout << "-" << std::flush;
+            if (instance_list->get_num() % 100000 == 0) {
+                std::cout << std::endl;
+            }
+        }
+    }
+
+    if (instance_count >= 1000) {
+        std::cout << std::endl;
+    }
+    std::cout << "[EDADB-IDB] readIdbInstance restored instance_count="
+              << instance_count << std::endl;
+    return true;
+}
+
+#if 0  //EDADB_TODO: enable one object family at a time after Instance.
+bool DefReadEdadb::readIdbPin(void) {
+    idb::IdbDefService* idb_def_service = edadb_adapter::EdadbIdbHelper::getIdbDefService();
+    if (idb_def_service == nullptr) {
+        edadb_adapter::EdadbIdbHelper::setIdbDefService(_def_service);
+    } else if (edadb_adapter::EdadbIdbHelper::getIdbDefService() != _def_service) {
+        std::cerr << "DefReadEdadb::readIdbPin failed, IdbDefService not consistent!" << std::endl;
+        return false;
+    }
+
+    IdbDesign* design = _def_service->get_design();  // Def
+    if (design == nullptr) {
+        std::cerr << "DefReadEdadb::readIdbPin failed, design is nullptr!" << std::endl;
+        return false;
+    }
+
+    IdbPins* pin_list = design->get_io_pin_list();
+    if (pin_list == nullptr) {
+        std::cerr << "DefReadEdadb::readIdbPin failed, pin_list is nullptr!" << std::endl;
+        return false;
+    }
+
+    pin_list->reset();
+
+    auto pin_reader = edadb::makeReadAllOp<edadb::Shadow<idb::IdbPin>>();
+    int32_t pin_count = 0;
+    while (true) {
+        edadb::Shadow<idb::IdbPin> pin_sd;
+        const int read_count = edadb::readNext<edadb::Shadow<idb::IdbPin>>(pin_reader, &pin_sd);
+        if (read_count == 0) {
+            break;
+        }
+        if (read_count < 0) {
+            std::cout << "DefReadEdadb::readIdbPin failed to read!" << std::endl;
+            return false;
+        }
+
+        edadb::Shadow<idb::IdbTerm>* term_sd = pin_sd._io_term_sd;
+        if (term_sd == nullptr) {
+            std::cerr << "DefReadEdadb::readIdbPin failed, term shadow is nullptr!" << std::endl;
+            return false;
+        }
+
+        IdbPin* pin = pin_list->add_pin_list(nullptr);
+        pin_sd.fromShadow(pin);
+        IdbTerm* term = pin->get_term();
+
+        int32_t bounding_box_ll_x = INT_MAX;
+        int32_t bounding_box_ll_y = INT_MAX;
+        int32_t bounding_box_ur_x = INT_MIN;
+        int32_t bounding_box_ur_y = INT_MIN;
+        int32_t coordinate_x = 0;
+        int32_t coordinate_y = 0;
+        int32_t layer_num = 0;
+
+        for (edadb::Shadow<idb::IdbPort>* port_sd : term_sd->_port_list_sd) {
+            IdbPort* port = term->add_port(nullptr);
+            port_sd->fromShadow(port);
+
+            for (auto& layer_shape_sd : port_sd->_layer_shape_list_sd) {
+                IdbLayerShape* layer_shape = port->add_layer_shape();
+                if (!layer_shape_sd->fromShadow(layer_shape)) {
+                    std::cerr << "DefReadEdadb::readIdbPin failed to restore layer shape" << std::endl;
+                    return false;
+                }
+
+                if (!term_sd->_has_port_sd) {
+                    for (IdbRect* rect : layer_shape->get_rect_list()) {
+                        bounding_box_ll_x = std::min(bounding_box_ll_x, rect->get_low_x());
+                        bounding_box_ll_y = std::min(bounding_box_ll_y, rect->get_low_y());
+                        bounding_box_ur_x = std::max(bounding_box_ur_x, rect->get_high_x());
+                        bounding_box_ur_y = std::max(bounding_box_ur_y, rect->get_high_y());
+                        coordinate_x += rect->get_low_x() + rect->get_high_x();
+                        coordinate_y += rect->get_low_y() + rect->get_high_y();
+                        ++layer_num;
+                    }
+                }
+            }
+
+            if (!port->get_layer_shape().empty()) {
+                port->set_io_bounding_box();
+            }
+        }
+
+        if (term_sd->_has_port_sd) {
+            pin->set_port_layer_shape();
+        } else if (layer_num > 0) {
+            term->set_average_position(coordinate_x / (layer_num * 2),
+                                       coordinate_y / (layer_num * 2));
+            term->set_bounding_box(bounding_box_ll_x, bounding_box_ll_y,
+                                   bounding_box_ur_x, bounding_box_ur_y);
+            pin->set_bounding_box();
+        }
+
+        ++pin_count;
+    }
+
+    std::cout << "[EDADB-IDB] readIdbPin restored pin_count="
+              << pin_count << std::endl;
+    return true;
+}
+
+bool DefReadEdadb::readIdbBlockage(void) {
+    IdbDesign* design = _def_service->get_design();  // Def
+    IdbLayout* layout = _def_service->get_layout();  // Lef
+    if (design == nullptr || layout == nullptr) {
+        std::cerr << "DefReadEdadb::readIdbBlockage failed, design or layout is nullptr!" << std::endl;
+        return false;
+    }
+
+    IdbBlockageList* blockage_list = design->get_blockage_list();
+    IdbInstanceList* instance_list = design->get_instance_list();
+    IdbLayers* layer_list = layout->get_layers();
+    if (blockage_list == nullptr || instance_list == nullptr || layer_list == nullptr) {
+        std::cerr << "DefReadEdadb::readIdbBlockage failed, required list is nullptr!" << std::endl;
+        return false;
+    }
+
+    blockage_list->reset();
+
+    auto blockage_reader = edadb::makeReadAllOp<edadb::Shadow<idb::IdbBlockage>>();
+    int32_t blockage_count = 0;
+    while (true) {
+        edadb::Shadow<idb::IdbBlockage> blockage_sd;
+        const int read_count = edadb::readNext<edadb::Shadow<idb::IdbBlockage>>(blockage_reader, &blockage_sd);
+        if (read_count == 0) {
+            break;
+        }
+        if (read_count < 0) {
+            std::cout << "DefReadEdadb::readIdbBlockage failed to read!" << std::endl;
+            return false;
+        }
+
+        IdbBlockage* blockage = nullptr;
+        if (blockage_sd._type_sd == idb::IdbBlockage::IdbBlockageType::kRoutingBlockage) {
+            IdbRoutingBlockage* routing_blockage = blockage_list->add_blockage_routing(blockage_sd._layer_name_sd);
+            blockage_sd.fromShadow(routing_blockage);
+            routing_blockage->set_layer(layer_list->find_layer(blockage_sd._layer_name_sd));
+            blockage = routing_blockage;
+        } else if (blockage_sd._type_sd == idb::IdbBlockage::IdbBlockageType::kPlacementBlockage) {
+            IdbPlacementBlockage* placement_blockage = blockage_list->add_blockage_placement();
+            blockage_sd.fromShadow(placement_blockage);
+            blockage = placement_blockage;
+        } else {
+            std::cerr << "DefReadEdadb::readIdbBlockage failed, unknown blockage type" << std::endl;
+            return false;
+        }
+
+        if (!blockage_sd._instance_name_sd.empty()) {
+            IdbInstance* inst = instance_list->find_instance(blockage_sd._instance_name_sd);
+            if (inst == nullptr) {
+                std::cerr << "DefReadEdadb::readIdbBlockage failed to find instance: "
+                          << blockage_sd._instance_name_sd << std::endl;
+                return false;
+            }
+            blockage->set_instance(inst);
+        }
+
+        ++blockage_count;
+    }
+
+    std::cout << "[EDADB-IDB] readIdbBlockage restored blockage_count="
+              << blockage_count << std::endl;
+    return true;
+}
+#endif
 
 #if 0  //EDADB_TODO: keep the old DbMap-based read implementations for stepwise DbTableOp porting.
 bool DefReadEdadb::readIdbDesign() {
