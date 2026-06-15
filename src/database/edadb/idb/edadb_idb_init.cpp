@@ -70,7 +70,7 @@ int initAllTables(bool crt_tab) {
 #if EDADB_OUTPUT_DEBUG
     std::cout << "[EDADB-IDB] initAllTables create=" << (crt_tab ? "true" : "false") << std::endl;
 #endif
-    std::cout << "[EDADB-IDB] initAllTables register Design/Die/Row/TrackGrid/GCell/Via/Region/Instance/Pin/Blockage/Slot groups"
+    std::cout << "[EDADB-IDB] initAllTables register Design/Die/Row/TrackGrid/GCell/Via/Region/Instance/Pin/Blockage/Slot/Group groups"
               << std::endl;
 
     EDADB_INIT_TABLE(idb::IdbDesign, crt_tab);
@@ -85,9 +85,9 @@ int initAllTables(bool crt_tab) {
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbBlockage>, crt_tab);
     EDADB_INIT_TABLE(idb::IdbRegion, crt_tab);
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbSlot>, crt_tab);
-
-#if 0  //EDADB_TODO: enable these tables one object family at a time after Slot.
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbGroup>, crt_tab);
+
+#if 0  //EDADB_TODO: enable these tables one object family at a time after Group.
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbFillLayer>, crt_tab);
 #endif
 

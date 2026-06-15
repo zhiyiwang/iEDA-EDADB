@@ -65,7 +65,7 @@ bool DefWriteEdadb::writeDb2Edadb(const char* edadb_path) {
 
 
 bool DefWriteEdadb::writeChip2Edadb() {
-    std::cout << "[EDADB-IDB] writeChip2Edadb Design/Die/Row/TrackGrid/GCell/Via/Instance/Pin/Blockage/Region/Slot enabled; other writeIdbXXX disabled"
+    std::cout << "[EDADB-IDB] writeChip2Edadb Design/Die/Row/TrackGrid/GCell/Via/Instance/Pin/Blockage/Region/Slot/Group enabled; other writeIdbXXX disabled"
               << std::endl;
     if (writeIdbDesign() != kDbSuccess) {
         return false;
@@ -100,8 +100,10 @@ bool DefWriteEdadb::writeChip2Edadb() {
     if (writeIdbSlot() != kDbSuccess) {
         return false;
     }
-#if 0  //EDADB_TODO: enable one object family at a time after Slot.
-    writeIdbGroup();
+    if (writeIdbGroup() != kDbSuccess) {
+        return false;
+    }
+#if 0  //EDADB_TODO: enable one object family at a time after Group.
     writeIdbFill();
 #endif
 
@@ -488,6 +490,49 @@ int32_t DefWriteEdadb::writeIdbSlot(void) {
 
     if (!ok) {
         std::cerr << "DefWriteEdadb::writeIdbSlot failed to insertVector" << std::endl;
+        return kDbFail;
+    }
+
+    return kDbSuccess;
+}
+
+int32_t DefWriteEdadb::writeIdbGroup(void) {
+    IdbDesign* design = _def_service->get_design();  // def
+    if (design == nullptr) {
+        std::cerr << "[EDADB-IDB] writeIdbGroup failed: design is nullptr" << std::endl;
+        return kDbFail;
+    }
+
+    IdbGroupList* group_list = design->get_group_list();
+    if (group_list == nullptr) {
+      std::cout << "Write GROUPS error..." << std::endl;
+      return kDbFail;
+    }
+
+    vector<IdbGroup*>& group_vec = group_list->get_group_list();
+    std::cout << "[EDADB-IDB] writeIdbGroup insert group_count="
+              << group_vec.size() << std::endl;
+
+    if (group_vec.empty()) {
+      return kDbSuccess;
+    }
+
+    vector<edadb::Shadow<idb::IdbGroup>*> group_sd_vec;
+    group_sd_vec.reserve(group_vec.size());
+    for (auto& group : group_vec) {
+        auto* group_sd = new edadb::Shadow<idb::IdbGroup>();
+        group_sd->toShadow(group);
+        group_sd_vec.emplace_back(group_sd);
+    }
+
+    bool ok = edadb::insertVector<edadb::Shadow<idb::IdbGroup>>(group_sd_vec);
+    for (auto& group_sd : group_sd_vec) {
+        delete group_sd;
+        group_sd = nullptr;
+    }
+
+    if (!ok) {
+        std::cerr << "DefWriteEdadb::writeIdbGroup failed to insertVector" << std::endl;
         return kDbFail;
     }
 

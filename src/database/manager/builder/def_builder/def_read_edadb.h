@@ -55,8 +55,8 @@ protected:
     bool readIdbBlockage(void);
     bool readIdbRegion(void);
     bool readIdbSlot(void);
-#if 0  //EDADB_TODO: enable one object family at a time after Slot.
     bool readIdbGroup(void);
+#if 0  //EDADB_TODO: enable one object family at a time after Group.
     bool readIdbFill(void);
 #endif
 

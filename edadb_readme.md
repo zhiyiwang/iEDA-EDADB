@@ -11,12 +11,12 @@ In this branch, the goal is not yet full object persistence. The current goal is
 - iEDA can open/init an EDADB database.
 - iEDA exposes Tcl commands `edadb_write` and `edadb_read`.
 - The demo can run DEF → EDADB write → EDADB read → DEF.
-- The Design, Die, Row, TrackGrid, GCell, Via, Instance, Pin, Blockage, Region, and Slot groups are persisted through EDADB.
+- The Design, Die, Row, TrackGrid, GCell, Via, Instance, Pin, Blockage, Region, Slot, and Group families are persisted through EDADB.
 - The final DEF roundtrip matches the input DEF.
 
 Current limitation:
 
-- Only Design / Units / BusBit, Die, Row, TrackGrid, GCell, Via, Instance, Pin, Blockage, Region, and Slot are written to and read from EDADB.
+- Only Design / Units / BusBit, Die, Row, TrackGrid, GCell, Via, Instance, Pin, Blockage, Region, Slot, and Group are written to and read from EDADB.
 - Other iDB object families still rebuild from the original DEF text.
 - Continue development on C (`edadb-idb`) only. Use B only as reference for old mappings.
 
@@ -163,11 +163,11 @@ Start from the iEDA executable entry, then follow the Tcl command path into EDAD
 
 13. `src/database/manager/builder/def_builder/def_write_edadb.*`
     - EDADB write framework
-- currently writes Design / Units / BusBit, Die, Row, TrackGrid, GCell, Via, Instance, Pin, Blockage, Region, and Slot
+- currently writes Design / Units / BusBit, Die, Row, TrackGrid, GCell, Via, Instance, Pin, Blockage, Region, Slot, and Group
 
 14. `src/database/manager/builder/def_builder/def_read_edadb.*`
     - EDADB read framework
-- currently reads Design / Units / BusBit, Die, Row, TrackGrid, GCell, Via, Region, Instance, Pin, Blockage, and Slot from EDADB
+- currently reads Design / Units / BusBit, Die, Row, TrackGrid, GCell, Via, Region, Instance, Pin, Blockage, Slot, and Group from EDADB
     - rebuilds remaining iDB object families from DEF text
 
 15. `src/database/edadb/idb/edadb_idb_init.*`
@@ -204,7 +204,7 @@ edadb_write
 Current write state:
 
 - `initWriteDb()` is active.
-- `writeChip2Edadb()` calls `writeIdbDesign()`, `writeIdbDie()`, `writeIdbRow()`, `writeIdbTrackGrid()`, `writeIdbGCellGrid()`, `writeIdbVia()`, `writeIdbInstance()`, `writeIdbPin()`, `writeIdbBlockage()`, `writeIdbRegion()`, and `writeIdbSlot()`.
+- `writeChip2Edadb()` calls `writeIdbDesign()`, `writeIdbDie()`, `writeIdbRow()`, `writeIdbTrackGrid()`, `writeIdbGCellGrid()`, `writeIdbVia()`, `writeIdbInstance()`, `writeIdbPin()`, `writeIdbBlockage()`, `writeIdbRegion()`, `writeIdbSlot()`, and `writeIdbGroup()`.
 - `writeIdbDesign()` uses the current EDADB API: `edadb::insertObject<idb::IdbDesign>(design)`.
 - `writeIdbDesign()` follows `DefWrite::write_units()` style: use DEF units when valid, otherwise use LEF units, and update active `design->_units` to the effective DBU before EDADB insert.
 - `writeIdbDie()` follows `DefWrite::write_die()` style: persist the die point list through `edadb::Shadow<idb::IdbDie>`.
@@ -217,6 +217,7 @@ Current write state:
 - `writeIdbBlockage()` follows `DefWrite::write_blockage()` style and writes only DEF-emitted BLOCKAGES fields through `Shadow<IdbBlockage>`.
 - `writeIdbRegion()` follows `DefWrite::write_region()` style and writes REGIONS fields directly as `IdbRegion`.
 - `writeIdbSlot()` follows `DefWrite::write_slot()` style and writes SLOTS fields through `Shadow<IdbSlot>`.
+- `writeIdbGroup()` follows `DefWrite::write_group()` style and writes GROUPS fields through `Shadow<IdbGroup>`.
 - EDADB creates physical table `iDesign`; `IdbUnits` and `IdbBusBitChars` are inline columns inside `iDesign`.
 - EDADB creates physical table `iDieSD` plus vector child rows for die coordinates.
 - EDADB creates physical table `iRow`; `IdbSite` and original coordinate are inline row columns.
@@ -228,6 +229,7 @@ Current write state:
 - EDADB creates physical table `iBlockageSD` plus rect child table.
 - EDADB creates physical table `iRegion` plus boundary-rect child table.
 - EDADB creates physical table `iSlotSD` plus rect child table.
+- EDADB creates physical table `iGroupSD` plus instance-name child table.
 - Other `writeIdbXXX()` calls are disabled under `//EDADB_TODO`.
 
 Read path:
@@ -246,7 +248,7 @@ edadb_read
 Current read state:
 
 - `initReadDb()` is active.
-- `createDbByEdadb()` calls `readIdbDesign()`, `readIdbDie()`, `readIdbRow()`, `readIdbTrackGrid()`, `readIdbGCellGrid()`, `readIdbVia()`, `readIdbRegion()`, `readIdbInstance()`, `readIdbPin()`, `readIdbBlockage()`, and `readIdbSlot()`.
+- `createDbByEdadb()` calls `readIdbDesign()`, `readIdbDie()`, `readIdbRow()`, `readIdbTrackGrid()`, `readIdbGCellGrid()`, `readIdbVia()`, `readIdbRegion()`, `readIdbInstance()`, `readIdbPin()`, `readIdbBlockage()`, `readIdbSlot()`, and `readIdbGroup()`.
 - `readIdbDesign()` uses the current EDADB cursor API: `makeReadAllOp<idb::IdbDesign>()` + `readNext()`.
 - `readIdbDesign()` follows the old DbMap implementation semantics: transfer owned `_units` and `_bus_bit_chars` pointers into the active `IdbDesign`, then null them in the temporary object.
 - The temporary `got` object is a safe buffer. Reading directly into active `design` would better match original iEDA object reuse, but EDADB NULL inline pointer columns could clear active pointers, so keep the buffered style for now.
@@ -260,7 +262,8 @@ Current read state:
 - `readIdbBlockage()` reads `Shadow<IdbBlockage>`, rebuilds routing/placement derived objects, resolves layers/instances by name, and restores rects, matching `DefRead::parse_blockage()`.
 - `readIdbRegion()` reads `IdbRegion` directly and restores name/type/boundary rects before instances resolve region names, matching `DefRead::parse_region()`.
 - `readIdbSlot()` reads `Shadow<IdbSlot>` and restores layer name plus rects, matching `DefRead::parse_slot()`.
-- `createDbByDef()` disables version/design/units/busbit/die/row/track/gcell/via/component/pin/blockage/region/slot callbacks and restores all remaining object families from DEF text.
+- `readIdbGroup()` reads `Shadow<IdbGroup>`, restores group name, resolves region name, and reconnects member instances by name.
+- `createDbByDef()` disables version/design/units/busbit/die/row/track/gcell/via/component/pin/blockage/region/slot/group callbacks and restores all remaining object families from DEF text.
 
 Important ownership note:
 
@@ -348,7 +351,7 @@ After each migration, check:
 - **Read**: Match `DefRead::parse_xxx()` rebuild semantics and disable the corresponding DEF callback.
 - **Runtime**: Run only the canonical demo, check write/read logs, inspect SQLite counts/key columns, and record uncovered cases.
 
-Active targets: design / units / busbit, die, row, track grid, gcell grid, via, instance, pin, blockage, region, and slot.
+Active targets: design / units / busbit, die, row, track grid, gcell grid, via, instance, pin, blockage, region, slot, and group.
 
 Mapping for these targets:
 
@@ -365,6 +368,7 @@ Mapping for these targets:
 | `writeIdbBlockage()` / `readIdbBlockage()` | `defrSetBlockageCbk` | `write_blockage` |
 | `writeIdbRegion()` / `readIdbRegion()` | `defrSetRegionCbk` | `write_region` |
 | `writeIdbSlot()` / `readIdbSlot()` | `defrSetSlotCbk` | `write_slot` |
+| `writeIdbGroup()` / `readIdbGroup()` | `defrSetGroupCbk` | `write_group` |
 
 Row does not currently need a shadow class. `IdbRow::_name` is the root table primary key, so EDADB can attach inline `IdbSite` and original-coordinate columns directly. `IdbDie` needed shadow because its coordinate vector requires a synthetic root `primary_key` for child rows.
 
@@ -383,6 +387,8 @@ Blockage uses `Shadow<IdbBlockage>` because the iDB class is polymorphic. The st
 Region does not need a shadow class. DEF REGIONS maps directly to region name, type, and boundary rect list, and `_name` is a natural root key. Read Region before Instance so component region references can resolve against the restored region list.
 
 Slot uses `Shadow<IdbSlot>`. DEF SLOTS maps to layer name plus rect list, but `_layer_name` is not a unique root key, so the shadow adds `primary_key` for stable child-rect grouping.
+
+Group uses `Shadow<IdbGroup>`. DEF GROUPS stores references by name: group name, region name, and member instance names. Readback runs after Region and Instance so those names can be resolved.
 
 Physical DB shape for active targets:
 
@@ -434,6 +440,9 @@ iRegion__boudary_list_IdbRect(iRegion__name, ...)
 
 iSlotSD(primary_key, _layer_name_sd)
 iSlotSD__rect_list_sd_IdbRect(iSlotSD_primary_key, ...)
+
+iGroupSD(_group_name_sd, _region_name_sd)
+iGroupSD__instance_name_vec_sd_CppStr(iGroupSD__group_name_sd, ...)
 ```
 
 NET and SPECIALNET are not implemented yet.
@@ -485,6 +494,8 @@ Expected current result:
 - logs show `readIdbRegion restored region_count=0`
 - logs show `writeIdbSlot insert slot_count=0`
 - logs show `readIdbSlot restored slot_count=0`
+- logs show `writeIdbGroup insert group_count=0`
+- logs show `readIdbGroup restored group_count=0`
 - SQLite `iDesign` row contains `gcd|5.8|1000|[|]`
 - SQLite `iDieSD_points_sd_iCoordSD` contains `(0,0)` and `(149960,150128)`
 - SQLite `iRow` row count is `39`
@@ -496,4 +507,5 @@ Expected current result:
 - SQLite `iBlockageSD` row count is `0`; current sky130_gcd demo covers only the empty-table path for Blockage
 - SQLite `iRegion` row count is `0`; current sky130_gcd demo covers only the empty-table path for Region
 - SQLite `iSlotSD` row count is `0`; current sky130_gcd demo covers only the empty-table path for Slot
+- SQLite `iGroupSD` row count is `0`; current sky130_gcd demo covers only the empty-table path for Group
 - final message says input DEF and output DEF are the same

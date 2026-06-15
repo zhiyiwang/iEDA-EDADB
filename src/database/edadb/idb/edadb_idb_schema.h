@@ -113,10 +113,9 @@ TABLE4CLASS_WVEC(idb::IdbRegion, "iRegion", (_name, _type), (_boudary_list));
 #include "shadow/shadow_idb_slot.h"
 TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbSlot>, "iSlotSD", (primary_key, _layer_name_sd), (_rect_list_sd));
 
-//--#include "shadow/shadow_idb_group.h"
-//--TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbGroup>, "iGroupSD", (_group_name_sd, _region_name_sd), (_instance_name_vec_sd));
-//--
-//--
+#include "shadow/shadow_idb_group.h"
+TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbGroup>, "iGroupSD", (_group_name_sd, _region_name_sd), (_instance_name_vec_sd));
+
 //--#include "shadow/shadow_idb_fill.h"
 //--TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbFillLayer>, "iFillLayerSD", (primary_key, _layer_name_sd), (_rect_list_sd));
 //--
