@@ -6,7 +6,8 @@
 
 #pragma once
 
-#include "../../data/design/db_design/IdbFill.h"
+#include "edadb.h"
+#include "database/data/design/db_design/IdbFill.h"
 
 namespace edadb {
 
@@ -89,7 +90,12 @@ template <>
 class Shadow<idb::IdbFill> {
 public:
     Shadow<idb::IdbFill> (void): primary_key(next_primary_key++) {}
-    ~Shadow<idb::IdbFill>() = default;
+    ~Shadow<idb::IdbFill>() {
+        delete _layer_sd;
+        _layer_sd = nullptr;
+        delete _via_sd;
+        _via_sd = nullptr;
+    }
     Shadow<idb::IdbFill>(const Shadow& other) = delete;
     Shadow<idb::IdbFill>& operator=(const Shadow& other) = delete;
 public:

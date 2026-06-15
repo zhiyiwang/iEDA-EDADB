@@ -92,8 +92,10 @@ bool DefReadEdadb::createDbByDef(const char* path) {
 #if 0  //EDADB_TODO: Group is restored from EDADB.
     defrSetGroupCbk(groupCallback);
 #endif
+#if 0  //EDADB_TODO: Fill is restored from EDADB.
     defrSetFillStartCbk(fillsCallback);
     defrSetFillCbk(fillCallback);
+#endif
 
     // Nets still come from DEF text while EDADB net persistence is not implemented.
     defrSetNetStartCbk(netBeginCallback);
@@ -258,7 +260,7 @@ bool DefReadEdadb::createDbByDef(const char* path) {
 
 
 bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
-    std::cout << "[EDADB-IDB] createDbByEdadb Design/Die/Row/TrackGrid/GCell/Via/Region/Instance/Pin/Blockage/Slot/Group enabled path="
+    std::cout << "[EDADB-IDB] createDbByEdadb Design/Die/Row/TrackGrid/GCell/Via/Region/Instance/Pin/Blockage/Slot/Group/Fill enabled path="
               << edadb_path << std::endl;
     std::cout << "[EDADB-IDB] createDbByEdadb other readIdbXXX disabled; DEF callbacks rebuild remaining iDB"
               << std::endl;
@@ -275,10 +277,7 @@ bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
     CHECK_READ(readIdbBlockage(), "DefReadEdadb::createDbByEdadb failed to read IdbBlockage!");
     CHECK_READ(readIdbSlot(), "DefReadEdadb::createDbByEdadb failed to read IdbSlot!");
     CHECK_READ(readIdbGroup(), "DefReadEdadb::createDbByEdadb failed to read IdbGroup!");
-
-#if 0  //EDADB_TODO: enable one object family at a time after Group.
     CHECK_READ(readIdbFill(), "DefReadEdadb::createDbByEdadb failed to read IdbFill!");
-#endif
 
 
 
@@ -668,6 +667,77 @@ bool DefReadEdadb::readIdbGroup(void) {
 
     std::cout << "[EDADB-IDB] readIdbGroup restored group_count="
               << group_count << std::endl;
+    return true;
+}
+
+bool DefReadEdadb::readIdbFill(void) {
+    IdbDesign* design = _def_service->get_design();  // def
+    IdbLayout* layout = _def_service->get_layout();  // lef
+    if (design == nullptr || layout == nullptr) {
+        std::cerr << "DefReadEdadb::readIdbFill failed, design or layout is nullptr!" << std::endl;
+        return false;
+    }
+
+    IdbLayers* layer_list = layout->get_layers();
+    IdbVias* via_list_def = design->get_via_list();
+    IdbVias* via_list_lef = layout->get_via_list();
+    IdbFillList* fill_list = design->get_fill_list();
+    if (layer_list == nullptr || via_list_def == nullptr || via_list_lef == nullptr || fill_list == nullptr) {
+        std::cerr << "DefReadEdadb::readIdbFill failed, required list is nullptr!" << std::endl;
+        return false;
+    }
+
+    auto fill_reader = edadb::makeReadAllOp<edadb::Shadow<idb::IdbFill>>();
+    int32_t fill_count = 0;
+    while (true) {
+        auto* fill_sd = new edadb::Shadow<idb::IdbFill>();
+        const int read_count = edadb::readNext<edadb::Shadow<idb::IdbFill>>(fill_reader, fill_sd);
+        if (read_count == 0) {
+            delete fill_sd;
+            break;
+        }
+        if (read_count < 0) {
+            delete fill_sd;
+            std::cout << "DefReadEdadb::readIdbFill failed to read!" << std::endl;
+            return false;
+        }
+
+        if (fill_sd->_layer_sd != nullptr) {
+            IdbLayer* layer = layer_list->find_layer(fill_sd->_layer_sd->_layer_name_sd);
+            if (layer == nullptr) {
+                std::cerr << "DefReadEdadb::readIdbFill failed to find layer: "
+                          << fill_sd->_layer_sd->_layer_name_sd << std::endl;
+                delete fill_sd;
+                return false;
+            }
+
+            IdbFillLayer* fill_layer = fill_list->add_fill_layer(layer);
+            fill_sd->_layer_sd->fromShadow(fill_layer);
+        }
+
+        if (fill_sd->_via_sd != nullptr) {
+            IdbVia* via = via_list_def->find_via(fill_sd->_via_sd->_via_name_sd);
+            if (via == nullptr) {
+                via = via_list_lef->find_via(fill_sd->_via_sd->_via_name_sd);
+            }
+            if (via == nullptr) {
+                std::cerr << "DefReadEdadb::readIdbFill failed to find via: "
+                          << fill_sd->_via_sd->_via_name_sd << std::endl;
+                delete fill_sd;
+                return false;
+            }
+
+            IdbVia* via_new = via->clone();
+            IdbFillVia* fill_via = fill_list->add_fill_via(via_new);
+            fill_sd->_via_sd->fromShadow(fill_via);
+        }
+
+        delete fill_sd;
+        ++fill_count;
+    }
+
+    std::cout << "[EDADB-IDB] readIdbFill restored fill_count="
+              << fill_count << std::endl;
     return true;
 }
 

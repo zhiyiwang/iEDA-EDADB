@@ -59,6 +59,7 @@ Active persistence groups:
 - `writeIdbRegion()` / `readIdbRegion()` are enabled directly on `IdbRegion`.
 - `writeIdbSlot()` / `readIdbSlot()` are enabled through `edadb::Shadow<idb::IdbSlot>`.
 - `writeIdbGroup()` / `readIdbGroup()` are enabled through `edadb::Shadow<idb::IdbGroup>`.
+- `writeIdbFill()` / `readIdbFill()` are enabled through `edadb::Shadow<idb::IdbFill>`.
 - `iDesign` stores `IdbUnits` and `IdbBusBitChars` as inline columns.
 - `iTrackGridSD` stores track grid scalar data and owns vector child rows for layer names.
 - `iVia` stores generated via fields inline through EDADB member StoreType conversion; no `Shadow<IdbVia>` is defined.
@@ -68,6 +69,7 @@ Active persistence groups:
 - `iRegion` stores DEF REGIONS fields: name, type, and boundary rects.
 - `iSlotSD` stores DEF SLOTS fields: layer name and rects.
 - `iGroupSD` stores DEF GROUPS fields: group name, region name, and instance names.
+- `iFillSD` stores DEF FILLS fields through layer/via member shadows: layer name + rects, via name + coordinates.
 - Disabled matching DEF parser callbacks in `DefReadEdadb::createDbByDef()`:
   - `defrSetVersionStrCbk`
   - `defrSetDesignCbk`
@@ -89,6 +91,8 @@ Active persistence groups:
   - `defrSetRegionCbk`
   - `defrSetSlotCbk`
   - `defrSetGroupCbk`
+  - `defrSetFillStartCbk`
+  - `defrSetFillCbk`
 - Other object families still come from DEF text callbacks.
 
 Validation:
@@ -132,13 +136,16 @@ Validation:
 - Demo logs on 2026-06-15 show `writeIdbGroup insert group_count=0`.
 - Demo logs on 2026-06-15 show `readIdbGroup restored group_count=0`.
 - SQLite group check: `select count(*) from iGroupSD;` returns `0`; current sky130_gcd demo validates the empty-table path only.
+- Demo logs on 2026-06-15 show `writeIdbFill insert fill_count=0`.
+- Demo logs on 2026-06-15 show `readIdbFill restored fill_count=0`.
+- SQLite fill check: `select count(*) from iFillSD;` returns `0`; current sky130_gcd demo validates the empty-table path only.
 - Final demo message: `Input def and output def are the same.`
 
 Current behavior:
 
-- `edadb_write` writes the Design, Die, Row, TrackGrid, GCell, Via, Instance, Pin, Blockage, Region, Slot, and Group families to EDADB.
-- `edadb_read` reads the Design, Die, Row, TrackGrid, GCell, Via, Region, Instance, Pin, Blockage, Slot, and Group families from EDADB.
-- DEF text callbacks rebuild fill/net/special-net.
+- `edadb_write` writes the Design, Die, Row, TrackGrid, GCell, Via, Instance, Pin, Blockage, Region, Slot, Group, and Fill families to EDADB.
+- `edadb_read` reads the Design, Die, Row, TrackGrid, GCell, Via, Region, Instance, Pin, Blockage, Slot, Group, and Fill families from EDADB.
+- DEF text callbacks rebuild net/special-net.
 - Disabled `readIdbXXX()` / `writeIdbXXX()` bodies are preserved under `#if 0 //EDADB_TODO`.
 
 Important rule:
@@ -165,7 +172,9 @@ Important rule:
 - Read `IdbRegion` before `IdbInstance` so instance region-name resolution can use the EDADB-restored region list.
 - `IdbSlot` uses shadow because DEF SLOTS has no natural unique root key: `_layer_name` is not guaranteed unique, while rect child rows still need a stable parent key.
 - `IdbGroup` uses shadow because DEF GROUPS stores region and member references by name; readback resolves region/instance names after Region and Instance are restored.
-- Next targets: `IdbFill`, `SpecialNet`, `Net`, one commit per target.
+- `IdbFill` uses shadow because DEF FILLS is a typed layer/via storage view with pointer references converted to layer/via names and child geometry rows.
+- Current sky130_gcd only validates empty Fill; nonzero Fill needs a dedicated testcase because `DefWrite::write_fill()` emits layer/via clauses from each fill object.
+- Next targets: `SpecialNet`, `Net`, one commit per target.
 - After each migration, run the concise Adapter Correctness Audit in `edadb_readme.md`.
 
 ## C Namespace / API Boundary

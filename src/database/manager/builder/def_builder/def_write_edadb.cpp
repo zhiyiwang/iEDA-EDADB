@@ -65,7 +65,7 @@ bool DefWriteEdadb::writeDb2Edadb(const char* edadb_path) {
 
 
 bool DefWriteEdadb::writeChip2Edadb() {
-    std::cout << "[EDADB-IDB] writeChip2Edadb Design/Die/Row/TrackGrid/GCell/Via/Instance/Pin/Blockage/Region/Slot/Group enabled; other writeIdbXXX disabled"
+    std::cout << "[EDADB-IDB] writeChip2Edadb Design/Die/Row/TrackGrid/GCell/Via/Instance/Pin/Blockage/Region/Slot/Group/Fill enabled; other writeIdbXXX disabled"
               << std::endl;
     if (writeIdbDesign() != kDbSuccess) {
         return false;
@@ -103,9 +103,9 @@ bool DefWriteEdadb::writeChip2Edadb() {
     if (writeIdbGroup() != kDbSuccess) {
         return false;
     }
-#if 0  //EDADB_TODO: enable one object family at a time after Group.
-    writeIdbFill();
-#endif
+    if (writeIdbFill() != kDbSuccess) {
+        return false;
+    }
 
     return true;
 } // writeChip2Edadb
@@ -533,6 +533,49 @@ int32_t DefWriteEdadb::writeIdbGroup(void) {
 
     if (!ok) {
         std::cerr << "DefWriteEdadb::writeIdbGroup failed to insertVector" << std::endl;
+        return kDbFail;
+    }
+
+    return kDbSuccess;
+}
+
+int32_t DefWriteEdadb::writeIdbFill(void) {
+    IdbDesign* design = _def_service->get_design();  // def
+    if (design == nullptr) {
+        std::cerr << "[EDADB-IDB] writeIdbFill failed: design is nullptr" << std::endl;
+        return kDbFail;
+    }
+
+    IdbFillList* fill_list = design->get_fill_list();
+    if (fill_list == nullptr) {
+      std::cout << "Write FILLS error..." << std::endl;
+      return kDbFail;
+    }
+
+    vector<IdbFill*>& fill_vec = fill_list->get_fill_list();
+    std::cout << "[EDADB-IDB] writeIdbFill insert fill_count="
+              << fill_vec.size() << std::endl;
+
+    if (fill_vec.empty()) {
+      return kDbSuccess;
+    }
+
+    vector<edadb::Shadow<idb::IdbFill>*> fill_sd_vec;
+    fill_sd_vec.reserve(fill_vec.size());
+    for (auto& fill : fill_vec) {
+        auto* fill_sd = new edadb::Shadow<idb::IdbFill>();
+        fill_sd->toShadow(fill);
+        fill_sd_vec.emplace_back(fill_sd);
+    }
+
+    bool ok = edadb::insertVector<edadb::Shadow<idb::IdbFill>>(fill_sd_vec);
+    for (auto& fill_sd : fill_sd_vec) {
+        delete fill_sd;
+        fill_sd = nullptr;
+    }
+
+    if (!ok) {
+        std::cerr << "DefWriteEdadb::writeIdbFill failed to insertVector" << std::endl;
         return kDbFail;
     }
 

@@ -116,12 +116,12 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbSlot>, "iSlotSD", (primary_key, _layer_na
 #include "shadow/shadow_idb_group.h"
 TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbGroup>, "iGroupSD", (_group_name_sd, _region_name_sd), (_instance_name_vec_sd));
 
-//--#include "shadow/shadow_idb_fill.h"
-//--TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbFillLayer>, "iFillLayerSD", (primary_key, _layer_name_sd), (_rect_list_sd));
-//--
-//--TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbFillVia>, "iFillViaSD", (primary_key, _via_name_sd), (_coordinate_list_sd));
-//--
-//--TABLE4CLASS(edadb::Shadow<idb::IdbFill>, "iFillSD", (primary_key, _type_sd, _layer_sd, _via_sd));
+#include "shadow/shadow_idb_fill.h"
+TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbFillLayer>, "iFillLayerSD", (primary_key, _layer_name_sd), (_rect_list_sd));
+
+TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbFillVia>, "iFillViaSD", (primary_key, _via_name_sd), (_coordinate_list_sd));
+
+TABLE4CLASS(edadb::Shadow<idb::IdbFill>, "iFillSD", (primary_key, _type_sd, _layer_sd, _via_sd));
 
 
 //#if 0

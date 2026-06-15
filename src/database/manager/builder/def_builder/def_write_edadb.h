@@ -39,8 +39,8 @@ protected:
     int32_t writeIdbRegion(void);
     int32_t writeIdbSlot(void);
     int32_t writeIdbGroup(void);
-#if 0  //EDADB_TODO: enable one object family at a time after Group.
     int32_t writeIdbFill(void);
+#if 0  //EDADB_TODO: enable one object family at a time after Fill.
 #endif
 
 
