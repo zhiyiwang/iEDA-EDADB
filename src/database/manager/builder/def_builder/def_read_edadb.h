@@ -51,9 +51,9 @@ protected:
     bool readIdbGCellGrid(void);
     bool readIdbVia(void);
     bool readIdbInstance(void);
-#if 0  //EDADB_TODO: enable one object family at a time after Instance.
-    bool readIdbRegion(void);
     bool readIdbPin(void);
+#if 0  //EDADB_TODO: enable one object family at a time after Pin.
+    bool readIdbRegion(void);
     bool readIdbBlockage(void);
     bool readIdbSlot(void);
     bool readIdbGroup(void);

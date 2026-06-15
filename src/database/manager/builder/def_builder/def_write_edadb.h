@@ -34,8 +34,8 @@ protected:
     int32_t writeIdbGCellGrid(void);
     int32_t writeIdbVia(void);
     int32_t writeIdbInstance(void); 
-#if 0  //EDADB_TODO: enable one object family at a time after Instance.
     int32_t writeIdbPin(void);
+#if 0  //EDADB_TODO: enable one object family at a time after Pin.
     int32_t writeIdbBlockage(void);
     int32_t writeIdbRegion(void);
     int32_t writeIdbSlot(void);

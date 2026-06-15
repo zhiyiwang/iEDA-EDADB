@@ -65,7 +65,7 @@ bool DefWriteEdadb::writeDb2Edadb(const char* edadb_path) {
 
 
 bool DefWriteEdadb::writeChip2Edadb() {
-    std::cout << "[EDADB-IDB] writeChip2Edadb Design/Die/Row/TrackGrid/GCell/Via/Instance enabled; other writeIdbXXX disabled"
+    std::cout << "[EDADB-IDB] writeChip2Edadb Design/Die/Row/TrackGrid/GCell/Via/Instance/Pin enabled; other writeIdbXXX disabled"
               << std::endl;
     if (writeIdbDesign() != kDbSuccess) {
         return false;
@@ -88,10 +88,10 @@ bool DefWriteEdadb::writeChip2Edadb() {
     if (writeIdbInstance() != kDbSuccess) {
         return false;
     }
-#if 0  //EDADB_TODO: enable one object family at a time after Instance.
     if (writeIdbPin() != kDbSuccess) {
         return false;
     }
+#if 0  //EDADB_TODO: enable one object family at a time after Pin.
     if (writeIdbBlockage() != kDbSuccess) {
         return false;
     }
@@ -334,7 +334,6 @@ int32_t DefWriteEdadb::writeIdbInstance(void) {
     return kDbSuccess;
 }
 
-#if 0  //EDADB_TODO: enable one object family at a time after Instance.
 int32_t DefWriteEdadb::writeIdbPin(void) {
     IdbDesign* design = _def_service->get_design();
     if (design == nullptr) {
@@ -378,6 +377,7 @@ int32_t DefWriteEdadb::writeIdbPin(void) {
     return kDbSuccess;
 }
 
+#if 0  //EDADB_TODO: enable one object family at a time after Pin.
 int32_t DefWriteEdadb::writeIdbBlockage(void) {
     IdbDesign* design = _def_service->get_design();
     if (design == nullptr) {
