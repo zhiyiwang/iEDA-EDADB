@@ -65,7 +65,7 @@ bool DefWriteEdadb::writeDb2Edadb(const char* edadb_path) {
 
 
 bool DefWriteEdadb::writeChip2Edadb() {
-    std::cout << "[EDADB-IDB] writeChip2Edadb Design/Die/Row/TrackGrid/GCell/Via/Instance/Pin/Blockage enabled; other writeIdbXXX disabled"
+    std::cout << "[EDADB-IDB] writeChip2Edadb Design/Die/Row/TrackGrid/GCell/Via/Instance/Pin/Blockage/Region enabled; other writeIdbXXX disabled"
               << std::endl;
     if (writeIdbDesign() != kDbSuccess) {
         return false;
@@ -94,10 +94,10 @@ bool DefWriteEdadb::writeChip2Edadb() {
     if (writeIdbBlockage() != kDbSuccess) {
         return false;
     }
-#if 0  //EDADB_TODO: enable one object family at a time after Blockage.
     if (writeIdbRegion() != kDbSuccess) {
         return false;
     }
+#if 0  //EDADB_TODO: enable one object family at a time after Region.
     writeIdbSlot();
     writeIdbGroup();
     writeIdbFill();
@@ -420,7 +420,6 @@ int32_t DefWriteEdadb::writeIdbBlockage(void) {
     return kDbSuccess;
 }
 
-#if 0  //EDADB_TODO: enable one object family at a time after Blockage.
 int32_t DefWriteEdadb::writeIdbRegion(void) {
     IdbDesign* design = _def_service->get_design();  // def
     if (design == nullptr) {
@@ -449,7 +448,6 @@ int32_t DefWriteEdadb::writeIdbRegion(void) {
 
     return kDbSuccess;
 }
-#endif
 
 #if 0  //EDADB_TODO: keep the old DbMap-based write implementations for stepwise DbTableOp porting.
 int32_t DefWriteEdadb::writeIdbDesign() {

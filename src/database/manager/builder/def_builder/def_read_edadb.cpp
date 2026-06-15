@@ -84,8 +84,8 @@ bool DefReadEdadb::createDbByDef(const char* path) {
     defrSetPinEndCbk(pinsEndCallback);
     defrSetStartPinsCbk(pinsBeginCallback);
     defrSetBlockageCbk(blockageCallback);
-#endif
     defrSetRegionCbk(regionCallback);
+#endif
     defrSetSlotCbk(slotsCallback);
     defrSetGroupCbk(groupCallback);
     defrSetFillStartCbk(fillsCallback);
@@ -254,7 +254,7 @@ bool DefReadEdadb::createDbByDef(const char* path) {
 
 
 bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
-    std::cout << "[EDADB-IDB] createDbByEdadb Design/Die/Row/TrackGrid/GCell/Via/Instance/Pin/Blockage enabled path="
+    std::cout << "[EDADB-IDB] createDbByEdadb Design/Die/Row/TrackGrid/GCell/Via/Region/Instance/Pin/Blockage enabled path="
               << edadb_path << std::endl;
     std::cout << "[EDADB-IDB] createDbByEdadb other readIdbXXX disabled; DEF callbacks rebuild remaining iDB"
               << std::endl;
@@ -265,12 +265,12 @@ bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
     CHECK_READ(readIdbTrackGrid(), "DefReadEdadb::createDbByEdadb failed to read readIdbTrackGrid!");
     CHECK_READ(readIdbGCellGrid(), "DefReadEdadb::createDbByEdadb failed to read IdbGCellGrid!");
     CHECK_READ(readIdbVia(), "DefReadEdadb::createDbByEdadb failed to read IdbVia!");
+    CHECK_READ(readIdbRegion(), "DefReadEdadb::createDbByEdadb failed to read IdbRegion!");
     CHECK_READ(readIdbInstance(), "DefReadEdadb::createDbByEdadb failed to read IdbInstance!");
     CHECK_READ(readIdbPin(), "DefReadEdadb::createDbByEdadb failed to read IdbPin!");
     CHECK_READ(readIdbBlockage(), "DefReadEdadb::createDbByEdadb failed to read IdbBlockage!");
 
-#if 0  //EDADB_TODO: enable one object family at a time after Blockage.
-    CHECK_READ(readIdbRegion(), "DefReadEdadb::createDbByEdadb failed to read IdbRegion!");
+#if 0  //EDADB_TODO: enable one object family at a time after Region.
     CHECK_READ(readIdbSlot(), "DefReadEdadb::createDbByEdadb failed to read IdbSlot!");
     CHECK_READ(readIdbGroup(), "DefReadEdadb::createDbByEdadb failed to read IdbGroup!");
     CHECK_READ(readIdbFill(), "DefReadEdadb::createDbByEdadb failed to read IdbFill!");
@@ -541,7 +541,6 @@ bool DefReadEdadb::readIdbVia(void) {
     return true;
 }
 
-#if 0  //EDADB_TODO: enable one object family at a time after Instance.
 bool DefReadEdadb::readIdbRegion(void) {
     IdbDesign* design = _def_service->get_design();  // def
     if (design == nullptr) {
@@ -578,7 +577,6 @@ bool DefReadEdadb::readIdbRegion(void) {
               << region_count << std::endl;
     return true;
 }
-#endif
 
 bool DefReadEdadb::readIdbInstance(void) {
     IdbDesign* design = _def_service->get_design();  // Def

@@ -107,10 +107,9 @@ TABLE4CLASS(edadb::Shadow<idb::IdbPin>, "iPinSD", (_pin_name_sd, _net_name_sd, _
 #include "shadow/shadow_idb_blockage.h"
 TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbBlockage>, "iBlockageSD", (primary_key, _instance_name_sd, _is_pushdown_sd, _type_sd, _layer_name_sd, _is_except_pgnet_sd), (_rect_list_sd));
 
-#if 0  //EDADB_TODO: enable Region schema after Blockage is validated.
 #include "database/data/design/db_design/IdbRegion.h"
 TABLE4CLASS_WVEC(idb::IdbRegion, "iRegion", (_name, _type), (_boudary_list));
-#endif
+
 //--
 //--
 //--#include "database/data/design/db_design/IdbSlot.h"

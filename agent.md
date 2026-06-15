@@ -56,12 +56,14 @@ Active persistence groups:
 - `writeIdbInstance()` / `readIdbInstance()` are enabled through `edadb::Shadow<idb::IdbInstance>`.
 - `writeIdbPin()` / `readIdbPin()` are enabled through `edadb::Shadow<idb::IdbPin>`.
 - `writeIdbBlockage()` / `readIdbBlockage()` are enabled through `edadb::Shadow<idb::IdbBlockage>`.
+- `writeIdbRegion()` / `readIdbRegion()` are enabled directly on `IdbRegion`.
 - `iDesign` stores `IdbUnits` and `IdbBusBitChars` as inline columns.
 - `iTrackGridSD` stores track grid scalar data and owns vector child rows for layer names.
 - `iVia` stores generated via fields inline through EDADB member StoreType conversion; no `Shadow<IdbVia>` is defined.
 - `iInstSD` stores DEF COMPONENT fields: instance name, cell master name, source/type, placement status, orient, weight, coordinate, HALO, ROUTEHALO, and region name.
 - `iPinSD` stores DEF PINS fields: pin/net names, IO term direction/use/special, port/layer rectangles, placement status, location, orient, and derived average/bbox rebuild inputs.
 - `iBlockageSD` stores only DEF writer-emitted BLOCKAGES fields: type, layer name, pushdown, exceptpgnet, component name, and rects.
+- `iRegion` stores DEF REGIONS fields: name, type, and boundary rects.
 - Disabled matching DEF parser callbacks in `DefReadEdadb::createDbByDef()`:
   - `defrSetVersionStrCbk`
   - `defrSetDesignCbk`
@@ -80,6 +82,7 @@ Active persistence groups:
   - `defrSetPinEndCbk`
   - `defrSetStartPinsCbk`
   - `defrSetBlockageCbk`
+  - `defrSetRegionCbk`
 - Other object families still come from DEF text callbacks.
 
 Validation:
@@ -114,13 +117,16 @@ Validation:
 - Demo logs on 2026-06-15 show `writeIdbBlockage insert blockage_count=0`.
 - Demo logs on 2026-06-15 show `readIdbBlockage restored blockage_count=0`.
 - SQLite blockage check: `select count(*) from iBlockageSD;` returns `0`; current sky130_gcd demo validates the empty-table path only.
+- Demo logs on 2026-06-15 show `writeIdbRegion insert region_count=0`.
+- Demo logs on 2026-06-15 show `readIdbRegion restored region_count=0`.
+- SQLite region check: `select count(*) from iRegion;` returns `0`; current sky130_gcd demo validates the empty-table path only.
 - Final demo message: `Input def and output def are the same.`
 
 Current behavior:
 
-- `edadb_write` writes the Design, Die, Row, TrackGrid, GCell, Via, Instance, Pin, and Blockage groups to EDADB.
-- `edadb_read` reads the Design, Die, Row, TrackGrid, GCell, Via, Instance, Pin, and Blockage groups from EDADB.
-- DEF text callbacks rebuild region/slot/group/fill/net/special-net.
+- `edadb_write` writes the Design, Die, Row, TrackGrid, GCell, Via, Instance, Pin, Blockage, and Region groups to EDADB.
+- `edadb_read` reads the Design, Die, Row, TrackGrid, GCell, Via, Region, Instance, Pin, and Blockage groups from EDADB.
+- DEF text callbacks rebuild slot/group/fill/net/special-net.
 - Disabled `readIdbXXX()` / `writeIdbXXX()` bodies are preserved under `#if 0 //EDADB_TODO`.
 
 Important rule:
@@ -143,7 +149,9 @@ Important rule:
 - `IdbInstance` uses shadow because DEF COMPONENT persistence stores a reduced view and must convert pointers to names: cell master, region, route-halo layers. Readback resolves those names and uses normal iDB setters.
 - `IdbPin` uses shadow because DEF PINS persistence is a reduced IO-term/port/layer-shape view; readback rebuilds port layer shapes, average position, bbox, placement, and then nets later reconnect pins through DEF net callbacks.
 - `IdbBlockage` uses shadow because it is polymorphic. The storage view is intentionally reduced to what `DefWrite::write_blockage()` emits; parser-only fields such as slots/fills/spacing/effective-width/soft/partial/density are not stored.
-- Next targets: `IdbRegion`, `IdbSlot`, `IdbGroup`, `IdbFill`, `SpecialNet`, `Net`, one commit per target.
+- `IdbRegion` does not use shadow because DEF REGIONS maps directly to name/type/boundary rects, and `_name` is a natural root key.
+- Read `IdbRegion` before `IdbInstance` so instance region-name resolution can use the EDADB-restored region list.
+- Next targets: `IdbSlot`, `IdbGroup`, `IdbFill`, `SpecialNet`, `Net`, one commit per target.
 - After each migration, run the concise Adapter Correctness Audit in `edadb_readme.md`.
 
 ## C Namespace / API Boundary
