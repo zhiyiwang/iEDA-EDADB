@@ -57,10 +57,8 @@ protected:
     bool readIdbSlot(void);
     bool readIdbGroup(void);
     bool readIdbFill(void);
-#if 0  //EDADB_TODO: enable one object family at a time after Fill.
-#endif
-
     bool readSpecialNet(void);
+    bool readIdbNet(void);
 
 }; // class DefReadEdadb
 

@@ -40,12 +40,8 @@ protected:
     int32_t writeIdbSlot(void);
     int32_t writeIdbGroup(void);
     int32_t writeIdbFill(void);
-#if 0  //EDADB_TODO: enable one object family at a time after Fill.
-#endif
-
-
-
     int32_t writeSpecialNet(void);
+    int32_t writeIdbNet(void);
 }; // DefWriteEdadb
 
 

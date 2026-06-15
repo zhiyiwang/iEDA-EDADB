@@ -28,7 +28,7 @@ Do not run the full physical-design flow unless requested.
 | original | `master @ 007435241` | none | none | none | official iEDA, no EDADB |
 | A | `origin/edadb @ 2f028c426` | `src/database/edadb/core` | `src/database/edadb/idb` | `8c724ef` | canonical non-owning layout |
 | B | `origin/edadb-shadow-transitive @ 664829eef` | `src/third_party/edadb` | `src/database/edadb` | `f1214007` | old shadow-transitive layout, DEF roundtrip OK |
-| C | `edadb-idb @ 1110100d2` | `src/database/edadb/core` | `src/database/edadb/idb` | `8a4e3bf` | current EDADB adapter line |
+| C | `edadb-idb` | `src/database/edadb/core` | `src/database/edadb/idb` | `8a4e3bf` | current EDADB adapter line |
 
 Notes:
 
@@ -61,6 +61,7 @@ Active persistence groups:
 - `writeIdbGroup()` / `readIdbGroup()` are enabled through `edadb::Shadow<idb::IdbGroup>`.
 - `writeIdbFill()` / `readIdbFill()` are enabled through `edadb::Shadow<idb::IdbFill>`.
 - `writeSpecialNet()` / `readSpecialNet()` are enabled through `edadb::Shadow<idb::IdbSpecialNet>`.
+- `writeIdbNet()` / `readIdbNet()` are enabled through `edadb::Shadow<idb::IdbNet>`.
 - `iDesign` stores `IdbUnits` and `IdbBusBitChars` as inline columns.
 - `iTrackGridSD` stores track grid scalar data and owns vector child rows for layer names.
 - `iVia` stores generated via fields inline through EDADB member StoreType conversion; no `Shadow<IdbVia>` is defined.
@@ -72,6 +73,7 @@ Active persistence groups:
 - `iGroupSD` stores DEF GROUPS fields: group name, region name, and instance names.
 - `iFillSD` stores DEF FILLS fields through layer/via member shadows: layer name + rects, via name + coordinates.
 - `iSpecNetSD` stores DEF SPECIALNETS fields: net name, USE/connect type, pins, wires, and wire segments through nested child tables.
+- `iNetSD` stores DEF NETS fields: net name, USE/connect type, IO pins, instance pins, and regular wire segments through nested child tables.
 - Disabled matching DEF parser callbacks in `DefReadEdadb::createDbByDef()`:
   - `defrSetVersionStrCbk`
   - `defrSetDesignCbk`
@@ -98,6 +100,9 @@ Active persistence groups:
   - `defrSetSNetStartCbk`
   - `defrSetSNetCbk`
   - `defrSetSNetEndCbk`
+  - `defrSetNetStartCbk`
+  - `defrSetNetCbk`
+  - `defrSetNetEndCbk`
 - Other object families still come from DEF text callbacks.
 
 Validation:
@@ -147,13 +152,16 @@ Validation:
 - Demo logs on 2026-06-15 show `writeSpecialNet insert special_net_count=2 segment_count=639`.
 - Demo logs on 2026-06-15 show `readSpecialNet restored special_net_count=2 segment_count=639`.
 - SQLite special-net check: `iSpecNetSD=2`, nested `wire_list=2`, nested `segment_list=639`, nested `point_list=697`.
+- Demo logs on 2026-06-15 show `writeIdbNet insert net_count=675 segment_count=0`.
+- Demo logs on 2026-06-15 show `readIdbNet restored net_count=675 segment_count=0`.
+- SQLite net check: `iNetSD=675`, nested IO pin refs `54`, nested instance pin refs `1726`, nested regular wire rows `0`.
 - Final demo message: `Input def and output def are the same.`
 
 Current behavior:
 
-- `edadb_write` writes the Design, Die, Row, TrackGrid, GCell, Via, Instance, Pin, Blockage, Region, Slot, Group, Fill, and SpecialNet families to EDADB.
-- `edadb_read` reads the Design, Die, Row, TrackGrid, GCell, Via, Region, Instance, Pin, Blockage, Slot, Group, Fill, and SpecialNet families from EDADB.
-- DEF text callbacks still rebuild ordinary net.
+- `edadb_write` writes the Design, Die, Row, TrackGrid, GCell, Via, Instance, Pin, Blockage, Region, Slot, Group, Fill, SpecialNet, and Net families to EDADB.
+- `edadb_read` reads the Design, Die, Row, TrackGrid, GCell, Via, Region, Instance, Pin, Blockage, Slot, Group, Fill, SpecialNet, and Net families from EDADB.
+- DEF text callbacks no longer rebuild the enabled DEF object families above.
 - Disabled `readIdbXXX()` / `writeIdbXXX()` bodies are preserved under `#if 0 //EDADB_TODO`.
 
 Important rule:
@@ -183,7 +191,9 @@ Important rule:
 - `IdbFill` uses shadow because DEF FILLS is a typed layer/via storage view with pointer references converted to layer/via names and child geometry rows.
 - Current sky130_gcd only validates empty Fill; nonzero Fill needs a dedicated testcase because `DefWrite::write_fill()` emits layer/via clauses from each fill object.
 - `IdbSpecialNet` uses shadow because SPECIALNETS is a nested net/wire/segment storage view with layer/via/pin/instance references converted to names and synthetic keys for child rows.
-- Next target: `Net`, then commit after build/demo/docs.
+- `IdbNet` uses shadow because NETS stores pin references and regular wire layer/via references by name; nested wire/segment rows need stable parent keys.
+- Current sky130_gcd validates Net connectivity storage, but regular net segment count is `0`; nonzero regular-wire NETS need a routed-net testcase.
+- Current requested DEF object-family migration is complete through Net.
 - After each migration, run the concise Adapter Correctness Audit in `edadb_readme.md`.
 
 ## C Namespace / API Boundary

@@ -65,7 +65,7 @@ bool DefWriteEdadb::writeDb2Edadb(const char* edadb_path) {
 
 
 bool DefWriteEdadb::writeChip2Edadb() {
-    std::cout << "[EDADB-IDB] writeChip2Edadb Design/Die/Row/TrackGrid/GCell/Via/Instance/Pin/Blockage/Region/Slot/Group/Fill/SpecialNet enabled; other writeIdbXXX disabled"
+    std::cout << "[EDADB-IDB] writeChip2Edadb Design/Die/Row/TrackGrid/GCell/Via/Instance/Pin/Blockage/Region/Slot/Group/Fill/SpecialNet/Net enabled"
               << std::endl;
     if (writeIdbDesign() != kDbSuccess) {
         return false;
@@ -107,6 +107,9 @@ bool DefWriteEdadb::writeChip2Edadb() {
         return false;
     }
     if (writeSpecialNet() != kDbSuccess) {
+        return false;
+    }
+    if (writeIdbNet() != kDbSuccess) {
         return false;
     }
 
@@ -623,6 +626,50 @@ int32_t DefWriteEdadb::writeSpecialNet(void) {
 
     if (!ok) {
         std::cerr << "DefWriteEdadb::writeSpecialNet failed to insertVector" << std::endl;
+        return kDbFail;
+    }
+
+    return kDbSuccess;
+}
+
+int32_t DefWriteEdadb::writeIdbNet(void) {
+    IdbDesign* design = _def_service->get_design();  // def
+    if (design == nullptr) {
+        std::cerr << "[EDADB-IDB] writeIdbNet failed: design is nullptr" << std::endl;
+        return kDbFail;
+    }
+
+    IdbNetList* net_list = design->get_net_list();
+    if (net_list == nullptr) {
+      std::cout << "Write NETS error..." << std::endl;
+      return kDbFail;
+    }
+
+    vector<idb::IdbNet*>& net_vec = net_list->get_net_list();
+    std::cout << "[EDADB-IDB] writeIdbNet insert net_count="
+              << net_vec.size() << " segment_count="
+              << net_list->get_segment_num() << std::endl;
+
+    if (net_vec.empty()) {
+      return kDbSuccess;
+    }
+
+    vector<edadb::Shadow<idb::IdbNet>*> net_sd_vec;
+    net_sd_vec.reserve(net_vec.size());
+    for (auto& net : net_vec) {
+        auto* net_sd = new edadb::Shadow<idb::IdbNet>();
+        net_sd->toShadow(net);
+        net_sd_vec.emplace_back(net_sd);
+    }
+
+    bool ok = edadb::insertVector<edadb::Shadow<idb::IdbNet>>(net_sd_vec);
+    for (auto& net_sd : net_sd_vec) {
+        delete net_sd;
+        net_sd = nullptr;
+    }
+
+    if (!ok) {
+        std::cerr << "DefWriteEdadb::writeIdbNet failed to insertVector" << std::endl;
         return kDbFail;
     }
 

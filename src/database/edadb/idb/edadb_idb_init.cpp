@@ -70,7 +70,7 @@ int initAllTables(bool crt_tab) {
 #if EDADB_OUTPUT_DEBUG
     std::cout << "[EDADB-IDB] initAllTables create=" << (crt_tab ? "true" : "false") << std::endl;
 #endif
-    std::cout << "[EDADB-IDB] initAllTables register Design/Die/Row/TrackGrid/GCell/Via/Region/Instance/Pin/Blockage/Slot/Group/Fill/SpecialNet groups"
+    std::cout << "[EDADB-IDB] initAllTables register Design/Die/Row/TrackGrid/GCell/Via/Region/Instance/Pin/Blockage/Slot/Group/Fill/SpecialNet/Net groups"
               << std::endl;
 
     EDADB_INIT_TABLE(idb::IdbDesign, crt_tab);
@@ -93,8 +93,12 @@ int initAllTables(bool crt_tab) {
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbSpecialWireSegment>, crt_tab);
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbSpecialWire>, crt_tab);
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbSpecialNet>, crt_tab);
+    EDADB_INIT_TABLE(idb::edadb_adapter::NetPinRef, crt_tab);
+    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbRegularWireSegment>, crt_tab);
+    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbRegularWire>, crt_tab);
+    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbNet>, crt_tab);
 
-#if 0  //EDADB_TODO: enable these tables one object family at a time after SpecialNet.
+#if 0  //EDADB_TODO: enable these tables one object family at a time after Net.
 #endif
 
     return 0;

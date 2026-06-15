@@ -34,6 +34,7 @@ TABLE4CLASS(idb::edadb_adapter::CppStrings, "CppStr", (str));
 #include "shadow/shadow_idb_group.h"
 #include "shadow/shadow_idb_fill.h"
 #include "shadow/shadow_idb_special_net.h"
+#include "shadow/shadow_idb_net.h"
 
 
 //--#include "shadow/shadow_idb_via.h"
