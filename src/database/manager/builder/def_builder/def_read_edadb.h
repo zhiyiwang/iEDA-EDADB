@@ -52,9 +52,9 @@ protected:
     bool readIdbVia(void);
     bool readIdbInstance(void);
     bool readIdbPin(void);
-#if 0  //EDADB_TODO: enable one object family at a time after Pin.
-    bool readIdbRegion(void);
     bool readIdbBlockage(void);
+#if 0  //EDADB_TODO: enable one object family at a time after Blockage.
+    bool readIdbRegion(void);
     bool readIdbSlot(void);
     bool readIdbGroup(void);
     bool readIdbFill(void);

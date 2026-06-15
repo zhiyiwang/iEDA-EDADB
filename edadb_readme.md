@@ -11,12 +11,12 @@ In this branch, the goal is not yet full object persistence. The current goal is
 - iEDA can open/init an EDADB database.
 - iEDA exposes Tcl commands `edadb_write` and `edadb_read`.
 - The demo can run DEF → EDADB write → EDADB read → DEF.
-- The Design, Die, Row, TrackGrid, GCell, Via, Instance, and Pin groups are persisted through EDADB.
+- The Design, Die, Row, TrackGrid, GCell, Via, Instance, Pin, and Blockage groups are persisted through EDADB.
 - The final DEF roundtrip matches the input DEF.
 
 Current limitation:
 
-- Only Design / Units / BusBit, Die, Row, TrackGrid, GCell, Via, Instance, and Pin are written to and read from EDADB.
+- Only Design / Units / BusBit, Die, Row, TrackGrid, GCell, Via, Instance, Pin, and Blockage are written to and read from EDADB.
 - Other iDB object families still rebuild from the original DEF text.
 - Continue development on C (`edadb-idb`) only. Use B only as reference for old mappings.
 
@@ -163,11 +163,11 @@ Start from the iEDA executable entry, then follow the Tcl command path into EDAD
 
 13. `src/database/manager/builder/def_builder/def_write_edadb.*`
     - EDADB write framework
-  - currently writes Design / Units / BusBit, Die, Row, TrackGrid, GCell, Via, Instance, and Pin
+  - currently writes Design / Units / BusBit, Die, Row, TrackGrid, GCell, Via, Instance, Pin, and Blockage
 
 14. `src/database/manager/builder/def_builder/def_read_edadb.*`
     - EDADB read framework
-  - currently reads Design / Units / BusBit, Die, Row, TrackGrid, GCell, Via, Instance, and Pin from EDADB
+  - currently reads Design / Units / BusBit, Die, Row, TrackGrid, GCell, Via, Instance, Pin, and Blockage from EDADB
     - rebuilds remaining iDB object families from DEF text
 
 15. `src/database/edadb/idb/edadb_idb_init.*`
@@ -204,7 +204,7 @@ edadb_write
 Current write state:
 
 - `initWriteDb()` is active.
-- `writeChip2Edadb()` calls `writeIdbDesign()`, `writeIdbDie()`, `writeIdbRow()`, `writeIdbTrackGrid()`, `writeIdbGCellGrid()`, `writeIdbVia()`, `writeIdbInstance()`, and `writeIdbPin()`.
+- `writeChip2Edadb()` calls `writeIdbDesign()`, `writeIdbDie()`, `writeIdbRow()`, `writeIdbTrackGrid()`, `writeIdbGCellGrid()`, `writeIdbVia()`, `writeIdbInstance()`, `writeIdbPin()`, and `writeIdbBlockage()`.
 - `writeIdbDesign()` uses the current EDADB API: `edadb::insertObject<idb::IdbDesign>(design)`.
 - `writeIdbDesign()` follows `DefWrite::write_units()` style: use DEF units when valid, otherwise use LEF units, and update active `design->_units` to the effective DBU before EDADB insert.
 - `writeIdbDie()` follows `DefWrite::write_die()` style: persist the die point list through `edadb::Shadow<idb::IdbDie>`.
@@ -214,6 +214,7 @@ Current write state:
 - `writeIdbVia()` follows `DefWrite::write_via()` style and writes root `IdbVia` directly; EDADB converts `_master_instance` through member StoreType.
 - `writeIdbInstance()` follows `DefWrite::write_component()` style and writes COMPONENT fields through `Shadow<IdbInstance>`.
 - `writeIdbPin()` follows `DefWrite::write_pin()` style and writes PINS fields through `Shadow<IdbPin>`, `Shadow<IdbTerm>`, and `Shadow<IdbPort>`.
+- `writeIdbBlockage()` follows `DefWrite::write_blockage()` style and writes only DEF-emitted BLOCKAGES fields through `Shadow<IdbBlockage>`.
 - EDADB creates physical table `iDesign`; `IdbUnits` and `IdbBusBitChars` are inline columns inside `iDesign`.
 - EDADB creates physical table `iDieSD` plus vector child rows for die coordinates.
 - EDADB creates physical table `iRow`; `IdbSite` and original coordinate are inline row columns.
@@ -222,6 +223,7 @@ Current write state:
 - EDADB creates physical table `iVia`; generated via master fields are inline columns under `_master_instance__master_generate_sd__...`.
 - EDADB creates physical table `iInstSD` for COMPONENT storage.
 - EDADB creates physical table `iPinSD` plus nested port/layer-shape/rect child tables.
+- EDADB creates physical table `iBlockageSD` plus rect child table.
 - Other `writeIdbXXX()` calls are disabled under `//EDADB_TODO`.
 
 Read path:
@@ -240,7 +242,7 @@ edadb_read
 Current read state:
 
 - `initReadDb()` is active.
-- `createDbByEdadb()` calls `readIdbDesign()`, `readIdbDie()`, `readIdbRow()`, `readIdbTrackGrid()`, `readIdbGCellGrid()`, `readIdbVia()`, `readIdbInstance()`, and `readIdbPin()`.
+- `createDbByEdadb()` calls `readIdbDesign()`, `readIdbDie()`, `readIdbRow()`, `readIdbTrackGrid()`, `readIdbGCellGrid()`, `readIdbVia()`, `readIdbInstance()`, `readIdbPin()`, and `readIdbBlockage()`.
 - `readIdbDesign()` uses the current EDADB cursor API: `makeReadAllOp<idb::IdbDesign>()` + `readNext()`.
 - `readIdbDesign()` follows the old DbMap implementation semantics: transfer owned `_units` and `_bus_bit_chars` pointers into the active `IdbDesign`, then null them in the temporary object.
 - The temporary `got` object is a safe buffer. Reading directly into active `design` would better match original iEDA object reuse, but EDADB NULL inline pointer columns could clear active pointers, so keep the buffered style for now.
@@ -251,7 +253,8 @@ Current read state:
 - `readIdbVia()` reads `IdbVia` directly; member-level StoreType rebuilds `IdbViaMaster`, via-rule/layer pointers, pattern, and generated cut shapes through `EdadbIdbHelper`, matching `DefRead::parse_via()`.
 - `readIdbInstance()` reads `Shadow<IdbInstance>`, resolves cell master/layers/region by name, and rebuilds instance state with normal setters, matching `DefRead::parse_component()`.
 - `readIdbPin()` reads `Shadow<IdbPin>`, rebuilds IO terms/ports/layer-shapes, recomputes average/bbox fields, and leaves net pointer reconnect for DEF net callbacks, matching `DefRead::parse_pin()`.
-- `createDbByDef()` disables version/design/units/busbit/die/row/track/gcell/via/component/pin callbacks and restores all remaining object families from DEF text.
+- `readIdbBlockage()` reads `Shadow<IdbBlockage>`, rebuilds routing/placement derived objects, resolves layers/instances by name, and restores rects, matching `DefRead::parse_blockage()`.
+- `createDbByDef()` disables version/design/units/busbit/die/row/track/gcell/via/component/pin/blockage callbacks and restores all remaining object families from DEF text.
 
 Important ownership note:
 
@@ -339,7 +342,7 @@ After each migration, check:
 - **Read**: Match `DefRead::parse_xxx()` rebuild semantics and disable the corresponding DEF callback.
 - **Runtime**: Run only the canonical demo, check write/read logs, inspect SQLite counts/key columns, and record uncovered cases.
 
-Active targets: design / units / busbit, die, row, track grid, gcell grid, via, instance, and pin.
+Active targets: design / units / busbit, die, row, track grid, gcell grid, via, instance, pin, and blockage.
 
 Mapping for these targets:
 
@@ -353,6 +356,7 @@ Mapping for these targets:
 | `writeIdbVia()` / `readIdbVia()` | `defrSetViaStartCbk`, `defrSetViaCbk` | `write_via` |
 | `writeIdbInstance()` / `readIdbInstance()` | `defrSetComponentCbk`, `defrSetComponentStartCbk`, `defrSetComponentEndCbk` | `write_component` |
 | `writeIdbPin()` / `readIdbPin()` | `defrSetPinCbk`, `defrSetPinEndCbk`, `defrSetStartPinsCbk` | `write_pin` |
+| `writeIdbBlockage()` / `readIdbBlockage()` | `defrSetBlockageCbk` | `write_blockage` |
 
 Row does not currently need a shadow class. `IdbRow::_name` is the root table primary key, so EDADB can attach inline `IdbSite` and original-coordinate columns directly. `IdbDie` needed shadow because its coordinate vector requires a synthetic root `primary_key` for child rows.
 
@@ -365,6 +369,8 @@ Via does not use a root shadow class. `IdbVia::_name` is the root primary key, a
 Instance uses `Shadow<IdbInstance>`. DEF COMPONENT output needs a reduced view: instance name, cell master name, type/source, placement status, orient, weight, coordinate, HALO, ROUTEHALO layer names, and region name. Readback resolves names and calls normal iDB setters.
 
 Pin uses `Shadow<IdbPin>`. DEF PINS output is an IO-term/port/layer-shape view, not the full `IdbPin` object. The adapter stores the DEF-emitted fields and recomputes bbox/average fields during readback; net pointers are reconnected later by normal DEF net parsing.
+
+Blockage uses `Shadow<IdbBlockage>` because the iDB class is polymorphic. The stored fields are limited to what `DefWrite::write_blockage()` emits: blockage type, layer name, pushdown, exceptpgnet, component name, and rects.
 
 Physical DB shape for active targets:
 
@@ -407,6 +413,9 @@ iPinSD(_pin_name_sd, _net_name_sd, _io_term_sd__..., _average_coordinate_sd__...
 iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD(...)
 iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD__layer_shape_list_sd_iLayerShapeSD(...)
 iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD__layer_shape_list_sd_iLayerShapeSD__rect_list_sd_IdbRect(...)
+
+iBlockageSD(primary_key, _instance_name_sd, _is_pushdown_sd, _type_sd, _layer_name_sd, _is_except_pgnet_sd)
+iBlockageSD__rect_list_sd_IdbRect(iBlockageSD_primary_key, ...)
 ```
 
 NET and SPECIALNET are not implemented yet.
@@ -452,6 +461,8 @@ Expected current result:
 - logs show `readIdbInstance restored instance_count=1458`
 - logs show `writeIdbPin insert pin_count=56`
 - logs show `readIdbPin restored pin_count=56`
+- logs show `writeIdbBlockage insert blockage_count=0`
+- logs show `readIdbBlockage restored blockage_count=0`
 - SQLite `iDesign` row contains `gcd|5.8|1000|[|]`
 - SQLite `iDieSD_points_sd_iCoordSD` contains `(0,0)` and `(149960,150128)`
 - SQLite `iRow` row count is `39`
@@ -460,4 +471,5 @@ Expected current result:
 - SQLite `iVia` row count is `4`
 - SQLite `iInstSD` row count is `1458`
 - SQLite `iPinSD` row count is `56`
+- SQLite `iBlockageSD` row count is `0`; current sky130_gcd demo covers only the empty-table path for Blockage
 - final message says input DEF and output DEF are the same
