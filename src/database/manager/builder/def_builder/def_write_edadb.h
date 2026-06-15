@@ -45,7 +45,7 @@ protected:
 
 
 
-//    int32_t writeSpecialNet(void);
+    int32_t writeSpecialNet(void);
 }; // DefWriteEdadb
 
 

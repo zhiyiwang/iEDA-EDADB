@@ -11,12 +11,12 @@ In this branch, the goal is not yet full object persistence. The current goal is
 - iEDA can open/init an EDADB database.
 - iEDA exposes Tcl commands `edadb_write` and `edadb_read`.
 - The demo can run DEF → EDADB write → EDADB read → DEF.
-- The Design, Die, Row, TrackGrid, GCell, Via, Instance, Pin, Blockage, Region, Slot, Group, and Fill families are persisted through EDADB.
+- The Design, Die, Row, TrackGrid, GCell, Via, Instance, Pin, Blockage, Region, Slot, Group, Fill, and SpecialNet families are persisted through EDADB.
 - The final DEF roundtrip matches the input DEF.
 
 Current limitation:
 
-- Only Design / Units / BusBit, Die, Row, TrackGrid, GCell, Via, Instance, Pin, Blockage, Region, Slot, Group, and Fill are written to and read from EDADB.
+- Only Design / Units / BusBit, Die, Row, TrackGrid, GCell, Via, Instance, Pin, Blockage, Region, Slot, Group, Fill, and SpecialNet are written to and read from EDADB.
 - Other iDB object families still rebuild from the original DEF text.
 - Continue development on C (`edadb-idb`) only. Use B only as reference for old mappings.
 
@@ -163,11 +163,11 @@ Start from the iEDA executable entry, then follow the Tcl command path into EDAD
 
 13. `src/database/manager/builder/def_builder/def_write_edadb.*`
     - EDADB write framework
-- currently writes Design / Units / BusBit, Die, Row, TrackGrid, GCell, Via, Instance, Pin, Blockage, Region, Slot, Group, and Fill
+- currently writes Design / Units / BusBit, Die, Row, TrackGrid, GCell, Via, Instance, Pin, Blockage, Region, Slot, Group, Fill, and SpecialNet
 
 14. `src/database/manager/builder/def_builder/def_read_edadb.*`
     - EDADB read framework
-- currently reads Design / Units / BusBit, Die, Row, TrackGrid, GCell, Via, Region, Instance, Pin, Blockage, Slot, Group, and Fill from EDADB
+- currently reads Design / Units / BusBit, Die, Row, TrackGrid, GCell, Via, Region, Instance, Pin, Blockage, Slot, Group, Fill, and SpecialNet from EDADB
     - rebuilds remaining iDB object families from DEF text
 
 15. `src/database/edadb/idb/edadb_idb_init.*`
@@ -204,7 +204,7 @@ edadb_write
 Current write state:
 
 - `initWriteDb()` is active.
-- `writeChip2Edadb()` calls `writeIdbDesign()`, `writeIdbDie()`, `writeIdbRow()`, `writeIdbTrackGrid()`, `writeIdbGCellGrid()`, `writeIdbVia()`, `writeIdbInstance()`, `writeIdbPin()`, `writeIdbBlockage()`, `writeIdbRegion()`, `writeIdbSlot()`, `writeIdbGroup()`, and `writeIdbFill()`.
+- `writeChip2Edadb()` calls `writeIdbDesign()`, `writeIdbDie()`, `writeIdbRow()`, `writeIdbTrackGrid()`, `writeIdbGCellGrid()`, `writeIdbVia()`, `writeIdbInstance()`, `writeIdbPin()`, `writeIdbBlockage()`, `writeIdbRegion()`, `writeIdbSlot()`, `writeIdbGroup()`, `writeIdbFill()`, and `writeSpecialNet()`.
 - `writeIdbDesign()` uses the current EDADB API: `edadb::insertObject<idb::IdbDesign>(design)`.
 - `writeIdbDesign()` follows `DefWrite::write_units()` style: use DEF units when valid, otherwise use LEF units, and update active `design->_units` to the effective DBU before EDADB insert.
 - `writeIdbDie()` follows `DefWrite::write_die()` style: persist the die point list through `edadb::Shadow<idb::IdbDie>`.
@@ -219,6 +219,7 @@ Current write state:
 - `writeIdbSlot()` follows `DefWrite::write_slot()` style and writes SLOTS fields through `Shadow<IdbSlot>`.
 - `writeIdbGroup()` follows `DefWrite::write_group()` style and writes GROUPS fields through `Shadow<IdbGroup>`.
 - `writeIdbFill()` follows `DefWrite::write_fill()` style and writes FILLS fields through `Shadow<IdbFill>`.
+- `writeSpecialNet()` follows `DefWrite::write_special_net()` style and writes SPECIALNETS fields through `Shadow<IdbSpecialNet>`.
 - EDADB creates physical table `iDesign`; `IdbUnits` and `IdbBusBitChars` are inline columns inside `iDesign`.
 - EDADB creates physical table `iDieSD` plus vector child rows for die coordinates.
 - EDADB creates physical table `iRow`; `IdbSite` and original coordinate are inline row columns.
@@ -232,6 +233,7 @@ Current write state:
 - EDADB creates physical table `iSlotSD` plus rect child table.
 - EDADB creates physical table `iGroupSD` plus instance-name child table.
 - EDADB creates physical table `iFillSD` plus layer/via member child tables.
+- EDADB creates physical table `iSpecNetSD` plus nested pin/wire/segment/point child tables.
 - Other `writeIdbXXX()` calls are disabled under `//EDADB_TODO`.
 
 Read path:
@@ -250,7 +252,7 @@ edadb_read
 Current read state:
 
 - `initReadDb()` is active.
-- `createDbByEdadb()` calls `readIdbDesign()`, `readIdbDie()`, `readIdbRow()`, `readIdbTrackGrid()`, `readIdbGCellGrid()`, `readIdbVia()`, `readIdbRegion()`, `readIdbInstance()`, `readIdbPin()`, `readIdbBlockage()`, `readIdbSlot()`, `readIdbGroup()`, and `readIdbFill()`.
+- `createDbByEdadb()` calls `readIdbDesign()`, `readIdbDie()`, `readIdbRow()`, `readIdbTrackGrid()`, `readIdbGCellGrid()`, `readIdbVia()`, `readIdbRegion()`, `readIdbInstance()`, `readIdbPin()`, `readIdbBlockage()`, `readIdbSlot()`, `readIdbGroup()`, `readIdbFill()`, and `readSpecialNet()`.
 - `readIdbDesign()` uses the current EDADB cursor API: `makeReadAllOp<idb::IdbDesign>()` + `readNext()`.
 - `readIdbDesign()` follows the old DbMap implementation semantics: transfer owned `_units` and `_bus_bit_chars` pointers into the active `IdbDesign`, then null them in the temporary object.
 - The temporary `got` object is a safe buffer. Reading directly into active `design` would better match original iEDA object reuse, but EDADB NULL inline pointer columns could clear active pointers, so keep the buffered style for now.
@@ -266,7 +268,8 @@ Current read state:
 - `readIdbSlot()` reads `Shadow<IdbSlot>` and restores layer name plus rects, matching `DefRead::parse_slot()`.
 - `readIdbGroup()` reads `Shadow<IdbGroup>`, restores group name, resolves region name, and reconnects member instances by name.
 - `readIdbFill()` reads `Shadow<IdbFill>`, resolves layer/via names, clones via masters, and restores rect/coordinate children.
-- `createDbByDef()` disables version/design/units/busbit/die/row/track/gcell/via/component/pin/blockage/region/slot/group/fill callbacks and restores all remaining object families from DEF text.
+- `readSpecialNet()` reads `Shadow<IdbSpecialNet>`, resolves pins/instances/layers/vias by name, and restores wire segments before ordinary nets are still rebuilt from DEF.
+- `createDbByDef()` disables version/design/units/busbit/die/row/track/gcell/via/component/pin/blockage/region/slot/group/fill/special-net callbacks and restores all remaining object families from DEF text.
 
 Important ownership note:
 
@@ -373,6 +376,7 @@ Mapping for these targets:
 | `writeIdbSlot()` / `readIdbSlot()` | `defrSetSlotCbk` | `write_slot` |
 | `writeIdbGroup()` / `readIdbGroup()` | `defrSetGroupCbk` | `write_group` |
 | `writeIdbFill()` / `readIdbFill()` | `defrSetFillStartCbk`, `defrSetFillCbk` | `write_fill` |
+| `writeSpecialNet()` / `readSpecialNet()` | `defrSetSNetStartCbk`, `defrSetSNetCbk`, `defrSetSNetEndCbk` | `write_special_net` |
 
 Row does not currently need a shadow class. `IdbRow::_name` is the root table primary key, so EDADB can attach inline `IdbSite` and original-coordinate columns directly. `IdbDie` needed shadow because its coordinate vector requires a synthetic root `primary_key` for child rows.
 
@@ -395,6 +399,8 @@ Slot uses `Shadow<IdbSlot>`. DEF SLOTS maps to layer name plus rect list, but `_
 Group uses `Shadow<IdbGroup>`. DEF GROUPS stores references by name: group name, region name, and member instance names. Readback runs after Region and Instance so those names can be resolved.
 
 Fill uses `Shadow<IdbFill>`. DEF FILLS is a typed layer/via view: layer name with rects, or via name with coordinates. Readback resolves layer/via names and clones via masters as `DefRead::parse_fill()` does.
+
+SpecialNet uses `Shadow<IdbSpecialNet>`. DEF SPECIALNETS is a nested net/wire/segment view; shadow stores layer/via/pin/instance references by name and gives nested child rows stable parent keys.
 
 Physical DB shape for active targets:
 
@@ -508,6 +514,8 @@ Expected current result:
 - logs show `readIdbGroup restored group_count=0`
 - logs show `writeIdbFill insert fill_count=0`
 - logs show `readIdbFill restored fill_count=0`
+- logs show `writeSpecialNet insert special_net_count=2 segment_count=639`
+- logs show `readSpecialNet restored special_net_count=2 segment_count=639`
 - SQLite `iDesign` row contains `gcd|5.8|1000|[|]`
 - SQLite `iDieSD_points_sd_iCoordSD` contains `(0,0)` and `(149960,150128)`
 - SQLite `iRow` row count is `39`
@@ -521,6 +529,7 @@ Expected current result:
 - SQLite `iSlotSD` row count is `0`; current sky130_gcd demo covers only the empty-table path for Slot
 - SQLite `iGroupSD` row count is `0`; current sky130_gcd demo covers only the empty-table path for Group
 - SQLite `iFillSD` row count is `0`; current sky130_gcd demo covers only the empty-table path for Fill
+- SQLite SpecialNet row counts: `iSpecNetSD=2`, nested wire rows `2`, nested segment rows `639`, nested point rows `697`
 - final message says input DEF and output DEF are the same
 
 Nonzero Fill still needs a dedicated testcase. The current sky130_gcd demo proves schema/init/read/write plumbing, not nonzero layer/via fill semantics.

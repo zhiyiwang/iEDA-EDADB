@@ -103,9 +103,11 @@ bool DefReadEdadb::createDbByDef(const char* path) {
     defrSetNetEndCbk(netEndCallback);
     defrSetAddPathToNet();
 
+#if 0  //EDADB_TODO: SpecialNet is restored from EDADB.
     defrSetSNetStartCbk(specialNetBeginCallback);
     defrSetSNetCbk(specialNetCallback);
     defrSetSNetEndCbk(specialNetEndCallback);
+#endif
 
 //------------------------------------------------------------------
 
@@ -260,7 +262,7 @@ bool DefReadEdadb::createDbByDef(const char* path) {
 
 
 bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
-    std::cout << "[EDADB-IDB] createDbByEdadb Design/Die/Row/TrackGrid/GCell/Via/Region/Instance/Pin/Blockage/Slot/Group/Fill enabled path="
+    std::cout << "[EDADB-IDB] createDbByEdadb Design/Die/Row/TrackGrid/GCell/Via/Region/Instance/Pin/Blockage/Slot/Group/Fill/SpecialNet enabled path="
               << edadb_path << std::endl;
     std::cout << "[EDADB-IDB] createDbByEdadb other readIdbXXX disabled; DEF callbacks rebuild remaining iDB"
               << std::endl;
@@ -278,6 +280,7 @@ bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
     CHECK_READ(readIdbSlot(), "DefReadEdadb::createDbByEdadb failed to read IdbSlot!");
     CHECK_READ(readIdbGroup(), "DefReadEdadb::createDbByEdadb failed to read IdbGroup!");
     CHECK_READ(readIdbFill(), "DefReadEdadb::createDbByEdadb failed to read IdbFill!");
+    CHECK_READ(readSpecialNet(), "DefReadEdadb::createDbByEdadb failed to read IdbSpecialNet!");
 
 
 
@@ -1735,38 +1738,139 @@ bool DefReadEdadb::readIdbVia(void) {
 
 
 
-#if 0  //EDADB_TODO: restore special-net EDADB read when net/special-net persistence is implemented.
 bool DefReadEdadb::readSpecialNet(void) {
     IdbDesign* design = _def_service->get_design();  // Def
+    IdbLayout* layout = _def_service->get_layout();  // Lef
+    if (design == nullptr || layout == nullptr) {
+        std::cerr << "DefReadEdadb::readSpecialNet failed, design or layout is nullptr!" << std::endl;
+        return false;
+    }
+
+    IdbLayers* layer_list = layout->get_layers();
+    IdbVias* via_list_def = design->get_via_list();
+    IdbVias* via_list_lef = layout->get_via_list();
     IdbPins* io_pin_list = design->get_io_pin_list();
     IdbInstanceList* instance_list = design->get_instance_list();
     IdbSpecialNetList* net_list = design->get_special_net_list();
+    if (layer_list == nullptr || via_list_def == nullptr || via_list_lef == nullptr || io_pin_list == nullptr || instance_list == nullptr || net_list == nullptr) {
+        std::cerr << "DefReadEdadb::readSpecialNet failed, required list is nullptr!" << std::endl;
+        return false;
+    }
 
-    using SpecialNetShadw = edadb::Shadow<idb::IdbSpecialNet>;
-    edadb::DbMap<SpecialNetShadw> special_net_map;
-    special_net_map.init();
-
-    int got = 0;
-    edadb::DbMapReader<SpecialNetShadw>* rd_sd = nullptr;
+    auto special_net_reader = edadb::makeReadAllOp<edadb::Shadow<idb::IdbSpecialNet>>();
+    int32_t special_net_count = 0;
+    int32_t segment_count = 0;
     while (true) {
-        SpecialNetShadw special_net_sd;
-        got = edadb::readNext<SpecialNetShadw>(rd_sd, special_net_map, &special_net_sd);
-        if (got < 0) {
+        auto* special_net_sd = new edadb::Shadow<idb::IdbSpecialNet>();
+        const int read_count = edadb::readNext<edadb::Shadow<idb::IdbSpecialNet>>(special_net_reader, special_net_sd);
+        if (read_count == 0) {
+            delete special_net_sd;
+            break;
+        }
+        if (read_count < 0) {
+            delete special_net_sd;
             std::cout << "DefReadEdadb::readSpecialNet failed to read!" << std::endl;
             return false;
         }
-        else if (got == 0) {
-            break;
+
+        IdbSpecialNet* special_net = net_list->add_net(special_net_sd->_net_name_sd);
+        special_net->set_original_net_name(special_net_sd->_original_net_name_sd);
+        special_net->set_connect_type(special_net_sd->_connect_type_sd);
+        special_net->set_weight(special_net_sd->_weight_sd);
+
+        for (auto& pin_name_sd : special_net_sd->_pin_string_list_sd) {
+            special_net->add_pin_string(pin_name_sd.str);
         }
 
-        // create IdbSpecialNet instance from shadow and add to net_list
-        IdbSpecialNet* special_net_instance = new IdbSpecialNet();
-        special_net_sd.fromShadow(special_net_instance, io_pin_list, instance_list);
-        net_list->add_net(special_net_instance);
-    } // while
+        for (auto& pin_name_sd : special_net_sd->_io_pin_name_list_sd) {
+            IdbPin* pin = io_pin_list->find_pin(pin_name_sd.str);
+            if (pin != nullptr) {
+                special_net->add_io_pin(pin);
+                pin->set_special_net(special_net);
+            }
+        }
 
+        for (auto& pin_ref_sd : special_net_sd->_instance_pin_list_sd) {
+            IdbInstance* instance = instance_list->find_instance(pin_ref_sd.instance_name);
+            if (instance != nullptr) {
+                special_net->add_instance(instance);
+                IdbPin* pin = instance->get_pin_by_term(pin_ref_sd.pin_name);
+                if (pin != nullptr) {
+                    special_net->add_instance_pin(pin);
+                    pin->set_special_net(special_net);
+                }
+            }
+        }
+
+        if (!special_net->get_pin_string_list().empty()) {
+            instance_list->get_pin_list_by_names(special_net->get_pin_string_list(), special_net->get_instance_pin_list(), special_net->get_instance_list());
+        }
+
+        IdbSpecialWireList* wire_list = special_net->get_wire_list();
+        for (auto wire_sd : special_net_sd->_wire_list_sd) {
+            IdbSpecialWire* wire = wire_list->add_wire(nullptr);
+            wire->set_wire_state(wire_sd->_wire_state_sd);
+            wire->set_shield_name(wire_sd->_shield_name_sd);
+            wire->init(wire_sd->_segment_list_sd.size());
+
+            for (auto segment_sd : wire_sd->_segment_list_sd) {
+                IdbSpecialWireSegment* segment = wire->add_segment(nullptr);
+                segment->set_route_width(segment_sd->_route_width_sd);
+                segment->set_style(segment_sd->_style_sd);
+                segment->set_shape_type(segment_sd->_shape_type_sd);
+                segment->set_is_via(segment_sd->_is_via_sd);
+                segment->set_is_rect(segment_sd->_is_rect_sd);
+
+                if (!segment_sd->_layer_name_sd.empty()) {
+                    IdbLayer* layer = layer_list->find_layer(segment_sd->_layer_name_sd);
+                    if (layer == nullptr) {
+                        std::cerr << "DefReadEdadb::readSpecialNet failed to find layer: "
+                                  << segment_sd->_layer_name_sd << std::endl;
+                        delete special_net_sd;
+                        return false;
+                    }
+                    segment->set_layer(layer);
+                }
+
+                for (auto point_sd : segment_sd->_point_list_sd) {
+                    segment->add_point(point_sd->get_x(), point_sd->get_y());
+                }
+
+                if (segment_sd->_delta_rect_sd != nullptr) {
+                    segment->set_delta_rect(segment_sd->_delta_rect_sd->get_low_x(), segment_sd->_delta_rect_sd->get_low_y(),
+                                            segment_sd->_delta_rect_sd->get_high_x(), segment_sd->_delta_rect_sd->get_high_y());
+                }
+
+                if (segment_sd->_is_via_sd) {
+                    IdbVia* via = via_list_def->find_via(segment_sd->_via_name_sd);
+                    if (via == nullptr) {
+                        via = via_list_lef->find_via(segment_sd->_via_name_sd);
+                    }
+                    if (via == nullptr) {
+                        std::cerr << "DefReadEdadb::readSpecialNet failed to find via: "
+                                  << segment_sd->_via_name_sd << std::endl;
+                        delete special_net_sd;
+                        return false;
+                    }
+
+                    IdbVia* via_new = segment->copy_via(via);
+                    if (via_new != nullptr) {
+                        via_new->set_coordinate(segment->get_point_start());
+                    }
+                }
+
+                segment->set_bounding_box();
+                ++segment_count;
+            }
+        }
+
+        delete special_net_sd;
+        ++special_net_count;
+    }
+
+    std::cout << "[EDADB-IDB] readSpecialNet restored special_net_count="
+              << special_net_count << " segment_count=" << segment_count << std::endl;
     return true;
 } // readSpecialNet
-#endif 
 
 } // namespace idb
