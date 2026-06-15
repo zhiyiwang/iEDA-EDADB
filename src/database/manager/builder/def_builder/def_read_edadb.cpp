@@ -86,7 +86,9 @@ bool DefReadEdadb::createDbByDef(const char* path) {
     defrSetBlockageCbk(blockageCallback);
     defrSetRegionCbk(regionCallback);
 #endif
+#if 0  //EDADB_TODO: Slot is restored from EDADB.
     defrSetSlotCbk(slotsCallback);
+#endif
     defrSetGroupCbk(groupCallback);
     defrSetFillStartCbk(fillsCallback);
     defrSetFillCbk(fillCallback);
@@ -254,7 +256,7 @@ bool DefReadEdadb::createDbByDef(const char* path) {
 
 
 bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
-    std::cout << "[EDADB-IDB] createDbByEdadb Design/Die/Row/TrackGrid/GCell/Via/Region/Instance/Pin/Blockage enabled path="
+    std::cout << "[EDADB-IDB] createDbByEdadb Design/Die/Row/TrackGrid/GCell/Via/Region/Instance/Pin/Blockage/Slot enabled path="
               << edadb_path << std::endl;
     std::cout << "[EDADB-IDB] createDbByEdadb other readIdbXXX disabled; DEF callbacks rebuild remaining iDB"
               << std::endl;
@@ -269,9 +271,9 @@ bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
     CHECK_READ(readIdbInstance(), "DefReadEdadb::createDbByEdadb failed to read IdbInstance!");
     CHECK_READ(readIdbPin(), "DefReadEdadb::createDbByEdadb failed to read IdbPin!");
     CHECK_READ(readIdbBlockage(), "DefReadEdadb::createDbByEdadb failed to read IdbBlockage!");
-
-#if 0  //EDADB_TODO: enable one object family at a time after Region.
     CHECK_READ(readIdbSlot(), "DefReadEdadb::createDbByEdadb failed to read IdbSlot!");
+
+#if 0  //EDADB_TODO: enable one object family at a time after Slot.
     CHECK_READ(readIdbGroup(), "DefReadEdadb::createDbByEdadb failed to read IdbGroup!");
     CHECK_READ(readIdbFill(), "DefReadEdadb::createDbByEdadb failed to read IdbFill!");
 #endif
@@ -575,6 +577,45 @@ bool DefReadEdadb::readIdbRegion(void) {
 
     std::cout << "[EDADB-IDB] readIdbRegion restored region_count="
               << region_count << std::endl;
+    return true;
+}
+
+bool DefReadEdadb::readIdbSlot(void) {
+    IdbDesign* design = _def_service->get_design();  // def
+    if (design == nullptr) {
+        std::cerr << "DefReadEdadb::readIdbSlot failed, design is nullptr!" << std::endl;
+        return false;
+    }
+
+    IdbSlotList* slot_list = design->get_slot_list();
+    if (slot_list == nullptr) {
+        std::cerr << "DefReadEdadb::readIdbSlot failed, slot_list is nullptr!" << std::endl;
+        return false;
+    }
+
+    auto slot_reader = edadb::makeReadAllOp<edadb::Shadow<idb::IdbSlot>>();
+    int32_t slot_count = 0;
+    while (true) {
+        auto* slot_sd = new edadb::Shadow<idb::IdbSlot>();
+        const int read_count = edadb::readNext<edadb::Shadow<idb::IdbSlot>>(slot_reader, slot_sd);
+        if (read_count == 0) {
+            delete slot_sd;
+            break;
+        }
+        if (read_count < 0) {
+            delete slot_sd;
+            std::cout << "DefReadEdadb::readIdbSlot failed to read!" << std::endl;
+            return false;
+        }
+
+        IdbSlot* slot = slot_list->add_slot();
+        slot_sd->fromShadow(slot);
+        delete slot_sd;
+        ++slot_count;
+    }
+
+    std::cout << "[EDADB-IDB] readIdbSlot restored slot_count="
+              << slot_count << std::endl;
     return true;
 }
 

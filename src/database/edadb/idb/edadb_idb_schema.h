@@ -110,12 +110,9 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbBlockage>, "iBlockageSD", (primary_key, _
 #include "database/data/design/db_design/IdbRegion.h"
 TABLE4CLASS_WVEC(idb::IdbRegion, "iRegion", (_name, _type), (_boudary_list));
 
-//--
-//--
-//--#include "database/data/design/db_design/IdbSlot.h"
-//--TABLE4CLASS_WVEC(idb::IdbSlot, "iSlot", (_layer_name), (_rect_list));
-//--
-//--
+#include "shadow/shadow_idb_slot.h"
+TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbSlot>, "iSlotSD", (primary_key, _layer_name_sd), (_rect_list_sd));
+
 //--#include "shadow/shadow_idb_group.h"
 //--TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbGroup>, "iGroupSD", (_group_name_sd, _region_name_sd), (_instance_name_vec_sd));
 //--

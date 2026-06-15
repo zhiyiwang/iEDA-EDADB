@@ -30,6 +30,7 @@ TABLE4CLASS(idb::edadb_adapter::CppStrings, "CppStr", (str));
 #include "shadow/shadow_idb_term.h"
 #include "shadow/shadow_idb_pin.h"
 #include "shadow/shadow_idb_blockage.h"
+#include "shadow/shadow_idb_slot.h"
 
 
 //--#include "shadow/shadow_idb_via.h"

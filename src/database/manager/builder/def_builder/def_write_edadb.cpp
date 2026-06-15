@@ -65,7 +65,7 @@ bool DefWriteEdadb::writeDb2Edadb(const char* edadb_path) {
 
 
 bool DefWriteEdadb::writeChip2Edadb() {
-    std::cout << "[EDADB-IDB] writeChip2Edadb Design/Die/Row/TrackGrid/GCell/Via/Instance/Pin/Blockage/Region enabled; other writeIdbXXX disabled"
+    std::cout << "[EDADB-IDB] writeChip2Edadb Design/Die/Row/TrackGrid/GCell/Via/Instance/Pin/Blockage/Region/Slot enabled; other writeIdbXXX disabled"
               << std::endl;
     if (writeIdbDesign() != kDbSuccess) {
         return false;
@@ -97,11 +97,13 @@ bool DefWriteEdadb::writeChip2Edadb() {
     if (writeIdbRegion() != kDbSuccess) {
         return false;
     }
-#if 0  //EDADB_TODO: enable one object family at a time after Region.
-    writeIdbSlot();
+    if (writeIdbSlot() != kDbSuccess) {
+        return false;
+    }
+#if 0  //EDADB_TODO: enable one object family at a time after Slot.
     writeIdbGroup();
     writeIdbFill();
-#endif 
+#endif
 
     return true;
 } // writeChip2Edadb
@@ -443,6 +445,49 @@ int32_t DefWriteEdadb::writeIdbRegion(void) {
 
     if (!edadb::insertVector<idb::IdbRegion>(region_vec)) {
         std::cerr << "DefWriteEdadb::writeIdbRegion failed to insertVector" << std::endl;
+        return kDbFail;
+    }
+
+    return kDbSuccess;
+}
+
+int32_t DefWriteEdadb::writeIdbSlot(void) {
+    IdbDesign* design = _def_service->get_design();  // def
+    if (design == nullptr) {
+        std::cerr << "[EDADB-IDB] writeIdbSlot failed: design is nullptr" << std::endl;
+        return kDbFail;
+    }
+
+    IdbSlotList* slot_list = design->get_slot_list();
+    if (slot_list == nullptr) {
+      std::cout << "Write SLOTS error..." << std::endl;
+      return kDbFail;
+    }
+
+    vector<IdbSlot*>& slot_vec = slot_list->get_slot_list();
+    std::cout << "[EDADB-IDB] writeIdbSlot insert slot_count="
+              << slot_vec.size() << std::endl;
+
+    if (slot_vec.empty()) {
+      return kDbSuccess;
+    }
+
+    vector<edadb::Shadow<idb::IdbSlot>*> slot_sd_vec;
+    slot_sd_vec.reserve(slot_vec.size());
+    for (auto& slot : slot_vec) {
+        auto* slot_sd = new edadb::Shadow<idb::IdbSlot>();
+        slot_sd->toShadow(slot);
+        slot_sd_vec.emplace_back(slot_sd);
+    }
+
+    bool ok = edadb::insertVector<edadb::Shadow<idb::IdbSlot>>(slot_sd_vec);
+    for (auto& slot_sd : slot_sd_vec) {
+        delete slot_sd;
+        slot_sd = nullptr;
+    }
+
+    if (!ok) {
+        std::cerr << "DefWriteEdadb::writeIdbSlot failed to insertVector" << std::endl;
         return kDbFail;
     }
 
