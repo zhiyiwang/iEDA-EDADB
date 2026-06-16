@@ -160,6 +160,7 @@ class IdbNet : public IdbObject
   void set_connect_type(IdbConnectType type) { _connect_type = type; }
   void set_connect_type(string type);
 
+  void set_source_type(IdbInstanceType type) { _source_type = type; }
   void set_source_type(string type);
   void set_weight(int32_t weight) { _weight = weight; }
   void set_original_net_name(string name) { _original_net_name = name; }

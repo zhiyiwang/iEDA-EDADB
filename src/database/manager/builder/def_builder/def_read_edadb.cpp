@@ -8,6 +8,8 @@
 #include "edadb.h"
 #include "edadb_idb_schema.h"
 
+#include <algorithm>
+
 namespace idb {
 
 DefReadEdadb::DefReadEdadb(IdbDefService* def_service) : DefRead(def_service)
@@ -1776,6 +1778,7 @@ bool DefReadEdadb::readSpecialNet(void) {
         IdbSpecialNet* special_net = net_list->add_net(special_net_sd->_net_name_sd);
         special_net->set_original_net_name(special_net_sd->_original_net_name_sd);
         special_net->set_connect_type(special_net_sd->_connect_type_sd);
+        special_net->set_source_type(special_net_sd->_source_type_sd);
         special_net->set_weight(special_net_sd->_weight_sd);
 
         for (auto& pin_name_sd : special_net_sd->_pin_string_list_sd) {
@@ -1790,6 +1793,8 @@ bool DefReadEdadb::readSpecialNet(void) {
             }
         }
 
+        std::sort(special_net_sd->_instance_pin_list_sd.begin(), special_net_sd->_instance_pin_list_sd.end(),
+                  [](const auto& lhs, const auto& rhs) { return lhs._order_sd < rhs._order_sd; });
         for (auto& pin_ref_sd : special_net_sd->_instance_pin_list_sd) {
             IdbInstance* instance = instance_list->find_instance(pin_ref_sd.instance_name);
             if (instance != nullptr) {
@@ -1917,6 +1922,7 @@ bool DefReadEdadb::readIdbNet(void) {
 
         net->set_original_net_name(net_sd->_original_net_name_sd);
         net->set_connect_type(net_sd->_connect_type_sd);
+        net->set_source_type(net_sd->_source_type_sd);
         net->set_weight(net_sd->_weight_sd);
         net->set_xtalk(net_sd->_xtalk_sd);
         net->set_fix_bump(net_sd->_fix_bump_sd);
@@ -1941,6 +1947,8 @@ bool DefReadEdadb::readIdbNet(void) {
             }
         }
 
+        std::sort(net_sd->_instance_pin_list_sd.begin(), net_sd->_instance_pin_list_sd.end(),
+                  [](const auto& lhs, const auto& rhs) { return lhs._order_sd < rhs._order_sd; });
         for (auto& pin_ref_sd : net_sd->_instance_pin_list_sd) {
             IdbInstance* instance = instance_list->find_instance(pin_ref_sd.instance_name);
             if (instance != nullptr) {

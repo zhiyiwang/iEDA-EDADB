@@ -589,10 +589,6 @@ unsigned CmdEdadbWrite::exec()
 
   TclOption* name_opt = getOptionOrArg(TCL_NAME);
   const char* name = name_opt->getStringVal();
-  if ((name != nullptr) && (iplf::tmInst->idbSave(name))) {
-    std::cout << "idb save success." << std::endl;
-    return 1;
-  }
 
   TclOption* edadb_path_opt = getOptionOrArg(TCL_EDADB_DB_PATH);
   const char* edadb_path = edadb_path_opt->getStringVal();
@@ -607,8 +603,12 @@ unsigned CmdEdadbWrite::exec()
 #endif
 
   if (edadb_path != nullptr) {
-      dmInst->saveDefToEdadb(edadb_path);
-      return 1;
+    return dmInst->saveDefToEdadb(edadb_path) ? 1 : 0;
+  }
+
+  if ((name != nullptr) && (iplf::tmInst->idbSave(name))) {
+    std::cout << "idb save success." << std::endl;
+    return 1;
   }
 
   return 0;

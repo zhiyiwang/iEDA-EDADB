@@ -17,13 +17,14 @@
 
 cmake_minimum_required(VERSION 3.11)
 project(iEDA)
+enable_testing()
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_VERBOSE_MAKEFILE OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -O3 -Wall -Werror=return-type -DEDADB_ENABLE=1")
 ## [EDADB by zhiyi]: add debug cmake parameters
-set(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -Wall -g2 -ggdb -Werror=return-type -DEDADB_ENABLE=1 -DEDADB_OUTPU_DEBUG=1") #  -DDEBUG_SQLITE3_BIND=1
+set(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -Wall -g2 -ggdb -Werror=return-type -DEDADB_ENABLE=1 -DEDADB_OUTPUT_DEBUG=1") #  -DDEBUG_SQLITE3_BIND=1
 #set(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -Wall -g2 -ggdb -Werror=return-type -DDEBUG -fsanitize=address -fno-omit-frame-pointer")
 
 ##set(CMAKE_BUILD_TYPE "Release")

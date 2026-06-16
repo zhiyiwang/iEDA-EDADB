@@ -796,6 +796,11 @@ int32_t DefWrite::write_special_net()
     string connect_str = IdbEnum::GetInstance()->get_connect_property()->get_type_name(special_net->get_connect_type());
     writestr("  + USE %s \n", connect_str.c_str());
 
+    if (IdbInstanceType::kNone < special_net->get_source_type() && IdbInstanceType::kMax > special_net->get_source_type()) {
+      string source = IdbEnum::GetInstance()->get_instance_property()->get_type_str(special_net->get_source_type());
+      writestr("  + SOURCE %s \n", source.c_str());
+    }
+
     for (IdbSpecialWire* wire : special_net->get_wire_list()->get_wire_list()) {
       write_specialnet_wire(wire);
     }
@@ -845,7 +850,11 @@ int32_t DefWrite::write_net()
     if (IdbConnectType::kNone < net->get_connect_type() && IdbConnectType::kMax > net->get_connect_type()) {
       string use = IdbEnum::GetInstance()->get_connect_property()->get_type_name(net->get_connect_type());
       writestr("  + USE %s \n", use.c_str());
-    } else {
+    }
+
+    if (IdbInstanceType::kNone < net->get_source_type() && IdbInstanceType::kMax > net->get_source_type()) {
+      string source = IdbEnum::GetInstance()->get_instance_property()->get_type_str(net->get_source_type());
+      writestr("  + SOURCE %s \n", source.c_str());
     }
 
     if (net->get_wire_list()->get_num() > 0) {

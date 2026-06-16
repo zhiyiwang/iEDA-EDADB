@@ -19,6 +19,8 @@ Current limitation:
 - Only Design / Units / BusBit, Die, Row, TrackGrid, GCell, Via, Instance, Pin, Blockage, Region, Slot, Group, Fill, SpecialNet, and Net are written to and read from EDADB.
 - Other iDB object families still rebuild from the original DEF text.
 - Continue development on C (`edadb-idb`) only. Use B only as reference for old mappings.
+- DEF byte diff is not a complete object-field proof. Some iDB fields are persisted by EDADB
+  but are not emitted by the current DEF writer, so they require adapter-level tests.
 
 This is intentional for the C init code base.
 
@@ -99,6 +101,18 @@ The demo does:
 2. Run `def2edadb.tcl`.
 3. Run `edadb2def.tcl`.
 4. Compare input DEF with output `_edadb.def`.
+
+For routed DEFs, add a direct iDB baseline:
+
+```text
+input DEF -> def_init -> def_save -> baseline DEF
+input DEF -> edadb_write -> edadb_read -> def_save -> EDADB DEF
+baseline DEF == EDADB DEF
+```
+
+Reason: iDB's normal DEF writer can canonicalize routed segment endpoint order. If the raw
+input DEF differs from both generated DEF files in the same way, that is not an EDADB data
+loss. EDADB-specific differences are differences between the baseline DEF and EDADB DEF.
 
 Tcl scripts:
 
@@ -270,8 +284,8 @@ Current read state:
 - `readIdbSlot()` reads `Shadow<IdbSlot>` and restores layer name plus rects, matching `DefRead::parse_slot()`.
 - `readIdbGroup()` reads `Shadow<IdbGroup>`, restores group name, resolves region name, and reconnects member instances by name.
 - `readIdbFill()` reads `Shadow<IdbFill>`, resolves layer/via names, clones via masters, and restores rect/coordinate children.
-- `readSpecialNet()` reads `Shadow<IdbSpecialNet>`, resolves pins/instances/layers/vias by name, and restores wire segments.
-- `readIdbNet()` reads `Shadow<IdbNet>`, resolves IO/instance pins, restores USE/connect type, and rebuilds regular wires.
+- `readSpecialNet()` reads `Shadow<IdbSpecialNet>`, resolves pins/instances/layers/vias by name, restores original name, USE/connect type, SOURCE/source type, weight, pin refs, and wire segments.
+- `readIdbNet()` reads `Shadow<IdbNet>`, resolves IO/instance pins, restores USE/connect type, SOURCE/source type, weight, xtalk, fixed-bump, frequency, and rebuilds regular wires.
 - `createDbByDef()` disables version/design/units/busbit/die/row/track/gcell/via/component/pin/blockage/region/slot/group/fill/special-net/net callbacks and restores all remaining object families from DEF text.
 
 Important ownership note:
@@ -279,6 +293,75 @@ Important ownership note:
 - Avoid `edadb::readAll(std::vector<T>&)` for owning raw-pointer iDB classes such as `IdbDesign` unless copy/move ownership is explicitly safe.
 - Prefer cursor readback for these classes, because it matches the original EDADB implementation style and avoids shallow-copy lifetime hazards.
 - Implement adapter code in the direct style of `DefWrite` / `DefRead`: read the original writer/parser first, persist the values normal DEF output would use, and avoid hidden raw-pointer swaps or temporary ownership tricks.
+
+## 2026-06-16 Correctness Updates
+
+The latest adapter audit found two issues that were not fully proven by the initial demo pass.
+
+### Net pin-reference order
+
+Problem:
+
+- `NetPinRef` and `SpecialNetPinRef` did not store vector order explicitly.
+- The child table key caused SQLite readback to order instance pins by key, not by original
+  net connection order.
+- This changed clock-net connection text for routed examples such as `clk_0` and `clk_1`.
+
+Fix:
+
+- `NetPinRef` and `SpecialNetPinRef` now contain `_order_sd`.
+- `edadb_idb_schema.h` maps `_order_sd` as the first local field for `iNetPinRef` and
+  `iSpecPinRef`.
+- `Shadow<IdbNet>::toShadow()` and `Shadow<IdbSpecialNet>::toShadow()` write increasing
+  order values.
+- `DefReadEdadb::readIdbNet()` and `readSpecialNet()` sort pin refs by `_order_sd` before
+  rebuilding iDB lists.
+
+Validation:
+
+- `iRT_result.def` has 677 regular nets and 8997 regular routed segments.
+- Raw input vs output differs because normal iDB DEF write canonicalizes endpoint order.
+- Direct DEF baseline vs EDADB DEF is identical after the pin-order fix.
+- `iPL_filler_result.def` passes raw demo byte diff and direct-baseline diff.
+
+### Net source-type restoration
+
+Problem:
+
+- `Shadow<IdbNet>` and `Shadow<IdbSpecialNet>` stored `_source_type_sd`.
+- `DefReadEdadb` did not restore that field.
+- Existing DEF byte diff did not catch the readback gap until a dedicated net `SOURCE`
+  fixture was added.
+
+Fix:
+
+- `IdbNet` and `IdbSpecialNet` now have enum setters for `IdbInstanceType`.
+- `DefReadEdadb::readIdbNet()` and `readSpecialNet()` restore `_source_type_sd`.
+- `DefWrite::write_net()` and `write_special_net()` emit net `+ SOURCE <type>` when the
+  source type is not `kNone`.
+
+Validation:
+
+- `cmake --build build --target iEDA -j 16` passed.
+- Default EDADB demo passed byte diff after the fix.
+- Full EDADB core CTest passed before this small source-type fix: `13/13 tests passed`.
+  Re-run CTest after future core/schema changes, or before handoff.
+- A routed `iRT_result.def` fixture with `+ SOURCE USER` on `ctrl$a_mux_sel[0]` writes
+  `_source_type_sd=3` (`IdbInstanceType::kUser`), reads back through `edadb_read`, emits
+  `+ SOURCE USER`, and matches the direct iDB DEF baseline exactly.
+
+## Tests That Still Need Dedicated Fixtures
+
+The demo suite is useful but not sufficient for all adapter fields.
+
+- Add an adapter-level C++ test that constructs nets with `ORIGINAL`, `WEIGHT`, `XTALK`,
+  `FREQUENCY`, and `FIXEDBUMP`, writes EDADB, reads EDADB, and asserts iDB fields directly.
+- Add a repeated-instance-pin fixture, such as one net containing `( U A )` and `( U B )`,
+  to guard against child-table key collisions and order regressions.
+- Add non-empty Blockage, Region, Slot, Group, and Fill DEF fixtures. Current sky130_gcd
+  mostly validates their empty-table paths.
+- Add an order-sensitive testcase for `CppStrings` vector children if textual order matters
+  for group instance names, special-net pin strings, or IO-pin name lists.
 
 ## How To Extend Persistence
 

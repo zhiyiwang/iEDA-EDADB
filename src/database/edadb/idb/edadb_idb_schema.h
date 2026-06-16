@@ -124,7 +124,7 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbFillVia>, "iFillViaSD", (primary_key, _vi
 TABLE4CLASS(edadb::Shadow<idb::IdbFill>, "iFillSD", (primary_key, _type_sd, _layer_sd, _via_sd));
 
 #include "shadow/shadow_idb_special_net.h"
-TABLE4CLASS(idb::edadb_adapter::SpecialNetPinRef, "iSpecPinRef", (instance_name, pin_name));
+TABLE4CLASS(idb::edadb_adapter::SpecialNetPinRef, "iSpecPinRef", (_order_sd, instance_name, pin_name));
 TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbSpecialWireSegment>, "iSpecWireSegSD",
                  (primary_key, _layer_name_sd, _via_name_sd, _route_width_sd, _style_sd, _shape_type_sd, _is_via_sd, _is_rect_sd, _delta_rect_sd),
                  (_point_list_sd));
@@ -135,7 +135,7 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbSpecialNet>, "iSpecNetSD",
                  (_pin_string_list_sd, _io_pin_name_list_sd, _instance_pin_list_sd, _wire_list_sd));
 
 #include "shadow/shadow_idb_net.h"
-TABLE4CLASS(idb::edadb_adapter::NetPinRef, "iNetPinRef", (instance_name, pin_name));
+TABLE4CLASS(idb::edadb_adapter::NetPinRef, "iNetPinRef", (_order_sd, instance_name, pin_name));
 TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbRegularWireSegment>, "iRegWireSegSD",
                  (primary_key, _layer_name_sd, _via_name_sd, _is_via_sd, _is_rect_sd, _is_second_point_virtual_sd, _delta_rect_sd),
                  (_point_list_sd));

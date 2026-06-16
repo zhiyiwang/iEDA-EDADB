@@ -21,6 +21,63 @@ bash /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/demo/demo.sh 2>&1 | te
 
 Do not run the full physical-design flow unless requested.
 
+When the request is about EDADB internal support or adapter correctness, also run:
+
+```bash
+cd /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/build
+ctest --output-on-failure
+```
+
+When validating routed NETS, do not rely only on raw input DEF vs EDADB-output DEF byte diff.
+The normal iDB `def_init -> def_save` path can canonicalize routed segment endpoint order.
+Use direct DEF roundtrip output as the baseline:
+
+1. Run normal `def_init -> def_save` for the same input DEF.
+2. Run `DEF -> EDADB -> DEF`.
+3. Compare the two generated DEF files.
+4. Treat differences between these generated files as EDADB adapter differences.
+
+The raw input DEF byte diff is still useful for simpler cases such as default `iPL_result.def`
+and `iPL_filler_result.def`, where the demo script currently passes byte-for-byte.
+
+## 2026-06-16 Adapter Audit Notes
+
+Recent issue found after the first green demo/CTest pass:
+
+- `Shadow<IdbNet>` and `Shadow<IdbSpecialNet>` persisted `_source_type_sd`, but
+  `DefReadEdadb` did not restore it.
+- Fix: add enum setters `IdbNet::set_source_type(IdbInstanceType)` and
+  `IdbSpecialNet::set_source_type(IdbInstanceType)`, then restore `_source_type_sd`
+  in `readIdbNet()` and `readSpecialNet()`.
+- Follow-up fix: `DefWrite::write_net()` and `DefWrite::write_special_net()` now emit
+  `+ SOURCE <type>` when source type is not `kNone`.
+- Validation: a routed `iRT_result.def` fixture with `+ SOURCE USER` on
+  `ctrl$a_mux_sel[0]` writes `_source_type_sd=3`, reads back through EDADB, emits
+  `+ SOURCE USER`, and matches the direct iDB DEF baseline exactly.
+
+Recent issue found by routed-net testing:
+
+- EDADB child rows for `NetPinRef` / `SpecialNetPinRef` previously used
+  `instance_name` as the local key and did not preserve original instance-pin order.
+- On clock nets such as `clk_0` / `clk_1`, SQLite readback sorted by key and changed
+  DEF connection order relative to normal iDB output.
+- Fix: add `_order_sd` to `NetPinRef` and `SpecialNetPinRef`, make it the local key,
+  store vector order on write, and sort by `_order_sd` before readback reconstruction.
+
+Current uncovered or weakly covered areas:
+
+- `original_net_name`, `weight`, `xtalk`, `frequency`, and `fix_bump` need an
+  adapter-level C++ test that asserts iDB object fields directly. DEF byte diff does not
+  prove all of these because the current DEF writer does not emit every field.
+- `CppStrings` vector children, such as group instance names, special-net pin strings,
+  and IO-pin name lists, do not have an explicit order column. Current demos pass, but
+  a deterministic-order testcase should be added if textual order matters.
+- Empty object-family paths are validated for Blockage, Region, Slot, Group, and Fill
+  on sky130_gcd. Non-empty cases still need dedicated DEF fixtures.
+- Repeated instance references with different pins on the same net should be covered
+  by a small targeted fixture; `_order_sd` avoids the previous instance-key collision
+  risk for net pin refs.
+
 ## Branch Map
 
 | Label | iEDA branch / commit | EDADB location | Adapter location | EDADB commit | Status |
