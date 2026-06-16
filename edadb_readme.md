@@ -350,12 +350,43 @@ Validation:
   `_source_type_sd=3` (`IdbInstanceType::kUser`), reads back through `edadb_read`, emits
   `+ SOURCE USER`, and matches the direct iDB DEF baseline exactly.
 
+### Net optional field visibility
+
+Problem:
+
+- EDADB already stored regular-net `ORIGINAL`, `WEIGHT`, `XTALK`, `FIXEDBUMP`, and
+  `FREQUENCY`, but normal `DefWrite::write_net()` did not emit them.
+- EDADB already stored special-net `ORIGINAL` and `WEIGHT`, but
+  `DefWrite::write_special_net()` did not emit them.
+- Normal DEF read did not set `IdbNet::_fix_bump` for `+ FIXEDBUMP`, so EDADB could not
+  persist the bit from input DEF.
+- A first writer fix emitted `FREQUENCY -1` for nets without explicit frequency because
+  `IdbNet` defaults `_frequency` to `-1`.
+
+Fix:
+
+- `DefRead::read_net()` now sets `fix_bump` when `defiNet::hasFixedbump()` is true.
+- `DefWrite::write_net()` emits existing iDB fields for `ORIGINAL`, `WEIGHT`, `XTALK`,
+  `FIXEDBUMP`, and positive `FREQUENCY`.
+- `DefWrite::write_special_net()` emits existing iDB fields for `ORIGINAL` and `WEIGHT`.
+
+Validation:
+
+- A routed fixture adds `+ SOURCE NETLIST + ORIGINAL orig_vdd_net + WEIGHT 5` to special
+  net `VDD`, and `+ SOURCE USER + ORIGINAL orig_ctrl_net + WEIGHT 7 + XTALK 11 +
+  FIXEDBUMP + FREQUENCY 250` to regular net `ctrl$a_mux_sel[0]`.
+- SQLite confirms `iSpecNetSD(VDD)=orig_vdd_net|POWER|NETLIST|5`.
+- SQLite confirms `iNetSD(ctrl$a_mux_sel[0])=orig_ctrl_net|SIGNAL|USER|7|11|1|250.0`.
+- Direct iDB DEF baseline and EDADB readback DEF match exactly for this fixture.
+- No default `FREQUENCY -1` is emitted after the positive-frequency guard.
+
 ## Tests That Still Need Dedicated Fixtures
 
 The demo suite is useful but not sufficient for all adapter fields.
 
-- Add an adapter-level C++ test that constructs nets with `ORIGINAL`, `WEIGHT`, `XTALK`,
-  `FREQUENCY`, and `FIXEDBUMP`, writes EDADB, reads EDADB, and asserts iDB fields directly.
+- Add an adapter-level C++ test that constructs optional net fields and asserts iDB fields
+  directly. The routed DEF fixture now covers these fields end-to-end, but a C++ test would
+  run faster and isolate object state without DEF formatting.
 - Add a repeated-instance-pin fixture, such as one net containing `( U A )` and `( U B )`,
   to guard against child-table key collisions and order regressions.
 - Add non-empty Blockage, Region, Slot, Group, and Fill DEF fixtures. Current sky130_gcd

@@ -55,6 +55,21 @@ Recent issue found after the first green demo/CTest pass:
   `ctrl$a_mux_sel[0]` writes `_source_type_sd=3`, reads back through EDADB, emits
   `+ SOURCE USER`, and matches the direct iDB DEF baseline exactly.
 
+Additional issue found by focused optional-field testing:
+
+- `DefRead::read_net()` did not copy regular-net `+ FIXEDBUMP` into `IdbNet`, even
+  though EDADB already stored `_fix_bump_sd`.
+- `DefWrite::write_net()` did not emit regular-net `ORIGINAL`, `WEIGHT`, `XTALK`,
+  `FIXEDBUMP`, or `FREQUENCY`; `DefWrite::write_special_net()` did not emit
+  special-net `ORIGINAL` or `WEIGHT`.
+- Fix: restore `FIXEDBUMP` in normal DEF read, and emit these existing iDB fields from
+  the DEF writer. Only emit regular-net `FREQUENCY` when it is positive, because the
+  iDB default is `-1`.
+- Validation: a routed fixture with special-net `VDD + SOURCE NETLIST + ORIGINAL
+  orig_vdd_net + WEIGHT 5` and regular net `ctrl$a_mux_sel[0] + SOURCE USER +
+  ORIGINAL orig_ctrl_net + WEIGHT 7 + XTALK 11 + FIXEDBUMP + FREQUENCY 250` writes the
+  expected SQLite values and the EDADB DEF matches the direct iDB baseline exactly.
+
 Recent issue found by routed-net testing:
 
 - EDADB child rows for `NetPinRef` / `SpecialNetPinRef` previously used
@@ -66,9 +81,10 @@ Recent issue found by routed-net testing:
 
 Current uncovered or weakly covered areas:
 
-- `original_net_name`, `weight`, `xtalk`, `frequency`, and `fix_bump` need an
-  adapter-level C++ test that asserts iDB object fields directly. DEF byte diff does not
-  prove all of these because the current DEF writer does not emit every field.
+- Net `source_type`, `original_net_name`, `weight`, `xtalk`, `frequency`, and
+  `fix_bump` now have focused routed DEF fixture coverage through direct iDB baseline
+  comparison. A future adapter-level C++ test would still be useful for faster direct
+  object assertions.
 - `CppStrings` vector children, such as group instance names, special-net pin strings,
   and IO-pin name lists, do not have an explicit order column. Current demos pass, but
   a deterministic-order testcase should be added if textual order matters.

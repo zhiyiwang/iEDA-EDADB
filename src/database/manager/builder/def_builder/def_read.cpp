@@ -1067,6 +1067,10 @@ int32_t DefRead::parse_net(defiNet* def_net)
     net->set_xtalk(def_net->XTalk());
   }
 
+  if (def_net->hasFixedbump()) {
+    net->set_fix_bump(true);
+  }
+
   if (def_net->hasFrequency()) {
     net->set_frequency(def_net->frequency());
   }

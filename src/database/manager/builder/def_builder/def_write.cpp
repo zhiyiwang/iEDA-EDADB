@@ -801,6 +801,15 @@ int32_t DefWrite::write_special_net()
       writestr("  + SOURCE %s \n", source.c_str());
     }
 
+    if (!special_net->get_original_net_name().empty()) {
+      string original_name = ieda::Str::addBackslash(special_net->get_original_net_name());
+      writestr("  + ORIGINAL %s \n", original_name.c_str());
+    }
+
+    if (special_net->get_weight() != 0) {
+      writestr("  + WEIGHT %d \n", special_net->get_weight());
+    }
+
     for (IdbSpecialWire* wire : special_net->get_wire_list()->get_wire_list()) {
       write_specialnet_wire(wire);
     }
@@ -855,6 +864,27 @@ int32_t DefWrite::write_net()
     if (IdbInstanceType::kNone < net->get_source_type() && IdbInstanceType::kMax > net->get_source_type()) {
       string source = IdbEnum::GetInstance()->get_instance_property()->get_type_str(net->get_source_type());
       writestr("  + SOURCE %s \n", source.c_str());
+    }
+
+    if (!net->get_original_net_name().empty()) {
+      string original_name = ieda::Str::addBackslash(net->get_original_net_name());
+      writestr("  + ORIGINAL %s \n", original_name.c_str());
+    }
+
+    if (net->get_weight() != 0) {
+      writestr("  + WEIGHT %d \n", net->get_weight());
+    }
+
+    if (net->get_xtalk() != 0) {
+      writestr("  + XTALK %d \n", net->get_xtalk());
+    }
+
+    if (net->is_fix_bump()) {
+      writestr("  + FIXEDBUMP \n");
+    }
+
+    if (net->get_frequency() > 0.0) {
+      writestr("  + FREQUENCY %g \n", net->get_frequency());
     }
 
     if (net->get_wire_list()->get_num() > 0) {
