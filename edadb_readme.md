@@ -247,7 +247,9 @@ Current write state:
 - EDADB creates physical table `iRegion` plus boundary-rect child table.
 - EDADB creates physical table `iSlotSD` plus rect child table.
 - EDADB creates physical table `iGroupSD` plus instance-name child table.
-- EDADB creates physical table `iFillSD` plus layer/via member child tables.
+- EDADB creates physical table `iFillSD` plus flattened layer-rect and via-coordinate
+  child tables. `iFillLayerSD` and `iFillViaSD` are still registered, but active Fill
+  roundtrip uses the flattened `iFillSD` view.
 - EDADB creates physical table `iSpecNetSD` plus nested pin/wire/segment/point child tables.
 - EDADB creates physical table `iNetSD` plus nested pin/wire/segment/point child tables.
 - Other `writeIdbXXX()` calls are disabled under `//EDADB_TODO`.
@@ -380,6 +382,44 @@ Validation:
 - Direct iDB DEF baseline and EDADB readback DEF match exactly for this fixture.
 - No default `FREQUENCY -1` is emitted after the positive-frequency guard.
 
+### Non-empty auxiliary sections and Fill variants
+
+Problem:
+
+- The default sky130_gcd demo mostly exercises empty BLOCKAGES, REGIONS, SLOTS, GROUPS,
+  and FILLS paths.
+- A synthetic non-empty fixture exposed two gaps:
+  - normal `DefWrite::write_fill()` assumed every `IdbFill` had both layer and via data,
+    so it segfaulted on valid separate layer/via fills;
+  - EDADB `Shadow<IdbFill>` stored nullable layer/via child objects, which did not match
+    the current vector-child schema when only one Fill variant was present.
+
+Fix:
+
+- `DefWrite::write_fill()` now branches by `IdbFillType::kLayer` / `kVia`, checks nulls,
+  writes only the matching record shape, and emits `END FILLS`.
+- `DefWrite::write_region()` now emits `END REGIONS`.
+- EDADB `Shadow<IdbFill>` now stores a flattened discriminated view:
+  - layer fills: `_layer_name_sd` plus `_rect_list_sd`;
+  - via fills: `_via_name_sd` plus `_coordinate_list_sd`.
+- `DefReadEdadb::readIdbFill()` restores layer fills by layer name and via fills by via
+  name, cloning the via and restoring coordinates.
+
+Validation:
+
+- Test storage root: `/tmp/iedadb_continue_tests`.
+- Fixture: `/tmp/iedadb_continue_tests/nonempty_aux.def`.
+- Direct iDB baseline: `/tmp/iedadb_continue_tests/direct_aux/data_out.def`.
+- EDADB DB: `/tmp/iedadb_continue_tests/edadb_aux_flat/edadb.db`.
+- EDADB readback DEF: `/tmp/iedadb_continue_tests/nonempty_aux_edadb_aux_flat.def`.
+- SQLite counts match the fixture: `iBlockageSD=2`, `iRegion=1`, `iSlotSD=1`,
+  `iGroupSD=1`, `iFillSD=2`.
+- Fill child tables contain one layer rect and one via coordinate.
+- Direct iDB baseline and EDADB readback DEF match exactly.
+- Default copied `iPL_result.def` regression under
+  `/tmp/iedadb_continue_tests/default_regression` also matches exactly after EDADB
+  write/read.
+
 ## Tests That Still Need Dedicated Fixtures
 
 The demo suite is useful but not sufficient for all adapter fields.
@@ -389,8 +429,13 @@ The demo suite is useful but not sufficient for all adapter fields.
   run faster and isolate object state without DEF formatting.
 - Add a repeated-instance-pin fixture, such as one net containing `( U A )` and `( U B )`,
   to guard against child-table key collisions and order regressions.
-- Add non-empty Blockage, Region, Slot, Group, and Fill DEF fixtures. Current sky130_gcd
-  mostly validates their empty-table paths.
+- Promote the non-empty Blockage, Region, Slot, Group, and Fill DEF fixture from
+  `/tmp/iedadb_continue_tests/nonempty_aux.def` into a repeatable checked-in or generated
+  regression.
+- Add a dedicated GROUP member fixture after normal `DefRead::parse_group()` is extended
+  to preserve member instance names; the current synthetic group member is dropped by the
+  direct iDB baseline too, so EDADB equivalence does not yet prove raw GROUP member
+  preservation.
 - Add an order-sensitive testcase for `CppStrings` vector children if textual order matters
   for group instance names, special-net pin strings, or IO-pin name lists.
 

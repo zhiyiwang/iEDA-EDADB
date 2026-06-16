@@ -121,7 +121,7 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbFillLayer>, "iFillLayerSD", (primary_key,
 
 TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbFillVia>, "iFillViaSD", (primary_key, _via_name_sd), (_coordinate_list_sd));
 
-TABLE4CLASS(edadb::Shadow<idb::IdbFill>, "iFillSD", (primary_key, _type_sd, _layer_sd, _via_sd));
+TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbFill>, "iFillSD", (primary_key, _type_sd, _layer_name_sd, _via_name_sd), (_rect_list_sd, _coordinate_list_sd));
 
 #include "shadow/shadow_idb_special_net.h"
 TABLE4CLASS(idb::edadb_adapter::SpecialNetPinRef, "iSpecPinRef", (_order_sd, instance_name, pin_name));

@@ -91,22 +91,35 @@ class Shadow<idb::IdbFill> {
 public:
     Shadow<idb::IdbFill> (void): primary_key(next_primary_key++) {}
     ~Shadow<idb::IdbFill>() {
-        delete _layer_sd;
-        _layer_sd = nullptr;
-        delete _via_sd;
-        _via_sd = nullptr;
+        for ( auto& rect_sd : _rect_list_sd ) {
+            delete rect_sd;
+            rect_sd = nullptr;
+        }
+        _rect_list_sd.clear();
+
+        for ( auto& coordinate_sd : _coordinate_list_sd ) {
+            delete coordinate_sd;
+            coordinate_sd = nullptr;
+        }
+        _coordinate_list_sd.clear();
     }
     Shadow<idb::IdbFill>(const Shadow& other) = delete;
     Shadow<idb::IdbFill>& operator=(const Shadow& other) = delete;
 public:
     void toShadow(idb::IdbFill* obj) {
         _type_sd = obj->get_type();
-        if ( _type_sd == idb::IdbFill::IdbFillType::kLayer ) {
-            _layer_sd = new Shadow<idb::IdbFillLayer>();
-            _layer_sd->toShadow( obj->get_layer() );
-        } else if ( _type_sd == idb::IdbFill::IdbFillType::kVia ) {
-            _via_sd = new Shadow<idb::IdbFillVia>();
-            _via_sd->toShadow( obj->get_via() );
+        if ( _type_sd == idb::IdbFill::IdbFillType::kLayer && obj->get_layer() != nullptr ) {
+            _layer_name_sd = obj->get_layer()->get_layer() ? obj->get_layer()->get_layer()->get_name() : "";
+            for ( auto& rect : obj->get_layer()->get_rect_list() ) {
+                idb::IdbRect* rect_sd = new idb::IdbRect(*rect);
+                _rect_list_sd.emplace_back( rect_sd );
+            }
+        } else if ( _type_sd == idb::IdbFill::IdbFillType::kVia && obj->get_via() != nullptr ) {
+            _via_name_sd = obj->get_via()->get_via() ? obj->get_via()->get_via()->get_name() : "";
+            for ( auto& coordinate : obj->get_via()->get_coordinate_list() ) {
+                idb::IdbCoordinate<int32_t>* coordinate_sd = new idb::IdbCoordinate<int32_t>(*coordinate);
+                _coordinate_list_sd.emplace_back( coordinate_sd );
+            }
         }
     } // toShadow
     void fromShadow(idb::IdbFill* obj) {
@@ -116,8 +129,10 @@ public:
 public:
     uint64_t primary_key;   
     idb::IdbFill::IdbFillType _type_sd;
-    Shadow<idb::IdbFillLayer>* _layer_sd = nullptr;
-    Shadow<idb::IdbFillVia>* _via_sd = nullptr;
+    std::string _layer_name_sd;
+    std::vector<idb::IdbRect*> _rect_list_sd;
+    std::string _via_name_sd;
+    std::vector<idb::IdbCoordinate<int32_t>*> _coordinate_list_sd;
 private:
     static inline uint64_t next_primary_key;
 }; // Shadow IdbFill

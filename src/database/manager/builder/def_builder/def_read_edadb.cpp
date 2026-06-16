@@ -707,34 +707,36 @@ bool DefReadEdadb::readIdbFill(void) {
             return false;
         }
 
-        if (fill_sd->_layer_sd != nullptr) {
-            IdbLayer* layer = layer_list->find_layer(fill_sd->_layer_sd->_layer_name_sd);
+        if (fill_sd->_type_sd == IdbFill::IdbFillType::kLayer) {
+            IdbLayer* layer = layer_list->find_layer(fill_sd->_layer_name_sd);
             if (layer == nullptr) {
                 std::cerr << "DefReadEdadb::readIdbFill failed to find layer: "
-                          << fill_sd->_layer_sd->_layer_name_sd << std::endl;
+                          << fill_sd->_layer_name_sd << std::endl;
                 delete fill_sd;
                 return false;
             }
 
             IdbFillLayer* fill_layer = fill_list->add_fill_layer(layer);
-            fill_sd->_layer_sd->fromShadow(fill_layer);
-        }
-
-        if (fill_sd->_via_sd != nullptr) {
-            IdbVia* via = via_list_def->find_via(fill_sd->_via_sd->_via_name_sd);
+            for (auto& rect_sd : fill_sd->_rect_list_sd) {
+                fill_layer->add_rect(rect_sd->get_low_x(), rect_sd->get_low_y(), rect_sd->get_high_x(), rect_sd->get_high_y());
+            }
+        } else if (fill_sd->_type_sd == IdbFill::IdbFillType::kVia) {
+            IdbVia* via = via_list_def->find_via(fill_sd->_via_name_sd);
             if (via == nullptr) {
-                via = via_list_lef->find_via(fill_sd->_via_sd->_via_name_sd);
+                via = via_list_lef->find_via(fill_sd->_via_name_sd);
             }
             if (via == nullptr) {
                 std::cerr << "DefReadEdadb::readIdbFill failed to find via: "
-                          << fill_sd->_via_sd->_via_name_sd << std::endl;
+                          << fill_sd->_via_name_sd << std::endl;
                 delete fill_sd;
                 return false;
             }
 
             IdbVia* via_new = via->clone();
             IdbFillVia* fill_via = fill_list->add_fill_via(via_new);
-            fill_sd->_via_sd->fromShadow(fill_via);
+            for (auto& coordinate_sd : fill_sd->_coordinate_list_sd) {
+                fill_via->add_coordinate(coordinate_sd->get_x(), coordinate_sd->get_y());
+            }
         }
 
         delete fill_sd;

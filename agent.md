@@ -383,9 +383,22 @@ Tcl stability:
 
 - `ScriptEngine.*` changes Tcl command/option names from manually managed `const char*` buffers to `std::string`.
 
-## Current Next Step
+## Current State And Next Step
 
-Restore persistence class by class. For each object family:
+Current EDADB adapter coverage:
+
+- Active write/read object families: Design / Units / BusBit, Die, Row, TrackGrid,
+  GCellGrid, Via, Instance, Pin, Blockage, Region, Slot, Group, Fill, SpecialNet,
+  and Net.
+- Matching DEF callbacks are disabled in `DefReadEdadb::createDbByDef()` for active
+  object families, so readback validation proves those families come from EDADB.
+- Net and SpecialNet preserve pin order, source type, original name, weight, optional
+  regular-net xtalk/fixed-bump/frequency fields, and routed wire segments.
+- Fill is stored as a flattened discriminated record: layer fills keep layer name and
+  rect children; via fills keep via name and coordinate children. This avoids nullable
+  variant child-object mismatches in the current EDADB vector-child schema.
+
+Restore or harden persistence class by class. For each object family:
 
 1. schema/table mapping
 2. `initAllTables()`
@@ -399,18 +412,28 @@ DEF callback ownership rule:
 - If `readIdbXXX()` is enabled for an object family, the corresponding `defrSetXXXCbk` path in `createDbByDef()` must be disabled.
 - Do not let EDADB readback and DEF text callbacks create the same iDB object family twice.
 
-Planned object order:
+Current weak spots to test next:
 
-- design / units / busbit
-- die
-- row
-- track
-- gcell
-- via / via-master / layer-shape
+- Group member names: the current normal DEF parser drops the `ctrl/_34_` member in the
+  synthetic `GROUPS` fixture, so EDADB matches direct iDB output but does not yet prove
+  full GROUP member preservation from raw DEF text.
+- Dedicated C++ adapter tests for optional net fields, repeated pin refs, and Fill layer/via
+  variants would be faster and more precise than end-to-end DEF fixtures.
 
-NET and SPECIALNET are not implemented yet.
+Latest continuation test storage:
 
-Current implementation target:
+- Root: `/tmp/iedadb_continue_tests`
+- Non-empty auxiliary-section fixture: `/tmp/iedadb_continue_tests/nonempty_aux.def`
+- Direct iDB baseline: `/tmp/iedadb_continue_tests/direct_aux/data_out.def`
+- EDADB DB with flattened Fill schema: `/tmp/iedadb_continue_tests/edadb_aux_flat/edadb.db`
+- EDADB readback DEF: `/tmp/iedadb_continue_tests/nonempty_aux_edadb_aux_flat.def`
+- Default empty auxiliary-section regression: `/tmp/iedadb_continue_tests/default_regression`
 
-- Design / units / busbit, die, row, track, gcell, and via are active for the current demo milestone.
-- Next object family is TBD; keep using the old-code-first migration rule.
+Latest continuation test result:
+
+- Non-empty BLOCKAGES / REGIONS / SLOTS / GROUPS / FILLS fixture writes and reads through
+  EDADB successfully.
+- SQLite count checks match the fixture: 2 blockages, 1 region, 1 slot, 1 group, and
+  2 fills; fill child tables contain 1 layer rect and 1 via coordinate.
+- Direct iDB baseline and EDADB readback DEF are byte-identical.
+- Default `iPL_result.def` EDADB regression also remains byte-identical.
