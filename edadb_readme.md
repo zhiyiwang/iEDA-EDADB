@@ -404,6 +404,8 @@ Fix:
   - via fills: `_via_name_sd` plus `_coordinate_list_sd`.
 - `DefReadEdadb::readIdbFill()` restores layer fills by layer name and via fills by via
   name, cloning the via and restoring coordinates.
+- `DefRead` now enables group-name and group-member callbacks, so normal DEF parsing
+  preserves exact GROUP member instances before EDADB writes `Shadow<IdbGroup>`.
 
 Validation:
 
@@ -419,6 +421,11 @@ Validation:
 - Default copied `iPL_result.def` regression under
   `/tmp/iedadb_continue_tests/default_regression` also matches exactly after EDADB
   write/read.
+- GROUP member regression under `/tmp/iedadb_continue_tests/group_member_fix` confirms
+  direct iDB output and EDADB readback both emit
+  `- test_group ctrl/_34_ + REGION test_region ;`.
+- SQLite confirms the EDADB child row `ctrl/_34_|test_group` in
+  `iGroupSD__instance_name_vec_sd_CppStr`.
 
 ## Tests That Still Need Dedicated Fixtures
 
@@ -432,10 +439,9 @@ The demo suite is useful but not sufficient for all adapter fields.
 - Promote the non-empty Blockage, Region, Slot, Group, and Fill DEF fixture from
   `/tmp/iedadb_continue_tests/nonempty_aux.def` into a repeatable checked-in or generated
   regression.
-- Add a dedicated GROUP member fixture after normal `DefRead::parse_group()` is extended
-  to preserve member instance names; the current synthetic group member is dropped by the
-  direct iDB baseline too, so EDADB equivalence does not yet prove raw GROUP member
-  preservation.
+- Add a dedicated GROUP member fixture to permanent regression coverage. The current
+  temporary fixture in `/tmp/iedadb_continue_tests/group_member_fix` proves one exact
+  member instance; wildcard/regex GROUP member patterns still deserve focused coverage.
 - Add an order-sensitive testcase for `CppStrings` vector children if textual order matters
   for group instance names, special-net pin strings, or IO-pin name lists.
 

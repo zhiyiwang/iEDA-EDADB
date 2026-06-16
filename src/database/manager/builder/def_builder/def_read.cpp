@@ -50,6 +50,7 @@ DefRead::DefRead(IdbDefService* def_service)
 {
   _def_service = def_service;
   _cur_cell_master = nullptr;
+  _cur_group = nullptr;
 }
 
 DefRead::~DefRead()
@@ -100,8 +101,8 @@ bool DefRead::createDb(const char* file)
     defrSetFillCbk(fillCallback);
     defrSetGcellGridCbk(gcellGridCallback);
     defrSetGroupCbk(groupCallback);
-    //   defrSetGroupMemberCbk(groupMemberCallback);
-    //   defrSetGroupNameCbk(groupNameCallback);
+    defrSetGroupMemberCbk(groupMemberCallback);
+    defrSetGroupNameCbk(groupNameCallback);
     //   defrSetHistoryCbk(historyCallback);
     defrSetNetStartCbk(netBeginCallback);
     defrSetNetCbk(netCallback);
@@ -284,8 +285,8 @@ bool DefRead::createDbGzip(const char* gzip_file)
   defrSetFillCbk(fillCallback);
   defrSetGcellGridCbk(gcellGridCallback);
   defrSetGroupCbk(groupCallback);
-  //   defrSetGroupMemberCbk(groupMemberCallback);
-  //   defrSetGroupNameCbk(groupNameCallback);
+  defrSetGroupMemberCbk(groupMemberCallback);
+  defrSetGroupNameCbk(groupNameCallback);
   //   defrSetHistoryCbk(historyCallback);
   defrSetNetStartCbk(netBeginCallback);
   defrSetNetCbk(netCallback);
@@ -466,8 +467,8 @@ bool DefRead::createFloorplanDb(const char* file)
   defrSetFillCbk(fillCallback);
   defrSetGcellGridCbk(gcellGridCallback);
   defrSetGroupCbk(groupCallback);
-  //   defrSetGroupMemberCbk(groupMemberCallback);
-  //   defrSetGroupNameCbk(groupNameCallback);
+  defrSetGroupMemberCbk(groupMemberCallback);
+  defrSetGroupNameCbk(groupNameCallback);
   //   defrSetHistoryCbk(historyCallback);
   defrSetNetStartCbk(netBeginCallback);
   defrSetNetCbk(netCallback);
@@ -2172,6 +2173,118 @@ int32_t DefRead::groupCallback(defrCallbackType_e type, defiGroup* def_group, de
   return kDbSuccess;
 }
 
+int32_t DefRead::groupNameCallback(defrCallbackType_e type, const char* group_name, defiUserData data)
+{
+  if (group_name == nullptr) {
+    std::cout << "Group name is nullPtr..." << std::endl;
+    return kDbFail;
+  }
+
+  DefRead* def_reader = (DefRead*) data;
+  if (!def_reader->check_type(type)) {
+    std::cout << "Check Type Error [Def : GroupName] ..." << std::endl;
+    return kDbFail;
+  }
+
+  def_reader->parse_group_name(group_name);
+
+  return kDbSuccess;
+}
+
+int32_t DefRead::groupMemberCallback(defrCallbackType_e type, const char* member_pattern, defiUserData data)
+{
+  if (member_pattern == nullptr) {
+    std::cout << "Group member is nullPtr..." << std::endl;
+    return kDbFail;
+  }
+
+  DefRead* def_reader = (DefRead*) data;
+  if (!def_reader->check_type(type)) {
+    std::cout << "Check Type Error [Def : GroupMember] ..." << std::endl;
+    return kDbFail;
+  }
+
+  def_reader->parse_group_member(member_pattern);
+
+  return kDbSuccess;
+}
+
+namespace {
+
+bool has_group_instance(IdbGroup* group, IdbInstance* instance)
+{
+  if (group == nullptr || instance == nullptr) {
+    return true;
+  }
+
+  for (IdbInstance* existing : group->get_instance_list()->get_instance_list()) {
+    if (existing == instance) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+void add_group_instance_once(IdbGroup* group, IdbInstance* instance)
+{
+  if (!has_group_instance(group, instance)) {
+    group->add_instance(instance);
+  }
+}
+
+}  // namespace
+
+int32_t DefRead::parse_group_name(const char* group_name)
+{
+  if (group_name == nullptr) {
+    std::cout << "Group name is nullPtr..." << std::endl;
+    return kDbFail;
+  }
+
+  IdbDesign* design = _def_service->get_design();
+  IdbGroupList* group_list = design->get_group_list();
+
+  _cur_group = group_list->add_group(group_name);
+
+  return kDbSuccess;
+}
+
+int32_t DefRead::parse_group_member(const char* member_pattern)
+{
+  if (member_pattern == nullptr) {
+    std::cout << "Group member is nullPtr..." << std::endl;
+    return kDbFail;
+  }
+
+  if (_cur_group == nullptr) {
+    return kDbSuccess;
+  }
+
+  IdbDesign* design = _def_service->get_design();
+  IdbInstanceList* instance_list = design->get_instance_list();
+  std::string pattern = member_pattern;
+
+  IdbInstance* exact_instance = instance_list->find_instance(pattern);
+  if (exact_instance != nullptr) {
+    add_group_instance_once(_cur_group, exact_instance);
+    return kDbSuccess;
+  }
+
+  try {
+    std::regex member_regex(pattern);
+    for (IdbInstance* instance : instance_list->get_instance_list()) {
+      if (std::regex_match(instance->get_name(), member_regex)) {
+        add_group_instance_once(_cur_group, instance);
+      }
+    }
+  } catch (const std::regex_error&) {
+    return kDbSuccess;
+  }
+
+  return kDbSuccess;
+}
+
 int32_t DefRead::parse_group(defiGroup* def_group)
 {
   if (def_group == nullptr) {
@@ -2180,11 +2293,15 @@ int32_t DefRead::parse_group(defiGroup* def_group)
   }
   IdbDesign* design = _def_service->get_design();  // def
   IdbRegionList* region_list = design->get_region_list();
-  // IdbInstanceList* instance_list = design->get_instance_list();
   IdbGroupList* group_list = design->get_group_list();
 
-  IdbGroup* group = group_list->add_group(def_group->name());
-  group->set_region(region_list->find_region(def_group->regionName()));
+  IdbGroup* group = _cur_group != nullptr && _cur_group->get_group_name() == def_group->name()
+                        ? _cur_group
+                        : group_list->add_group(def_group->name());
+  if (def_group->hasRegionName()) {
+    group->set_region(region_list->find_region(def_group->regionName()));
+  }
+  _cur_group = nullptr;
 
   // compNamePattern
   // Property

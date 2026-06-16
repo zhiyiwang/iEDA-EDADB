@@ -414,9 +414,6 @@ DEF callback ownership rule:
 
 Current weak spots to test next:
 
-- Group member names: the current normal DEF parser drops the `ctrl/_34_` member in the
-  synthetic `GROUPS` fixture, so EDADB matches direct iDB output but does not yet prove
-  full GROUP member preservation from raw DEF text.
 - Dedicated C++ adapter tests for optional net fields, repeated pin refs, and Fill layer/via
   variants would be faster and more precise than end-to-end DEF fixtures.
 
@@ -428,6 +425,7 @@ Latest continuation test storage:
 - EDADB DB with flattened Fill schema: `/tmp/iedadb_continue_tests/edadb_aux_flat/edadb.db`
 - EDADB readback DEF: `/tmp/iedadb_continue_tests/nonempty_aux_edadb_aux_flat.def`
 - Default empty auxiliary-section regression: `/tmp/iedadb_continue_tests/default_regression`
+- GROUP member regression: `/tmp/iedadb_continue_tests/group_member_fix`
 
 Latest continuation test result:
 
@@ -437,3 +435,6 @@ Latest continuation test result:
   2 fills; fill child tables contain 1 layer rect and 1 via coordinate.
 - Direct iDB baseline and EDADB readback DEF are byte-identical.
 - Default `iPL_result.def` EDADB regression also remains byte-identical.
+- Normal DEF parsing now preserves GROUP member `ctrl/_34_`, EDADB stores it in
+  `iGroupSD__instance_name_vec_sd_CppStr`, and the direct baseline matches EDADB readback
+  at `/tmp/iedadb_continue_tests/nonempty_aux_edadb_groupfix.def`.

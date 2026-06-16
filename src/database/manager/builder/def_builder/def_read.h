@@ -90,6 +90,8 @@ class DefRead
   static int32_t gcellGridCallback(defrCallbackType_e type, defiGcellGrid* def_grid, defiUserData data);
   static int32_t regionCallback(defrCallbackType_e type, defiRegion* def_region, defiUserData data);
   static int32_t slotsCallback(defrCallbackType_e type, defiSlot* def_slot, defiUserData data);
+  static int32_t groupNameCallback(defrCallbackType_e type, const char* group_name, defiUserData data);
+  static int32_t groupMemberCallback(defrCallbackType_e type, const char* member_pattern, defiUserData data);
   static int32_t groupCallback(defrCallbackType_e type, defiGroup* def_group, defiUserData data);
 
   static int32_t fillsCallback(defrCallbackType_e type, int32_t def_num, defiUserData data);
@@ -120,6 +122,8 @@ class DefRead
   int32_t parse_gcell_grid(defiGcellGrid* def_grid);
   int32_t parse_region(defiRegion* def_region);
   int32_t parse_slot(defiSlot* def_slot);
+  int32_t parse_group_name(const char* group_name);
+  int32_t parse_group_member(const char* member_pattern);
   int32_t parse_group(defiGroup* def_group);
   int32_t parse_fill_number(int32_t def_fill_num);
   int32_t parse_fill(defiFill* def_fill);
@@ -163,5 +167,6 @@ protected:
   clock_t _end_time;
 
   IdbCellMaster* _cur_cell_master;
+  IdbGroup* _cur_group;
 };
 }  // namespace idb
