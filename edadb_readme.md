@@ -1,710 +1,479 @@
-# iEDA + EDADB Adapter README
+# iEDA + EDADB Code Reading Guide
 
-This document is for humans reviewing or extending the EDADB integration in iEDA.
+这个 README 的目标是告诉你如何按顺序阅读当前 `edadb-idb` 分支里和 EDADB
+相关的代码，而不是一次性解释所有实现细节。
 
-## What EDADB Adds
-
-EDADB adds an alternate database persistence path for iEDA DEF data.
-
-In this branch, the goal is not yet full object persistence. The current goal is a verified adapter framework:
-
-- iEDA can open/init an EDADB database.
-- iEDA exposes Tcl commands `edadb_write` and `edadb_read`.
-- The demo can run DEF → EDADB write → EDADB read → DEF.
-- The Design, Die, Row, TrackGrid, GCell, Via, Instance, Pin, Blockage, Region, Slot, Group, Fill, SpecialNet, and Net families are persisted through EDADB.
-- The final DEF roundtrip matches the input DEF.
-
-Current limitation:
-
-- Only Design / Units / BusBit, Die, Row, TrackGrid, GCell, Via, Instance, Pin, Blockage, Region, Slot, Group, Fill, SpecialNet, and Net are written to and read from EDADB.
-- Other iDB object families still rebuild from the original DEF text.
-- Continue development on C (`edadb-idb`) only. Use B only as reference for old mappings.
-- DEF byte diff is not a complete object-field proof. Some iDB fields are persisted by EDADB
-  but are not emitted by the current DEF writer, so they require adapter-level tests.
-
-This is intentional for the C init code base.
-
-## Directory Layout
+当前分支把 EDADB 作为 iEDA 的一个 DEF 数据持久化后端接入进来。主流程是：
 
 ```text
-src/database/edadb/core/
+DEF -> iDB -> EDADB SQLite database -> iDB -> DEF
 ```
 
-EDADB implementation submodule.
+建议阅读时始终带着两个问题：
 
-It provides the EDADB C++ API, including `edadb.h`, `DbTableOp`, table definition utilities, backend code, and EDADB tests.
+1. 这个文件是原始 iEDA 代码、iEDA+EDADB wrapper，还是 EDADB core？
+2. 这个代码处在写入 EDADB、读回 EDADB，还是测试/验证链路上？
 
-```text
-src/database/edadb/idb/
-```
+## 0. 先确认当前版本
 
-iEDA-side adapter layer.
+当前关键版本：
 
-Important files:
+- iEDA branch: `edadb-idb`
+- iEDA current commit: `d5866cfa7 fix: preserve def group members`
+- official iEDA base commit: `0074352412f6a4a8c88c13739946cdf5004f25c0`
+- EDADB core submodule: `src/database/edadb/core @ 7dc2825`
 
-- `edadb_idb_init.*`: opens EDADB, applies primary-key policy, initializes tables.
-- `edadb_idb_helper.*`: stores/accesses `IdbDefService`; provides layer and via-rule lookup helpers.
-- `edadb_idb_schema.h`: maps iDB/shadow classes to EDADB table definitions.
-- `edadb_idb_shadow.h`: aggregates shadow types.
-- `shadow/*`: defines per-class iDB ↔ shadow conversion code.
-
-Current C branch rule:
-
-- schema/shadow/table creation is enabled only for object families whose `readIdbXXX()` / `writeIdbXXX()` are active.
-- dormant code should be kept under `//EDADB_TODO`, not deleted.
-
-## Naming Rule
-
-Use **adapter**, not **adaptor**.
-
-The adapter namespace is:
-
-```cpp
-namespace idb::edadb_adapter
-```
-
-Active adapter API:
-
-```cpp
-idb::edadb_adapter::initReadDb(const char*)
-idb::edadb_adapter::initWriteDb(const char*)
-idb::edadb_adapter::EdadbIdbHelper
-idb::edadb_adapter::CppStrings
-```
-
-Internal init helpers, such as `initPrimKeys()`, `initTable()`, and `initAllTables()`, also live directly in `idb::edadb_adapter` but remain `.cpp`-local by not being declared in the public header.
-
-Do not reintroduce old adapter entry points such as:
-
-```cpp
-edadb::init2read()
-edadb::init2write()
-```
-
-Exception:
-
-- `edadb::Shadow<T>` specializations stay in `namespace edadb`.
-- They specialize EDADB core templates and are not adapter namespace APIs.
-
-## Runtime Flow
-
-The demo entry is:
+可用下面命令确认：
 
 ```bash
-cd bin/
-bash /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/demo/demo.sh 2>&1 | tee run.out
+git branch --show-current
+git log --oneline -5
+git submodule status --recursive
 ```
 
-The demo does:
+如果你想看当前分支相对官方 iEDA 改了哪些文件：
 
-1. Set design/env paths.
-2. Run `def2edadb.tcl`.
-3. Run `edadb2def.tcl`.
-4. Compare input DEF with output `_edadb.def`.
-
-For routed DEFs, add a direct iDB baseline:
-
-```text
-input DEF -> def_init -> def_save -> baseline DEF
-input DEF -> edadb_write -> edadb_read -> def_save -> EDADB DEF
-baseline DEF == EDADB DEF
+```bash
+git diff --name-status 007435241..HEAD
 ```
 
-Reason: iDB's normal DEF writer can canonicalize routed segment endpoint order. If the raw
-input DEF differs from both generated DEF files in the same way, that is not an EDADB data
-loss. EDADB-specific differences are differences between the baseline DEF and EDADB DEF.
+如果你想看 EDADB core 相对当前 C baseline 的变化：
 
-Tcl scripts:
+```bash
+git -C src/database/edadb/core diff --name-status 8a4e3bf..HEAD
+```
+
+## 1. 先看目录分层
+
+先把代码分成三类，这样后面读起来不会乱。
+
+### 原始 iEDA 代码被修改的部分
+
+这些文件原本属于 iEDA，为了接入 EDADB 或修复 DEF 字段保真被修改：
+
+- Build/CMake:
+  - `CMakeLists.txt`
+  - `src/apps/CMakeLists.txt`
+  - `src/database/CMakeLists.txt`
+  - `src/database/manager/builder/CMakeLists.txt`
+  - `src/database/manager/builder/def_builder/CMakeLists.txt`
+  - `src/platform/data_manager/CMakeLists.txt`
+- Tcl/DataManager/Builder:
+  - `src/interface/tcl/tcl_idb/tcl_db_file.*`
+  - `src/interface/tcl/tcl_idb/tcl_register_idb.h`
+  - `src/interface/tcl/tcl_definition.h`
+  - `src/platform/data_manager/idm.*`
+  - `src/database/manager/builder/builder.*`
+- DEF normal reader/writer:
+  - `src/database/manager/builder/def_builder/def_read.*`
+  - `src/database/manager/builder/def_builder/def_write.*`
+- iDB data structures:
+  - `src/database/data/design/**`
+  - `src/database/basic/geometry/**`
+
+### iEDA + EDADB wrapper/adapter
+
+这些是本分支新增或主要为 EDADB 接入服务的代码：
+
+- `src/database/edadb/idb/*`
+- `src/database/edadb/idb/shadow/*`
+- `src/database/manager/builder/def_builder/def_read_edadb.*`
+- `src/database/manager/builder/def_builder/def_write_edadb.*`
+- `src/platform/data_manager/idm_edadb.cpp`
+- `scripts/edadb/demo/*`
+- `src/database/edadb/test/*`
+
+### EDADB core
+
+EDADB 自己的 ORM / SQLite / table-op 实现在子模块：
+
+- `src/database/edadb/core/include/edadb/*`
+- `src/database/edadb/core/src/*`
+- `src/database/edadb/core/test/*`
+- `src/database/edadb/core/demo/*`
+
+阅读 iEDA 接入逻辑时，先不要深入 core。先读 wrapper，等你看到
+`edadb::insertObject<T>()`、`edadb::readAll<T>()`、`TABLE4CLASS*` 这些 API 时，再回到
+core 里查它们的机制。
+
+## 2. 从可运行入口开始读
+
+先运行或阅读这个 demo：
+
+```bash
+cd bin
+bash /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/demo/demo.sh
+```
+
+入口脚本：
+
+- `scripts/edadb/demo/demo.sh`
+
+它做三件事：
+
+1. 设置 sky130_gcd 的环境变量。
+2. 调用 `def2edadb.tcl` 做 `DEF -> iDB -> EDADB`。
+3. 调用 `edadb2def.tcl` 做 `EDADB -> iDB -> DEF`。
+
+然后比较输入 DEF 和输出 DEF。
+
+接着读两个 Tcl：
 
 - `scripts/edadb/demo/tcl/def2edadb.tcl`
-  - reads LEF
-  - reads DEF using normal `def_init`
-  - calls `edadb_write -edadb_db_path`
-
 - `scripts/edadb/demo/tcl/edadb2def.tcl`
-  - reads LEF
-  - calls `edadb_read -edadb_db_path -path`
-  - calls `def_save`
 
-## Code Review Order
+重点看这两个命令：
 
-Start from the iEDA executable entry, then follow the Tcl command path into EDADB.
+```tcl
+edadb_write -edadb_db_path $db_path
+edadb_read -edadb_db_path $db_path -path $::env(INPUT_DEF)
+```
 
-1. `src/apps/ieda_main.cpp`
-   - `main()`
-   - handles `-script`
-   - calls `plfInst->runTcl()`
+这两个 Tcl 命令是进入 C++ 代码的门。
 
-2. `src/platform/flow/flow.cpp`
-   - `Flow::runTcl()`
-   - calls Tcl startup
+## 3. 读 Tcl 命令注册和执行
 
-3. `src/interface/tcl/tcl_main.h`
-   - `tcl_start()`
-   - installs `registerCommands`
+从注册开始：
 
-4. `src/interface/tcl/tcl_register.h`
-   - `registerCommands()`
-   - calls `registerCmdDB()`
+1. `src/interface/tcl/tcl_idb/tcl_register_idb.h`
+   - 看 `registerTclCmd(CmdEdadbRead, "edadb_read")`
+   - 看 `registerTclCmd(CmdEdadbWrite, "edadb_write")`
 
-5. `src/interface/tcl/tcl_idb/tcl_register_idb.h`
-   - registers `edadb_read`
-   - registers `edadb_write`
+2. `src/interface/tcl/tcl_idb/tcl_db_file.h`
+   - 看 `CmdEdadbRead`
+   - 看 `CmdEdadbWrite`
 
-6. `scripts/edadb/demo/demo.sh`
-   - shows the full EDADB DEF roundtrip test
+3. `src/interface/tcl/tcl_idb/tcl_db_file.cpp`
+   - 看 `CmdEdadbRead::exec()`
+   - 看 `CmdEdadbWrite::exec()`
 
-7. `scripts/edadb/demo/tcl/def2edadb.tcl`
-   - review the write-side Tcl flow
+这里要确认两件事：
 
-8. `scripts/edadb/demo/tcl/edadb2def.tcl`
-   - review the read-side Tcl flow
+- Tcl 参数 `-edadb_db_path` 是否正确传到 C++。
+- `edadb_read` 是否同时拿到 EDADB database path 和原始 DEF path。
 
-9. `src/interface/tcl/tcl_idb/tcl_db_file.h`
-   - declarations for `CmdEdadbRead` and `CmdEdadbWrite`
+当前关键调用是：
 
-10. `src/interface/tcl/tcl_idb/tcl_db_file.cpp`
-    - `CmdEdadbRead::exec()`
-    - `CmdEdadbWrite::exec()`
+```cpp
+dmInst->saveDefToEdadb(edadb_path);
+dmInst->readDefFromEdadb(edadb_path, path);
+```
 
-11. `src/platform/data_manager/idm_edadb.cpp`
-    - `DataManager::readDefFromEdadb()`
-    - `DataManager::saveDefToEdadb()`
+## 4. 读 DataManager 和 Builder 接口
 
-12. `src/database/manager/builder/builder.cpp`
-    - `IdbBuilder::buildDefFromEdadb()`
-    - `IdbBuilder::saveDefToEdadb()`
+接下来进入平台层：
 
-13. `src/database/manager/builder/def_builder/def_write_edadb.*`
-    - EDADB write framework
-- currently writes Design / Units / BusBit, Die, Row, TrackGrid, GCell, Via, Instance, Pin, Blockage, Region, Slot, Group, Fill, SpecialNet, and Net
+1. `src/platform/data_manager/idm.h`
+   - 看 `readDefFromEdadb()`
+   - 看 `saveDefToEdadb()`
 
-14. `src/database/manager/builder/def_builder/def_read_edadb.*`
-    - EDADB read framework
-- currently reads Design / Units / BusBit, Die, Row, TrackGrid, GCell, Via, Region, Instance, Pin, Blockage, Slot, Group, Fill, SpecialNet, and Net from EDADB
-    - rebuilds remaining iDB object families from DEF text
+2. `src/platform/data_manager/idm_edadb.cpp`
+   - 看 `DataManager::readDefFromEdadb()`
+   - 看 `DataManager::saveDefToEdadb()`
 
-15. `src/database/edadb/idb/edadb_idb_init.*`
-    - adapter API boundary
-    - DB init
-    - primary-key/table init policy
+3. `src/database/manager/builder/builder.h`
+   - 看 `buildDefFromEdadb()`
+   - 看 `saveDefToEdadb()`
 
-16. `src/database/edadb/idb/edadb_idb_helper.*`
-    - helper state and lookup functions
+4. `src/database/manager/builder/builder.cpp`
+   - 看 `IdbBuilder::buildDefFromEdadb()`
+   - 看 `IdbBuilder::saveDefToEdadb()`
 
-17. `src/database/edadb/idb/edadb_idb_schema.h`
-    - table mapping restoration point
-
-18. `src/database/edadb/idb/edadb_idb_shadow.h`
-    - shadow aggregation restoration point
-
-19. `src/database/edadb/idb/shadow/*`
-    - per-class conversion logic
-
-## Current Adapter Behavior
-
-Write path:
+这一层不要陷入具体 object 字段，只确认调用方向：
 
 ```text
-edadb_write
-  -> CmdEdadbWrite::exec()
-  -> DataManager::saveDefToEdadb()
-  -> IdbBuilder::saveDefToEdadb()
-  -> DefWriteEdadb::writeDb2Edadb()
-  -> idb::edadb_adapter::initWriteDb()
-  -> writeChip2Edadb()
+Tcl command
+  -> DataManager
+  -> IdbBuilder
+  -> DefWriteEdadb / DefReadEdadb
 ```
 
-Current write state:
+## 5. 读 EDADB 写入链路
 
-- `initWriteDb()` is active.
-- `writeChip2Edadb()` calls `writeIdbDesign()`, `writeIdbDie()`, `writeIdbRow()`, `writeIdbTrackGrid()`, `writeIdbGCellGrid()`, `writeIdbVia()`, `writeIdbInstance()`, `writeIdbPin()`, `writeIdbBlockage()`, `writeIdbRegion()`, `writeIdbSlot()`, `writeIdbGroup()`, `writeIdbFill()`, `writeSpecialNet()`, and `writeIdbNet()`.
-- `writeIdbDesign()` uses the current EDADB API: `edadb::insertObject<idb::IdbDesign>(design)`.
-- `writeIdbDesign()` follows `DefWrite::write_units()` style: use DEF units when valid, otherwise use LEF units, and update active `design->_units` to the effective DBU before EDADB insert.
-- `writeIdbDie()` follows `DefWrite::write_die()` style: persist the die point list through `edadb::Shadow<idb::IdbDie>`.
-- `writeIdbRow()` follows `DefWrite::write_row()` style: persist each row's name, site, origin, DO/BY count, and STEP values directly as `IdbRow`.
-- `writeIdbTrackGrid()` follows `DefWrite::write_track_grid()` style: persist direction/start/DO/STEP plus the DEF layer-name list through `edadb::Shadow<idb::IdbTrackGrid>`.
-- `writeIdbGCellGrid()` follows `DefWrite::write_gcell_grid()` style: persist direction/start/DO/STEP directly as `IdbGCellGrid`.
-- `writeIdbVia()` follows `DefWrite::write_via()` style and writes root `IdbVia` directly; EDADB converts `_master_instance` through member StoreType.
-- `writeIdbInstance()` follows `DefWrite::write_component()` style and writes COMPONENT fields through `Shadow<IdbInstance>`.
-- `writeIdbPin()` follows `DefWrite::write_pin()` style and writes PINS fields through `Shadow<IdbPin>`, `Shadow<IdbTerm>`, and `Shadow<IdbPort>`.
-- `writeIdbBlockage()` follows `DefWrite::write_blockage()` style and writes only DEF-emitted BLOCKAGES fields through `Shadow<IdbBlockage>`.
-- `writeIdbRegion()` follows `DefWrite::write_region()` style and writes REGIONS fields directly as `IdbRegion`.
-- `writeIdbSlot()` follows `DefWrite::write_slot()` style and writes SLOTS fields through `Shadow<IdbSlot>`.
-- `writeIdbGroup()` follows `DefWrite::write_group()` style and writes GROUPS fields through `Shadow<IdbGroup>`.
-- `writeIdbFill()` follows `DefWrite::write_fill()` style and writes FILLS fields through `Shadow<IdbFill>`.
-- `writeSpecialNet()` follows `DefWrite::write_special_net()` style and writes SPECIALNETS fields through `Shadow<IdbSpecialNet>`.
-- `writeIdbNet()` follows `DefWrite::write_net()` style and writes NETS fields through `Shadow<IdbNet>`.
-- EDADB creates physical table `iDesign`; `IdbUnits` and `IdbBusBitChars` are inline columns inside `iDesign`.
-- EDADB creates physical table `iDieSD` plus vector child rows for die coordinates.
-- EDADB creates physical table `iRow`; `IdbSite` and original coordinate are inline row columns.
-- EDADB creates physical table `iTrackGridSD` plus vector child rows for track-grid layer names.
-- EDADB creates physical table `iGCellGrid`.
-- EDADB creates physical table `iVia`; generated via master fields are inline columns under `_master_instance__master_generate_sd__...`.
-- EDADB creates physical table `iInstSD` for COMPONENT storage.
-- EDADB creates physical table `iPinSD` plus nested port/layer-shape/rect child tables.
-- EDADB creates physical table `iBlockageSD` plus rect child table.
-- EDADB creates physical table `iRegion` plus boundary-rect child table.
-- EDADB creates physical table `iSlotSD` plus rect child table.
-- EDADB creates physical table `iGroupSD` plus instance-name child table.
-- EDADB creates physical table `iFillSD` plus flattened layer-rect and via-coordinate
-  child tables. `iFillLayerSD` and `iFillViaSD` are still registered, but active Fill
-  roundtrip uses the flattened `iFillSD` view.
-- EDADB creates physical table `iSpecNetSD` plus nested pin/wire/segment/point child tables.
-- EDADB creates physical table `iNetSD` plus nested pin/wire/segment/point child tables.
-- Other `writeIdbXXX()` calls are disabled under `//EDADB_TODO`.
+写入入口：
 
-Read path:
+- `src/database/manager/builder/def_builder/def_write_edadb.h`
+- `src/database/manager/builder/def_builder/def_write_edadb.cpp`
+
+先读：
+
+```cpp
+DefWriteEdadb::writeDb2Edadb()
+DefWriteEdadb::writeChip2Edadb()
+```
+
+然后按顺序读这些函数：
+
+```cpp
+writeIdbDesign()
+writeIdbDie()
+writeIdbRow()
+writeIdbTrackGrid()
+writeIdbGCellGrid()
+writeIdbVia()
+writeIdbInstance()
+writeIdbPin()
+writeIdbBlockage()
+writeIdbRegion()
+writeIdbSlot()
+writeIdbGroup()
+writeIdbFill()
+writeSpecialNet()
+writeIdbNet()
+```
+
+每个函数的阅读方法一样：
+
+1. 看它从 iDB 哪个 list 取数据。
+2. 看它用原始对象直接写，还是先转成 `edadb::Shadow<T>`。
+3. 看它最后调用哪个 EDADB API，例如：
+
+```cpp
+edadb::insertObject<T>(...)
+```
+
+写入链路需要特别关注：
+
+- `writeIdbNet()` 和 `writeSpecialNet()` 是否保存 pin 顺序、source、original、weight 等字段。
+- `writeIdbFill()` 是否区分 layer fill 和 via fill。
+- `writeIdbGroup()` 是否保存 group name、region name、instance member。
+
+## 6. 读 EDADB 读回链路
+
+读回入口：
+
+- `src/database/manager/builder/def_builder/def_read_edadb.h`
+- `src/database/manager/builder/def_builder/def_read_edadb.cpp`
+
+先读：
+
+```cpp
+DefReadEdadb::createDbFromEdadb()
+DefReadEdadb::createDbByEdadb()
+```
+
+然后按对象族读：
+
+```cpp
+readIdbDesign()
+readIdbDie()
+readIdbRow()
+readIdbTrackGrid()
+readIdbGCellGrid()
+readIdbVia()
+readIdbRegion()
+readIdbInstance()
+readIdbPin()
+readIdbBlockage()
+readIdbSlot()
+readIdbGroup()
+readIdbFill()
+readSpecialNet()
+readIdbNet()
+```
+
+这里重点看三件事：
+
+1. EDADB 读出的 shadow 是否完整还原到 iDB 对象。
+2. readback 是否依赖 helper 查找 layer、via、instance、region。
+3. DEF parser callbacks 是否被关闭，避免同一个对象既从 EDADB 建一次，又从 DEF text 建一次。
+
+对应 helper 在：
+
+- `src/database/edadb/idb/edadb_idb_helper.h`
+- `src/database/edadb/idb/edadb_idb_helper.cpp`
+
+## 7. 读 schema 和 shadow
+
+当你理解 read/write 调用后，再读 adapter 的核心映射。
+
+先读聚合入口：
+
+- `src/database/edadb/idb/edadb_idb.h`
+- `src/database/edadb/idb/edadb_idb_init.h`
+- `src/database/edadb/idb/edadb_idb_init.cpp`
+
+重点看：
+
+```cpp
+initWriteDb()
+initReadDb()
+initPrimKeys()
+initAllTables()
+```
+
+然后读表定义：
+
+- `src/database/edadb/idb/edadb_idb_schema.h`
+
+这里会看到类似：
+
+```cpp
+TABLE4CLASS(...)
+TABLE4CLASS_WVEC(...)
+```
+
+这些宏定义了：
+
+- 哪个 C++ 类型对应哪个 SQL table。
+- 哪些字段是普通 column。
+- 哪些 vector 字段会展开成 child table。
+- primary key / foreign key 如何绑定。
+
+最后读 shadow：
+
+- `src/database/edadb/idb/shadow/shadow_idb_net.h`
+- `src/database/edadb/idb/shadow/shadow_idb_special_net.h`
+- `src/database/edadb/idb/shadow/shadow_idb_fill.h`
+- `src/database/edadb/idb/shadow/shadow_idb_group.h`
+- 其他 `shadow_idb_*.h`
+
+shadow 的作用是：
 
 ```text
-edadb_read
-  -> CmdEdadbRead::exec()
-  -> DataManager::readDefFromEdadb()
-  -> IdbBuilder::buildDefFromEdadb()
-  -> DefReadEdadb::createDbFromEdadb()
-  -> idb::edadb_adapter::initReadDb()
-  -> createDbByEdadb()
-  -> createDbByDef()
+iDB object <-> serializable EDADB object
 ```
 
-Current read state:
+阅读每个 shadow 时重点看：
 
-- `initReadDb()` is active.
-- `createDbByEdadb()` calls `readIdbDesign()`, `readIdbDie()`, `readIdbRow()`, `readIdbTrackGrid()`, `readIdbGCellGrid()`, `readIdbVia()`, `readIdbRegion()`, `readIdbInstance()`, `readIdbPin()`, `readIdbBlockage()`, `readIdbSlot()`, `readIdbGroup()`, `readIdbFill()`, `readSpecialNet()`, and `readIdbNet()`.
-- `readIdbDesign()` uses the current EDADB cursor API: `makeReadAllOp<idb::IdbDesign>()` + `readNext()`.
-- `readIdbDesign()` follows the old DbMap implementation semantics: transfer owned `_units` and `_bus_bit_chars` pointers into the active `IdbDesign`, then null them in the temporary object.
-- The temporary `got` object is a safe buffer. Reading directly into active `design` would better match original iEDA object reuse, but EDADB NULL inline pointer columns could clear active pointers, so keep the buffered style for now.
-- `readIdbDie()` reads `edadb::Shadow<idb::IdbDie>` and rebuilds the active die through `IdbDie::add_point()` plus `set_bounding_box()`, matching `DefRead::parse_die()`.
-- `readIdbRow()` reads `IdbRow` directly, then rebuilds each row's site from LEF site clone and calls `set_bounding_box()`, matching `DefRead::parse_row()`.
-- `readIdbTrackGrid()` reads `edadb::Shadow<idb::IdbTrackGrid>`, rebuilds track scalar fields, resolves layer names through LEF `IdbLayers`, and updates each routing layer's track-grid list, matching `DefRead::parse_track_grid()`.
-- `readIdbGCellGrid()` reads `IdbGCellGrid` directly and rebuilds the gcell list, matching `DefRead::parse_gcell_grid()`.
-- `readIdbVia()` reads `IdbVia` directly; member-level StoreType rebuilds `IdbViaMaster`, via-rule/layer pointers, pattern, and generated cut shapes through `EdadbIdbHelper`, matching `DefRead::parse_via()`.
-- `readIdbInstance()` reads `Shadow<IdbInstance>`, resolves cell master/layers/region by name, and rebuilds instance state with normal setters, matching `DefRead::parse_component()`.
-- `readIdbPin()` reads `Shadow<IdbPin>`, rebuilds IO terms/ports/layer-shapes, recomputes average/bbox fields, and leaves net pointer reconnect for DEF net callbacks, matching `DefRead::parse_pin()`.
-- `readIdbBlockage()` reads `Shadow<IdbBlockage>`, rebuilds routing/placement derived objects, resolves layers/instances by name, and restores rects, matching `DefRead::parse_blockage()`.
-- `readIdbRegion()` reads `IdbRegion` directly and restores name/type/boundary rects before instances resolve region names, matching `DefRead::parse_region()`.
-- `readIdbSlot()` reads `Shadow<IdbSlot>` and restores layer name plus rects, matching `DefRead::parse_slot()`.
-- `readIdbGroup()` reads `Shadow<IdbGroup>`, restores group name, resolves region name, and reconnects member instances by name.
-- `readIdbFill()` reads `Shadow<IdbFill>`, resolves layer/via names, clones via masters, and restores rect/coordinate children.
-- `readSpecialNet()` reads `Shadow<IdbSpecialNet>`, resolves pins/instances/layers/vias by name, restores original name, USE/connect type, SOURCE/source type, weight, pin refs, and wire segments.
-- `readIdbNet()` reads `Shadow<IdbNet>`, resolves IO/instance pins, restores USE/connect type, SOURCE/source type, weight, xtalk, fixed-bump, frequency, and rebuilds regular wires.
-- `createDbByDef()` disables version/design/units/busbit/die/row/track/gcell/via/component/pin/blockage/region/slot/group/fill/special-net/net callbacks and restores all remaining object families from DEF text.
+- constructor / `fromIdb` 一类逻辑如何从 iDB 抽字段。
+- `toIdb` / restore 一类逻辑如何把字段放回 iDB。
+- vector child 是否有顺序字段，例如 net pin ref 的 `_order_sd`。
 
-Important ownership note:
+## 8. 再读原始 DEF reader/writer 的改动
 
-- Avoid `edadb::readAll(std::vector<T>&)` for owning raw-pointer iDB classes such as `IdbDesign` unless copy/move ownership is explicitly safe.
-- Prefer cursor readback for these classes, because it matches the original EDADB implementation style and avoids shallow-copy lifetime hazards.
-- Implement adapter code in the direct style of `DefWrite` / `DefRead`: read the original writer/parser first, persist the values normal DEF output would use, and avoid hidden raw-pointer swaps or temporary ownership tricks.
+这一层是容易混淆的地方：有些修复不是 EDADB wrapper，而是原始 iEDA DEF
+读写器本身需要补字段。
 
-## 2026-06-16 Correctness Updates
+重点文件：
 
-The latest adapter audit found two issues that were not fully proven by the initial demo pass.
+- `src/database/manager/builder/def_builder/def_read.cpp`
+- `src/database/manager/builder/def_builder/def_read.h`
+- `src/database/manager/builder/def_builder/def_write.cpp`
+- `src/database/manager/builder/def_builder/def_write.h`
 
-### Net pin-reference order
+重点检查：
 
-Problem:
+- `DefRead::read_net()` / related parser 是否读入 `FIXEDBUMP`。
+- GROUP parser 是否保存 group name 和 member。
+- `DefWrite::write_net()` 是否输出 `SOURCE`、`ORIGINAL`、`WEIGHT`、`XTALK`、
+  `FIXEDBUMP`、`FREQUENCY`。
+- `DefWrite::write_special_net()` 是否输出 `SOURCE`、`ORIGINAL`、`WEIGHT`。
+- `write_fill()` 和 `write_region()` 是否输出完整 section end。
 
-- `NetPinRef` and `SpecialNetPinRef` did not store vector order explicitly.
-- The child table key caused SQLite readback to order instance pins by key, not by original
-  net connection order.
-- This changed clock-net connection text for routed examples such as `clk_0` and `clk_1`.
+这些修改会同时影响 direct iDB baseline 和 EDADB roundtrip，所以测试时不要只比较原始
+input DEF，要比较：
 
-Fix:
-
-- `NetPinRef` and `SpecialNetPinRef` now contain `_order_sd`.
-- `edadb_idb_schema.h` maps `_order_sd` as the first local field for `iNetPinRef` and
-  `iSpecPinRef`.
-- `Shadow<IdbNet>::toShadow()` and `Shadow<IdbSpecialNet>::toShadow()` write increasing
-  order values.
-- `DefReadEdadb::readIdbNet()` and `readSpecialNet()` sort pin refs by `_order_sd` before
-  rebuilding iDB lists.
-
-Validation:
-
-- `iRT_result.def` has 677 regular nets and 8997 regular routed segments.
-- Raw input vs output differs because normal iDB DEF write canonicalizes endpoint order.
-- Direct DEF baseline vs EDADB DEF is identical after the pin-order fix.
-- `iPL_filler_result.def` passes raw demo byte diff and direct-baseline diff.
-
-### Net source-type restoration
-
-Problem:
-
-- `Shadow<IdbNet>` and `Shadow<IdbSpecialNet>` stored `_source_type_sd`.
-- `DefReadEdadb` did not restore that field.
-- Existing DEF byte diff did not catch the readback gap until a dedicated net `SOURCE`
-  fixture was added.
-
-Fix:
-
-- `IdbNet` and `IdbSpecialNet` now have enum setters for `IdbInstanceType`.
-- `DefReadEdadb::readIdbNet()` and `readSpecialNet()` restore `_source_type_sd`.
-- `DefWrite::write_net()` and `write_special_net()` emit net `+ SOURCE <type>` when the
-  source type is not `kNone`.
-
-Validation:
-
-- `cmake --build build --target iEDA -j 16` passed.
-- Default EDADB demo passed byte diff after the fix.
-- Full EDADB core CTest passed before this small source-type fix: `13/13 tests passed`.
-  Re-run CTest after future core/schema changes, or before handoff.
-- A routed `iRT_result.def` fixture with `+ SOURCE USER` on `ctrl$a_mux_sel[0]` writes
-  `_source_type_sd=3` (`IdbInstanceType::kUser`), reads back through `edadb_read`, emits
-  `+ SOURCE USER`, and matches the direct iDB DEF baseline exactly.
-
-### Net optional field visibility
-
-Problem:
-
-- EDADB already stored regular-net `ORIGINAL`, `WEIGHT`, `XTALK`, `FIXEDBUMP`, and
-  `FREQUENCY`, but normal `DefWrite::write_net()` did not emit them.
-- EDADB already stored special-net `ORIGINAL` and `WEIGHT`, but
-  `DefWrite::write_special_net()` did not emit them.
-- Normal DEF read did not set `IdbNet::_fix_bump` for `+ FIXEDBUMP`, so EDADB could not
-  persist the bit from input DEF.
-- A first writer fix emitted `FREQUENCY -1` for nets without explicit frequency because
-  `IdbNet` defaults `_frequency` to `-1`.
-
-Fix:
-
-- `DefRead::read_net()` now sets `fix_bump` when `defiNet::hasFixedbump()` is true.
-- `DefWrite::write_net()` emits existing iDB fields for `ORIGINAL`, `WEIGHT`, `XTALK`,
-  `FIXEDBUMP`, and positive `FREQUENCY`.
-- `DefWrite::write_special_net()` emits existing iDB fields for `ORIGINAL` and `WEIGHT`.
-
-Validation:
-
-- A routed fixture adds `+ SOURCE NETLIST + ORIGINAL orig_vdd_net + WEIGHT 5` to special
-  net `VDD`, and `+ SOURCE USER + ORIGINAL orig_ctrl_net + WEIGHT 7 + XTALK 11 +
-  FIXEDBUMP + FREQUENCY 250` to regular net `ctrl$a_mux_sel[0]`.
-- SQLite confirms `iSpecNetSD(VDD)=orig_vdd_net|POWER|NETLIST|5`.
-- SQLite confirms `iNetSD(ctrl$a_mux_sel[0])=orig_ctrl_net|SIGNAL|USER|7|11|1|250.0`.
-- Direct iDB DEF baseline and EDADB readback DEF match exactly for this fixture.
-- No default `FREQUENCY -1` is emitted after the positive-frequency guard.
-
-### Non-empty auxiliary sections and Fill variants
-
-Problem:
-
-- The default sky130_gcd demo mostly exercises empty BLOCKAGES, REGIONS, SLOTS, GROUPS,
-  and FILLS paths.
-- A synthetic non-empty fixture exposed two gaps:
-  - normal `DefWrite::write_fill()` assumed every `IdbFill` had both layer and via data,
-    so it segfaulted on valid separate layer/via fills;
-  - EDADB `Shadow<IdbFill>` stored nullable layer/via child objects, which did not match
-    the current vector-child schema when only one Fill variant was present.
-
-Fix:
-
-- `DefWrite::write_fill()` now branches by `IdbFillType::kLayer` / `kVia`, checks nulls,
-  writes only the matching record shape, and emits `END FILLS`.
-- `DefWrite::write_region()` now emits `END REGIONS`.
-- EDADB `Shadow<IdbFill>` now stores a flattened discriminated view:
-  - layer fills: `_layer_name_sd` plus `_rect_list_sd`;
-  - via fills: `_via_name_sd` plus `_coordinate_list_sd`.
-- `DefReadEdadb::readIdbFill()` restores layer fills by layer name and via fills by via
-  name, cloning the via and restoring coordinates.
-- `DefRead` now enables group-name and group-member callbacks, so normal DEF parsing
-  preserves exact GROUP member instances before EDADB writes `Shadow<IdbGroup>`.
-
-Validation:
-
-- Test storage root: `/tmp/iedadb_continue_tests`.
-- Fixture: `/tmp/iedadb_continue_tests/nonempty_aux.def`.
-- Direct iDB baseline: `/tmp/iedadb_continue_tests/direct_aux/data_out.def`.
-- EDADB DB: `/tmp/iedadb_continue_tests/edadb_aux_flat/edadb.db`.
-- EDADB readback DEF: `/tmp/iedadb_continue_tests/nonempty_aux_edadb_aux_flat.def`.
-- SQLite counts match the fixture: `iBlockageSD=2`, `iRegion=1`, `iSlotSD=1`,
-  `iGroupSD=1`, `iFillSD=2`.
-- Fill child tables contain one layer rect and one via coordinate.
-- Direct iDB baseline and EDADB readback DEF match exactly.
-- Default copied `iPL_result.def` regression under
-  `/tmp/iedadb_continue_tests/default_regression` also matches exactly after EDADB
-  write/read.
-- GROUP member regression under `/tmp/iedadb_continue_tests/group_member_fix` confirms
-  direct iDB output and EDADB readback both emit
-  `- test_group ctrl/_34_ + REGION test_region ;`.
-- SQLite confirms the EDADB child row `ctrl/_34_|test_group` in
-  `iGroupSD__instance_name_vec_sd_CppStr`.
-
-## Tests That Still Need Dedicated Fixtures
-
-The demo suite is useful but not sufficient for all adapter fields.
-
-- Add an adapter-level C++ test that constructs optional net fields and asserts iDB fields
-  directly. The routed DEF fixture now covers these fields end-to-end, but a C++ test would
-  run faster and isolate object state without DEF formatting.
-- Add a repeated-instance-pin fixture, such as one net containing `( U A )` and `( U B )`,
-  to guard against child-table key collisions and order regressions.
-- Promote the non-empty Blockage, Region, Slot, Group, and Fill DEF fixture from
-  `/tmp/iedadb_continue_tests/nonempty_aux.def` into a repeatable checked-in or generated
-  regression.
-- Add a dedicated GROUP member fixture to permanent regression coverage. The current
-  temporary fixture in `/tmp/iedadb_continue_tests/group_member_fix` proves one exact
-  member instance; wildcard/regex GROUP member patterns still deserve focused coverage.
-- Add an order-sensitive testcase for `CppStrings` vector children if textual order matters
-  for group instance names, special-net pin strings, or IO-pin name lists.
-
-## How To Extend Persistence
-
-Restore one object family at a time.
-
-Recommended order:
-
-1. design / units / busbit
-2. die
-3. row
-4. track
-5. gcell
-6. via / via-master / layer-shape
-7. instance
-8. pin
-9. blockage
-10. region
-11. slot / group / fill
-12. special-net / net
-
-For each object family, use this migration workflow.
-
-1. Review the original DEF writer/parser:
-   - Find the matching `DefWrite::write_xxx()` method.
-   - Find the matching `DefRead::parse_xxx()` method and callback registration.
-   - List exactly which iDB members are emitted to DEF.
-   - List which iDB members are reconstructed from those emitted values.
-   - List which members are derived and should not be persisted.
-
-2. Decide the EDADB storage view:
-   - Direct `TABLE4CLASS` is OK when the iDB object already has a stable root key and its members match the DEF storage semantics.
-   - Keep root iDB classes direct when EDADB can convert their members implicitly.
-   - Use the minimum shadow needed for member pointer-to-name/key conversion, vector ownership, synthetic keys, reduced DEF views, or helper-based rebuilds.
-   - Do not add wrapper shadows when `TABLE4CLASS(root, ...)` plus member StoreType conversion is enough.
-
-3. Define schema and init:
-   - Add or enable `TABLE4CLASS`, `TABLE4SHADOW`, or `TABLE4CLASS_WVEC` in `src/database/edadb/idb/edadb_idb_schema.h`.
-   - If shadow is needed, add the class under `src/database/edadb/idb/shadow` and include it from `edadb_idb_shadow.h`.
-   - Update primary-key rules and `EDADB_INIT_TABLE(...)` in `src/database/edadb/idb/edadb_idb_init.cpp`.
-   - Keep schema/init/shadow disabled when the matching `readIdbXXX()` / `writeIdbXXX()` path is disabled.
-
-4. Port the write path:
-   - Read the normal `DefWrite::write_xxx()` implementation first.
-   - Implement `DefWriteEdadb::writeIdbXXX()` with the same object source, null checks, fallback rules, field set, and call-order assumptions.
-   - Persist the values that normal DEF output would contain. If normal DEF writer uses a fallback value, the EDADB adapter may canonicalize active iDB to that value before insertion.
-   - Use current EDADB API such as `edadb::insertObject<T>()` or `edadb::insertVector<T>()`; do not restore old `DbMap` code except as reference.
-
-5. Port the read path:
-   - Read the normal `DefRead::parse_xxx()` implementation first.
-   - Implement `DefReadEdadb::readIdbXXX()` so it rebuilds the active iDB object with the same semantics as the parser.
-   - Recompute derived fields through the same iDB methods, such as `set_bounding_box()`, reverse layer links, or helper lookups.
-   - Prefer cursor reads (`makeReadAllOp()` + `readNext()`) for owning raw-pointer classes unless copy/move ownership is proven safe.
-
-6. Disable matching DEF callbacks:
-   - Move the matching `defrSetXXXCbk(...)` into the disabled EDADB callback block in `DefReadEdadb::createDbByDef()`.
-   - Keep unrelated callbacks enabled so the rest of the design can still rebuild from DEF text.
-   - This makes the demo prove that the enabled object family really comes from EDADB.
-
-7. Validate:
-   - Build the relevant targets, normally `cmake --build build -j40 --target db_edadb def_builder iEDA`.
-   - Run only the canonical demo unless explicitly asked otherwise.
-   - Check adapter logs for `writeIdbXXX` and `readIdbXXX`.
-   - Inspect SQLite tables for object counts and key fields.
-   - Confirm the final DEF comparison says input and output are the same.
-
-Important compatibility rule:
-
-- During migration, iDB content can come from either EDADB object readback or DEF text callbacks.
-- For an enabled `readIdbXXX()` object family, disable the matching `defrSetXXXCbk` callbacks.
-- This prevents duplicate object creation and makes the test prove that the enabled object family really comes from EDADB.
-
-## Adapter Correctness Audit
-
-After each migration, check:
-
-- **Schema**: Persist only DEF-emitted fields or fields needed to rebuild them; do not store parser-derived caches.
-- **Shadow**: Keep root classes direct when possible; use only the minimum member-level shadow needed for vector ownership, synthetic keys, pointer-to-name/key conversion, reduced DEF views, or helper-based rebuilds.
-- **Write**: Match `DefWrite::write_xxx()` for source object, null/empty handling, fallback values, and emitted fields.
-- **Read**: Match `DefRead::parse_xxx()` rebuild semantics and disable the corresponding DEF callback.
-- **Runtime**: Run only the canonical demo, check write/read logs, inspect SQLite counts/key columns, and record uncovered cases.
-
-Active targets: design / units / busbit, die, row, track grid, gcell grid, via, instance, pin, blockage, region, slot, group, and fill.
-
-Mapping for these targets:
-
-| EDADB function | DEF callbacks to disable after enabling readback | Normal DEF writer functions |
-| --- | --- | --- |
-| `writeIdbDesign()` / `readIdbDesign()` | `defrSetVersionStrCbk`, `defrSetDesignCbk`, `defrSetUnitsCbk`, `defrSetBusBitCbk` | `write_version`, `write_design`, `write_units`, `write_busbit_char` |
-| `writeIdbDie()` / `readIdbDie()` | `defrSetDieAreaCbk` | `write_die` |
-| `writeIdbRow()` / `readIdbRow()` | `defrSetRowCbk` | `write_row` |
-| `writeIdbTrackGrid()` / `readIdbTrackGrid()` | `defrSetTrackCbk` | `write_track_grid` |
-| `writeIdbGCellGrid()` / `readIdbGCellGrid()` | `defrSetGcellGridCbk` | `write_gcell_grid` |
-| `writeIdbVia()` / `readIdbVia()` | `defrSetViaStartCbk`, `defrSetViaCbk` | `write_via` |
-| `writeIdbInstance()` / `readIdbInstance()` | `defrSetComponentCbk`, `defrSetComponentStartCbk`, `defrSetComponentEndCbk` | `write_component` |
-| `writeIdbPin()` / `readIdbPin()` | `defrSetPinCbk`, `defrSetPinEndCbk`, `defrSetStartPinsCbk` | `write_pin` |
-| `writeIdbBlockage()` / `readIdbBlockage()` | `defrSetBlockageCbk` | `write_blockage` |
-| `writeIdbRegion()` / `readIdbRegion()` | `defrSetRegionCbk` | `write_region` |
-| `writeIdbSlot()` / `readIdbSlot()` | `defrSetSlotCbk` | `write_slot` |
-| `writeIdbGroup()` / `readIdbGroup()` | `defrSetGroupCbk` | `write_group` |
-| `writeIdbFill()` / `readIdbFill()` | `defrSetFillStartCbk`, `defrSetFillCbk` | `write_fill` |
-| `writeSpecialNet()` / `readSpecialNet()` | `defrSetSNetStartCbk`, `defrSetSNetCbk`, `defrSetSNetEndCbk` | `write_special_net` |
-| `writeIdbNet()` / `readIdbNet()` | `defrSetNetStartCbk`, `defrSetNetCbk`, `defrSetNetEndCbk` | `write_net` |
-
-Row does not currently need a shadow class. `IdbRow::_name` is the root table primary key, so EDADB can attach inline `IdbSite` and original-coordinate columns directly. `IdbDie` needed shadow because its coordinate vector requires a synthetic root `primary_key` for child rows.
-
-TrackGrid does use a shadow class. Its DEF meaning is a scalar track definition plus a vector of layer names. The layer-name vector needs child rows grouped under the correct track grid root, so the explicit shadow `primary_key` is part of the storage model. Do not hide that grouping by making EDADB implicitly replace the class.
-
-GCellGrid does not need a shadow class. Its DEF meaning is exactly four scalar fields: direction, start, count, and step. There are no raw pointer members, vector child rows, or derived fields in the persisted object.
-
-Via does not use a root shadow class. `IdbVia::_name` is the root primary key, and `_master_instance` is converted by EDADB through member StoreType; `IdbViaMaster` / `IdbLayerShape` keep only the member-level conversion needed for layer-name lookup and generated/fixed shape rebuild.
-
-Instance uses `Shadow<IdbInstance>`. DEF COMPONENT output needs a reduced view: instance name, cell master name, type/source, placement status, orient, weight, coordinate, HALO, ROUTEHALO layer names, and region name. Readback resolves names and calls normal iDB setters.
-
-Pin uses `Shadow<IdbPin>`. DEF PINS output is an IO-term/port/layer-shape view, not the full `IdbPin` object. The adapter stores the DEF-emitted fields and recomputes bbox/average fields during readback; net pointers are reconnected later by normal DEF net parsing.
-
-Blockage uses `Shadow<IdbBlockage>` because the iDB class is polymorphic. The stored fields are limited to what `DefWrite::write_blockage()` emits: blockage type, layer name, pushdown, exceptpgnet, component name, and rects.
-
-Region does not need a shadow class. DEF REGIONS maps directly to region name, type, and boundary rect list, and `_name` is a natural root key. Read Region before Instance so component region references can resolve against the restored region list.
-
-Slot uses `Shadow<IdbSlot>`. DEF SLOTS maps to layer name plus rect list, but `_layer_name` is not a unique root key, so the shadow adds `primary_key` for stable child-rect grouping.
-
-Group uses `Shadow<IdbGroup>`. DEF GROUPS stores references by name: group name, region name, and member instance names. Readback runs after Region and Instance so those names can be resolved.
-
-Fill uses `Shadow<IdbFill>`. DEF FILLS is a typed layer/via view: layer name with rects, or via name with coordinates. Readback resolves layer/via names and clones via masters as `DefRead::parse_fill()` does.
-
-SpecialNet uses `Shadow<IdbSpecialNet>`. DEF SPECIALNETS is a nested net/wire/segment view; shadow stores layer/via/pin/instance references by name and gives nested child rows stable parent keys.
-
-Net uses `Shadow<IdbNet>`. DEF NETS stores pin references and regular wire layer/via references by name; nested wire/segment rows need stable parent keys. The shadow also records whether the second point is `VIRTUAL`, matching `DefWrite::write_net_wire_segment_points()`.
-
-Physical DB shape for active targets:
-
-```sql
-iDesign(
-  _design_name,
-  _version,
-  _units__micron_dbu,
-  _bus_bit_chars__left_delimiter,
-  _bus_bit_chars__right_delimiter,
-  ...
-)
-
-iDieSD(primary_key, ...)
-iDieSD_points_sd_iCoordSD(iDieSD_primary_key, _vec_idx, _x_sd, _y_sd)
-
-iRow(
-  _name,
-  _site__name,
-  _site__orient,
-  _original_coordinate__x_sd,
-  _original_coordinate__y_sd,
-  _row_num_x,
-  _row_num_y,
-  _step_x,
-  _step_y,
-  ...
-)
-
-iTrackGridSD(primary_key, _track_num_sd, _track_sd__start, _track_sd__direction, _track_sd__pitch)
-iTrackGridSD__layer_name_vec_sd_CppStr(iTrackGridSD_primary_key, str)
-
-iGCellGrid(_direction, _start, _num, _space)
-
-iVia(_name, _master_instance__name_sd, _master_instance__type_sd, _master_instance__master_generate_sd__...)
-
-iInstSD(_name_sd, _cell_master_name_sd, _type_sd, _status_sd, _orient_sd, _weight_sd, _coordinate_sd__..., _halo_sd__..., _route_halo_sd__..., _region_name_sd)
-
-iPinSD(_pin_name_sd, _net_name_sd, _io_term_sd__..., _average_coordinate_sd__..., _location_sd__..., _orient_sd, ...)
-iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD(...)
-iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD__layer_shape_list_sd_iLayerShapeSD(...)
-iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD__layer_shape_list_sd_iLayerShapeSD__rect_list_sd_IdbRect(...)
-
-iBlockageSD(primary_key, _instance_name_sd, _is_pushdown_sd, _type_sd, _layer_name_sd, _is_except_pgnet_sd)
-iBlockageSD__rect_list_sd_IdbRect(iBlockageSD_primary_key, ...)
-
-iRegion(_name, _type)
-iRegion__boudary_list_IdbRect(iRegion__name, ...)
-
-iSlotSD(primary_key, _layer_name_sd)
-iSlotSD__rect_list_sd_IdbRect(iSlotSD_primary_key, ...)
-
-iGroupSD(_group_name_sd, _region_name_sd)
-iGroupSD__instance_name_vec_sd_CppStr(iGroupSD__group_name_sd, ...)
-
-iFillSD(primary_key, _type_sd, _layer_sd__..., _via_sd__...)
-iFillSD__layer_sd_iFillLayerSD__rect_list_sd_IdbRect(...)
-iFillSD__via_sd_iFillViaSD__coordinate_list_sd_iCoordSD(...)
+```text
+input DEF -> normal iDB -> output DEF
+input DEF -> EDADB -> iDB -> output DEF
 ```
 
-NET and SPECIALNET are not implemented yet.
+## 9. 读 EDADB core
 
-## Validation
+只有当你需要理解 EDADB API 本身时，再进入 core。
 
-Build:
+建议顺序：
+
+1. `src/database/edadb/core/include/edadb.h`
+   - 先看 public API。
+
+2. `src/database/edadb/core/include/edadb/Table4Class.h`
+   - 看 table/class 映射宏。
+
+3. `src/database/edadb/core/include/edadb/Shadow.h`
+   - 看 shadow specialization 的机制。
+
+4. `src/database/edadb/core/include/edadb/DbTableOperator.h`
+   - 看 insert/select/update/delete 的抽象。
+
+5. `src/database/edadb/core/include/edadb/backend/sqlite/*`
+   - 看 SQLite backend 如何生成和执行 SQL。
+
+6. `src/database/edadb/core/test/*`
+   - 看 EDADB core 自己的 ORM/table-op 测试。
+
+当前 core 相对 C baseline `8a4e3bf` 的本地变化只有：
+
+- `include/edadb/backend/sqlite/DbStatement4Sqlite.h`
+- `test/CMakeLists.txt`
+
+这两个文件主要服务于 SQLite debug trace 测试。
+
+## 10. 最后读测试
+
+可重复测试放在：
+
+- `src/database/edadb/test/README.md`
+- `src/database/edadb/test/run_idb_roundtrip_regression.sh`
+- `src/database/edadb/test/tcl/*.tcl`
+
+运行：
 
 ```bash
-bash build.sh -j40
+bash src/database/edadb/test/run_idb_roundtrip_regression.sh
 ```
 
-Targeted compile check:
+默认输出：
 
-```bash
-cmake --build build -j40 --target db_edadb def_builder
+```text
+/tmp/iedadb_regression
 ```
 
-Demo:
+当前测试包含两个 case：
 
-```bash
-cd bin/
-bash /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/demo/demo.sh 2>&1 | tee run.out
-```
+- `default_ipl`
+  - 使用 sky130_gcd `iPL_result.def`。
+  - 比较 direct iDB DEF output 和 EDADB DEF output。
 
-Expected current result:
+- `aux_optional`
+  - 从 `iPL_result.def` 生成复杂 fixture。
+  - 添加非空 `BLOCKAGES`、`REGIONS`、`SLOTS`、`GROUPS`、`FILLS`。
+  - 添加 regular net 和 special net optional fields。
+  - 检查 SQLite 表内容和 DEF roundtrip diff。
 
-- logs show `[EDADB-IDB] initWriteDb`
-- logs show `[EDADB-IDB] initReadDb`
-- logs show `writeIdbDesign insert name=gcd version=5.8 micron_dbu=1000`
-- logs show `readIdbDesign restored name=gcd version=5.8 micron_dbu=1000`
-- logs show `writeIdbDie insert point_count=2`
-- logs show `readIdbDie restored point_count=2`
-- logs show `writeIdbRow insert row_count=39`
-- logs show `readIdbRow restored row_count=39`
-- logs show `writeIdbTrackGrid insert track_grid_count=12`
-- logs show `readIdbTrackGrid restored track_grid_count=12 layer_ref_count=12`
-- logs show `writeIdbGCellGrid insert gcell_grid_count=0`
-- logs show `readIdbGCellGrid restored gcell_grid_count=0`
-- logs show `writeIdbVia insert via_count=4`
-- logs show `readIdbVia restored via_count=4`
-- logs show `writeIdbInstance insert instance_count=1458`
-- logs show `readIdbInstance restored instance_count=1458`
-- logs show `writeIdbPin insert pin_count=56`
-- logs show `readIdbPin restored pin_count=56`
-- logs show `writeIdbBlockage insert blockage_count=0`
-- logs show `readIdbBlockage restored blockage_count=0`
-- logs show `writeIdbRegion insert region_count=0`
-- logs show `readIdbRegion restored region_count=0`
-- logs show `writeIdbSlot insert slot_count=0`
-- logs show `readIdbSlot restored slot_count=0`
-- logs show `writeIdbGroup insert group_count=0`
-- logs show `readIdbGroup restored group_count=0`
-- logs show `writeIdbFill insert fill_count=0`
-- logs show `readIdbFill restored fill_count=0`
-- logs show `writeSpecialNet insert special_net_count=2 segment_count=639`
-- logs show `readSpecialNet restored special_net_count=2 segment_count=639`
-- logs show `writeIdbNet insert net_count=675 segment_count=0`
-- logs show `readIdbNet restored net_count=675 segment_count=0`
-- SQLite `iDesign` row contains `gcd|5.8|1000|[|]`
-- SQLite `iDieSD_points_sd_iCoordSD` contains `(0,0)` and `(149960,150128)`
-- SQLite `iRow` row count is `39`
-- SQLite `iTrackGridSD` row count is `12`
-- SQLite `iGCellGrid` row count is `0`
-- SQLite `iVia` row count is `4`
-- SQLite `iInstSD` row count is `1458`
-- SQLite `iPinSD` row count is `56`
-- SQLite `iBlockageSD` row count is `0`; current sky130_gcd demo covers only the empty-table path for Blockage
-- SQLite `iRegion` row count is `0`; current sky130_gcd demo covers only the empty-table path for Region
-- SQLite `iSlotSD` row count is `0`; current sky130_gcd demo covers only the empty-table path for Slot
-- SQLite `iGroupSD` row count is `0`; current sky130_gcd demo covers only the empty-table path for Group
-- SQLite `iFillSD` row count is `0`; current sky130_gcd demo covers only the empty-table path for Fill
-- SQLite SpecialNet row counts: `iSpecNetSD=2`, nested wire rows `2`, nested segment rows `639`, nested point rows `697`
-- SQLite Net row counts: `iNetSD=675`, nested IO pin refs `54`, nested instance pin refs `1726`, nested regular wire rows `0`
-- final message says input DEF and output DEF are the same
+测试读法：
 
-Nonzero Fill still needs a dedicated testcase. The current sky130_gcd demo proves schema/init/read/write plumbing, not nonzero layer/via fill semantics.
-Nonzero regular-wire NETS also need a routed-net testcase; current sky130_gcd has `Nets segment : 0`.
+1. 先看 `run_idb_roundtrip_regression.sh` 如何生成 fixture。
+2. 再看 `run_case()` 如何跑 direct baseline 和 EDADB roundtrip。
+3. 最后看 SQLite assertions，它们对应 EDADB 内部表是否真的写对。
+
+## 11. 推荐完整阅读顺序
+
+按下面顺序读，最不容易迷路：
+
+1. `scripts/edadb/demo/demo.sh`
+2. `scripts/edadb/demo/tcl/def2edadb.tcl`
+3. `scripts/edadb/demo/tcl/edadb2def.tcl`
+4. `src/interface/tcl/tcl_idb/tcl_register_idb.h`
+5. `src/interface/tcl/tcl_idb/tcl_db_file.*`
+6. `src/platform/data_manager/idm.h`
+7. `src/platform/data_manager/idm_edadb.cpp`
+8. `src/database/manager/builder/builder.*`
+9. `src/database/manager/builder/def_builder/def_write_edadb.*`
+10. `src/database/manager/builder/def_builder/def_read_edadb.*`
+11. `src/database/edadb/idb/edadb_idb_init.*`
+12. `src/database/edadb/idb/edadb_idb_schema.h`
+13. `src/database/edadb/idb/shadow/*`
+14. `src/database/manager/builder/def_builder/def_read.*`
+15. `src/database/manager/builder/def_builder/def_write.*`
+16. `src/database/edadb/core/include/edadb.h`
+17. `src/database/edadb/core/include/edadb/Table4Class.h`
+18. `src/database/edadb/core/test/*`
+19. `src/database/edadb/test/run_idb_roundtrip_regression.sh`
+
+## 12. 阅读时的检查清单
+
+读每个对象族时，用同一套问题检查：
+
+- iDB 对象在哪个 list 里？
+- 写入 EDADB 时使用 direct object 还是 shadow？
+- schema 表里有哪些 scalar column？
+- vector 字段展开到了哪些 child table？
+- child table 是否需要稳定顺序？
+- EDADB 读回时是否能找到 layer/via/instance/region 等引用？
+- normal DEF writer 是否会把该字段写回 DEF？
+- 测试里是否既有 DEF diff，又有 SQLite 内部字段断言？
+
+如果某个字段只写进 EDADB，但 normal DEF writer 不输出它，那么 DEF byte diff 看不出来，
+需要 adapter-level object assertion 或 SQLite assertion。

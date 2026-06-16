@@ -21,6 +21,49 @@ bash /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/demo/demo.sh 2>&1 | te
 
 Do not run the full physical-design flow unless requested.
 
+Repeatable EDADB adapter regression command:
+
+```bash
+cd /home/zhiyiwang/cs/arch/eda/iEDA-EDADB
+bash src/database/edadb/test/run_idb_roundtrip_regression.sh
+```
+
+The regression definition is stored in `src/database/edadb/test/`.
+By default it writes generated fixtures, logs, EDADB SQLite databases, direct iDB
+DEF baselines, EDADB DEF outputs, and diffs to `/tmp/iedadb_regression`.
+Override paths with:
+
+```bash
+IEDA_BIN=/path/to/iEDA OUT_DIR=/tmp/my_edadb_run bash src/database/edadb/test/run_idb_roundtrip_regression.sh
+```
+
+Current cases:
+
+- `default_ipl`: sky130_gcd `iPL_result.def`, direct iDB DEF output compared with EDADB output.
+- `aux_optional`: generated from `iPL_result.def`; adds non-empty `BLOCKAGES`, `REGIONS`,
+  `SLOTS`, `GROUPS`, `FILLS`, plus special-net and regular-net optional fields.
+- `routed_irt`: sky130_gcd `iRT_result.def`; covers non-empty regular NETS routed wires
+  and segments.
+
+The `aux_optional` case also checks SQLite table content for blockage/region/slot/group/fill
+counts, group region/member rows, fill child rows, special-net optional fields, and regular-net
+optional fields.
+The `routed_irt` case checks SQLite counts for `iNetSD`, regular wire child rows, regular
+wire segment child rows, and regular wire point child rows.
+
+Latest run on 2026-06-16:
+
+- Command: `bash src/database/edadb/test/run_idb_roundtrip_regression.sh`
+- Output directory: `/tmp/iedadb_regression`
+- Result: passed.
+- `default_ipl`: direct iDB DEF output matched EDADB DEF output.
+- `aux_optional`: direct iDB DEF output matched EDADB DEF output; SQLite checks passed for
+  non-empty Blockage/Region/Slot/Group/Fill tables and optional regular/special net fields.
+- `routed_irt`: direct iDB DEF output matched EDADB DEF output; SQLite checks passed for
+  `iNetSD=677`, regular wire rows `677`, regular wire segment rows `8997`, and point rows `14256`.
+- EDADB/core check: `cd build && ctest --output-on-failure` passed `13/13` tests on
+  2026-06-16.
+
 When the request is about EDADB internal support or adapter correctness, also run:
 
 ```bash
@@ -82,14 +125,17 @@ Recent issue found by routed-net testing:
 Current uncovered or weakly covered areas:
 
 - Net `source_type`, `original_net_name`, `weight`, `xtalk`, `frequency`, and
-  `fix_bump` now have focused routed DEF fixture coverage through direct iDB baseline
-  comparison. A future adapter-level C++ test would still be useful for faster direct
-  object assertions.
+  `fix_bump` now have repeatable fixture coverage in
+  `src/database/edadb/test/run_idb_roundtrip_regression.sh` through direct iDB baseline
+  comparison and SQLite value checks. A future adapter-level C++ test would still be useful
+  for faster direct object assertions.
 - `CppStrings` vector children, such as group instance names, special-net pin strings,
   and IO-pin name lists, do not have an explicit order column. Current demos pass, but
   a deterministic-order testcase should be added if textual order matters.
 - Empty object-family paths are validated for Blockage, Region, Slot, Group, and Fill
-  on sky130_gcd. Non-empty cases still need dedicated DEF fixtures.
+  on sky130_gcd. Non-empty Blockage, Region, Slot, Group, and Fill paths are now covered by
+  the generated `aux_optional` regression fixture.
+- Non-empty regular routed NETS are now covered by the `routed_irt` regression fixture.
 - Repeated instance references with different pins on the same net should be covered
   by a small targeted fixture; `_order_sd` avoids the previous instance-key collision
   risk for net pin refs.
@@ -101,7 +147,7 @@ Current uncovered or weakly covered areas:
 | original | `master @ 007435241` | none | none | none | official iEDA, no EDADB |
 | A | `origin/edadb @ 2f028c426` | `src/database/edadb/core` | `src/database/edadb/idb` | `8c724ef` | canonical non-owning layout |
 | B | `origin/edadb-shadow-transitive @ 664829eef` | `src/third_party/edadb` | `src/database/edadb` | `f1214007` | old shadow-transitive layout, DEF roundtrip OK |
-| C | `edadb-idb` | `src/database/edadb/core` | `src/database/edadb/idb` | `8a4e3bf` | current EDADB adapter line |
+| C | `edadb-idb @ d5866cfa7` | `src/database/edadb/core` | `src/database/edadb/idb` | `7dc2825` | current EDADB adapter line |
 
 Notes:
 
@@ -109,11 +155,122 @@ Notes:
 - C starts from A’s layout and is the current development line.
 - B is reference-only for old DEF/EDADB mappings; do not copy shadow-transitive behavior into C.
 - `IdbVia` is enabled in C after re-audit with the new EDADB implicit member StoreType path.
-- EDADB `8a4e3bf` = `293c162` plus local CMake fix for embedding EDADB as an iEDA submodule.
+- C baseline EDADB `8a4e3bf` = `293c162` plus local CMake fix for embedding EDADB as an iEDA submodule.
+- Current C EDADB is `7dc2825`, which adds the SQLite debug trace test fix on top of `8a4e3bf`.
+
+## Branch Change Inventory
+
+Inventory basis:
+
+- Base iEDA commit: `0074352412f6a4a8c88c13739946cdf5004f25c0` (`master`, official iEDA without EDADB).
+- Current iEDA commit: `d5866cfa7` (`edadb-idb`).
+- Superproject command: `git diff --name-status 007435241..HEAD`.
+- EDADB core submodule: `src/database/edadb/core @ 7dc2825`.
+- EDADB core delta from C baseline: `git -C src/database/edadb/core diff --name-status 8a4e3bf..HEAD`.
+
+Original iEDA files modified for EDADB integration:
+
+- Build and module wiring:
+  - `.gitmodules`
+  - `CMakeLists.txt`
+  - `build.sh`
+  - `src/apps/CMakeLists.txt`
+  - `src/database/CMakeLists.txt`
+  - `src/database/manager/builder/CMakeLists.txt`
+  - `src/database/manager/builder/def_builder/CMakeLists.txt`
+  - `src/platform/data_manager/CMakeLists.txt`
+  - `src/third_party/CMakeLists.txt`
+- iDB data model headers touched to expose/preserve state needed by EDADB shadows:
+  - `src/database/basic/geometry/IdbGeometry.h`
+  - `src/database/basic/geometry/IdbLayerShape.h`
+  - `src/database/data/design/IdbDesign.h`
+  - `src/database/data/design/db_design/IdbBlockages.h`
+  - `src/database/data/design/db_design/IdbBus.h`
+  - `src/database/data/design/db_design/IdbBusBitChars.h`
+  - `src/database/data/design/db_design/IdbFill.h`
+  - `src/database/data/design/db_design/IdbGroup.h`
+  - `src/database/data/design/db_design/IdbHalo.h`
+  - `src/database/data/design/db_design/IdbInstance.h`
+  - `src/database/data/design/db_design/IdbNet.h`
+  - `src/database/data/design/db_design/IdbPins.h`
+  - `src/database/data/design/db_design/IdbRegion.h`
+  - `src/database/data/design/db_design/IdbSlot.h`
+  - `src/database/data/design/db_design/IdbSpecialNet.h`
+  - `src/database/data/design/db_design/IdbSpecialWire.h`
+  - `src/database/data/design/db_design/IdbTrackGrid.h`
+  - `src/database/data/design/db_design/IdbVias.h`
+  - `src/database/data/design/db_layout/IdbGCellGrid.h`
+  - `src/database/data/design/db_layout/IdbLayer.h`
+  - `src/database/data/design/db_layout/IdbRow.h`
+  - `src/database/data/design/db_layout/IdbSite.h`
+  - `src/database/data/design/db_layout/IdbTerm.cpp`
+  - `src/database/data/design/db_layout/IdbTerm.h`
+  - `src/database/data/design/db_layout/IdbUnits.h`
+  - `src/database/data/design/db_layout/IdbViaMaster.h`
+- Original iEDA DEF/platform/Tcl code modified or extended:
+  - `src/database/manager/builder/builder.cpp`
+  - `src/database/manager/builder/builder.h`
+  - `src/database/manager/builder/def_builder/def_read.cpp`
+  - `src/database/manager/builder/def_builder/def_read.h`
+  - `src/database/manager/builder/def_builder/def_write.cpp`
+  - `src/database/manager/builder/def_builder/def_write.h`
+  - `src/database/manager/service/def_service/def_service.cpp`
+  - `src/interface/tcl/tcl_definition.h`
+  - `src/interface/tcl/tcl_idb/tcl_db_file.cpp`
+  - `src/interface/tcl/tcl_idb/tcl_db_file.h`
+  - `src/interface/tcl/tcl_idb/tcl_register_idb.h`
+  - `src/platform/data_manager/idm.cpp`
+  - `src/platform/data_manager/idm.h`
+  - `src/utility/tcl/ScriptEngine.cc`
+  - `src/utility/tcl/ScriptEngine.hh`
+
+iEDA + EDADB wrapper/adapter code added by this branch:
+
+- Adapter root and table/shadow mapping:
+  - `src/database/edadb/CMakeLists.txt`
+  - `src/database/edadb/idb/CMakeLists.txt`
+  - `src/database/edadb/idb/edadb_idb.h`
+  - `src/database/edadb/idb/edadb_idb_helper.cpp`
+  - `src/database/edadb/idb/edadb_idb_helper.h`
+  - `src/database/edadb/idb/edadb_idb_init.cpp`
+  - `src/database/edadb/idb/edadb_idb_init.h`
+  - `src/database/edadb/idb/edadb_idb_schema.h`
+  - `src/database/edadb/idb/edadb_idb_shadow.h`
+  - `src/database/edadb/idb/shadow/*`
+- EDADB DEF bridge:
+  - `src/database/manager/builder/def_builder/def_read_edadb.cpp`
+  - `src/database/manager/builder/def_builder/def_read_edadb.h`
+  - `src/database/manager/builder/def_builder/def_write_edadb.cpp`
+  - `src/database/manager/builder/def_builder/def_write_edadb.h`
+  - `src/platform/data_manager/idm_edadb.cpp`
+- Adapter notes, old call-flow notes, demos, and repeatable regression tests:
+  - `agent.md`
+  - `cmds.md`
+  - `edadb_readme.md`
+  - `scripts/edadb/demo/*`
+  - `src/database/edadb/idb/docs/*`
+  - `src/database/edadb/test/*` (working tree addition on 2026-06-16)
+
+EDADB core code:
+
+- `src/database/edadb/core` is a submodule and was not present in original iEDA.
+- Current checked-out EDADB commit is `7dc2825 fix: enable sqlite debug trace tests`.
+- Relative to the current C baseline `8a4e3bf`, EDADB core changes are:
+  - `include/edadb/backend/sqlite/DbStatement4Sqlite.h`
+  - `test/CMakeLists.txt`
+- Relative to older canonical A commit `8c724ef`, EDADB core also includes the ORM/table-op
+  refactor, public API cleanup, demo refresh, and reusable core tests now visible under
+  `src/database/edadb/core/include/edadb/*`, `src/database/edadb/core/src/*`,
+  `src/database/edadb/core/demo/*`, and `src/database/edadb/core/test/*`.
 
 ## Current C Milestone
 
-Commit:
+Current committed state:
+
+- iEDA: `d5866cfa7 fix: preserve def group members`
+- EDADB submodule: `7dc2825 fix: enable sqlite debug trace tests`
+
+Initial C milestone:
 
 - iEDA: `99afe9c71 edadb: initialize idb adapter code base`
 - EDADB submodule: `8a4e3bf build: support embedding edadb as submodule`
@@ -176,7 +333,7 @@ Active persistence groups:
   - `defrSetNetStartCbk`
   - `defrSetNetCbk`
   - `defrSetNetEndCbk`
-- Other object families still come from DEF text callbacks.
+- Remaining unsupported/non-DEF object data still comes from existing iEDA flows or defaults.
 
 Validation:
 
@@ -265,7 +422,8 @@ Important rule:
 - Current sky130_gcd only validates empty Fill; nonzero Fill needs a dedicated testcase because `DefWrite::write_fill()` emits layer/via clauses from each fill object.
 - `IdbSpecialNet` uses shadow because SPECIALNETS is a nested net/wire/segment storage view with layer/via/pin/instance references converted to names and synthetic keys for child rows.
 - `IdbNet` uses shadow because NETS stores pin references and regular wire layer/via references by name; nested wire/segment rows need stable parent keys.
-- Current sky130_gcd validates Net connectivity storage, but regular net segment count is `0`; nonzero regular-wire NETS need a routed-net testcase.
+- Default sky130_gcd validates Net connectivity storage with regular net segment count `0`;
+  `routed_irt` validates non-empty regular-wire NETS with `8997` segments.
 - Current requested DEF object-family migration is complete through Net.
 - After each migration, run the concise Adapter Correctness Audit in `edadb_readme.md`.
 
@@ -376,7 +534,7 @@ Demo:
 iDB data model:
 
 - Many iDB classes expose members under `#if EDADB_ENABLE` so schema/shadow code can map fields.
-- Touched areas include geometry, layer shape, design, units, busbit, die/row/site, track/gcell, via/via-master, instance/pin/blockage/group/fill.
+- Touched areas include geometry, layer shape, design, units, busbit, die/row/site, track/gcell, via/via-master, instance/pin/blockage/group/fill, special-net, and net.
 - Recheck `IdbTerm.h` later; one visibility guard differs from the usual EDADB pattern.
 
 Tcl stability:
@@ -414,27 +572,19 @@ DEF callback ownership rule:
 
 Current weak spots to test next:
 
-- Dedicated C++ adapter tests for optional net fields, repeated pin refs, and Fill layer/via
-  variants would be faster and more precise than end-to-end DEF fixtures.
+- Add adapter-level C++ tests for optional net fields, repeated pin refs, and Fill layer/via
+  variants; the end-to-end regression now covers these paths, but C++ assertions would be
+  faster and more precise.
+- Add focused repeated-instance-pin and GROUP wildcard/regex fixtures if those textual cases
+  become important.
 
-Latest continuation test storage:
+Latest repeatable regression:
 
-- Root: `/tmp/iedadb_continue_tests`
-- Non-empty auxiliary-section fixture: `/tmp/iedadb_continue_tests/nonempty_aux.def`
-- Direct iDB baseline: `/tmp/iedadb_continue_tests/direct_aux/data_out.def`
-- EDADB DB with flattened Fill schema: `/tmp/iedadb_continue_tests/edadb_aux_flat/edadb.db`
-- EDADB readback DEF: `/tmp/iedadb_continue_tests/nonempty_aux_edadb_aux_flat.def`
-- Default empty auxiliary-section regression: `/tmp/iedadb_continue_tests/default_regression`
-- GROUP member regression: `/tmp/iedadb_continue_tests/group_member_fix`
-
-Latest continuation test result:
-
-- Non-empty BLOCKAGES / REGIONS / SLOTS / GROUPS / FILLS fixture writes and reads through
-  EDADB successfully.
-- SQLite count checks match the fixture: 2 blockages, 1 region, 1 slot, 1 group, and
-  2 fills; fill child tables contain 1 layer rect and 1 via coordinate.
-- Direct iDB baseline and EDADB readback DEF are byte-identical.
-- Default `iPL_result.def` EDADB regression also remains byte-identical.
-- Normal DEF parsing now preserves GROUP member `ctrl/_34_`, EDADB stores it in
-  `iGroupSD__instance_name_vec_sd_CppStr`, and the direct baseline matches EDADB readback
-  at `/tmp/iedadb_continue_tests/nonempty_aux_edadb_groupfix.def`.
+- Command: `bash src/database/edadb/test/run_idb_roundtrip_regression.sh`
+- Output root: `/tmp/iedadb_regression`
+- Result on 2026-06-16: passed.
+- `default_ipl`: direct iDB DEF output matches EDADB DEF output.
+- `aux_optional`: non-empty BLOCKAGES / REGIONS / SLOTS / GROUPS / FILLS and optional
+  regular/special net fields match direct iDB output; SQLite content checks pass.
+- `routed_irt`: non-empty regular routed NETS match direct iDB output; SQLite checks show
+  `iNetSD=677`, regular wire rows `677`, segment rows `8997`, point rows `14256`.
