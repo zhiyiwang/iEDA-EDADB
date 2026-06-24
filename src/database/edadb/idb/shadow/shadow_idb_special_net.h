@@ -137,15 +137,11 @@ public:
         _weight_sd = obj->get_weight();
 
         for (auto& pin_name : obj->get_pin_string_list()) {
-            idb::edadb_adapter::CppStrings pin_name_sd;
-            pin_name_sd.str = pin_name;
-            _pin_string_list_sd.emplace_back(pin_name_sd);
+            _pin_string_list_sd.emplace_back(pin_name);
         }
 
         for (auto pin : obj->get_io_pin_list()->get_pin_list()) {
-            idb::edadb_adapter::CppStrings pin_name_sd;
-            pin_name_sd.str = pin->get_pin_name();
-            _io_pin_name_list_sd.emplace_back(pin_name_sd);
+            _io_pin_name_list_sd.emplace_back(pin->get_pin_name());
         }
 
         uint64_t pin_order = 0;
@@ -171,8 +167,8 @@ public:
     idb::IdbConnectType _connect_type_sd = idb::IdbConnectType::kNone;
     idb::IdbInstanceType _source_type_sd = idb::IdbInstanceType::kNone;
     int32_t _weight_sd = 0;
-    std::vector<idb::edadb_adapter::CppStrings> _pin_string_list_sd;
-    std::vector<idb::edadb_adapter::CppStrings> _io_pin_name_list_sd;
+    std::vector<std::string> _pin_string_list_sd;
+    std::vector<std::string> _io_pin_name_list_sd;
     std::vector<idb::edadb_adapter::SpecialNetPinRef> _instance_pin_list_sd;
     std::vector<Shadow<idb::IdbSpecialWire>*> _wire_list_sd;
 }; // Shadow<idb::IdbSpecialNet>

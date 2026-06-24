@@ -15,7 +15,6 @@ namespace idb::edadb_adapter {
 void initPrimKeys(void) {
     edadb::Cpp2SqlTypeTrait<idb::IdbUnits>::hasPrimKey = false;
     edadb::Cpp2SqlTypeTrait<idb::IdbBusBitChars>::hasPrimKey = false;
-    edadb::Cpp2SqlTypeTrait<idb::edadb_adapter::CppStrings>::hasPrimKey = false;
     edadb::Cpp2SqlTypeTrait<idb::IdbTrack>::hasPrimKey = false;
     edadb::Cpp2SqlTypeTrait<idb::IdbGCellGrid>::hasPrimKey = false;
 

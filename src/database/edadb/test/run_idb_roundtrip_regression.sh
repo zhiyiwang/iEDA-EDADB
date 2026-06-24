@@ -152,7 +152,7 @@ run_case() {
         assert_eq "$(sql_value "$edadb_db" "select count(*) from iSlotSD;")" "1" "$name slot count"
         assert_eq "$(sql_value "$edadb_db" "select count(*) from iGroupSD;")" "1" "$name group count"
         assert_eq "$(sql_value "$edadb_db" "select _group_name_sd || '|' || _region_name_sd from iGroupSD;")" "test_group|test_region" "$name group region"
-        assert_eq "$(sql_value "$edadb_db" "select str from iGroupSD__instance_name_vec_sd_CppStr;")" "ctrl/_34_" "$name group member"
+        assert_eq "$(sql_value "$edadb_db" "select value from iGroupSD__instance_name_vec_sd___edadb_primitive_vector;")" "ctrl/_34_" "$name group member"
         assert_eq "$(sql_value "$edadb_db" "select count(*) from iFillSD;")" "2" "$name fill count"
         assert_eq "$(sql_value "$edadb_db" "select count(*) from iFillSD__rect_list_sd_IdbRect;")" "1" "$name fill rect count"
         assert_eq "$(sql_value "$edadb_db" "select count(*) from iFillSD__coordinate_list_sd_iCoordSD;")" "1" "$name fill via coordinate count"

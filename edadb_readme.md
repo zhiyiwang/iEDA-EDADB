@@ -19,9 +19,9 @@ DEF -> iDB -> EDADB SQLite database -> iDB -> DEF
 当前关键版本：
 
 - iEDA branch: `edadb-idb`
-- iEDA current commit: `d5866cfa7 fix: preserve def group members`
+- iEDA current commit: `HEAD` (`fix: adapt idb adapter to latest edadb vector api`)
 - official iEDA base commit: `0074352412f6a4a8c88c13739946cdf5004f25c0`
-- EDADB core submodule: `src/database/edadb/core @ 7dc2825`
+- EDADB core submodule: `src/database/edadb/core @ 3077132`
 
 可用下面命令确认：
 

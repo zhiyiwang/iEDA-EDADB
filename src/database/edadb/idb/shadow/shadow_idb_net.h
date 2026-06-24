@@ -139,9 +139,7 @@ public:
         _frequency_sd = obj->get_frequency();
 
         for (auto pin : obj->get_io_pins()->get_pin_list()) {
-            idb::edadb_adapter::CppStrings pin_name_sd;
-            pin_name_sd.str = pin->get_pin_name();
-            _io_pin_name_list_sd.emplace_back(pin_name_sd);
+            _io_pin_name_list_sd.emplace_back(pin->get_pin_name());
         }
 
         uint64_t pin_order = 0;
@@ -170,7 +168,7 @@ public:
     int32_t _xtalk_sd = 0;
     bool _fix_bump_sd = false;
     double _frequency_sd = 0.0;
-    std::vector<idb::edadb_adapter::CppStrings> _io_pin_name_list_sd;
+    std::vector<std::string> _io_pin_name_list_sd;
     std::vector<idb::edadb_adapter::NetPinRef> _instance_pin_list_sd;
     std::vector<Shadow<idb::IdbRegularWire>*> _wire_list_sd;
 }; // Shadow<idb::IdbNet>

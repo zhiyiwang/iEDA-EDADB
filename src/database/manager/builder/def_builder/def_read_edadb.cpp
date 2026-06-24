@@ -446,10 +446,10 @@ bool DefReadEdadb::readIdbTrackGrid(void) {
         track_grid_sd.fromShadow(track_grid);
 
         for (auto& layer_name_sd : track_grid_sd._layer_name_vec_sd) {
-            IdbLayer* layer = layers->find_layer(layer_name_sd.str);
+            IdbLayer* layer = layers->find_layer(layer_name_sd);
             if (layer == nullptr) {
                 std::cerr << "DefReadEdadb::readIdbTrackGrid failed to find layer: "
-                          << layer_name_sd.str << std::endl;
+                          << layer_name_sd << std::endl;
                 return false;
             }
 
@@ -660,7 +660,7 @@ bool DefReadEdadb::readIdbGroup(void) {
         group->set_region(region_list->find_region(group_sd->_region_name_sd));
 
         for (auto& instance_name_sd : group_sd->_instance_name_vec_sd) {
-            IdbInstance* instance = instance_list->find_instance(instance_name_sd.str);
+            IdbInstance* instance = instance_list->find_instance(instance_name_sd);
             if (instance != nullptr) {
                 group->add_instance(instance);
             }
@@ -1125,7 +1125,7 @@ bool DefReadEdadb::readIdbTrackGrid(void) {
         track_grid_sd.fromShadow(track_grid);
 
         for ( auto& layer_name_sd : track_grid_sd._layer_name_vec_sd ) {
-            IdbLayer* layer = layers->find_layer( layer_name_sd.str );
+            IdbLayer* layer = layers->find_layer(layer_name_sd);
             if ( layer != nullptr ) {
                 track_grid->add_layer_list( layer );
                 if (layer->is_routing()) {
@@ -1134,7 +1134,7 @@ bool DefReadEdadb::readIdbTrackGrid(void) {
                 }
             }
             else {
-                std::cerr << "DefReadEdadb::readIdbTrackGrid failed to find layer: " << layer_name_sd.str << std::endl;
+                std::cerr << "DefReadEdadb::readIdbTrackGrid failed to find layer: " << layer_name_sd << std::endl;
             }
         } // for layer names
     } // while
@@ -1784,11 +1784,11 @@ bool DefReadEdadb::readSpecialNet(void) {
         special_net->set_weight(special_net_sd->_weight_sd);
 
         for (auto& pin_name_sd : special_net_sd->_pin_string_list_sd) {
-            special_net->add_pin_string(pin_name_sd.str);
+            special_net->add_pin_string(pin_name_sd);
         }
 
         for (auto& pin_name_sd : special_net_sd->_io_pin_name_list_sd) {
-            IdbPin* pin = io_pin_list->find_pin(pin_name_sd.str);
+            IdbPin* pin = io_pin_list->find_pin(pin_name_sd);
             if (pin != nullptr) {
                 special_net->add_io_pin(pin);
                 pin->set_special_net(special_net);
@@ -1942,7 +1942,7 @@ bool DefReadEdadb::readIdbNet(void) {
         };
 
         for (auto& pin_name_sd : net_sd->_io_pin_name_list_sd) {
-            IdbPin* pin = io_pin_list->find_pin(pin_name_sd.str);
+            IdbPin* pin = io_pin_list->find_pin(pin_name_sd);
             if (pin != nullptr) {
                 net->add_io_pin(pin);
                 setPinNet(pin);

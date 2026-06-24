@@ -25,9 +25,7 @@ public:
         }
         _instance_name_vec_sd.clear();
         for (auto& instance : obj->get_instance_list()->get_instance_list()) {
-            idb::edadb_adapter::CppStrings instance_name_sd;
-            instance_name_sd.str = instance->get_name();
-            _instance_name_vec_sd.emplace_back( instance_name_sd );
+            _instance_name_vec_sd.emplace_back(instance->get_name());
         }
     }
 
@@ -40,7 +38,7 @@ public:
 public:
     std::string _group_name_sd;
     std::string _region_name_sd;
-    std::vector<idb::edadb_adapter::CppStrings> _instance_name_vec_sd;
+    std::vector<std::string> _instance_name_vec_sd;
 }; // Shadow IdbGroup
 
 } // namespace edadb

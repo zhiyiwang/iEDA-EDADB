@@ -129,9 +129,9 @@ Current uncovered or weakly covered areas:
   `src/database/edadb/test/run_idb_roundtrip_regression.sh` through direct iDB baseline
   comparison and SQLite value checks. A future adapter-level C++ test would still be useful
   for faster direct object assertions.
-- `CppStrings` vector children, such as group instance names, special-net pin strings,
-  and IO-pin name lists, do not have an explicit order column. Current demos pass, but
-  a deterministic-order testcase should be added if textual order matters.
+- New EDADB primitive vector support stores scalar vector children, such as group
+  instance names and IO-pin name lists, directly as `std::vector<std::string>` using
+  `___edadb_primitive_vector` child tables with `__edadb_vec_idx` and `value`.
 - Empty object-family paths are validated for Blockage, Region, Slot, Group, and Fill
   on sky130_gcd. Non-empty Blockage, Region, Slot, Group, and Fill paths are now covered by
   the generated `aux_optional` regression fixture.
@@ -147,7 +147,7 @@ Current uncovered or weakly covered areas:
 | original | `master @ 007435241` | none | none | none | official iEDA, no EDADB |
 | A | `origin/edadb @ 2f028c426` | `src/database/edadb/core` | `src/database/edadb/idb` | `8c724ef` | canonical non-owning layout |
 | B | `origin/edadb-shadow-transitive @ 664829eef` | `src/third_party/edadb` | `src/database/edadb` | `f1214007` | old shadow-transitive layout, DEF roundtrip OK |
-| C | `edadb-idb @ d5866cfa7` | `src/database/edadb/core` | `src/database/edadb/idb` | `7dc2825` | current EDADB adapter line |
+| C | `edadb-idb @ HEAD` | `src/database/edadb/core` | `src/database/edadb/idb` | `3077132` | current EDADB adapter line |
 
 Notes:
 
@@ -156,16 +156,16 @@ Notes:
 - B is reference-only for old DEF/EDADB mappings; do not copy shadow-transitive behavior into C.
 - `IdbVia` is enabled in C after re-audit with the new EDADB implicit member StoreType path.
 - C baseline EDADB `8a4e3bf` = `293c162` plus local CMake fix for embedding EDADB as an iEDA submodule.
-- Current C EDADB is `7dc2825`, which adds the SQLite debug trace test fix on top of `8a4e3bf`.
+- Current C EDADB is `3077132`, which adds primitive vector support and latest core tests on top of the earlier C baseline.
 
 ## Branch Change Inventory
 
 Inventory basis:
 
 - Base iEDA commit: `0074352412f6a4a8c88c13739946cdf5004f25c0` (`master`, official iEDA without EDADB).
-- Current iEDA commit: `d5866cfa7` (`edadb-idb`).
+- Current iEDA commit: `HEAD` (`edadb-idb`).
 - Superproject command: `git diff --name-status 007435241..HEAD`.
-- EDADB core submodule: `src/database/edadb/core @ 7dc2825`.
+- EDADB core submodule: `src/database/edadb/core @ 3077132`.
 - EDADB core delta from C baseline: `git -C src/database/edadb/core diff --name-status 8a4e3bf..HEAD`.
 
 Original iEDA files modified for EDADB integration:
@@ -254,10 +254,9 @@ iEDA + EDADB wrapper/adapter code added by this branch:
 EDADB core code:
 
 - `src/database/edadb/core` is a submodule and was not present in original iEDA.
-- Current checked-out EDADB commit is `7dc2825 fix: enable sqlite debug trace tests`.
-- Relative to the current C baseline `8a4e3bf`, EDADB core changes are:
-  - `include/edadb/backend/sqlite/DbStatement4Sqlite.h`
-  - `test/CMakeLists.txt`
+- Current checked-out EDADB commit is `3077132 fix: enable sqlite debug trace tests`.
+- Relative to the current C baseline `8a4e3bf`, EDADB core also includes const table definitions,
+  primitive vector rows, updated public/table-op internals, and expanded reusable tests.
 - Relative to older canonical A commit `8c724ef`, EDADB core also includes the ORM/table-op
   refactor, public API cleanup, demo refresh, and reusable core tests now visible under
   `src/database/edadb/core/include/edadb/*`, `src/database/edadb/core/src/*`,
@@ -267,8 +266,8 @@ EDADB core code:
 
 Current committed state:
 
-- iEDA: `d5866cfa7 fix: preserve def group members`
-- EDADB submodule: `7dc2825 fix: enable sqlite debug trace tests`
+- iEDA: `HEAD` (`fix: adapt idb adapter to latest edadb vector api`)
+- EDADB submodule: `3077132 fix: enable sqlite debug trace tests`
 
 Initial C milestone:
 
@@ -442,7 +441,9 @@ Active adapter APIs:
 - `idb::edadb_adapter::initReadDb(const char*)`
 - `idb::edadb_adapter::initWriteDb(const char*)`
 - `idb::edadb_adapter::EdadbIdbHelper`
-- `idb::edadb_adapter::CppStrings`
+
+Do not use the old `CppStrings` wrapper for active scalar vector fields; EDADB now maps
+`std::vector<std::string>` through primitive vector child tables.
 
 Internal init helpers such as `initPrimKeys()`, `initTable()`, and `initAllTables()` also live directly in `idb::edadb_adapter` in the `.cpp`; do not expose them in `edadb_idb_init.h` unless they become public API.
 
