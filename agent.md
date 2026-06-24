@@ -51,7 +51,7 @@ optional fields.
 The `routed_irt` case checks SQLite counts for `iNetSD`, regular wire child rows, regular
 wire segment child rows, and regular wire point child rows.
 
-Latest run on 2026-06-16:
+Latest run on 2026-06-24:
 
 - Command: `bash src/database/edadb/test/run_idb_roundtrip_regression.sh`
 - Output directory: `/tmp/iedadb_regression`
@@ -61,8 +61,8 @@ Latest run on 2026-06-16:
   non-empty Blockage/Region/Slot/Group/Fill tables and optional regular/special net fields.
 - `routed_irt`: direct iDB DEF output matched EDADB DEF output; SQLite checks passed for
   `iNetSD=677`, regular wire rows `677`, regular wire segment rows `8997`, and point rows `14256`.
-- EDADB/core check: `cd build && ctest --output-on-failure` passed `13/13` tests on
-  2026-06-16.
+- EDADB/core check at `src/database/edadb/core @ 3077132`: `cd build && ctest --output-on-failure`
+  passed `13/13` tests on 2026-06-24.
 
 When the request is about EDADB internal support or adapter correctness, also run:
 
@@ -418,7 +418,7 @@ Important rule:
 - `IdbSlot` uses shadow because DEF SLOTS has no natural unique root key: `_layer_name` is not guaranteed unique, while rect child rows still need a stable parent key.
 - `IdbGroup` uses shadow because DEF GROUPS stores region and member references by name; readback resolves region/instance names after Region and Instance are restored.
 - `IdbFill` uses shadow because DEF FILLS is a typed layer/via storage view with pointer references converted to layer/via names and child geometry rows.
-- Current sky130_gcd only validates empty Fill; nonzero Fill needs a dedicated testcase because `DefWrite::write_fill()` emits layer/via clauses from each fill object.
+- Non-empty layer-fill and via-fill paths are covered by the generated `aux_optional` fixture and SQLite checks.
 - `IdbSpecialNet` uses shadow because SPECIALNETS is a nested net/wire/segment storage view with layer/via/pin/instance references converted to names and synthetic keys for child rows.
 - `IdbNet` uses shadow because NETS stores pin references and regular wire layer/via references by name; nested wire/segment rows need stable parent keys.
 - Default sky130_gcd validates Net connectivity storage with regular net segment count `0`;
@@ -557,7 +557,7 @@ Current EDADB adapter coverage:
   rect children; via fills keep via name and coordinate children. This avoids nullable
   variant child-object mismatches in the current EDADB vector-child schema.
 
-Restore or harden persistence class by class. For each object family:
+For future EDADB API changes or new object families, restore or harden persistence class by class:
 
 1. schema/table mapping
 2. `initAllTables()`
@@ -583,7 +583,7 @@ Latest repeatable regression:
 
 - Command: `bash src/database/edadb/test/run_idb_roundtrip_regression.sh`
 - Output root: `/tmp/iedadb_regression`
-- Result on 2026-06-16: passed.
+- Result on 2026-06-24: passed after updating EDADB core to `3077132`.
 - `default_ipl`: direct iDB DEF output matches EDADB DEF output.
 - `aux_optional`: non-empty BLOCKAGES / REGIONS / SLOTS / GROUPS / FILLS and optional
   regular/special net fields match direct iDB output; SQLite content checks pass.

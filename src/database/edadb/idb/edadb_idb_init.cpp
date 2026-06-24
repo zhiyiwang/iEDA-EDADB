@@ -107,7 +107,7 @@ int initAllTables(bool crt_tab) {
 
 int initReadDb(const char* edadb_path) {
     std::cout << "[EDADB-IDB] initReadDb path=" << edadb_path << std::endl;
-    std::cout << "[EDADB-IDB] core api=DbTableOp commit-target=293c162" << std::endl;
+    std::cout << "[EDADB-IDB] core api=DbTableOp primitive-vector target=3077132" << std::endl;
     if (!edadb::initDatabase(edadb_path)) {
         std::cerr << "Error: failed to init database from " << edadb_path << std::endl;
         return -1; 
@@ -126,7 +126,7 @@ int initReadDb(const char* edadb_path) {
 
 int initWriteDb(const char* edadb_path) {
     std::cout << "[EDADB-IDB] initWriteDb path=" << edadb_path << std::endl;
-    std::cout << "[EDADB-IDB] core api=DbTableOp commit-target=293c162" << std::endl;
+    std::cout << "[EDADB-IDB] core api=DbTableOp primitive-vector target=3077132" << std::endl;
     if (!edadb::initDatabase(edadb_path)) {
         std::cerr << "Error: failed to init database from " << edadb_path << std::endl;
         return -1;

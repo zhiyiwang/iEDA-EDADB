@@ -16,9 +16,9 @@ namespace __probe2 {
   using Y = boost::fusion::traits::tag_of<int>; 
 }
 
-//EDADB_TODO: C currently keeps EDADB as an empty framework. Re-enable each
-// schema group only when the corresponding readIdbXXX/writeIdbXXX implementation
-// has been ported to the EDADB DbTableOp API.
+// Active DEF object-family schema for the C adapter line. Keep every enabled
+// schema group synchronized with the matching readIdbXXX/writeIdbXXX path and
+// the disabled DEF parser callback in DefReadEdadb::createDbByDef().
 #include "database/data/design/db_layout/IdbUnits.h"
 TABLE4CLASS(idb::IdbUnits, "iUnits", (_nanoseconds, _picofarads, _ohms, _milliwatts, _milliamps, _volts, _micron_dbu, _megahertz));
 
@@ -48,8 +48,9 @@ TABLE4CLASS(idb::IdbSite, "iSite", (_name, _width, _heigtht, _b_overlap, _site_c
 TABLE4CLASS(idb::IdbRow, "iRow", (_name, _site, _original_coordinate, _row_num_x, _row_num_y, _step_x, _step_y));
 
 
-//EDADB_TODO: restore via schema groups after their
-// readIdbXXX/writeIdbXXX implementations are ported to the EDADB DbTableOp API.
+// Via is stored as a direct root object. Its member-level via-master/layer-shape
+// shadows provide the storage view for layer-name lookup and fixed/generate
+// geometry rebuild; do not add a root Shadow<IdbVia>.
 #include "database/data/design/db_design/IdbTrackGrid.h"
 TABLE4CLASS(idb::IdbTrack, "iTrack", (_start, _direction, _pitch));
 
