@@ -611,6 +611,11 @@ Latest repeatable regression:
   `iNetSD=677`, regular wire rows `677`, segment rows `8997`, point rows `14256`.
 - EDADB core completion-audit check: `cd build && ctest --output-on-failure` passed `13/13`
   in `428.08 sec`.
+- Detailed regression was strengthened after this audit: `default_ipl` now checks design fields,
+  core object-family counts, die points, track-grid primitive vector rows, via names, and key
+  write/read logs; `aux_optional` now uses a two-member group and checks blockage/region/slot/fill
+  field values; `routed_irt` now checks GCell fields, ordered `clk_0` pin refs, and largest routed
+  segment nets.
 
 ## Objective Completion Audit
 

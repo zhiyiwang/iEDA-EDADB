@@ -57,6 +57,17 @@ assert_eq() {
     echo "PASS: $label = $got"
 }
 
+assert_contains() {
+    local file="$1"
+    local pattern="$2"
+    local label="$3"
+    if ! grep -Fq "$pattern" "$file"; then
+        echo "FAIL: $label: missing '$pattern' in $file" >&2
+        exit 1
+    fi
+    echo "PASS: $label contains '$pattern'"
+}
+
 assert_diff_clean() {
     local expected="$1"
     local actual="$2"
@@ -67,6 +78,83 @@ assert_diff_clean() {
         exit 1
     fi
     echo "PASS: DEF files match: $actual"
+}
+
+check_default_sql() {
+    local name="$1"
+    local edadb_db="$2"
+    local def2edadb_log="$3"
+    local edadb2def_log="$4"
+
+    assert_eq "$(sql_value "$edadb_db" "select _design_name || '|' || _version || '|' || _units__micron_dbu || '|' || char(_bus_bit_chars__left_delimiter) || '|' || char(_bus_bit_chars__right_delimiter) from iDesign;")" \
+        "gcd|5.8|1000|[|]" "$name design fields"
+    assert_eq "$(sql_value "$edadb_db" "select (select count(*) from iDesign) || '|' || (select count(*) from iDieSD) || '|' || (select count(*) from iRow) || '|' || (select count(*) from iTrackGridSD) || '|' || (select count(*) from iGCellGrid) || '|' || (select count(*) from iVia) || '|' || (select count(*) from iInstSD) || '|' || (select count(*) from iPinSD) || '|' || (select count(*) from iSpecNetSD) || '|' || (select count(*) from iNetSD);")" \
+        "1|1|39|12|0|4|1458|56|2|675" "$name core object counts"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_x_sd || ',' || _y_sd, ';') from (select _x_sd, _y_sd from iDieSD_points_sd_iCoordSD order by _vec_idx);")" \
+        "0,0;149960,150128" "$name die points"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) || '|' || group_concat(value, ',') from (select value from iTrackGridSD__layer_name_vec_sd___edadb_primitive_vector order by iTrackGridSD_primary_key, __edadb_vec_idx);")" \
+        "12|li1,li1,met1,met1,met2,met2,met3,met3,met4,met4,met5,met5" "$name track layer primitive vector"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_name, ',') from (select _name from iVia order by _name);")" \
+        "via2_1600x480,via3_1600x480,via4_1600x1600,via_1600x480" "$name via names"
+
+    assert_contains "$def2edadb_log" "[EDADB-IDB] writeIdbInstance insert instance_count=1458" "$name write instance log"
+    assert_contains "$def2edadb_log" "[EDADB-IDB] writeIdbPin insert pin_count=56" "$name write pin log"
+    assert_contains "$edadb2def_log" "[EDADB-IDB] readIdbInstance restored instance_count=1458" "$name read instance log"
+    assert_contains "$edadb2def_log" "[EDADB-IDB] readIdbPin restored pin_count=56" "$name read pin log"
+}
+
+check_aux_optional_sql() {
+    local name="$1"
+    local edadb_db="$2"
+
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from iBlockageSD;")" "2" "$name blockage count"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from iRegion;")" "1" "$name region count"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from iSlotSD;")" "1" "$name slot count"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from iGroupSD;")" "1" "$name group count"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from iFillSD;")" "2" "$name fill count"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_type_sd || '|' || coalesce(_layer_name_sd,'') || '|' || _is_pushdown_sd || '|' || _is_except_pgnet_sd, ';') from (select * from iBlockageSD order by primary_key);")" \
+        "1|met1|1|1;2||0|0" "$name blockage fields"
+    assert_eq "$(sql_value "$edadb_db" "select _name || '|' || _type from iRegion;")" "test_region|1" "$name region fields"
+    assert_eq "$(sql_value "$edadb_db" "select _lx || '|' || _ly || '|' || _hx || '|' || _hy from iRegion__boudary_list_IdbRect;")" \
+        "1000|1000|10000|10000" "$name region rect"
+    assert_eq "$(sql_value "$edadb_db" "select _layer_name_sd from iSlotSD;")" "met1" "$name slot layer"
+    assert_eq "$(sql_value "$edadb_db" "select _lx || '|' || _ly || '|' || _hx || '|' || _hy from iSlotSD__rect_list_sd_IdbRect;")" \
+        "5000|5000|6000|6000" "$name slot rect"
+    assert_eq "$(sql_value "$edadb_db" "select _group_name_sd || '|' || _region_name_sd from iGroupSD;")" "test_group|test_region" "$name group region"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(__edadb_vec_idx || ':' || value, ',') from (select __edadb_vec_idx, value from iGroupSD__instance_name_vec_sd___edadb_primitive_vector order by __edadb_vec_idx);")" \
+        "0:ctrl/_34_,1:ctrl/_35_" "$name group member order"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(primary_key || '|' || _type_sd || '|' || coalesce(_layer_name_sd,'') || '|' || coalesce(_via_name_sd,''), ';') from (select * from iFillSD order by primary_key);")" \
+        "0|1|met1|;1|2||via_1600x480" "$name fill typed rows"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from iFillSD__rect_list_sd_IdbRect;")" "1" "$name fill rect count"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from iFillSD__coordinate_list_sd_iCoordSD;")" "1" "$name fill via coordinate count"
+    assert_eq "$(sql_value "$edadb_db" "select _original_net_name_sd || '|' || _source_type_sd || '|' || _weight_sd from iSpecNetSD where _net_name_sd='VDD';")" \
+        "orig_vdd_net|1|5" "$name special net optional fields"
+    assert_eq "$(sql_value "$edadb_db" "select _original_net_name_sd || '|' || _source_type_sd || '|' || _weight_sd || '|' || _xtalk_sd || '|' || _fix_bump_sd || '|' || _frequency_sd from iNetSD where _net_name_sd='ctrl\$a_mux_sel[0]';")" \
+        "orig_ctrl_net|3|7|11|1|250.0" "$name regular net optional fields"
+}
+
+check_routed_sql() {
+    local name="$1"
+    local edadb_db="$2"
+    local def2edadb_log="$3"
+    local edadb2def_log="$4"
+
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from iGCellGrid;")" "6" "$name gcell grid count"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_direction || ':' || _start || ':' || _num || ':' || _space, ';') from iGCellGrid;")" \
+        "1:0:2:3600;1:3600:43:3360;1:144720:2:5240;2:0:2:3600;2:3600:43:3360;2:144720:2:5408" "$name gcell grid fields"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from iNetSD;")" "677" "$name net count"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from iNetSD__wire_list_sd_iRegWireSD;")" "677" "$name regular wire count"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD;")" "8997" "$name regular wire segment count"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__point_list_sd_iCoordSD;")" "14256" "$name regular wire point count"
+    assert_eq "$(sql_value "$edadb_db" "select min(_order_sd) || '|' || max(_order_sd) || '|' || count(*) from iNetSD__instance_pin_list_sd_iNetPinRef where iNetSD__net_name_sd='clk_0';")" \
+        "0|18|19" "$name clk_0 ordered pin refs"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || ':' || instance_name || ':' || pin_name, ',') from (select _order_sd, instance_name, pin_name from iNetSD__instance_pin_list_sd_iNetPinRef where iNetSD__net_name_sd='clk_0' order by _order_sd limit 5);")" \
+        "0:clk_0_buf:X,1:dpath/b_reg/_140_:CLK,2:dpath/b_reg/_139_:CLK,3:dpath/b_reg/_138_:CLK,4:dpath/b_reg/_137_:CLK" "$name clk_0 pin order prefix"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(iNetSD__net_name_sd || ':' || cnt, ',') from (select iNetSD__net_name_sd, count(*) as cnt from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD group by iNetSD__net_name_sd order by cnt desc, iNetSD__net_name_sd limit 3);")" \
+        "clk_0:138,clk_1:137,dpath/a_mux/_066_:103" "$name largest routed segment nets"
+
+    assert_contains "$def2edadb_log" "[EDADB-IDB] writeIdbNet insert net_count=677" "$name write routed net log"
+    assert_contains "$edadb2def_log" "[EDADB-IDB] readIdbNet restored net_count=677" "$name read routed net log"
 }
 
 generate_aux_optional_fixture() {
@@ -108,7 +196,7 @@ generate_aux_optional_fixture() {
                 print "END SLOTS"
                 print ""
                 print "GROUPS 1 ;"
-                print "    - test_group ctrl/_34_ + REGION test_region ;"
+                print "    - test_group ctrl/_34_ ctrl/_35_ + REGION test_region ;"
                 print "END GROUPS"
                 print ""
                 print "FILLS 2 ;"
@@ -123,8 +211,7 @@ generate_aux_optional_fixture() {
 run_case() {
     local name="$1"
     local input_def="$2"
-    local check_sql="$3"
-    local check_routed="${4:-0}"
+    local check_mode="$3"
     local case_dir="$OUT_DIR/$name"
     local direct_def="$case_dir/direct.def"
     local edadb_def="$case_dir/edadb.def"
@@ -146,25 +233,24 @@ run_case() {
     run_ieda "$SCRIPT_DIR/tcl/edadb2def_generic.tcl" "$case_dir/edadb2def.log"
 
     assert_diff_clean "$direct_def" "$edadb_def" "$case_dir/direct_vs_edadb.diff"
-    if [[ "$check_sql" == "1" ]]; then
-        assert_eq "$(sql_value "$edadb_db" "select count(*) from iBlockageSD;")" "2" "$name blockage count"
-        assert_eq "$(sql_value "$edadb_db" "select count(*) from iRegion;")" "1" "$name region count"
-        assert_eq "$(sql_value "$edadb_db" "select count(*) from iSlotSD;")" "1" "$name slot count"
-        assert_eq "$(sql_value "$edadb_db" "select count(*) from iGroupSD;")" "1" "$name group count"
-        assert_eq "$(sql_value "$edadb_db" "select _group_name_sd || '|' || _region_name_sd from iGroupSD;")" "test_group|test_region" "$name group region"
-        assert_eq "$(sql_value "$edadb_db" "select value from iGroupSD__instance_name_vec_sd___edadb_primitive_vector;")" "ctrl/_34_" "$name group member"
-        assert_eq "$(sql_value "$edadb_db" "select count(*) from iFillSD;")" "2" "$name fill count"
-        assert_eq "$(sql_value "$edadb_db" "select count(*) from iFillSD__rect_list_sd_IdbRect;")" "1" "$name fill rect count"
-        assert_eq "$(sql_value "$edadb_db" "select count(*) from iFillSD__coordinate_list_sd_iCoordSD;")" "1" "$name fill via coordinate count"
-        assert_eq "$(sql_value "$edadb_db" "select _original_net_name_sd || '|' || _source_type_sd || '|' || _weight_sd from iSpecNetSD where _net_name_sd='VDD';")" "orig_vdd_net|1|5" "$name special net optional fields"
-        assert_eq "$(sql_value "$edadb_db" "select _original_net_name_sd || '|' || _source_type_sd || '|' || _weight_sd || '|' || _xtalk_sd || '|' || _fix_bump_sd || '|' || _frequency_sd from iNetSD where _net_name_sd='ctrl\$a_mux_sel[0]';")" "orig_ctrl_net|3|7|11|1|250.0" "$name regular net optional fields"
-    fi
-    if [[ "$check_routed" == "1" ]]; then
-        assert_eq "$(sql_value "$edadb_db" "select count(*) from iNetSD;")" "677" "$name net count"
-        assert_eq "$(sql_value "$edadb_db" "select count(*) from iNetSD__wire_list_sd_iRegWireSD;")" "677" "$name regular wire count"
-        assert_eq "$(sql_value "$edadb_db" "select count(*) from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD;")" "8997" "$name regular wire segment count"
-        assert_eq "$(sql_value "$edadb_db" "select count(*) from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__point_list_sd_iCoordSD;")" "14256" "$name regular wire point count"
-    fi
+    case "$check_mode" in
+        default)
+            check_default_sql "$name" "$edadb_db" "$case_dir/def2edadb.log" "$case_dir/edadb2def.log"
+            ;;
+        aux)
+            check_default_sql "$name" "$edadb_db" "$case_dir/def2edadb.log" "$case_dir/edadb2def.log"
+            check_aux_optional_sql "$name" "$edadb_db"
+            ;;
+        routed)
+            check_routed_sql "$name" "$edadb_db" "$case_dir/def2edadb.log" "$case_dir/edadb2def.log"
+            ;;
+        none)
+            ;;
+        *)
+            echo "unknown check mode: $check_mode" >&2
+            exit 1
+            ;;
+    esac
 
     echo "case output: $case_dir"
 }
@@ -188,9 +274,9 @@ main() {
     echo "base fixture: $BASE_DEF"
     echo "generated fixture: $aux_def"
 
-    run_case "default_ipl" "$BASE_DEF" "0"
-    run_case "aux_optional" "$aux_def" "1"
-    run_case "routed_irt" "$ROUTED_DEF" "0" "1"
+    run_case "default_ipl" "$BASE_DEF" "default"
+    run_case "aux_optional" "$aux_def" "aux"
+    run_case "routed_irt" "$ROUTED_DEF" "routed"
 
     echo "All EDADB iDB roundtrip regression tests passed."
 }
