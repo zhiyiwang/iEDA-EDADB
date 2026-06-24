@@ -393,12 +393,13 @@ input DEF -> EDADB -> iDB -> output DEF
 6. `src/database/edadb/core/test/*`
    - 看 EDADB core 自己的 ORM/table-op 测试。
 
-当前 core 相对 C baseline `8a4e3bf` 的本地变化只有：
+当前 EDADB core 使用 `src/database/edadb/core @ 3077132`。相对早期 C baseline，
+它包含 const table definition、primitive vector row、table-op/public API 调整、
+SQLite backend 更新，以及 expanded core tests。iEDA adapter 里最重要的影响是：
 
-- `include/edadb/backend/sqlite/DbStatement4Sqlite.h`
-- `test/CMakeLists.txt`
-
-这两个文件主要服务于 SQLite debug trace 测试。
+- `std::vector<std::string>` 这类 scalar vector 直接由 EDADB primitive vector child table 存储。
+- 旧的 `CppStrings` wrapper 不再用于 active adapter path。
+- 生成的 primitive vector child table 使用 `__edadb_vec_idx` 和 `value` 列。
 
 ## 10. 最后读测试
 
@@ -420,7 +421,7 @@ bash src/database/edadb/test/run_idb_roundtrip_regression.sh
 /tmp/iedadb_regression
 ```
 
-当前测试包含两个 case：
+当前测试包含三个 case：
 
 - `default_ipl`
   - 使用 sky130_gcd `iPL_result.def`。
@@ -431,6 +432,11 @@ bash src/database/edadb/test/run_idb_roundtrip_regression.sh
   - 添加非空 `BLOCKAGES`、`REGIONS`、`SLOTS`、`GROUPS`、`FILLS`。
   - 添加 regular net 和 special net optional fields。
   - 检查 SQLite 表内容和 DEF roundtrip diff。
+
+- `routed_irt`
+  - 使用 sky130_gcd `iRT_result.def`。
+  - 覆盖非空 regular routed NETS。
+  - 检查 `iNetSD`、regular wire、wire segment、wire point child rows。
 
 测试读法：
 
@@ -477,3 +483,36 @@ bash src/database/edadb/test/run_idb_roundtrip_regression.sh
 
 如果某个字段只写进 EDADB，但 normal DEF writer 不输出它，那么 DEF byte diff 看不出来，
 需要 adapter-level object assertion 或 SQLite assertion。
+
+## 13. 对照 master 的正确性结论
+
+相对 `master @ 007435241`，当前分支没有替换原始 DEF writer 的文本输出规则；
+它是在 `edadb_read` / `edadb_write` 路径中加入一个可持久化中间层：
+
+```text
+master: DEF -> iDB -> DEF
+C:      DEF -> iDB -> EDADB -> iDB -> DEF
+```
+
+因此判断 EDADB adapter 正确性的核心不是和输入 DEF 逐字节比较，而是：
+
+```text
+normal direct iDB roundtrip DEF == EDADB roundtrip DEF
+```
+
+当前对象族映射原则：
+
+| DEF family | master 语义来源 | EDADB 存储方式 | 正确性依据 |
+| --- | --- | --- | --- |
+| Design/Units/BusBit | `write_version/write_design/write_units/write_bus_bit_chars` | direct `iDesign` | 输出字段和 fallback 与 normal writer 对齐 |
+| Die/Row/Track/GCell/Via | die/row/track/gcell/via writer/parser | direct 或最小 member shadow | 读回后重建 layer/site/via 引用，再由 normal writer 输出 |
+| Instance/Pin | COMPONENTS/PINS writer/parser | reduced shadow | 指针引用转 name，读回用 LEF/layout 查回对象 |
+| Blockage/Region/Slot/Group/Fill | 对应 DEF section writer/parser | direct 或 reduced shadow | 只保存 DEF 会输出的字段；derived/cache 不持久化 |
+| SpecialNet/Net | SPECIALNETS/NETS writer/parser | nested shadow + ordered pin refs | `_order_sd` 保持 pin 顺序；layer/via/pin name 读回重连 |
+
+测试证据：
+
+- `default_ipl` 覆盖 Design 到 Net 的常规 sky130_gcd placement DEF roundtrip。
+- `aux_optional` 补覆盖非空 Blockage/Region/Slot/Group/Fill 和 optional net 字段，并查 SQLite。
+- `routed_irt` 补覆盖 non-empty regular routed NETS 的 wire/segment/point 子表。
+- EDADB core 自测 `ctest --output-on-failure` 在 `3077132` 上通过 `13/13`。

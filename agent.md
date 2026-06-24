@@ -365,19 +365,19 @@ Validation:
 - SQLite pin check: `select count(*) from iPinSD;` returns `56`; each nested port/layer-shape/rect child table also returns `56` for sky130_gcd.
 - Demo logs on 2026-06-15 show `writeIdbBlockage insert blockage_count=0`.
 - Demo logs on 2026-06-15 show `readIdbBlockage restored blockage_count=0`.
-- SQLite blockage check: `select count(*) from iBlockageSD;` returns `0`; current sky130_gcd demo validates the empty-table path only.
+- SQLite blockage check: `select count(*) from iBlockageSD;` returns `0`; the default sky130_gcd demo validates the empty-table path, while `aux_optional` validates non-empty blockage rows.
 - Demo logs on 2026-06-15 show `writeIdbRegion insert region_count=0`.
 - Demo logs on 2026-06-15 show `readIdbRegion restored region_count=0`.
-- SQLite region check: `select count(*) from iRegion;` returns `0`; current sky130_gcd demo validates the empty-table path only.
+- SQLite region check: `select count(*) from iRegion;` returns `0`; the default sky130_gcd demo validates the empty-table path, while `aux_optional` validates non-empty region rows.
 - Demo logs on 2026-06-15 show `writeIdbSlot insert slot_count=0`.
 - Demo logs on 2026-06-15 show `readIdbSlot restored slot_count=0`.
-- SQLite slot check: `select count(*) from iSlotSD;` returns `0`; current sky130_gcd demo validates the empty-table path only.
+- SQLite slot check: `select count(*) from iSlotSD;` returns `0`; the default sky130_gcd demo validates the empty-table path, while `aux_optional` validates non-empty slot rows.
 - Demo logs on 2026-06-15 show `writeIdbGroup insert group_count=0`.
 - Demo logs on 2026-06-15 show `readIdbGroup restored group_count=0`.
-- SQLite group check: `select count(*) from iGroupSD;` returns `0`; current sky130_gcd demo validates the empty-table path only.
+- SQLite group check: `select count(*) from iGroupSD;` returns `0`; the default sky130_gcd demo validates the empty-table path, while `aux_optional` validates non-empty group rows and member names.
 - Demo logs on 2026-06-15 show `writeIdbFill insert fill_count=0`.
 - Demo logs on 2026-06-15 show `readIdbFill restored fill_count=0`.
-- SQLite fill check: `select count(*) from iFillSD;` returns `0`; current sky130_gcd demo validates the empty-table path only.
+- SQLite fill check: `select count(*) from iFillSD;` returns `0`; the default sky130_gcd demo validates the empty-table path, while `aux_optional` validates non-empty layer/via fill rows.
 - Demo logs on 2026-06-15 show `writeSpecialNet insert special_net_count=2 segment_count=639`.
 - Demo logs on 2026-06-15 show `readSpecialNet restored special_net_count=2 segment_count=639`.
 - SQLite special-net check: `iSpecNetSD=2`, nested `wire_list=2`, nested `segment_list=639`, nested `point_list=697`.
@@ -469,8 +469,8 @@ Review from executable entry to EDADB adapter internals:
 12. `src/database/manager/builder/def_builder/def_write_edadb.*`: EDADB write path.
 13. `src/database/manager/builder/def_builder/def_read_edadb.*`: EDADB read path.
 14. `src/database/edadb/idb/edadb_idb_init.*`: adapter init API and table framework.
-15. `src/database/edadb/idb/edadb_idb_helper.*`: helper state for future shadow readback.
-16. `src/database/edadb/idb/edadb_idb_schema.h`, `edadb_idb_shadow.h`, `shadow/*`: dormant schema/shadow restoration area.
+15. `src/database/edadb/idb/edadb_idb_helper.*`: helper state for layer/via/region/instance lookup during shadow readback.
+16. `src/database/edadb/idb/edadb_idb_schema.h`, `edadb_idb_shadow.h`, `shadow/*`: active schema/shadow mapping for all enabled DEF object families.
 
 ## C Directory Roles
 
@@ -488,9 +488,9 @@ src/database/edadb/idb/
 - iEDA-side adapter layer.
 - `edadb_idb_init.*`: open DB, init primary-key policy, init tables.
 - `edadb_idb_helper.*`: stores/accesses `IdbDefService`; layer/via-rule lookup helpers.
-- `edadb_idb_schema.h`: iDB/shadow table mappings; Design, Die, and Row groups enabled, others dormant.
-- `edadb_idb_shadow.h`: shadow aggregation; geometry/die enabled, other shadows dormant.
-- `shadow/*`: per-class iDB ↔ shadow conversion definitions for later restoration.
+- `edadb_idb_schema.h`: active iDB/shadow table mappings for Design through Net.
+- `edadb_idb_shadow.h`: shadow aggregation for active geometry/die/track/via/instance/pin/blockage/slot/group/fill/net mappings.
+- `shadow/*`: per-class iDB ↔ shadow conversion definitions used by current EDADB read/write paths.
 - `docs/*`: DEF/LEF parsing and ORM notes.
 
 ## Master vs C: What EDADB Adds
@@ -556,6 +556,26 @@ Current EDADB adapter coverage:
 - Fill is stored as a flattened discriminated record: layer fills keep layer name and
   rect children; via fills keep via name and coordinate children. This avoids nullable
   variant child-object mismatches in the current EDADB vector-child schema.
+
+Class-level EDADB storage map:
+
+| DEF family | EDADB storage | Shadow? | Main verification |
+| --- | --- | --- | --- |
+| Design / Units / BusBit | `iDesign` with inline `iUnits` / `iBusBitChars` | no | `default_ipl` DEF diff and logs |
+| Die | `iDieSD` + `iCoordSD` points | yes | `default_ipl` DEF diff |
+| Row | `iRow` direct table | no | `default_ipl` DEF diff |
+| TrackGrid | `iTrackGridSD` + primitive vector layer names | yes | `default_ipl` DEF diff |
+| GCellGrid | `iGCellGrid` direct table | no | `default_ipl` DEF diff |
+| Via | `iVia` direct root with via-master/layer-shape member shadows | no root shadow | `default_ipl` DEF diff |
+| Instance | `iInstSD` reduced COMPONENT view | yes | `default_ipl` DEF diff |
+| Pin | `iPinSD` reduced PINS view | yes | `default_ipl` DEF diff |
+| Blockage | `iBlockageSD` + rect rows | yes | `aux_optional` DEF diff + SQLite count |
+| Region | `iRegion` + boundary rows | no | `aux_optional` DEF diff + SQLite count |
+| Slot | `iSlotSD` + rect rows | yes | `aux_optional` DEF diff + SQLite count |
+| Group | `iGroupSD` + primitive vector instance names | yes | `aux_optional` DEF diff + SQLite member check |
+| Fill | `iFillSD` flattened layer/via records | yes | `aux_optional` DEF diff + SQLite child checks |
+| SpecialNet | `iSpecNetSD` nested wires/segments/pins | yes | `aux_optional` optional fields + `default_ipl` segment logs |
+| Net | `iNetSD` nested regular wires/segments/pins | yes | `aux_optional` optional fields + `routed_irt` wire/segment checks |
 
 For future EDADB API changes or new object families, restore or harden persistence class by class:
 
