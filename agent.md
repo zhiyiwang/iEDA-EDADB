@@ -603,9 +603,25 @@ Latest repeatable regression:
 
 - Command: `bash src/database/edadb/test/run_idb_roundtrip_regression.sh`
 - Output root: `/tmp/iedadb_regression`
-- Result on 2026-06-24: passed after updating EDADB core to `3077132`.
+- Result on 2026-06-24: passed after updating EDADB core to `3077132`; rerun during completion audit also passed.
 - `default_ipl`: direct iDB DEF output matches EDADB DEF output.
 - `aux_optional`: non-empty BLOCKAGES / REGIONS / SLOTS / GROUPS / FILLS and optional
   regular/special net fields match direct iDB output; SQLite content checks pass.
 - `routed_irt`: non-empty regular routed NETS match direct iDB output; SQLite checks show
   `iNetSD=677`, regular wire rows `677`, segment rows `8997`, point rows `14256`.
+- EDADB core completion-audit check: `cd build && ctest --output-on-failure` passed `13/13`
+  in `428.08 sec`.
+
+## Objective Completion Audit
+
+Current audit target: EDADB core `3077132` with iEDA branch `edadb-idb`.
+
+| Objective item | Current evidence | Status |
+| --- | --- | --- |
+| Update EDADB adapter implementation for the new core | `src/database/edadb/idb/edadb_idb_init.*` uses `idb::edadb_adapter`; active code uses current `edadb::initDatabase`, `createTable`, `insertObject`, `insertVector`, `makeReadAllOp`, and `readNext`; scalar vectors now use EDADB primitive vector tables instead of active `CppStrings`. | done |
+| Decide direct vs shadow per iEDA class and update shadows | `src/database/edadb/idb/edadb_idb_schema.h` maps direct roots and shadows; `src/database/edadb/idb/shadow/*` implements reduced storage views for classes that need names, synthetic keys, vector child ownership, or DEF-only views. | done |
+| Migrate DEF read/write by object family | `DefWriteEdadb::writeChip2Edadb()` writes Design, Die, Row, TrackGrid, GCell, Via, Instance, Pin, Blockage, Region, Slot, Group, Fill, SpecialNet, Net; `DefReadEdadb::createDbByEdadb()` reads the matching families and `createDbByDef()` disables matching DEF callbacks. | done |
+| Commit by object-family increments | Git history on `edadb-idb` contains per-family commits from Design/Die/Row through Net, plus follow-up hardening commits for optional net fields, fill variants, primitive vectors, and documentation audits. | done |
+| Verify each migrated family | `default_ipl` covers baseline families; `aux_optional` covers non-empty Blockage/Region/Slot/Group/Fill and optional net fields with SQLite assertions; `routed_irt` covers non-empty regular routed NETS with SQLite assertions. | done |
+| Compare against original master and prove logic | `edadb_readme.md` section “对照 master 的正确性结论” defines the proof strategy: compare direct iDB DEF roundtrip with EDADB DEF roundtrip, preserving master DEF writer/parser semantics while replacing the persistence middle step. | done |
+| Use server resources efficiently | Build/test commands use `-j40` where applicable; regression script runs focused EDADB adapter cases instead of unrelated full design flow. | done |
