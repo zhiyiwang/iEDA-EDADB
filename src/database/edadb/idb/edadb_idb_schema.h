@@ -44,10 +44,6 @@ TABLE4CLASS(idb::IdbSite, "iSite", (_name, _width, _heigtht, _b_overlap, _site_c
 #include "database/data/design/db_layout/IdbRow.h"
 TABLE4CLASS(idb::IdbRow, "iRow", (_name, _site, _original_coordinate, _row_num_x, _row_num_y, _step_x, _step_y));
 
-
-// Via is stored as a direct root object. Its member-level via-master/layer-shape
-// shadows provide the storage view for layer-name lookup and fixed/generate
-// geometry rebuild; do not add a root Shadow<IdbVia>.
 #include "database/data/design/db_design/IdbTrackGrid.h"
 TABLE4CLASS(idb::IdbTrack, "iTrack", (_start, _direction, _pitch));
 
@@ -74,6 +70,8 @@ TABLE4CLASS_WVEC (edadb::Shadow<idb::IdbLayerShape>, "iLayerShapeSD", (_layer_na
 TABLE4SHADOW_WVEC(idb::IdbViaMaster);
 TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbViaMaster>, "iViaMasterSD", (_name_sd, _type_sd, _master_generate_sd), (fixed_layer_shape_list_sd));
 
+// Via is stored as a direct root object. Its member-level via-master/layer-shape
+// shadows provide layer-name lookup and fixed/generate geometry rebuild.
 #include "database/data/design/db_design/IdbVias.h"
 TABLE4CLASS(idb::IdbVia, "iVia", (_name, _master_instance));
 

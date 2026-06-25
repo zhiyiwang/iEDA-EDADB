@@ -397,9 +397,8 @@ bool DefReadEdadb::readIdbTrackGrid(void) {
         for (auto& layer_name_sd : track_grid_sd._layer_name_vec_sd) {
             IdbLayer* layer = layers->find_layer(layer_name_sd);
             if (layer == nullptr) {
-                std::cerr << "DefReadEdadb::readIdbTrackGrid failed to find layer: "
-                          << layer_name_sd << std::endl;
-                return false;
+                std::cout << "Track Grid Error : no layer exist..." << std::endl;
+                continue;
             }
 
             track_grid->add_layer_list(layer);
