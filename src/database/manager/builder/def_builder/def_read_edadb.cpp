@@ -350,8 +350,8 @@ bool DefReadEdadb::readIdbRow(void) {
 
         std::string site_name = row_site->get_name();
         IdbOrient site_orient = row_site->get_orient();
-        IdbSite* lef_site = sites->find_site(site_name);
-        IdbSite* site = lef_site == nullptr ? row_site->clone() : lef_site->clone();
+        IdbSite* lef_site = sites->add_site_list(site_name);
+        IdbSite* site = lef_site->clone();
         site->set_orient(site_orient);
         row->set_site(site);
         row->set_orient(site_orient);
