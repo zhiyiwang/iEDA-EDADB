@@ -92,10 +92,28 @@ check_default_sql() {
         "1|1|39|12|0|4|1458|56|2|675" "$name core object counts"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_x_sd || ',' || _y_sd, ';') from (select _x_sd, _y_sd from iDieSD_points_sd_iCoordSD order by _vec_idx);")" \
         "0,0;149960,150128" "$name die points"
+    assert_eq "$(sql_value "$edadb_db" "select _name || '|' || _site__name || '|' || _original_coordinate__x_sd || ',' || _original_coordinate__y_sd || '|' || _row_num_x || '|' || _row_num_y || '|' || _step_x || '|' || _step_y from iRow where _name='ROW_0';")" \
+        "ROW_0|unit|9600,9990|271|1|480|0" "$name row fields"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(primary_key || ':' || _track_sd__direction || ':' || _track_sd__start || ':' || _track_num_sd || ':' || _track_sd__pitch, ';') from (select * from iTrackGridSD order by primary_key limit 4);")" \
+        "1:1:240:311:480;2:2:185:405:370;3:1:185:404:370;4:2:185:405:370" "$name track fields"
     assert_eq "$(sql_value "$edadb_db" "select count(*) || '|' || group_concat(value, ',') from (select value from iTrackGridSD__layer_name_vec_sd___edadb_primitive_vector order by iTrackGridSD_primary_key, __edadb_vec_idx);")" \
         "12|li1,li1,met1,met1,met2,met2,met3,met3,met4,met4,met5,met5" "$name track layer primitive vector"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_name, ',') from (select _name from iVia order by _name);")" \
         "via2_1600x480,via3_1600x480,via4_1600x1600,via_1600x480" "$name via names"
+    assert_eq "$(sql_value "$edadb_db" "select _name || '|' || _master_instance__type_sd || '|' || _master_instance__master_generate_sd__rule_name_sd || '|' || _master_instance__master_generate_sd__cut_size_x_sd || '|' || _master_instance__master_generate_sd__cut_size_y_sd || '|' || _master_instance__master_generate_sd__num_cut_rows_sd || '|' || _master_instance__master_generate_sd__num_cut_cols_sd || '|' || _master_instance__master_generate_sd__layer_bottom_name_sd || '|' || _master_instance__master_generate_sd__layer_cut_name_sd || '|' || _master_instance__master_generate_sd__layer_top_name_sd from iVia where _name='via_1600x480';")" \
+        "via_1600x480|1|M1M2_PR_C|150|150|2|5|met1|via|met2" "$name via generate fields"
+    assert_eq "$(sql_value "$edadb_db" "select _name_sd || '|' || _cell_master_name_sd || '|' || _status_sd || '|' || _orient_sd || '|' || _coordinate_sd__x_sd || ',' || _coordinate_sd__y_sd from iInstSD where _name_sd='ENDCAP_0';")" \
+        "ENDCAP_0|sky130_fd_sc_hs__fill_1|1|7|9600,9990" "$name instance fields"
+    assert_eq "$(sql_value "$edadb_db" "select _pin_name_sd || '|' || _net_name_sd || '|' || _io_term_sd__direction_sd || '|' || _io_term_sd__type_sd || '|' || _io_term_sd__has_port_sd || '|' || _location_sd__x_sd || ',' || _location_sd__y_sd || '|' || _layer_num_sd from iPinSD where _pin_name_sd='clk';")" \
+        "clk|clk|1|1|0|1000,9990|1" "$name pin fields"
+    assert_eq "$(sql_value "$edadb_db" "select (select count(*) from iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD) || '|' || (select count(*) from iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD__layer_shape_list_sd_iLayerShapeSD) || '|' || (select count(*) from iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD__layer_shape_list_sd_iLayerShapeSD__rect_list_sd_IdbRect);")" \
+        "56|56|56" "$name pin port/layer/rect child counts"
+    assert_eq "$(sql_value "$edadb_db" "select _net_name_sd || '|' || _connect_type_sd || '|' || _source_type_sd || '|' || _weight_sd from iSpecNetSD where _net_name_sd='VSS';")" \
+        "VSS|4|0|0" "$name special net default fields"
+    assert_eq "$(sql_value "$edadb_db" "select (select count(*) from iSpecNetSD__pin_string_list_sd___edadb_primitive_vector) || '|' || (select count(*) from iSpecNetSD__wire_list_sd_iSpecWireSD) || '|' || (select count(*) from iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD) || '|' || (select count(*) from iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD__point_list_sd_iCoordSD);")" \
+        "6|2|639|697" "$name special net child counts"
+    assert_eq "$(sql_value "$edadb_db" "select _net_name_sd || '|' || _connect_type_sd || '|' || _source_type_sd || '|' || _weight_sd || '|' || _xtalk_sd || '|' || _fix_bump_sd || '|' || _frequency_sd from iNetSD where _net_name_sd='clk';")" \
+        "clk|5|0|0|0|0|-1.0" "$name regular net default fields"
 
     assert_contains "$def2edadb_log" "[EDADB-IDB] writeIdbInstance insert instance_count=1458" "$name write instance log"
     assert_contains "$def2edadb_log" "[EDADB-IDB] writeIdbPin insert pin_count=56" "$name write pin log"
@@ -146,6 +164,8 @@ check_routed_sql() {
     assert_eq "$(sql_value "$edadb_db" "select count(*) from iNetSD__wire_list_sd_iRegWireSD;")" "677" "$name regular wire count"
     assert_eq "$(sql_value "$edadb_db" "select count(*) from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD;")" "8997" "$name regular wire segment count"
     assert_eq "$(sql_value "$edadb_db" "select count(*) from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__point_list_sd_iCoordSD;")" "14256" "$name regular wire point count"
+    assert_eq "$(sql_value "$edadb_db" "select (select count(*) from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD where _is_via_sd=1) || '|' || (select count(*) from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD where _is_rect_sd=1) || '|' || (select count(*) from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD where _is_second_point_virtual_sd=1) || '|' || (select count(*) from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD where _via_name_sd is not null and _via_name_sd != '');")" \
+        "3716|22|0|3716" "$name regular wire segment types"
     assert_eq "$(sql_value "$edadb_db" "select min(_order_sd) || '|' || max(_order_sd) || '|' || count(*) from iNetSD__instance_pin_list_sd_iNetPinRef where iNetSD__net_name_sd='clk_0';")" \
         "0|18|19" "$name clk_0 ordered pin refs"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || ':' || instance_name || ':' || pin_name, ',') from (select _order_sd, instance_name, pin_name from iNetSD__instance_pin_list_sd_iNetPinRef where iNetSD__net_name_sd='clk_0' order by _order_sd limit 5);")" \

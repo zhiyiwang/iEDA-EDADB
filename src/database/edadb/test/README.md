@@ -37,7 +37,9 @@ For `default_ipl`, it also checks:
 
 - design/version/units/bus-bit fields;
 - object-family counts for Design, Die, Row, TrackGrid, GCellGrid, Via, Instance, Pin, SpecialNet, and Net;
-- die point rows, track-grid primitive vector layer names, via names;
+- die point rows, row fields, track-grid fields and primitive vector layer names;
+- via generate fields, instance fields, pin fields and pin port/layer/rect child rows;
+- special-net default fields and child rows, regular-net default fields;
 - write/read logs for instance and pin restoration counts.
 
 For `aux_optional`, it also checks SQLite content for key EDADB tables and fields:
@@ -54,6 +56,27 @@ For `routed_irt`, it also checks SQLite content for routed regular-net tables:
 - `iNetSD__wire_list_sd_iRegWireSD = 677`;
 - `iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD = 8997`;
 - `iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__point_list_sd_iCoordSD = 14256`.
+- routed segment type counters cover via segments, rect segments, virtual second points, and via-name rows;
 - `clk_0` ordered instance-pin refs preserve `_order_sd = 0..18`;
 - largest routed segment nets remain `clk_0`, `clk_1`, and `dpath/a_mux/_066_`;
 - write/read logs report `net_count=677`.
+
+## Verification Rule
+
+Each migrated class must be checked against the original `DefWrite`/`DefRead` behavior:
+
+- persist only fields that can affect DEF output or later object rebuild;
+- recompute derived fields in the same way as the original parser/writer;
+- disable the matching DEF callback when `readIdbXXX()` restores that object from EDADB;
+- prefer direct EDADB mapping; use shadow only for synthetic primary keys, reduced DEF views, layer/via/name lookup, ordered child vectors, or variant flattening.
+
+The executable baseline is the current branch's direct iDB `DEF -> DEF` path. It may include small intentional fixes beyond `origin/master`, so master-diff reports must call out that drift separately.
+
+Current class coverage:
+
+| Family | Storage | Main edge covered |
+| --- | --- | --- |
+| Design / Die / Row / TrackGrid / GCellGrid / Via | direct or minimal shadow | scalar fields, point/vector rows, empty and non-empty GCell |
+| Instance / Pin | shadow | master/placement/halo fields, port/layer/rect child rows |
+| Blockage / Region / Slot / Group / Fill | direct or shadow | routing vs placement, region type, ordered group members, layer-fill vs via-fill |
+| SpecialNet / Net | shadow | ordered pin refs, optional fields, routed wire/segment/point rows |

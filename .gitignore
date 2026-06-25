@@ -32,5 +32,11 @@ CMakePresets.json
 __pycache__
 mcp_iEDA.egg-info/
 
+# Local Codex / Understand-Anything analysis outputs
+.understand-anything/
+build.out
+diff.out
+run.out
+
 # Prevent accidental re-addition of removed submodules
 src/third_party/mt-kahypar/

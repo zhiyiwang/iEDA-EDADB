@@ -12,6 +12,12 @@
 
 namespace idb::edadb_adapter {
 
+#if EDADB_OUTPUT_DEBUG
+#define EDADB_IDB_DEBUG_STREAM std::cout
+#else
+#define EDADB_IDB_DEBUG_STREAM if (true) {} else std::cout
+#endif
+
 void initPrimKeys(void) {
     edadb::Cpp2SqlTypeTrait<idb::IdbUnits>::hasPrimKey = false;
     edadb::Cpp2SqlTypeTrait<idb::IdbBusBitChars>::hasPrimKey = false;
@@ -25,8 +31,6 @@ void initPrimKeys(void) {
     edadb::Cpp2SqlTypeTrait<idb::IdbHalo>::hasPrimKey = false;
     edadb::Cpp2SqlTypeTrait<edadb::Shadow<idb::IdbRouteHalo>>::hasPrimKey = false;
 
-//-//    edadb::Cpp2SqlTypeTrait<idb::IdbSpecialNetEdgeSegment>::hasPrimKey = false;
-
 } // initPrimKeys
 
 
@@ -34,19 +38,19 @@ template <typename T>
 int initTable(bool crt_tab) {
     const std::string& table_name = edadb::TypeMetaData<edadb::StoreTypeOf<T>>::table_name();
 #if EDADB_OUTPUT_DEBUG
-    std::cout << "[EDADB-IDB] schema table=" << table_name
+    EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] schema table=" << table_name
               << " create=" << (crt_tab ? "true" : "false") << std::endl;
 #endif
 
     if (!crt_tab) {
         const edadb::DbTableDefBase* table_def = edadb::getTableDef<T>();
         if (table_def == nullptr) {
-            std::cerr << "[EDADB-IDB] failed to map table definition: " << table_name << std::endl;
+            std::cerr << "failed to map table definition: " << table_name << std::endl;
             return -1;
         }
     } else {
         if (!edadb::createTable<T>()) {
-            std::cerr << "[EDADB-IDB] failed to create table: " << table_name << std::endl;
+            std::cerr << "failed to create table: " << table_name << std::endl;
             return -1;
         }
     } // if-else
@@ -67,9 +71,9 @@ int initTable(bool crt_tab) {
 
 int initAllTables(bool crt_tab) {
 #if EDADB_OUTPUT_DEBUG
-    std::cout << "[EDADB-IDB] initAllTables create=" << (crt_tab ? "true" : "false") << std::endl;
+    EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] initAllTables create=" << (crt_tab ? "true" : "false") << std::endl;
 #endif
-    std::cout << "[EDADB-IDB] initAllTables register Design/Die/Row/TrackGrid/GCell/Via/Region/Instance/Pin/Blockage/Slot/Group/Fill/SpecialNet/Net groups"
+    EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] initAllTables register Design/Die/Row/TrackGrid/GCell/Via/Region/Instance/Pin/Blockage/Slot/Group/Fill/SpecialNet/Net groups"
               << std::endl;
 
     EDADB_INIT_TABLE(idb::IdbDesign, crt_tab);
@@ -97,17 +101,14 @@ int initAllTables(bool crt_tab) {
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbRegularWire>, crt_tab);
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbNet>, crt_tab);
 
-#if 0  //EDADB_TODO: enable these tables one object family at a time after Net.
-#endif
-
     return 0;
 } // createAllTables
 
 
 
 int initReadDb(const char* edadb_path) {
-    std::cout << "[EDADB-IDB] initReadDb path=" << edadb_path << std::endl;
-    std::cout << "[EDADB-IDB] core api=DbTableOp primitive-vector target=3077132" << std::endl;
+    EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] initReadDb path=" << edadb_path << std::endl;
+    EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] core api=DbTableOp primitive-vector target=3077132" << std::endl;
     if (!edadb::initDatabase(edadb_path)) {
         std::cerr << "Error: failed to init database from " << edadb_path << std::endl;
         return -1; 
@@ -125,8 +126,8 @@ int initReadDb(const char* edadb_path) {
 
 
 int initWriteDb(const char* edadb_path) {
-    std::cout << "[EDADB-IDB] initWriteDb path=" << edadb_path << std::endl;
-    std::cout << "[EDADB-IDB] core api=DbTableOp primitive-vector target=3077132" << std::endl;
+    EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] initWriteDb path=" << edadb_path << std::endl;
+    EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] core api=DbTableOp primitive-vector target=3077132" << std::endl;
     if (!edadb::initDatabase(edadb_path)) {
         std::cerr << "Error: failed to init database from " << edadb_path << std::endl;
         return -1;
@@ -141,5 +142,7 @@ int initWriteDb(const char* edadb_path) {
 
     return 0;
 } // initWriteDb
+
+#undef EDADB_IDB_DEBUG_STREAM
 
 } // namespace idb::edadb_adapter

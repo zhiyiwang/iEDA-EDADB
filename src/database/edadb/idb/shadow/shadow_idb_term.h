@@ -53,12 +53,7 @@ public:
         obj->_is_instance = _is_instance_sd;
 
         assert(obj->_port_list.empty());
-        // DefReadEdadb::readIdbPin: 
-        //   will create IdbPort and call fromShadow to get the value
-//--        for (auto& port_sd : _port_list_sd) {
-//--            idb::IdbPort* port = obj->add_port(nullptr);
-//--            port_sd->fromShadow(port);
-//--        }
+        // DefReadEdadb::readIdbPin will create IdbPort and call fromShadow.
     } // fromShadow
 
 
@@ -77,4 +72,3 @@ public:
 }; // class Shadow<idb::IdbTerm>
 
 } // namespace edadb
-

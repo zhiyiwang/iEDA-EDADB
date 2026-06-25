@@ -593,11 +593,24 @@ DEF callback ownership rule:
 
 Current weak spots to test next:
 
-- Add adapter-level C++ tests for optional net fields, repeated pin refs, and Fill layer/via
-  variants; the end-to-end regression now covers these paths, but C++ assertions would be
-  faster and more precise.
+- Add adapter-level C++ tests only when they can instantiate iDB classes cheaply; current
+  executable proof is the iEDA+EDADB roundtrip regression.
 - Add focused repeated-instance-pin and GROUP wildcard/regex fixtures if those textual cases
   become important.
+
+Verification discipline for future classes:
+
+- First compare original `DefWrite::write_xxx()` and `DefRead::parse_xxx()`; EDADB must persist
+  the same DEF-visible fields and rebuild computed fields the same way.
+- Current C branch native baseline is not byte-identical to `origin/master`: it intentionally adds
+  GROUP member callbacks/rebuild and extra net/special-net optional field handling. Use the current
+  native direct `DEF -> DEF` path as executable baseline, and note master drift when writing reports.
+- Prefer direct EDADB mapping. Add shadow only for synthetic PK, reduced DEF view, ordered child
+  vectors, variant flattening, or LEF/name lookup needed during `fromShadow()`.
+- For every enabled `readIdbXXX()`, disable the matching DEF callback in
+  `DefReadEdadb::createDbByDef()`.
+- Tests must include DEF byte-diff against direct iDB output plus SQLite assertions for scalar
+  fields, child-row counts/order, empty/non-empty cases, and optional fields.
 
 Latest repeatable regression:
 
@@ -612,9 +625,10 @@ Latest repeatable regression:
 - EDADB core completion-audit check: `cd build && ctest --output-on-failure` passed `13/13`
   in `428.08 sec`.
 - Detailed regression was strengthened after this audit: `default_ipl` now checks design fields,
-  core object-family counts, die points, track-grid primitive vector rows, via names, and key
-  write/read logs; `aux_optional` now uses a two-member group and checks blockage/region/slot/fill
-  field values; `routed_irt` now checks GCell fields, ordered `clk_0` pin refs, and largest routed
+  core object-family counts, die/row/track/via/instance/pin/special-net/net fields, pin child rows,
+  special-net child rows, and key write/read logs; `aux_optional` now uses a two-member group and
+  checks blockage/region/slot/fill field values; `routed_irt` now checks GCell fields, regular-net
+  wire/segment/point counts, segment type counters, ordered `clk_0` pin refs, and largest routed
   segment nets.
 
 ## Objective Completion Audit

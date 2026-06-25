@@ -516,3 +516,46 @@ normal direct iDB roundtrip DEF == EDADB roundtrip DEF
 - `aux_optional` 补覆盖非空 Blockage/Region/Slot/Group/Fill 和 optional net 字段，并查 SQLite。
 - `routed_irt` 补覆盖 non-empty regular routed NETS 的 wire/segment/point 子表。
 - EDADB core 自测 `ctest --output-on-failure` 在 `3077132` 上通过 `13/13`。
+
+## 14. 最新验证记录：2026-06-24
+
+这轮验证对应三件事：
+
+1. 对比当前分支 direct iDB `DEF -> DEF` 和 EDADB `DEF -> EDADB -> DEF`。
+2. 对照 schema/shadow，检查每类对象是否只保存 DEF 可见字段和必要重建字段。
+3. 把字段、child row、可选值、顺序、空/非空情况放进可重复 iEDA+EDADB 回归。
+
+重要结论：
+
+- 当前可执行 baseline 是当前分支的 direct iDB roundtrip，不是裸 `origin/master`。
+- 当前分支相对 `origin/master` 有少量有意漂移：GROUP member callback/rebuild、Net/SpecialNet optional fields 等。
+- 后续写总结时要分开说：EDADB adapter 是否正确，看它是否等价于当前 direct iDB baseline；若讨论 master 差异，要单独列出这些 direct iDB 层改动。
+
+本轮增强的测试断言：
+
+| Case | 新增验证点 |
+| --- | --- |
+| `default_ipl` | Design/Units/BusBit、Die points、Row fields、Track fields/layer vector、Via generate fields、Instance placement/master、Pin term/port/layer/rect、SpecialNet defaults/children、Net defaults |
+| `aux_optional` | Blockage routing/placement、Region type/rect、Slot rect、Group ordered members、Fill layer/via variants、SpecialNet optional fields、Net optional fields |
+| `routed_irt` | GCellGrid 非空字段、Net count、wire/segment/point child rows、segment type counters、ordered pin refs、最大 segment net 分布 |
+
+本轮运行结果：
+
+```bash
+bash src/database/edadb/test/run_idb_roundtrip_regression.sh
+```
+
+结果：
+
+```text
+All EDADB iDB roundtrip regression tests passed.
+```
+
+后续新增或修改对象族时，按这个顺序做：
+
+1. 读 `DefWrite::write_xxx()` 和 `DefRead::parse_xxx()`，确定 DEF 真正读写的字段。
+2. 决定 direct table 还是 shadow；优先 direct，只有需要 synthetic PK、ordered child vector、variant flattening、name/layer/via lookup 时才加 shadow。
+3. 更新 `edadb_idb_schema.h` 和 `edadb_idb_init.cpp`。
+4. 实现 `writeIdbXXX()` / `readIdbXXX()`。
+5. 在 `DefReadEdadb::createDbByDef()` 禁用对应 DEF callback，避免重复建对象。
+6. 在 `run_idb_roundtrip_regression.sh` 增加 DEF diff + SQLite field/child/order/optional assertions。

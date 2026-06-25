@@ -31,9 +31,6 @@ TABLE4CLASS(idb::IdbDesign, "iDesign", (_design_name, _version, _units, _bus_bit
 #include "shadow/shadow_idb_geometry.h"
 TABLE4SHADOW(idb::IdbCoordinate<int32_t>);
 TABLE4CLASS (edadb::Shadow<idb::IdbCoordinate<int32_t>>, "iCoordSD", (_vec_idx, _x_sd, _y_sd));
-//DIS--TABLE4CLASS(idb::IdbCoordinate<int32_t>, "iCoord", (_x, _y));
-//DIS--// vector coordinate points 
-//DIS--TABLE4CLASS(edadb::Shadow<idb::IdbCoordinate<int32_t>>, "iCoordSD", (_vidx, _x_sd, _y_sd));
 
 
 #include "shadow/shadow_idb_die.h"
@@ -73,15 +70,9 @@ TABLE4CLASS(idb::IdbRect, "IdbRect", (_lx, _ly, _hx, _hy));
 TABLE4SHADOW_WVEC(idb::IdbLayerShape);
 TABLE4CLASS_WVEC (edadb::Shadow<idb::IdbLayerShape>, "iLayerShapeSD", (_layer_name_sd, _type_sd), (_rect_list_sd));
 
-//--EDADB_IGNORE: no need to define as a table: store the underlayer member directly
-//--TABLE4CLASS(edadb::Shadow<idb::IdbViaMasterFixed>, "iViaMasterFixedSD", (primary_key, _layer_shape_sd));
-
 #include "shadow/shadow_idb_via_master.h"
 TABLE4SHADOW_WVEC(idb::IdbViaMaster);
 TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbViaMaster>, "iViaMasterSD", (_name_sd, _type_sd, _master_generate_sd), (fixed_layer_shape_list_sd));
-
-//TABLE4SHADOW(idb::IdbViaMaster);
-//TABLE4CLASS(edadb::Shadow<idb::IdbViaMaster>, "iViaMasterSD", (_name_sd, _type_sd, _master_generate_sd));
 
 #include "database/data/design/db_design/IdbVias.h"
 TABLE4CLASS(idb::IdbVia, "iVia", (_name, _master_instance));
