@@ -41,3 +41,4 @@ EDADB adapter 的目标不是 dump 完整 C++ 对象，而是贴近 iEDA 原始 
 ## Class Review Index
 
 - `01_idb_design.md`: `IdbDesign`, `IdbUnits`, `IdbBusBitChars` for `VERSION`, `BUSBITCHARS`, `DESIGN`, `UNITS`.
+- `02_idb_die.md`: `IdbDie` for `DIEAREA`, including point vector persistence and bounding-box rebuild.
