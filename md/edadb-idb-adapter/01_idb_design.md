@@ -72,7 +72,7 @@
 - 从 EDADB 读取一个 `IdbDesign got` 作为安全缓冲。
 - 设置 active `design->_design_name` 和 `_version`。
 - 复用 active `design->_units`，只从 `got._units` 复制 `_micron_dbu`，并保持和原始 `parse_units()` 一样的 LEF DBU warning 语义。
-- 按原始 `parse_bus_bit_chars()` 语义新建 `IdbBusBitChars`，复制左右 delimiter，删除旧 `_bus_bit_chars` 后替换。
+- 删除 active `design->_bus_bit_chars`，直接接管 EDADB 读出的 `got._bus_bit_chars`，并清空 `got._bus_bit_chars`。
 
 ## Computed Fields
 
@@ -89,7 +89,7 @@
 `readIdbDesign()` 已按原始 read 语义收敛：
 
 - `parse_units()` 复用 active `design->_units`，当前 EDADB read 也复用该对象并只恢复 `_micron_dbu`。
-- `parse_bus_bit_chars()` 删除旧对象并替换，当前 EDADB read 保持相同策略。
+- `parse_bus_bit_chars()` 删除旧对象并替换；当前 EDADB read 直接接管 EDADB 读出的新对象，语义相同且代码更直观。
 - `IdbDesign::~IdbDesign()` 当前删除 `_bus_bit_chars`，但没有删除 `_units`；因此禁止在 EDADB read 中替换 active `_units` pointer。
 
 后续仍需确认：

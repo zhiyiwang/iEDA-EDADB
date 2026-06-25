@@ -273,11 +273,9 @@ bool DefReadEdadb::readIdbDesign() {
         std::cerr << "readIdbDesign failed: bus_bit_chars is nullptr" << std::endl;
         return false;
     }
-    IdbBusBitChars* bus_bit_chars = new IdbBusBitChars();
-    bus_bit_chars->setLeftDelimiter(got_bus_bit_chars->getLeftDelimiter());
-    bus_bit_chars->setRightDelimter(got_bus_bit_chars->getRightDelimiter());
     delete design->get_bus_bit_chars();
-    design->set_bus_bit_chars(bus_bit_chars);
+    design->set_bus_bit_chars(got_bus_bit_chars);
+    got.set_bus_bit_chars(nullptr);
 
     EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] readIdbDesign restored name="
               << design->get_design_name()
