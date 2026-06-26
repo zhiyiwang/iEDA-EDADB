@@ -73,8 +73,6 @@ TABLE4CLASS_WVEC (edadb::Shadow<idb::IdbLayerShape>, "iLayerShapeSD", (_layer_na
 TABLE4SHADOW_WVEC(idb::IdbViaMaster);
 TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbViaMaster>, "iViaMasterSD", (_name_sd, _type_sd, _master_generate_sd), (fixed_layer_shape_list_sd));
 
-// Via is stored as a direct root object. Its member-level via-master/layer-shape
-// shadows provide layer-name lookup and fixed/generate geometry rebuild.
 #include "database/data/design/db_design/IdbVias.h"
 TABLE4CLASS(idb::IdbVia, "iVia", (_name, _master_instance));
 

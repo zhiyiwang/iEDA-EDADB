@@ -102,6 +102,7 @@ EDADB adapter 的目标不是 dump 完整 C++ 对象，而是贴近 iEDA 原始 
 - `06_idb_region.md`: `IdbRegion` for `REGIONS`, including name/type and boundary rectangle vector persistence.
 - `07_idb_slot.md`: `IdbSlot` for `SLOTS`, including layer name, rectangle vector, and explicit root order.
 - `08_idb_group.md`: `IdbGroup` for `GROUPS`, including region/member name references and explicit root/member order.
+- `09_idb_via.md`: `IdbVia` for `VIAS`, including direct root storage and via-master/layer-shape shadow rebuild.
 - `todo.md`: root list order guarantees that still need implementation or verification.
 
 ## Suggested Next Steps
