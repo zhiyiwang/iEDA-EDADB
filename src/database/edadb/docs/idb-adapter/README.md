@@ -74,7 +74,8 @@ EDADB adapter 的目标不是 dump 完整 C++ 对象，而是贴近 iEDA 原始 
 | Blockage | Done | EDADB roundtrip enabled and regression-covered; detailed review doc still missing. |
 | Region | Done | `_name_sd` identity, `_order_sd` root order, boundary vector preserved. |
 | Slot | Done | `primary_key` identity, `_order_sd` root order, rectangle vector preserved. |
-| Group / Fill | Implemented | Regression-covered by `aux_optional`; detailed docs/order audit still pending. |
+| Group | Done | `_group_name_sd` identity, `_order_sd` root order, member vector order preserved. |
+| Fill | Implemented | Regression-covered by `aux_optional`; detailed docs/order audit still pending. |
 | SpecialNet / Net | Implemented | Regression-covered by `default_ipl`, `aux_optional`, and `routed_irt`; detailed docs/order audit still pending. |
 
 ## Output Template
@@ -100,11 +101,12 @@ EDADB adapter 的目标不是 dump 完整 C++ 对象，而是贴近 iEDA 原始 
 - `05_idb_gcell_grid.md`: `IdbGCellGrid` for `GCELLGRID`, including direct four-field mapping and empty-list adapter semantics.
 - `06_idb_region.md`: `IdbRegion` for `REGIONS`, including name/type and boundary rectangle vector persistence.
 - `07_idb_slot.md`: `IdbSlot` for `SLOTS`, including layer name, rectangle vector, and explicit root order.
+- `08_idb_group.md`: `IdbGroup` for `GROUPS`, including region/member name references and explicit root/member order.
 - `todo.md`: root list order guarantees that still need implementation or verification.
 
 ## Suggested Next Steps
 
-1. Add review docs for already-implemented classes in DEF write order: `IdbBlockage`, `IdbGroup`, `IdbFill`, `IdbSpecialNet`, `IdbNet`.
+1. Add review docs for already-implemented classes in DEF write order: `IdbBlockage`, `IdbFill`, `IdbSpecialNet`, `IdbNet`.
 2. For each root list, decide whether order needs explicit `_order_sd`; do not rely on EDADB read-all physical order.
-3. Continue with `IdbGroupList`, then `IdbFill`, because they are covered by `aux_optional` and smaller than routed nets.
+3. Continue with `IdbFill`, because it is covered by `aux_optional` and smaller than routed nets.
 4. After each class: update schema/read/write if needed, extend SQL assertions, run demo and regression, then commit.

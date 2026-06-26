@@ -18,8 +18,11 @@ public:
     ~Shadow<idb::IdbGroup>(void) = default;
 
 public:
-    void toShadow(idb::IdbGroup* obj) {
+    void toShadow(idb::IdbGroup* obj, const uint32_t* idx_ptr = nullptr) {
+        assert(idx_ptr != nullptr);
+
         _group_name_sd = obj->get_group_name();
+        _order_sd = *idx_ptr;
         if (obj->get_region() != nullptr) {
             _region_name_sd = obj->get_region()->get_name();
         }
@@ -29,7 +32,11 @@ public:
         }
     }
 
-    void fromShadow(idb::IdbGroup* obj) {
+    void fromShadow(idb::IdbGroup* obj, uint32_t* idx_ptr = nullptr) {
+        if (idx_ptr != nullptr) {
+            *idx_ptr = static_cast<uint32_t>(_order_sd);
+        }
+
         obj->set_group_name( _group_name_sd );
         // use region name to lookup region during def read
         // use instance names to lookup instances during def read
@@ -37,6 +44,7 @@ public:
 
 public:
     std::string _group_name_sd;
+    uint64_t _order_sd = 0;
     std::string _region_name_sd;
     std::vector<std::string> _instance_name_vec_sd;
 }; // Shadow IdbGroup
