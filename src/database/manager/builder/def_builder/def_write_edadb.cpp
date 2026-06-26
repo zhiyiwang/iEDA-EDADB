@@ -387,9 +387,9 @@ int32_t DefWriteEdadb::writeIdbPin(void) {
 
     vector<edadb::Shadow<idb::IdbPin>*> pin_sd_vec;
     pin_sd_vec.reserve(pin_vec.size());
-    for (auto& pin : pin_vec) {
+    for (uint32_t pin_idx = 0; pin_idx < pin_vec.size(); ++pin_idx) {
         auto* pin_sd = new edadb::Shadow<idb::IdbPin>();
-        pin_sd->toShadow(pin);
+        pin_sd->toShadow(pin_vec[pin_idx], &pin_idx);
         pin_sd_vec.emplace_back(pin_sd);
     }
 

@@ -71,7 +71,7 @@ EDADB adapter 的目标不是 dump 完整 C++ 对象，而是贴近 iEDA 原始 
 | GCellGrid | Done | `primary_key` identity, `_order_sd` root order, DEF four-field view. |
 | Via | Done | Direct root object; member-level via master/layer-shape shadows handle rebuild. |
 | Instance | Done | `_name_sd` identity, `_order_sd` root order, master/region/layer references rebuilt by name. |
-| Pin | Done | EDADB roundtrip enabled and regression-covered. |
+| Pin | Done | `_pin_name_sd` identity, `_order_sd` root order, port/layer shape relative geometry preserved. |
 | Blockage | Done | EDADB roundtrip enabled and regression-covered; detailed review doc still missing. |
 | Region | Done | `_name_sd` identity, `_order_sd` root order, boundary vector preserved. |
 | Slot | Done | `primary_key` identity, `_order_sd` root order, rectangle vector preserved. |
@@ -105,6 +105,7 @@ EDADB adapter 的目标不是 dump 完整 C++ 对象，而是贴近 iEDA 原始 
 - `08_idb_group.md`: `IdbGroup` for `GROUPS`, including region/member name references and explicit root/member order.
 - `09_idb_via.md`: `IdbVia` for `VIAS`, including direct root storage and via-master/layer-shape shadow rebuild.
 - `10_idb_instance.md`: `IdbInstance` for `COMPONENTS`, including component fields, name references, and explicit root order.
+- `11_idb_pin.md`: `IdbPin` for `PINS`, including IO term, port/layer shape storage, computed absolute geometry, and explicit root order.
 - `todo.md`: root list order guarantees that still need implementation or verification.
 
 ## Suggested Next Steps

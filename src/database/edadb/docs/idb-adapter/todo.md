@@ -22,6 +22,7 @@
 - `IdbGCellGridList`: root identity 使用 `primary_key`，root order 已由 `Shadow<IdbGCellGrid>::_order_sd` 和 ordered read 保证。
 - `IdbViaList`: root identity 使用 `IdbVia::_name`；当前使用点主要按 name lookup，未发现 design via root vector index 语义，因此不新增 root shadow/order 字段。
 - `IdbInstanceList`: root identity 使用 `Shadow<IdbInstance>::_name_sd`，root order 已由 `_order_sd` 和 ordered read 保证。
+- `IdbPins` / IO pin list: root identity 使用 `Shadow<IdbPin>::_pin_name_sd`，root order 已由 `_order_sd` 和 ordered read 保证。
 - `IdbRegionList`: root identity 使用 `Shadow<IdbRegion>::_name_sd`，root order 已由 `_order_sd` 和 ordered read 保证。
 - `IdbSlotList`: root identity 使用 `primary_key`，root order 已由 `Shadow<IdbSlot>::_order_sd` 和 ordered read 保证。
 - `IdbGroupList`: root identity 使用 `Shadow<IdbGroup>::_group_name_sd`，root order 已由 `_order_sd` 和 ordered read 保证；member vector order 已由 primitive vector `__edadb_vec_idx` 保证。

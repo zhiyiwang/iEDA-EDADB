@@ -112,6 +112,8 @@ check_default_sql() {
         "0:ctrl/_17_,1:ctrl/_18_,2:ctrl/_19_,3:ctrl/_20_,4:ctrl/_21_" "$name instance order prefix"
     assert_eq "$(sql_value "$edadb_db" "select _pin_name_sd || '|' || _net_name_sd || '|' || _io_term_sd__direction_sd || '|' || _io_term_sd__type_sd || '|' || _io_term_sd__has_port_sd || '|' || _location_sd__x_sd || ',' || _location_sd__y_sd || '|' || _layer_num_sd from iPinSD where _pin_name_sd='clk';")" \
         "clk|clk|1|1|0|1000,9990|1" "$name pin fields"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || ':' || _pin_name_sd, ',') from (select _order_sd, _pin_name_sd from iPinSD order by _order_sd limit 5);")" \
+        "0:clk,1:req_msg[0],2:req_msg[1],3:req_msg[2],4:req_msg[3]" "$name pin order prefix"
     assert_eq "$(sql_value "$edadb_db" "select (select count(*) from iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD) || '|' || (select count(*) from iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD__layer_shape_list_sd_iLayerShapeSD) || '|' || (select count(*) from iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD__layer_shape_list_sd_iLayerShapeSD__rect_list_sd_IdbRect);")" \
         "56|56|56" "$name pin port/layer/rect child counts"
     assert_eq "$(sql_value "$edadb_db" "select _net_name_sd || '|' || _connect_type_sd || '|' || _source_type_sd || '|' || _weight_sd from iSpecNetSD where _net_name_sd='VSS';")" \

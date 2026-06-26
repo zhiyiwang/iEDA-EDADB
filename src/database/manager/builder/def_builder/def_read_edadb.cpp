@@ -837,7 +837,12 @@ bool DefReadEdadb::readIdbPin(void) {
 
     pin_list->reset();
 
-    auto pin_reader = edadb::makeReadAllOp<edadb::Shadow<idb::IdbPin>>();
+    auto pin_reader = edadb::makeGenericQueryOp<edadb::Shadow<idb::IdbPin>>();
+    if (pin_reader.preparePredicate("ORDER BY \"_order_sd\"") < 0) {
+        std::cerr << "DefReadEdadb::readIdbPin failed to prepare ordered pin query!" << std::endl;
+        return false;
+    }
+
     int32_t pin_count = 0;
     while (true) {
         edadb::Shadow<idb::IdbPin> pin_sd;
