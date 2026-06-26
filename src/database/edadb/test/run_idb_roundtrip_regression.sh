@@ -138,8 +138,8 @@ check_aux_optional_sql() {
     assert_eq "$(sql_value "$edadb_db" "select count(*) from iSlotSD;")" "1" "$name slot count"
     assert_eq "$(sql_value "$edadb_db" "select count(*) from iGroupSD;")" "1" "$name group count"
     assert_eq "$(sql_value "$edadb_db" "select count(*) from iFillSD;")" "2" "$name fill count"
-    assert_eq "$(sql_value "$edadb_db" "select group_concat(_type_sd || '|' || coalesce(_layer_name_sd,'') || '|' || _is_pushdown_sd || '|' || _is_except_pgnet_sd, ';') from (select * from iBlockageSD order by primary_key);")" \
-        "1|met1|1|1;2||0|0" "$name blockage fields"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || '|' || _type_sd || '|' || coalesce(_layer_name_sd,'') || '|' || _is_pushdown_sd || '|' || _is_except_pgnet_sd, ';') from (select * from iBlockageSD order by _order_sd);")" \
+        "0|1|met1|1|1;1|2||0|0" "$name blockage fields"
     assert_eq "$(sql_value "$edadb_db" "select _name_sd || '|' || _order_sd || '|' || _type_sd from iRegion;")" "test_region|0|1" "$name region fields"
     assert_eq "$(sql_value "$edadb_db" "select _lx || '|' || _ly || '|' || _hx || '|' || _hy from iRegion__boundary_list_sd_IdbRect;")" \
         "1000|1000|10000|10000" "$name region rect"

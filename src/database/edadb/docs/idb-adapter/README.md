@@ -60,6 +60,7 @@ EDADB adapter 的目标不是 dump 完整 C++ 对象，而是贴近 iEDA 原始 
 | `IdbTrackGridList` | Yes | vector traversal, layer back links, DEF writer order | Implemented with `primary_key` as identity, `_order_sd` as list order, and ordered read. |
 | `IdbGCellGridList` | Yes | vector traversal and DEF writer order | Implemented with `primary_key` as identity, `_order_sd` as list order, and ordered read. |
 | `IdbRegionList` | Yes | name lookup for references, but vector traversal assigns internal order/id and DEF writer order | Implemented with `_name_sd` as identity, `_order_sd` as list order, and ordered read. |
+| `IdbBlockageList` | Yes | vector traversal and DEF writer order; no natural name identity | Implemented with `primary_key` as identity, `_order_sd` as list order, and ordered read. |
 
 ## Current Progress
 
@@ -73,7 +74,7 @@ EDADB adapter 的目标不是 dump 完整 C++ 对象，而是贴近 iEDA 原始 
 | Via | Done | Direct root object; member-level via master/layer-shape shadows handle rebuild. |
 | Instance | Done | `_name_sd` identity, `_order_sd` root order, master/region/layer references rebuilt by name. |
 | Pin | Done | `_pin_name_sd` identity, `_order_sd` root order, port/layer shape relative geometry preserved. |
-| Blockage | Done | EDADB roundtrip enabled and regression-covered; detailed review doc still missing. |
+| Blockage | Done | `primary_key` identity, `_order_sd` root order, layer/instance references rebuilt by name. |
 | Region | Done | `_name_sd` identity, `_order_sd` root order, boundary vector preserved. |
 | Slot | Done | `primary_key` identity, `_order_sd` root order, rectangle vector preserved. |
 | Group | Done | `_group_name_sd` identity, `_order_sd` root order, member vector order preserved. |
@@ -108,11 +109,12 @@ EDADB adapter 的目标不是 dump 完整 C++ 对象，而是贴近 iEDA 原始 
 - `09_idb_via.md`: `IdbVia` for `VIAS`, including direct root storage and via-master/layer-shape shadow rebuild.
 - `10_idb_instance.md`: `IdbInstance` for `COMPONENTS`, including component fields, name references, and explicit root order.
 - `11_idb_pin.md`: `IdbPin` for `PINS`, including IO term, port/layer shape storage, computed absolute geometry, and explicit root order.
+- `12_idb_blockage.md`: `IdbBlockage` for `BLOCKAGES`, including routing/placement polymorphism, rect vector, name references, and explicit root order.
 - `todo.md`: root list order guarantees that still need implementation or verification.
 
 ## Suggested Next Steps
 
-1. Add review docs for already-implemented classes in DEF write order: `IdbBlockage`, `IdbFill`, `IdbSpecialNet`, `IdbNet`.
+1. Add review docs for already-implemented classes in DEF write order: `IdbFill`, `IdbSpecialNet`, `IdbNet`.
 2. For each root list, decide whether order needs explicit `_order_sd`; do not rely on EDADB read-all physical order.
 3. Continue with `IdbFill`, because it is covered by `aux_optional` and smaller than routed nets.
 4. After each class: update schema/read/write if needed, extend SQL assertions, run demo and regression, then commit.

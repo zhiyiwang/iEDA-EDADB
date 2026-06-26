@@ -938,7 +938,11 @@ bool DefReadEdadb::readIdbBlockage(void) {
 
     blockage_list->reset();
 
-    auto blockage_reader = edadb::makeReadAllOp<edadb::Shadow<idb::IdbBlockage>>();
+    auto blockage_reader = edadb::makeGenericQueryOp<edadb::Shadow<idb::IdbBlockage>>();
+    if (blockage_reader.preparePredicate("ORDER BY \"_order_sd\"") < 0) {
+        std::cerr << "DefReadEdadb::readIdbBlockage failed to prepare ordered query!" << std::endl;
+        return false;
+    }
     int32_t blockage_count = 0;
     while (true) {
         edadb::Shadow<idb::IdbBlockage> blockage_sd;

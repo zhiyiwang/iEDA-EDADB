@@ -430,9 +430,11 @@ int32_t DefWriteEdadb::writeIdbBlockage(void) {
 
     vector<edadb::Shadow<idb::IdbBlockage>*> blockage_sd_vec;
     blockage_sd_vec.reserve(blockage_vec.size());
+    int32_t blockage_order = 0;
     for (auto& blockage : blockage_vec) {
         auto* blockage_sd = new edadb::Shadow<idb::IdbBlockage>();
         blockage_sd->toShadow(blockage);
+        blockage_sd->_order_sd = blockage_order++;
         blockage_sd_vec.emplace_back(blockage_sd);
     }
 

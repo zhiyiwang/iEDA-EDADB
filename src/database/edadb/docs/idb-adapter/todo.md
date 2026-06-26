@@ -8,7 +8,6 @@
 
 | Class / Root List | Why Order Matters | Current State | TODO |
 | --- | --- | --- | --- |
-| `IdbBlockageList` | DEF writer 按 vector 输出；placement/routing blockage 遍历可能影响工具内部处理顺序。 | 已实现并回归覆盖，缺少详细 order audit 文档。 | 补 `07_idb_blockage.md`，确认是否已有 `_order_sd` 或需要新增。 |
 | `IdbFillList` | DEF writer 按 vector 输出；fill layer/via children 有顺序语义。 | 已实现并回归覆盖，缺少详细 order audit 文档。 | 补 `10_idb_fill.md`，确认 root/child order。 |
 | `IdbSpecialNetList` | DEF writer 按 vector 输出；pin refs/wires/segments 有顺序语义。 | 已实现并 routed/optional 回归覆盖，缺少详细 order audit 文档。 | 补 `11_idb_special_net.md`，确认 root/child order。 |
 | `IdbNetList` | DEF writer 按 vector 输出；pin refs/wires/segments 有顺序语义。 | 已实现并 routed/optional 回归覆盖，缺少详细 order audit 文档。 | 补 `12_idb_net.md`，确认 root/child order。 |
@@ -23,6 +22,7 @@
 - `IdbViaList`: root identity 使用 `IdbVia::_name`；当前使用点主要按 name lookup，未发现 design via root vector index 语义，因此不新增 root shadow/order 字段。
 - `IdbInstanceList`: root identity 使用 `Shadow<IdbInstance>::_name_sd`，root order 已由 `_order_sd` 和 ordered read 保证。
 - `IdbPins` / IO pin list: root identity 使用 `Shadow<IdbPin>::_pin_name_sd`，root order 已由 `_order_sd` 和 ordered read 保证。
+- `IdbBlockageList`: root identity 使用 `primary_key`，root order 已由 `Shadow<IdbBlockage>::_order_sd` 和 ordered read 保证；rect vector order 已由 child vector 机制保证。
 - `IdbRegionList`: root identity 使用 `Shadow<IdbRegion>::_name_sd`，root order 已由 `_order_sd` 和 ordered read 保证。
 - `IdbSlotList`: root identity 使用 `primary_key`，root order 已由 `Shadow<IdbSlot>::_order_sd` 和 ordered read 保证。
 - `IdbGroupList`: root identity 使用 `Shadow<IdbGroup>::_group_name_sd`，root order 已由 `_order_sd` 和 ordered read 保证；member vector order 已由 primitive vector `__edadb_vec_idx` 保证。
