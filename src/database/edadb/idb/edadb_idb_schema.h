@@ -120,7 +120,7 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbSpecialWireSegment>, "iSpecWireSegSD",
 TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbSpecialWire>, "iSpecWireSD",
                  (primary_key, _wire_state_sd, _shield_name_sd), (_segment_list_sd));
 TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbSpecialNet>, "iSpecNetSD",
-                 (_net_name_sd, _original_net_name_sd, _connect_type_sd, _source_type_sd, _weight_sd),
+                 (_net_name_sd, _order_sd, _original_net_name_sd, _connect_type_sd, _source_type_sd, _weight_sd),
                  (_pin_string_list_sd, _io_pin_name_list_sd, _instance_pin_list_sd, _wire_list_sd));
 
 #include "shadow/shadow_idb_net.h"

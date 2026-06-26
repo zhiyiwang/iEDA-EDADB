@@ -643,9 +643,11 @@ int32_t DefWriteEdadb::writeSpecialNet(void) {
 
     vector<edadb::Shadow<idb::IdbSpecialNet>*> special_net_sd_vec;
     special_net_sd_vec.reserve(special_net_vec.size());
+    uint64_t special_net_order = 0;
     for (auto& special_net : special_net_vec) {
         auto* special_net_sd = new edadb::Shadow<idb::IdbSpecialNet>();
         special_net_sd->toShadow(special_net);
+        special_net_sd->_order_sd = special_net_order++;
         special_net_sd_vec.emplace_back(special_net_sd);
     }
 

@@ -1012,7 +1012,11 @@ bool DefReadEdadb::readSpecialNet(void) {
         return false;
     }
 
-    auto special_net_reader = edadb::makeReadAllOp<edadb::Shadow<idb::IdbSpecialNet>>();
+    auto special_net_reader = edadb::makeGenericQueryOp<edadb::Shadow<idb::IdbSpecialNet>>();
+    if (special_net_reader.preparePredicate("ORDER BY \"_order_sd\"") < 0) {
+        std::cerr << "DefReadEdadb::readSpecialNet failed to prepare ordered query!" << std::endl;
+        return false;
+    }
     int32_t special_net_count = 0;
     int32_t segment_count = 0;
     while (true) {
