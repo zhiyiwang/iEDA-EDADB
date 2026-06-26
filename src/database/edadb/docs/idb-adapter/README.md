@@ -70,7 +70,8 @@ EDADB adapter 的目标不是 dump 完整 C++ 对象，而是贴近 iEDA 原始 
 | TrackGrid | Done | `primary_key` identity, `_order_sd` root order, layer names rebuild LEF/routing references. |
 | GCellGrid | Done | `primary_key` identity, `_order_sd` root order, DEF four-field view. |
 | Via | Done | Direct root object; member-level via master/layer-shape shadows handle rebuild. |
-| Instance / Pin | Done | EDADB roundtrip enabled and regression-covered. |
+| Instance | Done | `_name_sd` identity, `_order_sd` root order, master/region/layer references rebuilt by name. |
+| Pin | Done | EDADB roundtrip enabled and regression-covered. |
 | Blockage | Done | EDADB roundtrip enabled and regression-covered; detailed review doc still missing. |
 | Region | Done | `_name_sd` identity, `_order_sd` root order, boundary vector preserved. |
 | Slot | Done | `primary_key` identity, `_order_sd` root order, rectangle vector preserved. |
@@ -103,6 +104,7 @@ EDADB adapter 的目标不是 dump 完整 C++ 对象，而是贴近 iEDA 原始 
 - `07_idb_slot.md`: `IdbSlot` for `SLOTS`, including layer name, rectangle vector, and explicit root order.
 - `08_idb_group.md`: `IdbGroup` for `GROUPS`, including region/member name references and explicit root/member order.
 - `09_idb_via.md`: `IdbVia` for `VIAS`, including direct root storage and via-master/layer-shape shadow rebuild.
+- `10_idb_instance.md`: `IdbInstance` for `COMPONENTS`, including component fields, name references, and explicit root order.
 - `todo.md`: root list order guarantees that still need implementation or verification.
 
 ## Suggested Next Steps

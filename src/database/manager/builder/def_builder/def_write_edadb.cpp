@@ -344,9 +344,9 @@ int32_t DefWriteEdadb::writeIdbInstance(void) {
 
     vector<edadb::Shadow<idb::IdbInstance>*> inst_sd_vec;
     inst_sd_vec.reserve(inst_vec.size());
-    for (auto& instance : inst_vec) {
+    for (uint32_t inst_idx = 0; inst_idx < inst_vec.size(); ++inst_idx) {
         auto* inst_sd = new edadb::Shadow<idb::IdbInstance>();
-        inst_sd->toShadow(instance);
+        inst_sd->toShadow(inst_vec[inst_idx], &inst_idx);
         inst_sd_vec.emplace_back(inst_sd);
     }
 

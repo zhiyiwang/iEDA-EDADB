@@ -748,7 +748,12 @@ bool DefReadEdadb::readIdbInstance(void) {
 
     instance_list->reset();
 
-    auto inst_reader = edadb::makeReadAllOp<edadb::Shadow<idb::IdbInstance>>();
+    auto inst_reader = edadb::makeGenericQueryOp<edadb::Shadow<idb::IdbInstance>>();
+    if (inst_reader.preparePredicate("ORDER BY \"_order_sd\"") < 0) {
+        std::cerr << "DefReadEdadb::readIdbInstance failed to prepare ordered instance query!" << std::endl;
+        return false;
+    }
+
     int32_t instance_count = 0;
     while (true) {
         edadb::Shadow<idb::IdbInstance> inst_sd;
