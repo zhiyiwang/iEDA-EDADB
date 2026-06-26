@@ -34,19 +34,20 @@
 当前 schema：
 
 ```cpp
-TABLE4CLASS(idb::IdbGCellGrid, "iGCellGrid", (_direction, _start, _num, _space));
+TABLE4SHADOW(idb::IdbGCellGrid);
+TABLE4CLASS(edadb::Shadow<idb::IdbGCellGrid>, "iGCellGrid", (primary_key, _order_sd, _direction_sd, _start_sd, _num_sd, _space_sd));
 ```
 
 保存字段正好覆盖原始 DEF writer/read 需要的四个字段。
 
-## Why No GCellGrid Shadow
+## Why GCellGrid Shadow
 
-当前不需要 `Shadow<IdbGCellGrid>`：
+当前需要 `Shadow<IdbGCellGrid>`：
 
 - `IdbGCellGrid` 没有 vector child。
 - 没有 `IdbLayer*` / via rule / master 等非 owning 引用需要 name lookup。
-- direct mapping 能完整表达 `GCELLGRID` DEF 语义。
-- `Cpp2SqlTypeTrait<IdbGCellGrid>::hasPrimKey = false` 后，可作为无主键简单记录表保存。
+- `IdbGCellGridList` 需要恢复 DEF append 顺序，但不能用 vector order index 作为 PK。
+- 因此 shadow 使用 `primary_key` 作为 root record identity，用 `_order_sd` 单独保存 list order。
 
 ## EDADB Write Path
 
@@ -54,7 +55,9 @@ TABLE4CLASS(idb::IdbGCellGrid, "iGCellGrid", (_direction, _start, _num, _space))
 
 - 从 `layout->get_gcell_grid_list()` 取得 list。
 - 空列表时直接返回 `kDbSuccess`，避免 `writeChip2Edadb()` 因原始 writer 的局部 `kDbFail` 语义中断整个 EDADB 写流程。
-- 非空时使用 `edadb::insertVector<IdbGCellGrid>()` 写入。
+- 非空时按 list 顺序构造 `Shadow<IdbGCellGrid>` vector。
+- `toShadow()` 保存 `primary_key`、`_order_sd`、direction、start、num、space。
+- 使用 `edadb::insertVector<Shadow<IdbGCellGrid>>()` 写入。
 
 这与原始输出字段一致；空列表返回值是 adapter 层必要调整，因为 EDADB write dispatcher 会检查每个 `writeIdbXXX()` 的返回值。
 
@@ -63,7 +66,9 @@ TABLE4CLASS(idb::IdbGCellGrid, "iGCellGrid", (_direction, _start, _num, _space))
 当前 `readIdbGCellGrid()`：
 
 - `gcell_grid_list->clear()` 清空旧数据。
-- 循环读取 `IdbGCellGrid`。
+- 通过 `ORDER BY "_order_sd"` 读取 root records，恢复 `IdbGCellGridList` 原始 append 顺序。
+- 循环读取 `Shadow<IdbGCellGrid>`。
+- `fromShadow()` 恢复 direction、start、num、space。
 - 直接加入 layout 的 gcell grid list。
 
 这和原始 parser 的对象重建语义一致：没有额外 computed field 或外部引用要恢复。
@@ -85,15 +90,17 @@ TABLE4CLASS(idb::IdbGCellGrid, "iGCellGrid", (_direction, _start, _num, _space))
 - 原始 parser 按 DEF 出现顺序 append。
 - 原始 writer 按 list 当前顺序输出。
 - iEDA/iRT 主要通过 vector traversal 使用 GCell grid，没有 name lookup。
+- 当前 shadow 用 `primary_key` 作为 root identity，用 `_order_sd` 保存 list order；禁止把 vector order index 当作 PK。
+- read path 已显式按 `_order_sd` 恢复，不依赖 EDADB/SQLite read-all 物理顺序。
 
-当前状态：未显式实现 root order；direct mapping 依赖 EDADB `insertVector()` / `readAll` 的读回顺序稳定。regression routed case 验证了当前 EDADB API 下非空路径顺序稳定；若未来 DB backend 不保证顺序，应给 `IdbGCellGrid` 增加 `_order` 或 shadow。
+当前状态：已实现。root identity 和 root order 已分离，`primary_key` 不表达 vector order。
 
 ## Tests
 
 - demo `sky130_gcd` 当前没有 `GCELLGRID`，覆盖空列表路径：`writeIdbGCellGrid insert gcell_grid_count=0`，`readIdbGCellGrid restored gcell_grid_count=0`。
-- `src/database/edadb/test/run_idb_roundtrip_regression.sh` 中 routed case 覆盖非空路径，并检查 `iGCellGrid` count 和字段组合。
+- `src/database/edadb/test/run_idb_roundtrip_regression.sh` 中 routed case 覆盖非空路径，并检查 `iGCellGrid` count、`_order_sd` 顺序和字段组合。
 
 ## Risks / TODO
 
 - demo 只覆盖空列表，正向字段持久化应以 regression 的 routed case 为准。
-- 若未来 EDADB 对无主键重复简单表引入顺序约束，需要确保 `iGCellGrid` 读写顺序稳定。
+- `IdbGCellGrid` 没有天然 name/ID；当前 `primary_key` 是 synthetic root identity，仅用于 DB row identity。

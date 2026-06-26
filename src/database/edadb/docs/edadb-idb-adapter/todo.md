@@ -8,7 +8,6 @@
 
 | Class / Root List | Why Order Matters | Current State | TODO |
 | --- | --- | --- | --- |
-| `IdbGCellGridList` | DEF writer 按 vector 输出；routing grid 通过 vector 遍历使用。 | 未显式实现，依赖 EDADB read order。 | 增加 `_order` 或 shadow，并按 `_order` 恢复。 |
 | `IdbRegionList` | references 用 name lookup，但 iPL wrapper 遍历时会产生内部 order/id；DEF writer 按 vector 输出。 | 未显式实现，依赖 EDADB read order。 | 增加 `_order`，不要按 region name 排序。 |
 
 已满足：
@@ -17,3 +16,4 @@
 - `IdbDie`: singleton；nested point order 已由 `Shadow<IdbCoordinate<int32_t>>::_vec_idx` 处理。
 - `IdbRowList`: root order 已由 `Shadow<IdbRow>::_order_sd` 和 ordered read 保证。
 - `IdbTrackGridList`: root identity 使用 `primary_key`，root order 已由 `Shadow<IdbTrackGrid>::_order_sd` 和 ordered read 保证。
+- `IdbGCellGridList`: root identity 使用 `primary_key`，root order 已由 `Shadow<IdbGCellGrid>::_order_sd` 和 ordered read 保证。

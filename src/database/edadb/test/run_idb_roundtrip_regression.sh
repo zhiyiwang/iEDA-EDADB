@@ -160,8 +160,8 @@ check_routed_sql() {
     local edadb2def_log="$4"
 
     assert_eq "$(sql_value "$edadb_db" "select count(*) from iGCellGrid;")" "6" "$name gcell grid count"
-    assert_eq "$(sql_value "$edadb_db" "select group_concat(_direction || ':' || _start || ':' || _num || ':' || _space, ';') from iGCellGrid;")" \
-        "1:0:2:3600;1:3600:43:3360;1:144720:2:5240;2:0:2:3600;2:3600:43:3360;2:144720:2:5408" "$name gcell grid fields"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || ':' || _direction_sd || ':' || _start_sd || ':' || _num_sd || ':' || _space_sd, ';') from (select * from iGCellGrid order by _order_sd);")" \
+        "0:1:0:2:3600;1:1:3600:43:3360;2:1:144720:2:5240;3:2:0:2:3600;4:2:3600:43:3360;5:2:144720:2:5408" "$name gcell grid fields"
     assert_eq "$(sql_value "$edadb_db" "select count(*) from iNetSD;")" "677" "$name net count"
     assert_eq "$(sql_value "$edadb_db" "select count(*) from iNetSD__wire_list_sd_iRegWireSD;")" "677" "$name regular wire count"
     assert_eq "$(sql_value "$edadb_db" "select count(*) from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD;")" "8997" "$name regular wire segment count"

@@ -437,11 +437,17 @@ bool DefReadEdadb::readIdbGCellGrid(void) {
 
     gcell_grid_list->clear();
 
-    auto gcell_grid_reader = edadb::makeReadAllOp<idb::IdbGCellGrid>();
+    auto gcell_grid_reader = edadb::makeGenericQueryOp<edadb::Shadow<idb::IdbGCellGrid>>();
+    if (gcell_grid_reader.preparePredicate("ORDER BY \"_order_sd\"") < 0) {
+        std::cerr << "DefReadEdadb::readIdbGCellGrid failed to prepare ordered gcell grid query!" << std::endl;
+        return false;
+    }
+
     int32_t gcell_grid_count = 0;
     while (true) {
         IdbGCellGrid* gcell_grid = new IdbGCellGrid();
-        const int read_count = edadb::readNext<idb::IdbGCellGrid>(gcell_grid_reader, gcell_grid);
+        edadb::Shadow<idb::IdbGCellGrid> gcell_grid_sd;
+        const int read_count = edadb::readNext<edadb::Shadow<idb::IdbGCellGrid>>(gcell_grid_reader, &gcell_grid_sd);
         if (read_count == 0) {
             delete gcell_grid;
             break;
@@ -452,6 +458,7 @@ bool DefReadEdadb::readIdbGCellGrid(void) {
             return false;
         }
 
+        gcell_grid_sd.fromShadow(gcell_grid);
         gcell_grid_list->add_gcell_grid(gcell_grid);
         ++gcell_grid_count;
     }
