@@ -96,8 +96,8 @@ check_default_sql() {
         "ROW_0|unit|9600,9990|271|1|480|0" "$name row fields"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || ':' || _name_sd, ',') from (select _order_sd, _name_sd from iRow order by _order_sd limit 5);")" \
         "0:ROW_0,1:ROW_1,2:ROW_2,3:ROW_3,4:ROW_4" "$name row order prefix"
-    assert_eq "$(sql_value "$edadb_db" "select group_concat(primary_key || ':' || _track_sd__direction || ':' || _track_sd__start || ':' || _track_num_sd || ':' || _track_sd__pitch, ';') from (select * from iTrackGridSD order by primary_key limit 4);")" \
-        "1:1:240:311:480;2:2:185:405:370;3:1:185:404:370;4:2:185:405:370" "$name track fields"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || ':' || _track_sd__direction || ':' || _track_sd__start || ':' || _track_num_sd || ':' || _track_sd__pitch, ';') from (select * from iTrackGridSD order by _order_sd limit 4);")" \
+        "0:1:240:311:480;1:2:185:405:370;2:1:185:404:370;3:2:185:405:370" "$name track fields"
     assert_eq "$(sql_value "$edadb_db" "select count(*) || '|' || group_concat(value, ',') from (select value from iTrackGridSD__layer_name_vec_sd___edadb_primitive_vector order by iTrackGridSD_primary_key, __edadb_vec_idx);")" \
         "12|li1,li1,met1,met1,met2,met2,met3,met3,met4,met4,met5,met5" "$name track layer primitive vector"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_name, ',') from (select _name from iVia order by _name);")" \

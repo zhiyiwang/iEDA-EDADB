@@ -19,8 +19,9 @@ public:
 public:
     bool toShadow(idb::IdbTrackGrid* obj, const uint32_t* idx_ptr = nullptr) {
         assert(obj != nullptr);
-        assert(idx_ptr == nullptr);
+        assert(idx_ptr != nullptr);
 
+        _order_sd = *idx_ptr;
         _track_num_sd = obj->get_track_num();
         // assign to write, no need to deep copy
         _track_sd = *(obj->get_track());
@@ -33,7 +34,9 @@ public:
 
     bool fromShadow(idb::IdbTrackGrid* obj, uint32_t* idx_ptr = nullptr) {
         assert(obj != nullptr);
-        assert(idx_ptr == nullptr);
+        if (idx_ptr != nullptr) {
+            *idx_ptr = static_cast<uint32_t>(_order_sd);
+        }
 
         obj->set_track_number( _track_num_sd );
         *(obj->get_track()) = _track_sd;
@@ -45,6 +48,7 @@ public:
 
 public:
     uint64_t primary_key = 0;
+    uint64_t _order_sd = 0;
     uint32_t _track_num_sd = 0;
     idb::IdbTrack _track_sd;
     std::vector<std::string> _layer_name_vec_sd;
@@ -54,4 +58,3 @@ private:
 }; // shadow IdbTrackGrid
 
 } // namespace edadb
-

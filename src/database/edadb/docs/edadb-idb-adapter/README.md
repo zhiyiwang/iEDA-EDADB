@@ -45,7 +45,7 @@ EDADB adapter 的目标不是 dump 完整 C++ 对象，而是贴近 iEDA 原始 
 | `IdbDesign` | No | singleton object | No root list order. |
 | `IdbDie` | No for root; yes for points | singleton root; point order is geometry/DEF semantics | Root no order; point order already handled by nested shadow `_vec_idx`. |
 | `IdbRowList` | Yes | vector traversal plus `front()` / index-derived row logic | Implemented with `_order_sd` and ordered read. |
-| `IdbTrackGridList` | Yes | vector traversal, layer back links, DEF writer order | Partially implemented by shadow `primary_key`; adapter still should verify/enforce read order. |
+| `IdbTrackGridList` | Yes | vector traversal, layer back links, DEF writer order | Implemented with `primary_key` as identity, `_order_sd` as list order, and ordered read. |
 | `IdbGCellGridList` | Yes | vector traversal and DEF writer order | Not explicitly implemented; currently depends on EDADB read order. |
 | `IdbRegionList` | Yes | name lookup for references, but vector traversal assigns internal order/id and DEF writer order | Not explicitly implemented; currently depends on EDADB read order. |
 

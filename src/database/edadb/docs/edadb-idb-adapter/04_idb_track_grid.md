@@ -43,7 +43,7 @@
 ```cpp
 TABLE4CLASS(idb::IdbTrack, "iTrack", (_start, _direction, _pitch));
 TABLE4SHADOW_WVEC(idb::IdbTrackGrid);
-TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbTrackGrid>, "iTrackGridSD", (primary_key, _track_num_sd, _track_sd), (_layer_name_vec_sd));
+TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbTrackGrid>, "iTrackGridSD", (primary_key, _order_sd, _track_num_sd, _track_sd), (_layer_name_vec_sd));
 ```
 
 保存字段覆盖原始 DEF writer 需要的内容：direction、start、pitch、track number、layer name vector。
@@ -53,6 +53,7 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbTrackGrid>, "iTrackGridSD", (primary_key,
 当前需要 `Shadow<IdbTrackGrid>`：
 
 - `IdbTrackGrid` 没有天然 name/ID，需要 `primary_key` 作为 root record 标识。
+- `IdbTrackGridList` 的顺序不是对象身份，不能把 vector index 作为 PK；因此用 `primary_key` 做 root identity，`_order_sd` 单独保存 list order。
 - `_layer_list` 是 `vector<IdbLayer*>`，属于对 LEF layer 的非 owning 引用；DB 中应保存 layer name，而不是持久化完整 layer 对象或裸指针。
 - read 时必须用 layer name 回查当前 layout 的 LEF layer，并重建 routing layer 到 track grid 的反向引用。
 
@@ -64,7 +65,7 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbTrackGrid>, "iTrackGridSD", (primary_key,
 
 - 从 `layout->get_track_grid_list()` 取得 track grid list。
 - 对每个 `IdbTrackGrid` 调用 `Shadow<IdbTrackGrid>::toShadow()`。
-- `toShadow()` 保存 track number、`IdbTrack` 的 DEF 字段、layer name vector。
+- `toShadow()` 保存 `_order_sd`、track number、`IdbTrack` 的 DEF 字段、layer name vector。
 - 使用 `edadb::insertVector<Shadow<IdbTrackGrid>>()` 写入。
 
 这与原始 writer 输出字段一致。
@@ -74,6 +75,7 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbTrackGrid>, "iTrackGridSD", (primary_key,
 当前 `readIdbTrackGrid()`：
 
 - `track_grid_list->reset()` 清空旧 track grid。
+- 通过 `ORDER BY "_order_sd"` 读取 root records，恢复 `IdbTrackGridList` 原始 append 顺序。
 - 循环读取 `Shadow<IdbTrackGrid>`。
 - `fromShadow()` 恢复 track number 和 track 基本字段。
 - 对 `_layer_name_vec_sd` 中每个 layer name 回查 LEF layer。
@@ -100,14 +102,14 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbTrackGrid>, "iTrackGridSD", (primary_key,
 - 原始 `parse_track_grid()` 按 DEF 出现顺序 append track grid。
 - DEF writer 会按 `track_grid_list` 当前顺序输出，因此严格文本 roundtrip 需要稳定 root order。
 - iEDA/iRT 主要通过 vector traversal 和 layer back links 使用 track grid，没有 name lookup。
-- 当前 shadow 的 `primary_key` 按构造顺序递增，可作为 root insertion order；read path 应保持按该顺序恢复。
+- 当前 shadow 用 `primary_key` 作为 root identity，用 `_order_sd` 保存 list order；禁止把 vector order index 当作 PK。
+- read path 已显式按 `_order_sd` 恢复，不依赖 EDADB/SQLite read-all 物理顺序。
 - `_layer_name_vec_sd` 是 layer name vector，必须保持 DEF 中 layer name 的原始顺序。
 
-当前状态：部分实现。root record 已有 shadow `primary_key`，但 adapter 仍需确认 EDADB `readAll` 是否按 `primary_key` 返回；若不保证，应在 `readIdbTrackGrid()` 中显式按 `primary_key` 恢复。
+当前状态：已实现。root identity 和 root order 已分离，`primary_key` 不表达 vector order。
 
 ## Risks / TODO
 
 - `Shadow<IdbTrackGrid>` 依赖 LEF 已先读入，否则 layer name 无法解析。
 - 当前 layer lookup 留在 `readIdbTrackGrid()`，不是 `fromShadow()`；这样更接近原始 parser，也避免 shadow 隐式依赖全局 helper。
 - 当前 missing-layer 行为已对齐原始 parser：打印并继续；如果后续希望 EDADB 对 DB/LEF mismatch 更严格，可以改成 adapter 层可配置策略。
-- 如果 EDADB `readAll` 不按 `primary_key` 返回 root shadow，需要在 adapter 里显式按 `primary_key` 排序。
