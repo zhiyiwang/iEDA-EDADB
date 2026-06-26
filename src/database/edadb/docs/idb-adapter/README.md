@@ -80,7 +80,7 @@ EDADB adapter 的目标不是 dump 完整 C++ 对象，而是贴近 iEDA 原始 
 | Group | Done | `_group_name_sd` identity, `_order_sd` root order, member vector order preserved. |
 | Fill | Done | `primary_key` identity, `_order_sd` root order, layer/via references rebuilt by name. |
 | SpecialNet | Done | `_net_name_sd` identity, `_order_sd` root order, pin/wire/segment vectors preserved. |
-| Net | Implemented | Regression-covered by `default_ipl`, `aux_optional`, and `routed_irt`; detailed docs/order audit still pending. |
+| Net | Done | `_net_name_sd` identity, `_order_sd` root order, pin/wire/segment vectors preserved. |
 
 ## Output Template
 
@@ -113,11 +113,11 @@ EDADB adapter 的目标不是 dump 完整 C++ 对象，而是贴近 iEDA 原始 
 - `12_idb_group.md`: `IdbGroup` for `GROUPS`, including region/member name references and explicit root/member order.
 - `13_idb_fill.md`: `IdbFill` for `FILLS`, including layer/via typed storage, geometry vectors, and explicit root order.
 - `14_idb_special_net.md`: `IdbSpecialNet` for `SPECIALNETS`, including pin refs, special wires, segments, geometry, and explicit root order.
+- `15_idb_net.md`: `IdbNet` for `NETS`, including pin refs, regular wires, segments, geometry, and explicit root order.
 - `todo.md`: root list order guarantees that still need implementation or verification.
 
 ## Suggested Next Steps
 
-1. Add review docs for already-implemented classes in DEF write order: `IdbNet`.
+1. Keep each new root adapter aligned with original `DefWrite` / `DefRead` semantics.
 2. For each root list, decide whether order needs explicit `_order_sd`; do not rely on EDADB read-all physical order.
-3. Continue with `IdbFill`, because it is covered by `aux_optional` and smaller than routed nets.
-4. After each class: update schema/read/write if needed, extend SQL assertions, run demo and regression, then commit.
+3. After each class: update schema/read/write if needed, extend SQL assertions, run demo and regression, then commit.

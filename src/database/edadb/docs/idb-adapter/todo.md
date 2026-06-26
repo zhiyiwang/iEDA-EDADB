@@ -4,11 +4,7 @@
 
 目标：EDADB read/write 后，iDB root list 中 `t1, t2, t3` 的顺序应与原始 DEF parser append 顺序一致。不要用 name sort 代替原始顺序。
 
-当前需要后续补充或确认：
-
-| Class / Root List | Why Order Matters | Current State | TODO |
-| --- | --- | --- | --- |
-| `IdbNetList` | DEF writer 按 vector 输出；pin refs/wires/segments 有顺序语义。 | 已实现并 routed/optional 回归覆盖，缺少详细 order audit 文档。 | 补 `15_idb_net.md`，确认 root/child order。 |
+当前没有已知 root list order 遗留项。
 
 已满足：
 
@@ -26,3 +22,4 @@
 - `IdbGroupList`: root identity 使用 `Shadow<IdbGroup>::_group_name_sd`，root order 已由 `_order_sd` 和 ordered read 保证；member vector order 已由 primitive vector `__edadb_vec_idx` 保证。
 - `IdbFillList`: root identity 使用 `primary_key`，root order 已由 `Shadow<IdbFill>::_order_sd` 和 ordered read 保证；rect/coordinate vector order 已由 child vector 机制保证。
 - `IdbSpecialNetList`: root identity 使用 `Shadow<IdbSpecialNet>::_net_name_sd`，root order 已由 `_order_sd` 和 ordered read 保证；pin/wire/segment/point vector order 已由 child vector 或 explicit pin ref order 保证。
+- `IdbNetList`: root identity 使用 `Shadow<IdbNet>::_net_name_sd`，root order 已由 `_order_sd` 和 ordered read 保证；pin/wire/segment/point vector order 已由 child vector 或 explicit pin ref order 保证。

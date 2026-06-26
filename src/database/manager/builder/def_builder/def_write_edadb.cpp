@@ -689,9 +689,11 @@ int32_t DefWriteEdadb::writeIdbNet(void) {
 
     vector<edadb::Shadow<idb::IdbNet>*> net_sd_vec;
     net_sd_vec.reserve(net_vec.size());
+    uint64_t net_order = 0;
     for (auto& net : net_vec) {
         auto* net_sd = new edadb::Shadow<idb::IdbNet>();
         net_sd->toShadow(net);
+        net_sd->_order_sd = net_order++;
         net_sd_vec.emplace_back(net_sd);
     }
 

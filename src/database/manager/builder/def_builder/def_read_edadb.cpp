@@ -1154,7 +1154,8 @@ bool DefReadEdadb::readIdbNet(void) {
         return false;
     }
 
-    auto net_reader = edadb::makeReadAllOp<edadb::Shadow<idb::IdbNet>>();
+    auto net_reader = edadb::makeGenericQueryOp<edadb::Shadow<idb::IdbNet>>();
+    net_reader.preparePredicate("ORDER BY \"_order_sd\"");
     int32_t net_count = 0;
     int32_t segment_count = 0;
     while (true) {

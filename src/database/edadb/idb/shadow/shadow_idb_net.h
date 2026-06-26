@@ -161,6 +161,7 @@ public:
 
 public:
     std::string _net_name_sd;
+    uint64_t _order_sd = 0;
     std::string _original_net_name_sd;
     idb::IdbConnectType _connect_type_sd = idb::IdbConnectType::kNone;
     idb::IdbInstanceType _source_type_sd = idb::IdbInstanceType::kNone;
