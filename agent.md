@@ -140,6 +140,33 @@ Current uncovered or weakly covered areas:
   by a small targeted fixture; `_order_sd` avoids the previous instance-key collision
   risk for net pin refs.
 
+## EDADB Adapter Current Rules
+
+- Match original DEF semantics first: compare `DefWrite::write_xxx()` and
+  `DefRead::parse_xxx()` before changing `writeIdbXXX/readIdbXXX`.
+- Persist the DEF storage view, not the whole C++ object graph.
+- Prefer direct mapping; use `Shadow<T>` only for stable PK, root order, name lookup,
+  vector ownership, or reconstruction views.
+- Never use vector order index as PK. Keep identity and order separate:
+  `primary_key` or name for identity, `_order_sd` for root list order.
+- For root lists that affect DEF roundtrip, read back with `ORDER BY "_order_sd"`.
+- Update schema/init, builder read/write, DEF callbacks, regression SQL, and docs together.
+
+Recent root-order milestones:
+
+- `IdbRowList`: `_name_sd` identity, `_order_sd` order; committed `74420696a`.
+- `IdbTrackGridList`: `primary_key` identity, `_order_sd` order; committed `9679335f7`.
+- `IdbGCellGridList`: `primary_key` identity, `_order_sd` order; committed `3deb1105e`.
+- `IdbRegionList`: `_name_sd` identity, `_order_sd` order; committed `35e3999cf`.
+
+Recommended next work:
+
+1. Review/document `IdbBlockage`.
+2. Then continue in DEF write order: `IdbSlot`, `IdbGroup`, `IdbFill`,
+   `IdbSpecialNet`, `IdbNet`.
+3. For each class, verify root/child vector order, add `_order_sd` where needed,
+   extend regression SQL, run demo + `run_idb_roundtrip_regression.sh`, then commit.
+
 ## Branch Map
 
 | Label | iEDA branch / commit | EDADB location | Adapter location | EDADB commit | Status |

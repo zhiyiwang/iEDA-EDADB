@@ -570,7 +570,12 @@ bool DefReadEdadb::readIdbSlot(void) {
         return false;
     }
 
-    auto slot_reader = edadb::makeReadAllOp<edadb::Shadow<idb::IdbSlot>>();
+    auto slot_reader = edadb::makeGenericQueryOp<edadb::Shadow<idb::IdbSlot>>();
+    if (slot_reader.preparePredicate("ORDER BY \"_order_sd\"") < 0) {
+        std::cerr << "DefReadEdadb::readIdbSlot failed to prepare ordered slot query!" << std::endl;
+        return false;
+    }
+
     int32_t slot_count = 0;
     while (true) {
         auto* slot_sd = new edadb::Shadow<idb::IdbSlot>();

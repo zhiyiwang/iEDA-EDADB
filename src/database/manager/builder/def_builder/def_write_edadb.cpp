@@ -509,9 +509,9 @@ int32_t DefWriteEdadb::writeIdbSlot(void) {
 
     vector<edadb::Shadow<idb::IdbSlot>*> slot_sd_vec;
     slot_sd_vec.reserve(slot_vec.size());
-    for (auto& slot : slot_vec) {
+    for (uint32_t slot_idx = 0; slot_idx < slot_vec.size(); ++slot_idx) {
         auto* slot_sd = new edadb::Shadow<idb::IdbSlot>();
-        slot_sd->toShadow(slot);
+        slot_sd->toShadow(slot_vec[slot_idx], &slot_idx);
         slot_sd_vec.emplace_back(slot_sd);
     }
 

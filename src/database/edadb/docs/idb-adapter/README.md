@@ -10,6 +10,17 @@ EDADB adapter 的目标不是 dump 完整 C++ 对象，而是贴近 iEDA 原始 
 - `readIdbT()` 对齐 `DefRead::parse_xxx()` 实际重建的 iDB 状态。
 - DB schema 只保存 DEF 语义需要的字段，以及 read 时无法从上下文重新计算的字段。
 
+## Adapter Rules
+
+- 先读原始 `DefWrite::write_xxx()` / `DefRead::parse_xxx()`，再改 EDADB adapter。
+- EDADB 表达的是 DEF 语义视图，不一定等于完整 C++ object dump。
+- 优先 direct mapping；只有需要 PK、root order、name lookup、vector ownership 或重建视图时才引入 `Shadow<T>`。
+- 对 root list，identity 和 order 必须分开：不要用 vector order index 当 PK。
+- 没有天然 identity 的 root record 用 `primary_key`；有天然 name 的对象用 name 做 PK。
+- 需要稳定 DEF roundtrip 的 root list 增加 `_order_sd`，read path 必须 `ORDER BY "_order_sd"`。
+- computed fields 不入库；read path 按原始 parser 语义重新计算或重建。
+- 每启用一个 `readIdbXXX/writeIdbXXX`，必须同步 schema/init、DEF callback、测试 SQL 和文档。
+
 ## Per-Class Checklist
 
 对每个 iEDA class `T`，按以下顺序检查：
@@ -49,6 +60,23 @@ EDADB adapter 的目标不是 dump 完整 C++ 对象，而是贴近 iEDA 原始 
 | `IdbGCellGridList` | Yes | vector traversal and DEF writer order | Implemented with `primary_key` as identity, `_order_sd` as list order, and ordered read. |
 | `IdbRegionList` | Yes | name lookup for references, but vector traversal assigns internal order/id and DEF writer order | Implemented with `_name_sd` as identity, `_order_sd` as list order, and ordered read. |
 
+## Current Progress
+
+| Area | Status | Notes |
+| --- | --- | --- |
+| Design / Units / BusBitChars | Done | Direct `IdbDesign`; only DEF-visible fields are persisted. |
+| Die | Done | Shadow root plus ordered point vector. |
+| Row | Done | `Shadow<IdbRow>`; `_name_sd` identity, `_order_sd` root order, site cloned from LEF. |
+| TrackGrid | Done | `primary_key` identity, `_order_sd` root order, layer names rebuild LEF/routing references. |
+| GCellGrid | Done | `primary_key` identity, `_order_sd` root order, DEF four-field view. |
+| Via | Done | Direct root object; member-level via master/layer-shape shadows handle rebuild. |
+| Instance / Pin | Done | EDADB roundtrip enabled and regression-covered. |
+| Blockage | Done | EDADB roundtrip enabled and regression-covered; detailed review doc still missing. |
+| Region | Done | `_name_sd` identity, `_order_sd` root order, boundary vector preserved. |
+| Slot | Done | `primary_key` identity, `_order_sd` root order, rectangle vector preserved. |
+| Group / Fill | Implemented | Regression-covered by `aux_optional`; detailed docs/order audit still pending. |
+| SpecialNet / Net | Implemented | Regression-covered by `default_ipl`, `aux_optional`, and `routed_irt`; detailed docs/order audit still pending. |
+
 ## Output Template
 
 每个类的 review 文档保持这个结构：
@@ -71,4 +99,12 @@ EDADB adapter 的目标不是 dump 完整 C++ 对象，而是贴近 iEDA 原始 
 - `04_idb_track_grid.md`: `IdbTrackGrid` for `TRACKS`, including track fields, layer-name references, and routing-layer backlink rebuild.
 - `05_idb_gcell_grid.md`: `IdbGCellGrid` for `GCELLGRID`, including direct four-field mapping and empty-list adapter semantics.
 - `06_idb_region.md`: `IdbRegion` for `REGIONS`, including name/type and boundary rectangle vector persistence.
+- `07_idb_slot.md`: `IdbSlot` for `SLOTS`, including layer name, rectangle vector, and explicit root order.
 - `todo.md`: root list order guarantees that still need implementation or verification.
+
+## Suggested Next Steps
+
+1. Add review docs for already-implemented classes in DEF write order: `IdbBlockage`, `IdbGroup`, `IdbFill`, `IdbSpecialNet`, `IdbNet`.
+2. For each root list, decide whether order needs explicit `_order_sd`; do not rely on EDADB read-all physical order.
+3. Continue with `IdbGroupList`, then `IdbFill`, because they are covered by `aux_optional` and smaller than routed nets.
+4. After each class: update schema/read/write if needed, extend SQL assertions, run demo and regression, then commit.

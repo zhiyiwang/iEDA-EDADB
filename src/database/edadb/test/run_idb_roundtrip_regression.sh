@@ -137,7 +137,7 @@ check_aux_optional_sql() {
     assert_eq "$(sql_value "$edadb_db" "select _name_sd || '|' || _order_sd || '|' || _type_sd from iRegion;")" "test_region|0|1" "$name region fields"
     assert_eq "$(sql_value "$edadb_db" "select _lx || '|' || _ly || '|' || _hx || '|' || _hy from iRegion__boundary_list_sd_IdbRect;")" \
         "1000|1000|10000|10000" "$name region rect"
-    assert_eq "$(sql_value "$edadb_db" "select _layer_name_sd from iSlotSD;")" "met1" "$name slot layer"
+    assert_eq "$(sql_value "$edadb_db" "select _order_sd || '|' || _layer_name_sd from iSlotSD;")" "0|met1" "$name slot layer"
     assert_eq "$(sql_value "$edadb_db" "select _lx || '|' || _ly || '|' || _hx || '|' || _hy from iSlotSD__rect_list_sd_IdbRect;")" \
         "5000|5000|6000|6000" "$name slot rect"
     assert_eq "$(sql_value "$edadb_db" "select _group_name_sd || '|' || _region_name_sd from iGroupSD;")" "test_group|test_region" "$name group region"
