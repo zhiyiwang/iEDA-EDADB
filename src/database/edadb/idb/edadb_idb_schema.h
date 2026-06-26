@@ -101,7 +101,9 @@ TABLE4CLASS(edadb::Shadow<idb::IdbPin>, "iPinSD", (_pin_name_sd, _net_name_sd, _
 TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbBlockage>, "iBlockageSD", (primary_key, _instance_name_sd, _is_pushdown_sd, _type_sd, _layer_name_sd, _is_except_pgnet_sd), (_rect_list_sd));
 
 #include "database/data/design/db_design/IdbRegion.h"
-TABLE4CLASS_WVEC(idb::IdbRegion, "iRegion", (_name, _type), (_boudary_list));
+#include "shadow/shadow_idb_region.h"
+TABLE4SHADOW_WVEC(idb::IdbRegion);
+TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbRegion>, "iRegion", (_name_sd, _order_sd, _type_sd), (_boundary_list_sd));
 
 #include "shadow/shadow_idb_slot.h"
 TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbSlot>, "iSlotSD", (primary_key, _layer_name_sd), (_rect_list_sd));
