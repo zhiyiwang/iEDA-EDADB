@@ -48,6 +48,15 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbTrackGrid>, "iTrackGridSD", (primary_key,
 
 保存字段覆盖原始 DEF writer 需要的内容：direction、start、pitch、track number、layer name vector。
 
+## Child Storage View
+
+`IdbTrackGrid` 是 `TRACKS` root，当前子节点分两类：
+
+- `_track_sd`：direct `IdbTrack` inline member，只保存 `_start/_direction/_pitch`；`IdbTrack` 是纯 DEF 标量对象，不需要 shadow。
+- `_layer_name_vec_sd`：primitive string vector child，保存 DEF 中 layer name 列表和顺序。
+
+不直接持久化 `vector<IdbLayer*> _layer_list`：`IdbLayer` 属于 LEF/layout，track grid 只应保存 layer name，read 时按 name 查找全局 `IdbLayer` 并重建 routing layer 反向引用。
+
 ## Why TrackGrid Shadow
 
 当前需要 `Shadow<IdbTrackGrid>`：

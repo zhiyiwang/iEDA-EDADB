@@ -38,6 +38,14 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbSlot>, "iSlotSD", (primary_key, _order_sd
 
 保存字段覆盖原始 DEF writer/read 需要的 layer name 和 rectangle vector。
 
+## Child Storage View
+
+`IdbSlot` 是 `SLOTS` root，当前持久化子节点是 rectangle vector：
+
+- `_rect_list_sd`：`vector<IdbRect*>`，使用 direct `IdbRect` child table，并保持 child order。
+
+不保存 `IdbLayer* _layer`：原始 `parse_slot()` 只设置 layer name，当前 adapter 也只保存 `_layer_name_sd`。如果未来原始 parser 恢复 layer pointer，再讨论是否用 layer name lookup 重建。
+
 ## Why Slot Shadow
 
 当前需要 `Shadow<IdbSlot>`：

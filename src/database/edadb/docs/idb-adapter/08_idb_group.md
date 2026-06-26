@@ -40,6 +40,14 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbGroup>, "iGroupSD", (_group_name_sd, _ord
 
 保存字段覆盖原始 DEF writer/read 需要的 group name、region name 和 member instance names。
 
+## Child Storage View
+
+`IdbGroup` 是 `GROUPS` root，当前子节点是 instance name vector：
+
+- `_instance_name_vec_sd`：primitive string vector child，保存 group member instance names 和 member 顺序。
+
+不直接保存 `IdbInstance*` vector，也不保存 `IdbRegion*`：这些都是 non-owning references。DB 中保存 instance/region name，read 时通过 `IdbInstanceList::find_instance()` 和 `IdbRegionList::find_region()` 恢复。
+
 ## Why Group Shadow
 
 当前需要 `Shadow<IdbGroup>`：

@@ -59,6 +59,19 @@ TABLE4CLASS(edadb::Shadow<idb::IdbPin>, "iPinSD",
 - `Shadow<IdbPort>` 保存 port orient/status/coordinate 和 layer shape vector。
 - `Shadow<IdbLayerShape>` 保存 layer name、shape type 和 rect vector。
 
+## Child Storage View
+
+`IdbPin` 是 `PINS` root，当前子节点按 DEF 语义分层保存：
+
+- `_io_term_sd`：`Shadow<IdbTerm>` child，保存 term name、direction、use、special、has-port、placement status 和 port vector。
+- `_port_list_sd`：`Shadow<IdbPort>` vector child，保存 port class、orient、placement status、coordinate 和 layer shape vector。
+- `_layer_shape_list_sd`：`Shadow<IdbLayerShape>` vector child，保存 layer name/type 和 direct `IdbRect` rect vector。
+- `_average_coordinate_sd` / `_location_sd`：coordinate value fields，保存 pin-level 位置/平均坐标。
+
+不直接保存原始 `IdbPin::_layer_shape_list`：它是由 term/port relative geometry 和 placement 计算得到的 absolute geometry cache。原始 DEF writer/read 的语义根在 `IdbTerm -> IdbPort -> IdbLayerShape`，所以 EDADB 保存这个层次，并在 read path 调用 `set_port_layer_shape()` 或重算 bbox。
+
+也不保存 `_net` / `_special_net` pointer：这里只保存 net name，后续 net/special-net adapter 按 pin name 连接对象引用。
+
 ## EDADB Write Path
 
 当前 `writeIdbPin()`：

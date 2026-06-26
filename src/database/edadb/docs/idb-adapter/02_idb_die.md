@@ -56,6 +56,15 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbDie>, "iDieSD", (primary_key), (points_sd
 - `_x_sd`
 - `_y_sd`
 
+## Child Storage View
+
+`IdbDie` 是 `DIEAREA` root，唯一持久化子节点是 point vector：
+
+- `points_sd`：`vector<IdbCoordinate<int32_t>*>`，使用 `Shadow<IdbCoordinate<int32_t>>`。
+- `Shadow<IdbCoordinate<int32_t>>` 保存 `_vec_idx/_x_sd/_y_sd`，其中 `_vec_idx` 是 nested vector order，不是 root identity。
+
+这里不直接使用原始 `IdbCoordinate`，因为原始 coordinate 只有 x/y，没有 child vector index；DEF polygon 点序必须可恢复。
+
 ## Why Shadow Is Used
 
 当前不直接存 `IdbDie`，而是使用 `Shadow<IdbDie>`，原因是：

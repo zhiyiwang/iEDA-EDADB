@@ -53,6 +53,15 @@
 
 当前采用 direct class mapping，不需要 `Shadow<IdbDesign>`。
 
+## Child Storage View
+
+`IdbDesign` 是 DEF design header 的 root，当前只有两个持久化子节点：
+
+- `IdbUnits`：direct member，通过 `IdbDesign::_units` inline 写入；当前 DEF 语义只需要 `_micron_dbu`，其它 units 字段是原始类附带字段。
+- `IdbBusBitChars`：direct member，通过 `IdbDesign::_bus_bit_chars` inline 写入；只保存左右 delimiter。
+
+这两个子节点不需要 shadow：它们是 singleton value object，不引用 LEF/layout 对象，也没有 vector child order。`readIdbDesign()` 仍按原始 parser 语义处理 ownership：`_units` 复用 active object，`_bus_bit_chars` 替换 active pointer。
+
 ## EDADB Write Path
 
 当前 `writeIdbDesign()` 已贴近原始 writer：

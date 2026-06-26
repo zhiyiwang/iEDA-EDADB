@@ -51,6 +51,17 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbLayerShape>, "iLayerShapeSD", ...);
 
 `IdbVia` 不定义 root shadow：root identity 是 `_name`，`_master_instance` 内部由 EDADB 的 `Shadow<IdbViaMaster>` 隐式转换。
 
+## Child Storage View
+
+`IdbVia` 是 `VIAS` root，root 本身 direct mapping，但子节点必须使用 storage view：
+
+- `_master_instance`：通过 `Shadow<IdbViaMaster>` 存储，不直接 dump 原始 `IdbViaMaster`。
+- generated via：`Shadow<IdbViaMasterGenerate>` 保存 via rule name、cut size/spacing/enclosure、row/col、origin/offset、bottom/cut/top layer name、pattern string。
+- fixed via：`Shadow<IdbViaMaster>` 的 `fixed_layer_shape_list_sd` 保存 `Shadow<IdbLayerShape>` vector。
+- layer shape：`Shadow<IdbLayerShape>` 保存 layer name、shape type 和 direct `IdbRect` rect vector。
+
+这些 child shadow 是必要的：原始 via master 中包含 LEF layer/rule 指针和由 `set_via_shape()` 计算出的 shape cache。DB 应保存 DEF-visible name/scalar/rect 语义，read 时再按 name lookup LEF layer/rule 并重建几何。
+
 ## EDADB Write Path
 
 当前 `writeIdbVia()`：

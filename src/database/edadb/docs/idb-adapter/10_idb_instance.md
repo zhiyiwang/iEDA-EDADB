@@ -52,6 +52,19 @@ TABLE4CLASS(edadb::Shadow<idb::IdbInstance>, "iInstSD",
 - `_order_sd` 保存 `IdbInstanceList` append 顺序。
 - `_cell_master` / `_region` / route halo layers 通过 name lookup 重建，避免直接持久化运行时指针。
 
+## Child Storage View
+
+`IdbInstance` 是 `COMPONENTS` root，当前子节点/引用处理如下：
+
+- `_coordinate_sd`：coordinate value child，保存 placement x/y。
+- `_halo_sd`：direct `IdbHalo` child；halo 只包含 left/right/top/bottom/soft 纯 DEF 字段，不需要 shadow。
+- `_route_halo_sd`：`Shadow<IdbRouteHalo>` child；route halo 的 bottom/top layer 是 LEF layer pointer，DB 中保存 layer name。
+- `_cell_master`：不作为 child 存库；保存 `_cell_master_name_sd`，read 时从 LEF `IdbCellMasterList` 查找并调用 `set_cell_master()` 重建 pin list。
+- `_region`：不作为 child 存库；保存 `_region_name_sd`，read 时查找 region 并补回 region-instance 关系。
+- `_pin_list` / obs boxes / bbox：不入库，由 `set_cell_master()`、coordinate/orient 设置和 iDB 计算流程重建。
+
+因此 `Shadow<IdbInstance>` 是必要的：它把 DEF component 语义从 iEDA 运行时对象图中拆出来，避免把 cell master、region、layer 等 non-owning pointers 当成 DB ownership。
+
 ## EDADB Write Path
 
 当前 `writeIdbInstance()`：

@@ -39,6 +39,15 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbRegion>, "iRegion", (_name_sd, _order_sd,
 
 保存字段覆盖原始 DEF writer/read 需要的 name、type 和 boundary rectangle vector。
 
+## Child Storage View
+
+`IdbRegion` 是 `REGIONS` root，当前持久化子节点是 boundary rectangle vector：
+
+- `_boundary_list_sd`：`vector<IdbRect*>`，使用 direct `IdbRect` child table。
+- `IdbRect` 只包含 `_lx/_ly/_hx/_hy` 纯几何标量，不需要 shadow。
+
+不保存 `_instance_list`：它不是 DEF `REGIONS` section 的直接输出字段，而是由 `COMPONENTS` 中的 region name 在 `readIdbInstance()` 阶段反向补回。
+
 ## Why Region Shadow
 
 当前需要 `Shadow<IdbRegion>`：

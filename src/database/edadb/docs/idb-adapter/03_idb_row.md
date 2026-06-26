@@ -50,6 +50,16 @@ TABLE4CLASS(edadb::Shadow<idb::IdbRow>, "iRow", (_name_sd, _order_sd, _site_name
 
 当前采用 `Shadow<IdbRow>`，只保存 DEF row 语义字段和 root list order。
 
+## Child Storage View
+
+`IdbRow` 是 `ROW` root，当前没有持久化 owning child object：
+
+- site 不作为 `IdbSite` child 存库；只保存 `_site_name_sd` 和 `_site_orient_sd`。
+- original coordinate 被 flatten 成 `_origin_x_sd/_origin_y_sd`，不单独建 coordinate child。
+- row bbox、row-local site clone 都是 read 阶段重建结果。
+
+虽然 schema 文件中存在 `TABLE4CLASS(idb::IdbSite, ...)`，但当前 row adapter 不写/读 `iSite` 表；row site 语义必须从 LEF site 按 name clone 后设置 orient，贴近原始 `parse_row()`。
+
 ## Why Row Shadow
 
 当前需要 `Shadow<IdbRow>`：

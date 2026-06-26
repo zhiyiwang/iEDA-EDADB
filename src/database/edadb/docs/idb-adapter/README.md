@@ -19,6 +19,7 @@ EDADB adapter 的目标不是 dump 完整 C++ 对象，而是贴近 iEDA 原始 
 - 没有天然 identity 的 root record 用 `primary_key`；有天然 name 的对象用 name 做 PK。
 - 需要稳定 DEF roundtrip 的 root list 增加 `_order_sd`，read path 必须 `ORDER BY "_order_sd"`。
 - computed fields 不入库；read path 按原始 parser 语义重新计算或重建。
+- 每个 root 文档必须说明 child storage view：哪些子节点 direct mapping，哪些子节点 shadow，哪些运行时 pointer/cache 不入库以及如何重建。
 - 每启用一个 `readIdbXXX/writeIdbXXX`，必须同步 schema/init、DEF callback、测试 SQL 和文档。
 
 ## Per-Class Checklist
@@ -87,6 +88,7 @@ EDADB adapter 的目标不是 dump 完整 C++ 对象，而是贴近 iEDA 原始 
 - Original Write Semantics: 原始 writer 输出哪些字段。
 - Original Read Semantics: 原始 parser 如何重建对象。
 - EDADB Schema: 当前 DB 中保存哪些 class/member。
+- Child Storage View: root 下有哪些子节点、direct/shadow 选择、为什么不用原始类。
 - EDADB Write Path: `writeIdbT()` 是否贴近原始 writer。
 - EDADB Read Path: `readIdbT()` 是否贴近原始 parser。
 - Computed Fields: 哪些字段不入库，如何计算。

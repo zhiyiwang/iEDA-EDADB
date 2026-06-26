@@ -40,6 +40,15 @@ TABLE4CLASS(edadb::Shadow<idb::IdbGCellGrid>, "iGCellGrid", (primary_key, _order
 
 保存字段正好覆盖原始 DEF writer/read 需要的四个字段。
 
+## Child Storage View
+
+`IdbGCellGrid` 是 `GCELLGRID` root，没有持久化子节点：
+
+- direction/start/num/space 全部是 root scalar。
+- 没有 LEF layer pointer、geometry vector 或 computed child 需要保存。
+
+因此 shadow 只用于补 root identity/order，不承担 child object 转换。
+
 ## Why GCellGrid Shadow
 
 当前需要 `Shadow<IdbGCellGrid>`：
