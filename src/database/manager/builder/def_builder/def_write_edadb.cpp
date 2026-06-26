@@ -597,9 +597,11 @@ int32_t DefWriteEdadb::writeIdbFill(void) {
 
     vector<edadb::Shadow<idb::IdbFill>*> fill_sd_vec;
     fill_sd_vec.reserve(fill_vec.size());
+    int32_t fill_order = 0;
     for (auto& fill : fill_vec) {
         auto* fill_sd = new edadb::Shadow<idb::IdbFill>();
         fill_sd->toShadow(fill);
+        fill_sd->_order_sd = fill_order++;
         fill_sd_vec.emplace_back(fill_sd);
     }
 

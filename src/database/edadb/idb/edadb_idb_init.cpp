@@ -89,8 +89,6 @@ int initAllTables(bool crt_tab) {
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbRegion>, crt_tab);
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbSlot>, crt_tab);
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbGroup>, crt_tab);
-    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbFillLayer>, crt_tab);
-    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbFillVia>, crt_tab);
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbFill>, crt_tab);
     EDADB_INIT_TABLE(idb::edadb_adapter::SpecialNetPinRef, crt_tab);
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbSpecialWireSegment>, crt_tab);

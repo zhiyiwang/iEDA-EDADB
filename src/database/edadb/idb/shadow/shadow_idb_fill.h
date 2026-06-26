@@ -128,6 +128,7 @@ public:
     } // fromShadow
 public:
     uint64_t primary_key;   
+    int32_t _order_sd = 0;
     idb::IdbFill::IdbFillType _type_sd;
     std::string _layer_name_sd;
     std::vector<idb::IdbRect*> _rect_list_sd;
