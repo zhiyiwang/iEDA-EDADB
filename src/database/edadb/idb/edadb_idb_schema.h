@@ -41,8 +41,9 @@ TABLE4CLASS_WVEC (edadb::Shadow<idb::IdbDie>, "iDieSD", (primary_key), (points_s
 #include "database/data/design/db_layout/IdbSite.h"
 TABLE4CLASS(idb::IdbSite, "iSite", (_name, _width, _heigtht, _b_overlap, _site_class, _symmetry, _orient, _type));
 
-#include "database/data/design/db_layout/IdbRow.h"
-TABLE4CLASS(idb::IdbRow, "iRow", (_name, _site, _original_coordinate, _row_num_x, _row_num_y, _step_x, _step_y));
+#include "shadow/shadow_idb_row.h"
+TABLE4SHADOW(idb::IdbRow);
+TABLE4CLASS(edadb::Shadow<idb::IdbRow>, "iRow", (_name_sd, _order_sd, _site_name_sd, _site_orient_sd, _origin_x_sd, _origin_y_sd, _row_num_x_sd, _row_num_y_sd, _step_x_sd, _step_y_sd));
 
 #include "database/data/design/db_design/IdbTrackGrid.h"
 TABLE4CLASS(idb::IdbTrack, "iTrack", (_start, _direction, _pitch));

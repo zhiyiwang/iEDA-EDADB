@@ -76,6 +76,18 @@ TABLE4CLASS(idb::IdbGCellGrid, "iGCellGrid", (_direction, _start, _num, _space))
 - 不需要查 LEF layer。
 - 不需要反向引用重建。
 
+## Order / Index
+
+`IdbGCellGridList` 需要保持原始 append 顺序，且不应该按字段或方向排序。
+
+依据：
+
+- 原始 parser 按 DEF 出现顺序 append。
+- 原始 writer 按 list 当前顺序输出。
+- iEDA/iRT 主要通过 vector traversal 使用 GCell grid，没有 name lookup。
+
+当前状态：未显式实现 root order；direct mapping 依赖 EDADB `insertVector()` / `readAll` 的读回顺序稳定。regression routed case 验证了当前 EDADB API 下非空路径顺序稳定；若未来 DB backend 不保证顺序，应给 `IdbGCellGrid` 增加 `_order` 或 shadow。
+
 ## Tests
 
 - demo `sky130_gcd` 当前没有 `GCELLGRID`，覆盖空列表路径：`writeIdbGCellGrid insert gcell_grid_count=0`，`readIdbGCellGrid restored gcell_grid_count=0`。

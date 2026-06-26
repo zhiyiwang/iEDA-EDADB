@@ -216,10 +216,17 @@ int32_t DefWriteEdadb::writeIdbRow(void) {
     }
 
     vector<IdbRow*>& row_vec = rows->get_row_list();
-    EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] writeIdbRow insert row_count="
-              << row_vec.size() << std::endl;
+    vector<edadb::Shadow<idb::IdbRow>> row_sd_vec;
+    row_sd_vec.reserve(row_vec.size());
+    for (uint32_t row_idx = 0; row_idx < row_vec.size(); ++row_idx) {
+        row_sd_vec.emplace_back();
+        row_sd_vec.back().toShadow(row_vec[row_idx], &row_idx);
+    }
 
-    if (!edadb::insertVector<idb::IdbRow>(row_vec)) {
+    EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] writeIdbRow insert row_count="
+              << row_sd_vec.size() << std::endl;
+
+    if (!edadb::insertVector<edadb::Shadow<idb::IdbRow>>(row_sd_vec)) {
         std::cerr << "DefWriteEdadb::writeIdbRow failed to insertVector" << std::endl;
         return kDbFail;
     }

@@ -84,6 +84,17 @@
 - 如果 `VERSION` 为空，DEF writer 输出时仍会 canonicalize 为 `5.8`。
 - `DIVIDERCHAR` 是固定 writer 输出，不应作为 `IdbDesign` DB 字段处理。
 
+## Order / Index
+
+`IdbDesign` 是 singleton root object，不存在 `vector<IdbDesign>` root list 顺序问题。
+
+依据：
+
+- 原始 DEF read/write 只恢复一个 active `IdbDesign`。
+- `IdbUnits` 和 `IdbBusBitChars` 是 inline/member object，不是 DEF statement list。
+
+当前状态：已满足，不需要 `_order`。
+
 ## Risks / TODO
 
 `readIdbDesign()` 已按原始 read 语义收敛：

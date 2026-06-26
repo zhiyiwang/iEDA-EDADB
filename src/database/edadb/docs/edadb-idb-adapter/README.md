@@ -25,6 +25,30 @@ EDADB adapter 的目标不是 dump 完整 C++ 对象，而是贴近 iEDA 原始 
 9. 检查 `DefReadEdadb::createDbByDef()` 是否只禁用了已由 EDADB 完整恢复的 DEF callbacks。
 10. 用 demo roundtrip、DB 表内容和关键对象数量验证。
 
+## Order / Index Policy
+
+对 iDB root list，例如 `IdbDesign::_region_list` 或 `IdbLayout::_rows`，默认目标是保持原始 `t1, t2, t3` append 顺序。iEDA 原始 parser 通常按 DEF 出现顺序 append，writer 再按 vector 当前顺序输出。
+
+判断原则：
+
+- 不要为了稳定输出对 iDB list 做 name sort；这会改变原始 DEF statement order。
+- 先区分使用方式：对象是通过 name lookup 找到，还是通过 vector traversal / index 使用。
+- 如果代码使用 `front()`、`operator[]`、row id、按 vector 遍历生成内部 id，则 root list 顺序更重要。
+- 如果对象主要通过 name lookup 引用，EDA 语义通常不依赖顺序，但 DEF roundtrip 仍需要保持 insertion order。
+- 如果 EDADB API/DB backend 不能明确保证 `insertVector()` / `readAll` 顺序稳定，root list 必须补显式 `_order`。
+- 成员 vector child 的顺序由对应 shadow/EDADB vector 机制处理；本表只判断 root list 顺序。
+
+已 review 类的顺序需求：
+
+| Class / Root List | Preserve Order? | Usage Basis | Current State |
+| --- | --- | --- | --- |
+| `IdbDesign` | No | singleton object | No root list order. |
+| `IdbDie` | No for root; yes for points | singleton root; point order is geometry/DEF semantics | Root no order; point order already handled by nested shadow `_vec_idx`. |
+| `IdbRowList` | Yes | vector traversal plus `front()` / index-derived row logic | Implemented with `_order_sd` and ordered read. |
+| `IdbTrackGridList` | Yes | vector traversal, layer back links, DEF writer order | Partially implemented by shadow `primary_key`; adapter still should verify/enforce read order. |
+| `IdbGCellGridList` | Yes | vector traversal and DEF writer order | Not explicitly implemented; currently depends on EDADB read order. |
+| `IdbRegionList` | Yes | name lookup for references, but vector traversal assigns internal order/id and DEF writer order | Not explicitly implemented; currently depends on EDADB read order. |
+
 ## Output Template
 
 每个类的 review 文档保持这个结构：
@@ -37,6 +61,7 @@ EDADB adapter 的目标不是 dump 完整 C++ 对象，而是贴近 iEDA 原始 
 - EDADB Read Path: `readIdbT()` 是否贴近原始 parser。
 - Computed Fields: 哪些字段不入库，如何计算。
 - Risks / TODO: 与原始语义不一致或 ownership 风险。
+- Order / Index: root list 是否需要保持顺序、依据是什么、当前是否已显式实现。
 
 ## Class Review Index
 
@@ -46,3 +71,4 @@ EDADB adapter 的目标不是 dump 完整 C++ 对象，而是贴近 iEDA 原始 
 - `04_idb_track_grid.md`: `IdbTrackGrid` for `TRACKS`, including track fields, layer-name references, and routing-layer backlink rebuild.
 - `05_idb_gcell_grid.md`: `IdbGCellGrid` for `GCELLGRID`, including direct four-field mapping and empty-list adapter semantics.
 - `06_idb_region.md`: `IdbRegion` for `REGIONS`, including name/type and boundary rectangle vector persistence.
+- `todo.md`: root list order guarantees that still need implementation or verification.

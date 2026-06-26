@@ -91,8 +91,23 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbTrackGrid>, "iTrackGridSD", (primary_key,
 - 完整 `IdbLayer` 内容：由 LEF read 提供。
 - `IdbTrack::_width`：原始 DEF `TRACKS` writer/read 不处理。
 
+## Order / Index
+
+`IdbTrackGridList` 需要保持原始 append 顺序，且不应该按方向、layer 或 start 排序。
+
+依据：
+
+- 原始 `parse_track_grid()` 按 DEF 出现顺序 append track grid。
+- DEF writer 会按 `track_grid_list` 当前顺序输出，因此严格文本 roundtrip 需要稳定 root order。
+- iEDA/iRT 主要通过 vector traversal 和 layer back links 使用 track grid，没有 name lookup。
+- 当前 shadow 的 `primary_key` 按构造顺序递增，可作为 root insertion order；read path 应保持按该顺序恢复。
+- `_layer_name_vec_sd` 是 layer name vector，必须保持 DEF 中 layer name 的原始顺序。
+
+当前状态：部分实现。root record 已有 shadow `primary_key`，但 adapter 仍需确认 EDADB `readAll` 是否按 `primary_key` 返回；若不保证，应在 `readIdbTrackGrid()` 中显式按 `primary_key` 恢复。
+
 ## Risks / TODO
 
 - `Shadow<IdbTrackGrid>` 依赖 LEF 已先读入，否则 layer name 无法解析。
 - 当前 layer lookup 留在 `readIdbTrackGrid()`，不是 `fromShadow()`；这样更接近原始 parser，也避免 shadow 隐式依赖全局 helper。
 - 当前 missing-layer 行为已对齐原始 parser：打印并继续；如果后续希望 EDADB 对 DB/LEF mismatch 更严格，可以改成 adapter 层可配置策略。
+- 如果 EDADB `readAll` 不按 `primary_key` 返回 root shadow，需要在 adapter 里显式按 `primary_key` 排序。

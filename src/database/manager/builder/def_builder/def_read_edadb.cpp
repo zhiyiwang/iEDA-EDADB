@@ -326,35 +326,39 @@ bool DefReadEdadb::readIdbRow(void) {
 
     rows->reset();
 
-    auto row_reader = edadb::makeReadAllOp<idb::IdbRow>();
+    auto row_reader = edadb::makeGenericQueryOp<edadb::Shadow<idb::IdbRow>>();
+    if (row_reader.preparePredicate("ORDER BY \"_order_sd\"") < 0) {
+        std::cerr << "DefReadEdadb::readIdbRow failed to prepare ordered row query!" << std::endl;
+        return false;
+    }
+
     int32_t row_count = 0;
     while (true) {
-        IdbRow* row = new IdbRow();
-        const int read_count = edadb::readNext<idb::IdbRow>(row_reader, row);
+        edadb::Shadow<idb::IdbRow> row_sd;
+        const int read_count = edadb::readNext<edadb::Shadow<idb::IdbRow>>(row_reader, &row_sd);
         if (read_count == 0) {
-            delete row;
             break;
         }
         if (read_count < 0) {
-            delete row;
             std::cout << "DefReadEdadb::readIdbRow failed to read!" << std::endl;
             return false;
         }
 
-        IdbSite* row_site = row->get_site();
-        if (row_site == nullptr) {
+        IdbRow* row = new IdbRow();
+        row_sd.fromShadow(row);
+
+        IdbSite* lef_site = sites->add_site_list(row_sd._site_name_sd);
+        if (lef_site == nullptr) {
             delete row;
-            std::cerr << "DefReadEdadb::readIdbRow failed, row site is nullptr!" << std::endl;
+            std::cerr << "DefReadEdadb::readIdbRow failed, lef site is nullptr: "
+                      << row_sd._site_name_sd << std::endl;
             return false;
         }
 
-        std::string site_name = row_site->get_name();
-        IdbOrient site_orient = row_site->get_orient();
-        IdbSite* lef_site = sites->add_site_list(site_name);
         IdbSite* site = lef_site->clone();
-        site->set_orient(site_orient);
+        site->set_orient(row_sd._site_orient_sd);
         row->set_site(site);
-        row->set_orient(site_orient);
+        row->set_orient(row_sd._site_orient_sd);
         row->set_bounding_box();
 
         rows->add_row_list(row);

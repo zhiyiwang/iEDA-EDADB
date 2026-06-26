@@ -98,6 +98,18 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbDie>, "iDieSD", (primary_key), (points_sd
 - `_area`：`get_area()` lazy 计算。
 - `_polygon`：`add_point()` 时同步构建。
 
+## Order / Index
+
+`IdbDie` 是 singleton root object，不存在 `vector<IdbDie>` root list 顺序问题。
+
+`IdbDie` 的 point vector 是 nested member，必须保存顺序：
+
+- DEF `DIEAREA` 输出按 `die->get_points()` 顺序写点。
+- polygon/bounding box 重建也依赖点序。
+- 当前 `Shadow<IdbCoordinate<int32_t>>` 使用 `_vec_idx` 保存 vector index，这是必要字段。
+
+当前状态：root order 不需要；nested point order 已由 shadow `_vec_idx` 实现。
+
 ## Risks / TODO
 
 当前实现总体贴近原始 DEF read/write 语义，但需要注意：

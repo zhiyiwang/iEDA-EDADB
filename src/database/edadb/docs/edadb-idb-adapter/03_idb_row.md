@@ -44,28 +44,30 @@
 当前 schema：
 
 ```cpp
-TABLE4CLASS(idb::IdbSite, "iSite", (_name, _width, _heigtht, _b_overlap, _site_class, _symmetry, _orient, _type));
-TABLE4CLASS(idb::IdbRow, "iRow", (_name, _site, _original_coordinate, _row_num_x, _row_num_y, _step_x, _step_y));
+TABLE4SHADOW(idb::IdbRow);
+TABLE4CLASS(edadb::Shadow<idb::IdbRow>, "iRow", (_name_sd, _order_sd, _site_name_sd, _site_orient_sd, _origin_x_sd, _origin_y_sd, _row_num_x_sd, _row_num_y_sd, _step_x_sd, _step_y_sd));
 ```
 
-当前采用 direct class mapping，不定义 `Shadow<IdbRow>`。
+当前采用 `Shadow<IdbRow>`，只保存 DEF row 语义字段和 root list order。
 
-## Why No Row Shadow
+## Why Row Shadow
 
-当前不需要 `Shadow<IdbRow>`：
+当前需要 `Shadow<IdbRow>`：
 
-- `IdbRow::_name` 是天然 root key，可作为 `iRow` 记录标识。
-- row 没有需要额外 owner PK 归属的 vector child。
-- direct mapping 已能表达 row 的 DEF 输出字段和 site/origin 嵌套对象。
-
-需要注意：schema 当前保存了完整 `IdbSite`，但 DEF row 语义只需要 site name 和 orient。完整 site 属性更多是 EDADB direct mapping 的副产物，不是 `ROW` roundtrip 的必要字段。
+- `IdbRowList` root 顺序需要显式保存，不能依赖 DB 物理顺序。
+- DEF row 语义只需要 site name、site orient、origin、DO/BY、STEP，不需要保存完整 `IdbSite`。
+- shadow 使用 `_name_sd` 作为 `iRow` primary key，表达 row identity。
+- shadow 使用 `_order_sd` 作为 order key，表达 `IdbRowList` append 顺序。
+- shadow 用纯标量字段表达 DEF row，避免保存完整 `IdbSite` 对象。
 
 ## EDADB Write Path
 
 当前 `writeIdbRow()`：
 
 - 从 `layout->get_rows()` 取得 row list。
-- 使用 `edadb::insertVector<IdbRow>(row_vec)` 写入每个 row。
+- 按 `row_vec` 当前顺序构造 `Shadow<IdbRow>`。
+- 第 `idx` 个 row 写入 `_order_sd = idx`。
+- 使用 `edadb::insertVector<Shadow<IdbRow>>(row_sd_vec)` 写入。
 
 这覆盖了原始 writer 需要的 row name、site name/orient、origin、DO/BY、STEP 字段。
 
@@ -74,14 +76,14 @@ TABLE4CLASS(idb::IdbRow, "iRow", (_name, _site, _original_coordinate, _row_num_x
 当前 `readIdbRow()`：
 
 - `rows->reset()` 清空旧 row。
-- 循环读取 `IdbRow`。
-- 从 EDADB row 中取出 site name 和 site orient。
+- 使用 `ORDER BY "_order_sd"` 循环读取 `Shadow<IdbRow>`。
+- 从 shadow 中取出 site name 和 site orient。
 - 按原始 `parse_row()` 语义调用 `sites->add_site_list(site_name)` 获取/创建 LEF site。
 - clone site，设置 orient，并挂回 row。
-- 设置 row orient，调用 `set_bounding_box()`。
+- 设置 row name、origin、DO/BY、STEP、orient，调用 `set_bounding_box()`。
 - 加入 `rows`。
 
-这和原始 `parse_row()` 的对象重建语义保持一致：最终 row site 是 layout site 的 clone，而不是直接依赖 EDADB 读出的 site pointer 作为最终对象。
+这和原始 `parse_row()` 的对象重建语义保持一致：最终 row site 是 layout site 的 clone，而不是 EDADB 持久化的完整 site 对象。
 
 ## Computed Fields
 
@@ -94,9 +96,22 @@ TABLE4CLASS(idb::IdbRow, "iRow", (_name, _site, _original_coordinate, _row_num_x
 
 - `set_bounding_box()` 使用 original coordinate、`row_num_x`、`step_x` 和 row site height 计算 bbox。
 
+## Order / Index
+
+`IdbRowList` 需要保持原始 append 顺序，且不应该按 name 排序。
+
+依据：
+
+- 原始 `parse_row()` 按 DEF 出现顺序 append row。
+- 原始 `write_row()` 按 `rows->get_row_list()` 当前顺序输出。
+- iEDA 后续代码存在 `rows->get_row_list().front()` / `rows->get_row_list()[0]` 获取 site width/height/orient。
+- iPL wrapper 按 row vector 遍历顺序分配 row id；部分 placer/legalizer 再按 row index 使用。
+
+当前状态：已显式实现 root order。写入保存 `_order_sd`，读回使用 `ORDER BY "_order_sd"`，不依赖 EDADB/SQLite root table 物理顺序。
+
 ## Risks / TODO
 
-当前实现总体贴近原始 DEF read/write 语义，但有两个后续可优化点：
+当前实现总体贴近原始 DEF read/write 语义，但需要注意：
 
-- `iSite` 当前保存完整 site 属性，超过 `ROW` DEF 语义所需；如果后续要更严格贴近 DEF，可用 row shadow 只保存 site name + orient。
-- `IdbRow::_orient` 没在 schema 中单独保存；当前读回由 site orient 同步设置，符合原始 parser 语义。
+- `IdbRow::_orient` 不单独从 active row 读取；shadow 保存 `_site_orient_sd`，读回后同步设置 row site orient 和 row orient。
+- `iRow` 表名保持不变，但列名已从 direct mapping 切换为 shadow 字段。

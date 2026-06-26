@@ -92,8 +92,10 @@ check_default_sql() {
         "1|1|39|12|0|4|1458|56|2|675" "$name core object counts"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_x_sd || ',' || _y_sd, ';') from (select _x_sd, _y_sd from iDieSD_points_sd_iCoordSD order by _vec_idx);")" \
         "0,0;149960,150128" "$name die points"
-    assert_eq "$(sql_value "$edadb_db" "select _name || '|' || _site__name || '|' || _original_coordinate__x_sd || ',' || _original_coordinate__y_sd || '|' || _row_num_x || '|' || _row_num_y || '|' || _step_x || '|' || _step_y from iRow where _name='ROW_0';")" \
+    assert_eq "$(sql_value "$edadb_db" "select _name_sd || '|' || _site_name_sd || '|' || _origin_x_sd || ',' || _origin_y_sd || '|' || _row_num_x_sd || '|' || _row_num_y_sd || '|' || _step_x_sd || '|' || _step_y_sd from iRow where _name_sd='ROW_0';")" \
         "ROW_0|unit|9600,9990|271|1|480|0" "$name row fields"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || ':' || _name_sd, ',') from (select _order_sd, _name_sd from iRow order by _order_sd limit 5);")" \
+        "0:ROW_0,1:ROW_1,2:ROW_2,3:ROW_3,4:ROW_4" "$name row order prefix"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(primary_key || ':' || _track_sd__direction || ':' || _track_sd__start || ':' || _track_num_sd || ':' || _track_sd__pitch, ';') from (select * from iTrackGridSD order by primary_key limit 4);")" \
         "1:1:240:311:480;2:2:185:405:370;3:1:185:404:370;4:2:185:405:370" "$name track fields"
     assert_eq "$(sql_value "$edadb_db" "select count(*) || '|' || group_concat(value, ',') from (select value from iTrackGridSD__layer_name_vec_sd___edadb_primitive_vector order by iTrackGridSD_primary_key, __edadb_vec_idx);")" \

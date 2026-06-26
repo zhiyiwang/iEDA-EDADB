@@ -75,6 +75,21 @@ TABLE4CLASS_WVEC(idb::IdbRegion, "iRegion", (_name, _type), (_boudary_list));
 - `_instance_list` 不入库，由 instance read 阶段按 `_region_name` 反向补回。
 - region property 尚未在原始 parser 中实现，不进入 EDADB schema。
 
+## Order / Index
+
+`IdbRegionList` 需要保持原始 append 顺序，且不应该按 name 排序。
+
+依据：
+
+- 原始 `parse_region()` 按 DEF 出现顺序 `add_region()`。
+- 原始 `write_region()` 按 `region_list->get_region_list()` 当前顺序输出。
+- instance/group 对 region 的语义引用靠 `find_region(name)`，不是靠 list index。
+- iPL 等后续流程把 region 作为命名约束集合使用；遍历顺序会影响内部 region id 分配，但 EDA 约束语义不要求按 name 排序。
+
+当前状态：未显式实现 root order；direct mapping 依赖 EDADB `insertVector()` / `readAll` 的读回顺序稳定。如果 EDADB `readAll` 不能保证写入顺序，应增加显式 `_order` 字段，而不是对 region name 排序。
+
+boundary rectangle vector 也应保持原始 DEF 顺序；当前由 `TABLE4CLASS_WVEC` 的 vector child 机制负责。
+
 ## Tests
 
 - demo `sky130_gcd` 覆盖空列表路径：`writeIdbRegion insert region_count=0`，`readIdbRegion restored region_count=0`。
@@ -84,3 +99,4 @@ TABLE4CLASS_WVEC(idb::IdbRegion, "iRegion", (_name, _type), (_boudary_list));
 
 - `IdbRegion::clear_boundary()` 删除 rect 后没有清空 vector；当前 read path 不调用它，暂不影响 roundtrip。
 - 若未来原始 DEF parser 支持 region property，需要同步扩展 schema 和 read/write。
+- 当前 region root list 没有显式 `_order`；如果后续 DB backend 不保证 insertion order，需补 order 字段。
