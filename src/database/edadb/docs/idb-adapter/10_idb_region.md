@@ -62,7 +62,7 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbRegion>, "iRegion", (_name_sd, _order_sd,
 - `_boundary_list_sd`：`vector<IdbRect*>`，使用 direct `IdbRect` child table。
 - `IdbRect` 只包含 `_lx/_ly/_hx/_hy` 纯几何标量，不需要 shadow。
 
-不保存 `_instance_list`：它不是 DEF `REGIONS` section 的直接输出字段，而是由 `COMPONENTS` 中的 region name 在 `readIdbInstance()` 阶段反向补回。
+不保存 `_instance_list`：它不是 DEF `REGIONS` section 的直接输出字段。`demo` 分支中 `COMPONENTS` / `GROUPS` 仍走原始 DEF fallback，由原始 parser 按 region name 建立引用。
 
 ## Why Region Shadow
 
@@ -73,7 +73,7 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbRegion>, "iRegion", (_name_sd, _order_sd,
 - `_order_sd` 单独保存 list order；禁止按 region name 排序代替原始顺序。
 - boundary 是 owning vector child，可由 `TABLE4CLASS_WVEC` 直接表达。
 - 没有需要通过 name lookup 重建的 non-owning pointer。
-- group/instance 到 region 的引用由它们各自的 adapter 保存 region name 后重建。
+- group/instance 到 region 的引用在 `demo` 分支由原始 DEF fallback parser 按 region name 重建。
 
 ## EDADB Write Path
 
@@ -97,14 +97,14 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbRegion>, "iRegion", (_name_sd, _order_sd,
 - 直接加入 `design->get_region_list()`。
 - `createDbByDef()` 不注册 region callback，避免 DEF 文本重复创建 region。
 
-读取顺序在 `readIdbInstance()` / `readIdbGroup()` 之前，因此 instance/group 可通过 region name 查找并恢复引用。
+读取顺序早于 `createDbByDef()` 的 fallback parser，因此后续原始 DEF `COMPONENTS` / `GROUPS` callback 可通过 region name 查找并恢复引用。
 
 ## Computed Fields
 
 `IdbRegion` 当前没有 read 后计算字段：
 
 - name/type/boundary 全部来自 DEF/EDADB。
-- `_instance_list` 不入库，由 instance read 阶段按 `_region_name` 反向补回。
+- `_instance_list` 不入库；`demo` 分支由原始 DEF fallback parser 按 `_region_name` 反向补回。
 - region property 尚未在原始 parser 中实现，不进入 EDADB schema。
 
 ## Order / Index
@@ -127,7 +127,7 @@ boundary rectangle vector 也应保持原始 DEF 顺序；当前由 `TABLE4CLASS
 ## Tests
 
 - demo `sky130_gcd` 覆盖空列表路径：`writeIdbRegion insert region_count=0`，`readIdbRegion restored region_count=0`。
-- `src/database/edadb/test/run_idb_roundtrip_regression.sh` 的 `aux_optional` case 覆盖非空 region，并检查 `iRegion` count、`_order_sd`、type、boundary rectangle 和 group-region 引用。
+- `src/database/edadb/test/run_idb_roundtrip_regression.sh` 的 `aux_optional` case 覆盖非空 region，并检查 `iRegion` count、`_order_sd`、type 和 boundary rectangle。
 
 ## Risks / TODO
 

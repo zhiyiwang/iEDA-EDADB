@@ -33,33 +33,25 @@ For each case the script runs:
 3. `EDADB -> DEF`;
 4. byte diff of direct output vs EDADB output.
 
-For `default_ipl`, it also checks:
+For `default_ipl`, the `demo` branch checks:
 
 - design/version/units/bus-bit fields;
-- object-family counts for Design, Die, Row, TrackGrid, GCellGrid, Via, Instance, Pin, SpecialNet, and Net;
+- object-family counts for Design, Die, Row, TrackGrid, GCellGrid, Region, and Slot;
 - die point rows, row fields, track-grid fields and primitive vector layer names;
-- via generate fields, instance fields, pin fields and pin port/layer/rect child rows;
-- special-net default fields and child rows, regular-net default fields;
-- write/read logs for instance and pin restoration counts.
+- write/read logs proving only the demo EDADB groups are enabled.
 
-For `aux_optional`, it also checks SQLite content for key EDADB tables and fields:
+For `aux_optional`, the `demo` branch checks SQLite content for:
 
-- `iBlockageSD`, `iRegion`, `iSlotSD`, `iGroupSD`, `iFillSD`;
-- blockage fields, region/slot rectangles, group region and ordered member child rows;
-- fill layer/via typed rows and child rows;
-- special-net `ORIGINAL`, `SOURCE`, and `WEIGHT`;
-- regular-net `ORIGINAL`, `SOURCE`, `WEIGHT`, `XTALK`, `FIXEDBUMP`, and `FREQUENCY`.
+- `iRegion`;
+- `iSlotSD`;
+- region and slot rectangle fields.
 
-For `routed_irt`, it also checks SQLite content for routed regular-net tables:
+For `routed_irt`, the `demo` branch checks SQLite content for non-empty GCellGrid data:
 
-- `iNetSD = 677`;
-- `iNetSD__wire_list_sd_iRegWireSD = 677`;
-- `iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD = 8997`;
-- `iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__point_list_sd_iCoordSD = 14256`.
-- routed segment type counters cover via segments, rect segments, virtual second points, and via-name rows;
-- `clk_0` ordered instance-pin refs preserve `_order_sd = 0..18`;
-- largest routed segment nets remain `clk_0`, `clk_1`, and `dpath/a_mux/_066_`;
-- write/read logs report `net_count=677`.
+- `iGCellGrid` count and fields;
+- demo EDADB write/read log scope.
+
+All other DEF object families use original DEF fallback in `demo`; their correctness is covered by the direct DEF output vs EDADB output byte diff.
 
 ## Verification Rule
 
@@ -72,11 +64,10 @@ Each migrated class must be checked against the original `DefWrite`/`DefRead` be
 
 The executable baseline is the current branch's direct iDB `DEF -> DEF` path. It may include small intentional fixes beyond `origin/master`, so master-diff reports must call out that drift separately.
 
-Current class coverage:
+Current `demo` class coverage:
 
 | Family | Storage | Main edge covered |
 | --- | --- | --- |
-| Design / Die / Row / TrackGrid / GCellGrid / Via | direct or minimal shadow | scalar fields, point/vector rows, empty and non-empty GCell |
-| Instance / Pin | shadow | master/placement/halo fields, port/layer/rect child rows |
-| Blockage / Region / Slot / Group / Fill | direct or shadow | routing vs placement, region type, ordered group members, layer-fill vs via-fill |
-| SpecialNet / Net | shadow | ordered pin refs, optional fields, routed wire/segment/point rows |
+| Design / Die / Row / TrackGrid / GCellGrid | direct or minimal shadow | scalar fields, point/vector rows, empty and non-empty GCell |
+| Region / Slot | shadow | region type/boundaries, slot layer/rect rows, explicit root order |
+| Via / Instance / Pin / Blockage / Group / Fill / SpecialNet / Net | DEF fallback | preserved by original DEF parser callbacks and final DEF diff |
