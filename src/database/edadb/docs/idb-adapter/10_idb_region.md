@@ -39,6 +39,22 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbRegion>, "iRegion", (_name_sd, _order_sd,
 
 保存字段覆盖原始 DEF writer/read 需要的 name、type 和 boundary rectangle vector。
 
+## Field Mapping To Original DEF Flow
+
+以下按 EDADB shadow 域列出它对应的原始 DEF read/write 代码位置。
+
+- Region identity / root order: `_name_sd`, `_order_sd`
+  - Write source: `DefWrite::write_region()` 按 region list 顺序输出 region name，见 `src/database/manager/builder/def_builder/def_write.cpp:1040-1072`。
+  - Read source: `regionCallback()` / `parse_region()` 按 DEF 出现顺序创建 region，见 `src/database/manager/builder/def_builder/def_read.cpp:2075-2115`。
+
+- Region type: `_type_sd`
+  - Write source: `write_region()` 输出 region type，见 `src/database/manager/builder/def_builder/def_write.cpp:1040-1072`。
+  - Read source: `parse_region()` 读取 region type，见 `src/database/manager/builder/def_builder/def_read.cpp:2093-2115`。
+
+- Boundary rectangles: `_boundary_list_sd`
+  - Write source: `write_region()` 输出 region rectangle list，见 `src/database/manager/builder/def_builder/def_write.cpp:1040-1072`。
+  - Read source: `parse_region()` 读取 region rects，见 `src/database/manager/builder/def_builder/def_read.cpp:2093-2115`。
+
 ## Child Storage View
 
 `IdbRegion` 是 `REGIONS` root，当前持久化子节点是 boundary rectangle vector：

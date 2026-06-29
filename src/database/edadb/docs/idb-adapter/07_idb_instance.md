@@ -52,6 +52,30 @@ TABLE4CLASS(edadb::Shadow<idb::IdbInstance>, "iInstSD",
 - `_order_sd` 保存 `IdbInstanceList` append 顺序。
 - `_cell_master` / `_region` / route halo layers 通过 name lookup 重建，避免直接持久化运行时指针。
 
+## Field Mapping To Original DEF Flow
+
+以下按 EDADB shadow 域列出它对应的原始 DEF read/write 代码位置。
+
+- Instance identity / root order: `_name_sd`, `_order_sd`
+  - Write source: `DefWrite::write_component()` 按 instance list 顺序输出 component name，见 `src/database/manager/builder/def_builder/def_write.cpp:460-515`。
+  - Read source: `componentNumberCallback()` / `parse_component_number()` reserve list，`componentsCallback()` / `parse_component()` 按 DEF 出现顺序创建 instance，见 `src/database/manager/builder/def_builder/def_read.cpp:843-971`。
+
+- Master cell: `_cell_master_name_sd`
+  - Write source: `write_component()` 输出 cell master name，见 `src/database/manager/builder/def_builder/def_write.cpp:460-515`。
+  - Read source: `parse_component()` 按 master name 从 layout cell master list lookup，并创建 instance pins，见 `src/database/manager/builder/def_builder/def_read.cpp:884-971`。
+
+- Placement: `_status_sd`, `_orient_sd`, `_coordinate_sd`
+  - Write source: `write_component()` 输出 placement status、coordinate、orient，见 `src/database/manager/builder/def_builder/def_write.cpp:460-515`。
+  - Read source: `parse_component()` 读取 placement status/location/orient 并更新 bbox/pins，见 `src/database/manager/builder/def_builder/def_read.cpp:884-971`。
+
+- Optional component properties: `_type_sd`, `_weight_sd`, `_halo_sd`, `_route_halo_sd`, `_region_name_sd`
+  - Write source: `write_component()` 输出 component type、weight、halo/route halo/region 等 DEF-visible fields，见 `src/database/manager/builder/def_builder/def_write.cpp:460-515`。
+  - Read source: `parse_component()` 读取相应 optional fields 并按 region/layer name lookup，见 `src/database/manager/builder/def_builder/def_read.cpp:884-971`。
+
+- Computed bbox/pin geometry
+  - Write source: DEF writer 不直接输出 instance bbox 或 pin absolute geometry，见 `src/database/manager/builder/def_builder/def_write.cpp:460-515`。
+  - Read source: 原始 `parse_component()` 设置 placement 后重建 bbox 和 pin geometry，见 `src/database/manager/builder/def_builder/def_read.cpp:884-971`。
+
 ## Child Storage View
 
 `IdbInstance` 是 `COMPONENTS` root，当前子节点/引用处理如下：

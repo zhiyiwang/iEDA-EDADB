@@ -140,17 +140,19 @@ public:
             _pin_string_list_sd.emplace_back(pin_name);
         }
 
-        for (auto pin : obj->get_io_pin_list()->get_pin_list()) {
-            _io_pin_name_list_sd.emplace_back(pin->get_pin_name());
-        }
+        if (_pin_string_list_sd.empty()) {
+            for (auto pin : obj->get_io_pin_list()->get_pin_list()) {
+                _io_pin_name_list_sd.emplace_back(pin->get_pin_name());
+            }
 
-        uint64_t pin_order = 0;
-        for (auto pin : obj->get_instance_pin_list()->get_pin_list()) {
-            idb::edadb_adapter::SpecialNetPinRef pin_ref_sd;
-            pin_ref_sd._order_sd = pin_order++;
-            pin_ref_sd.instance_name = pin->get_instance() ? pin->get_instance()->get_name() : "";
-            pin_ref_sd.pin_name = pin->get_pin_name();
-            _instance_pin_list_sd.emplace_back(pin_ref_sd);
+            uint64_t pin_order = 0;
+            for (auto pin : obj->get_instance_pin_list()->get_pin_list()) {
+                idb::edadb_adapter::SpecialNetPinRef pin_ref_sd;
+                pin_ref_sd._order_sd = pin_order++;
+                pin_ref_sd.instance_name = pin->get_instance() ? pin->get_instance()->get_name() : "";
+                pin_ref_sd.pin_name = pin->get_pin_name();
+                _instance_pin_list_sd.emplace_back(pin_ref_sd);
+            }
         }
 
         assert(_wire_list_sd.empty());

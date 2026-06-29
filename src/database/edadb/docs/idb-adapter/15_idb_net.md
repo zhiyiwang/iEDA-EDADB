@@ -56,6 +56,42 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbNet>, "iNetSD",
 
 保存字段覆盖当前 DEF writer/read 需要的 net header、pin refs、wire list、segment list、points/via/rect。
 
+## Field Mapping To Original DEF Flow
+
+以下按 EDADB shadow 域列出它对应的原始 DEF read/write 代码位置。这里记录的是 regular `NETS` 的 DEF-visible 语义。
+
+- Net identity / root order: `_net_name_sd`, `_order_sd`
+  - Write source: `DefWrite::write_net()` 按 `IdbNetList` 顺序输出 net name，见 `src/database/manager/builder/def_builder/def_write.cpp:827-904`。
+  - Read source: `netBeginCallback()` / `parse_net_number()` reserve list，`netCallback()` / `parse_net()` 按 DEF 出现顺序创建 net，见 `src/database/manager/builder/def_builder/def_read.cpp:987-1240`。
+
+- Net header: `_connect_type_sd`, `_source_type_sd`, `_original_net_name_sd`, `_weight_sd`, `_xtalk_sd`, `_fix_bump_sd`, `_frequency_sd`
+  - Write source: `write_net()` 输出 USE/SOURCE/ORIGINAL/WEIGHT/XTALK/FIXEDBUMP/FREQUENCY，见 `src/database/manager/builder/def_builder/def_write.cpp:852-889`。
+  - Read source: `parse_net()` 读取对应 optional fields，见 `src/database/manager/builder/def_builder/def_read.cpp:1047-1077`。
+
+- IO pin refs: `_io_pin_name_list_sd`
+  - Write source: `write_net()` 输出 `( PIN pin )`，见 `src/database/manager/builder/def_builder/def_write.cpp:837-839`。
+  - Read source: `parse_net()` 对 `PIN` connection 按 pin name lookup，并设置 net pointer，见 `src/database/manager/builder/def_builder/def_read.cpp:1089-1100`。
+
+- Instance pin refs: `_instance_pin_list_sd`
+  - Write source: `write_net()` 输出 `( inst pin )`，见 `src/database/manager/builder/def_builder/def_write.cpp:842-844`。
+  - Read source: `parse_net()` 按 instance name 和 term pin name lookup，并设置 net pointer，见 `src/database/manager/builder/def_builder/def_read.cpp:1101-1116`。
+
+- Regular wire root: `Shadow<IdbRegularWire>::_wire_state_sd`, `_shield_name_sd`, `_segment_list_sd`
+  - Write source: `write_net()` 遍历 wire list 并调用 `write_net_wire()`，见 `src/database/manager/builder/def_builder/def_write.cpp:891-904`；`write_net_wire()` 输出 wire state 并按 segment 顺序输出，见 `src/database/manager/builder/def_builder/def_write.cpp:905-924`。
+  - Read source: `parse_net()` 为每个 DEF wire 创建 `IdbRegularWire`，设置 wire state/shield name，并按 path 创建 segment，见 `src/database/manager/builder/def_builder/def_read.cpp:1119-1237`。
+
+- Segment dispatch: `_is_via_sd`, `_is_rect_sd`, `_is_second_point_virtual_sd`
+  - Write source: `write_net_wire_segment()` 按 rect/via/points 三分支分发，见 `src/database/manager/builder/def_builder/def_write.cpp:926-940`；points/via/rect writer 分别见 `src/database/manager/builder/def_builder/def_write.cpp:942-1011`。
+  - Read source: `parse_net()` 在 `DEFIPATH_VIA`、`DEFIPATH_RECT`、`DEFIPATH_VIRTUALPOINT` 中设置对应状态，见 `src/database/manager/builder/def_builder/def_read.cpp:1147-1218`。
+
+- Segment layer / via / points / rect: `_layer_name_sd`, `_via_name_sd`, `_point_list_sd`, `_delta_rect_sd`
+  - Write source: point/via/rect segment writer 输出 layer、via、point、rect geometry，见 `src/database/manager/builder/def_builder/def_write.cpp:942-1011`。
+  - Read source: `parse_net()` 读取 layer/via/point/virtual point/rect，并按 layer/via name lookup，见 `src/database/manager/builder/def_builder/def_read.cpp:1138-1218`。
+
+- Runtime pointers and copied via geometry
+  - Write source: DEF writer 输出 names/geometry，不输出 raw layer/via/pin/instance pointers，见 `src/database/manager/builder/def_builder/def_write.cpp:827-1011`。
+  - Read source: 原始 `parse_net()` 通过 name lookup 重建 pin/instance/layer/via pointers，并 `copy_via()` 设置 coordinate，见 `src/database/manager/builder/def_builder/def_read.cpp:1081-1237`。
+
 ## Child Storage View
 
 `IdbNet` 是 `NETS` root，当前子节点/引用处理如下：

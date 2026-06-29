@@ -56,6 +56,22 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbDie>, "iDieSD", (primary_key), (points_sd
 - `_x_sd`
 - `_y_sd`
 
+## Field Mapping To Original DEF Flow
+
+以下按 EDADB shadow 域列出它对应的原始 DEF read/write 代码位置。
+
+- Die points: `_points_sd`
+  - Write source: `DefWrite::write_die()` 输出 `DIEAREA` 点序列，见 `src/database/manager/builder/def_builder/def_write.cpp:340-360`。
+  - Read source: `dieAreaCallback()` / `parse_die()` 按 DEF point 顺序创建 die points，见 `src/database/manager/builder/def_builder/def_read.cpp:691-729`。
+
+- Die bounding box: computed from points
+  - Write source: DEF writer 不直接输出 bounding box，只输出 die points，见 `src/database/manager/builder/def_builder/def_write.cpp:340-360`。
+  - Read source: 原始 `parse_die()` 在 points 恢复后调用 `die->set_bounding_box()`，见 `src/database/manager/builder/def_builder/def_read.cpp:709-729`。
+
+- Root identity: `primary_key`
+  - Write source: 原始 DEF 中 `DIEAREA` 是 singleton section，没有 name identity，见 `src/database/manager/builder/def_builder/def_write.cpp:340-360`。
+  - Read source: 原始 `parse_die()` 写入当前 layout singleton `IdbDie`，见 `src/database/manager/builder/def_builder/def_read.cpp:709-729`。
+
 ## Child Storage View
 
 `IdbDie` 是 `DIEAREA` root，唯一持久化子节点是 point vector：

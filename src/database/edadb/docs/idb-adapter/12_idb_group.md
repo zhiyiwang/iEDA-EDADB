@@ -40,6 +40,22 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbGroup>, "iGroupSD", (_group_name_sd, _ord
 
 保存字段覆盖原始 DEF writer/read 需要的 group name、region name 和 member instance names。
 
+## Field Mapping To Original DEF Flow
+
+以下按 EDADB shadow 域列出它对应的原始 DEF read/write 代码位置。
+
+- Group identity / root order: `_group_name_sd`, `_order_sd`
+  - Write source: `DefWrite::write_group()` 按 group list 顺序输出 group name，见 `src/database/manager/builder/def_builder/def_write.cpp:1106-1138`。
+  - Read source: `groupNameCallback()` / `parse_group_name()` 创建 group，见 `src/database/manager/builder/def_builder/def_read.cpp:2176-2192` 和 `src/database/manager/builder/def_builder/def_read.cpp:2238-2251`。
+
+- Member instance patterns: `_instance_name_vec_sd`
+  - Write source: `write_group()` 输出 member instance list，见 `src/database/manager/builder/def_builder/def_write.cpp:1106-1138`。
+  - Read source: `groupMemberCallback()` / `parse_group_member()` 保存 member pattern，见 `src/database/manager/builder/def_builder/def_read.cpp:2194-2236` 和 `src/database/manager/builder/def_builder/def_read.cpp:2253-2286`。
+
+- Region ref: `_region_name_sd`
+  - Write source: `write_group()` 输出 group region constraint，见 `src/database/manager/builder/def_builder/def_write.cpp:1106-1138`。
+  - Read source: `groupCallback()` / `parse_group()` 读取 region name 并关联 region，见 `src/database/manager/builder/def_builder/def_read.cpp:2158-2174` 和 `src/database/manager/builder/def_builder/def_read.cpp:2288-2311`。
+
 ## Child Storage View
 
 `IdbGroup` 是 `GROUPS` root，当前子节点是 instance name vector：

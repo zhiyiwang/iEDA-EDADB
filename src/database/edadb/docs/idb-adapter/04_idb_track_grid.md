@@ -48,6 +48,22 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbTrackGrid>, "iTrackGridSD", (primary_key,
 
 保存字段覆盖原始 DEF writer 需要的内容：direction、start、pitch、track number、layer name vector。
 
+## Field Mapping To Original DEF Flow
+
+以下按 EDADB shadow 域列出它对应的原始 DEF read/write 代码位置。
+
+- Root identity / order: `primary_key`, `_order_sd`
+  - Write source: `DefWrite::write_track_grid()` 按 `IdbTrackGridList` 顺序输出 `TRACKS`，见 `src/database/manager/builder/def_builder/def_write.cpp:362-388`。
+  - Read source: `trackGridCallback()` / `parse_track_grid()` 按 DEF 出现顺序创建 track grid，见 `src/database/manager/builder/def_builder/def_read.cpp:731-787`。
+
+- Track axis fields: `_track_sd`, `_track_num_sd`
+  - Write source: `write_track_grid()` 输出 direction/start/track count/pitch，见 `src/database/manager/builder/def_builder/def_write.cpp:362-388`。
+  - Read source: `parse_track_grid()` 设置 direction/start/num/pitch，见 `src/database/manager/builder/def_builder/def_read.cpp:749-787`。
+
+- Layer refs: `_layer_name_vec_sd`
+  - Write source: `write_track_grid()` 输出 `LAYER` 后的 layer name list，见 `src/database/manager/builder/def_builder/def_write.cpp:362-388`。
+  - Read source: `parse_track_grid()` 按 DEF layer list lookup LEF layer，并维护 routing layer track-grid back link，见 `src/database/manager/builder/def_builder/def_read.cpp:749-787`。
+
 ## Child Storage View
 
 `IdbTrackGrid` 是 `TRACKS` root，当前子节点分两类：

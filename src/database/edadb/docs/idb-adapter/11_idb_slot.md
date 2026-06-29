@@ -38,6 +38,22 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbSlot>, "iSlotSD", (primary_key, _order_sd
 
 保存字段覆盖原始 DEF writer/read 需要的 layer name 和 rectangle vector。
 
+## Field Mapping To Original DEF Flow
+
+以下按 EDADB shadow 域列出它对应的原始 DEF read/write 代码位置。
+
+- Root identity / order: `primary_key`, `_order_sd`
+  - Write source: `DefWrite::write_slot()` 按 slot list 顺序输出 slot records，见 `src/database/manager/builder/def_builder/def_write.cpp:1074-1104`。
+  - Read source: `slotsCallback()` / `parse_slot()` 按 DEF 出现顺序创建 slot，见 `src/database/manager/builder/def_builder/def_read.cpp:2117-2156`。
+
+- Layer ref: `_layer_name_sd`
+  - Write source: `write_slot()` 输出 slot layer name，见 `src/database/manager/builder/def_builder/def_write.cpp:1074-1104`。
+  - Read source: `parse_slot()` 按 layer name lookup LEF layer，见 `src/database/manager/builder/def_builder/def_read.cpp:2135-2156`。
+
+- Rect geometry: `_rect_list_sd`
+  - Write source: `write_slot()` 输出 slot rectangle list，见 `src/database/manager/builder/def_builder/def_write.cpp:1074-1104`。
+  - Read source: `parse_slot()` 读取 slot rects，见 `src/database/manager/builder/def_builder/def_read.cpp:2135-2156`。
+
 ## Child Storage View
 
 `IdbSlot` 是 `SLOTS` root，当前持久化子节点是 rectangle vector：

@@ -40,6 +40,18 @@ TABLE4CLASS(edadb::Shadow<idb::IdbGCellGrid>, "iGCellGrid", (primary_key, _order
 
 保存字段正好覆盖原始 DEF writer/read 需要的四个字段。
 
+## Field Mapping To Original DEF Flow
+
+以下按 EDADB shadow 域列出它对应的原始 DEF read/write 代码位置。
+
+- Root identity / order: `primary_key`, `_order_sd`
+  - Write source: `DefWrite::write_gcell_grid()` 按 `IdbGCellGridList` 顺序输出，见 `src/database/manager/builder/def_builder/def_write.cpp:1013-1038`。
+  - Read source: `gcellGridCallback()` / `parse_gcell_grid()` 按 DEF 出现顺序创建 grid，见 `src/database/manager/builder/def_builder/def_read.cpp:2034-2073`。
+
+- GCell fields: `_direction_sd`, `_start_sd`, `_num_sd`, `_space_sd`
+  - Write source: `write_gcell_grid()` 输出 direction/start/count/space，见 `src/database/manager/builder/def_builder/def_write.cpp:1013-1038`。
+  - Read source: `parse_gcell_grid()` 设置 direction/start/num/space，见 `src/database/manager/builder/def_builder/def_read.cpp:2052-2073`。
+
 ## Child Storage View
 
 `IdbGCellGrid` 是 `GCELLGRID` root，没有持久化子节点：

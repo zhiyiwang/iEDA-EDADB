@@ -59,6 +59,34 @@ TABLE4CLASS(edadb::Shadow<idb::IdbPin>, "iPinSD",
 - `Shadow<IdbPort>` 保存 port orient/status/coordinate 和 layer shape vector。
 - `Shadow<IdbLayerShape>` 保存 layer name、shape type 和 rect vector。
 
+## Field Mapping To Original DEF Flow
+
+以下按 EDADB shadow 域列出它对应的原始 DEF read/write 代码位置。
+
+- Pin identity / root order: `_pin_name_sd`, `_order_sd`
+  - Write source: `DefWrite::write_pin()` 按 IO pin list 顺序输出 pin name，见 `src/database/manager/builder/def_builder/def_write.cpp:517-586`。
+  - Read source: `pinsBeginCallback()` / `parse_pin_number()` reserve list，`pinCallback()` / `parse_pin()` 按 DEF 出现顺序创建 IO pin，见 `src/database/manager/builder/def_builder/def_read.cpp:1529-1746`。
+
+- Net ref and pin flags: `_net_name_sd`, `_is_io_pin_sd`, `_is_special_net_sd`
+  - Write source: `write_pin()` 输出 pin net name 和 SPECIAL flag，见 `src/database/manager/builder/def_builder/def_write.cpp:517-586`。
+  - Read source: `parse_pin()` 读取 net name、设置 IO pin，并读取 special flag，见 `src/database/manager/builder/def_builder/def_read.cpp:1573-1746`。
+
+- IO term fields: `_io_term_sd`
+  - Write source: `write_pin()` 输出 direction/use，并根据 port/layer shape 输出 PORT 信息，见 `src/database/manager/builder/def_builder/def_write.cpp:517-586`。
+  - Read source: `parse_pin()` 创建 `IdbTerm`，设置 direction/use/special/port，见 `src/database/manager/builder/def_builder/def_read.cpp:1573-1746`。
+
+- Port placement: `_location_sd`, `_orient_sd`, `_average_coordinate_sd`
+  - Write source: `write_pin()` 输出 port/pin placement status、location、orient，见 `src/database/manager/builder/def_builder/def_write.cpp:517-586`。
+  - Read source: `parse_pin()` 读取 placement，并计算 pin/term bounding box，见 `src/database/manager/builder/def_builder/def_read.cpp:1573-1746`。
+
+- Layer shapes and rects: port/layer-shape child shadows, `_layer_num_sd`
+  - Write source: `write_pin()` 输出 layer name 和 rect geometry，见 `src/database/manager/builder/def_builder/def_write.cpp:517-586`。
+  - Read source: `parse_pin()` 为每个 port layer 创建 `IdbLayerShape`，按 layer name lookup 并保存 rect，见 `src/database/manager/builder/def_builder/def_read.cpp:1573-1746`。
+
+- Computed absolute geometry
+  - Write source: DEF writer 输出 DEF-relative pin/port geometry，不输出 runtime bbox cache，见 `src/database/manager/builder/def_builder/def_write.cpp:517-586`。
+  - Read source: `parse_pin()` 调用 term/pin bbox 计算逻辑，见 `src/database/manager/builder/def_builder/def_read.cpp:1573-1746`。
+
 ## Child Storage View
 
 `IdbPin` 是 `PINS` root，当前子节点按 DEF 语义分层保存：

@@ -90,6 +90,7 @@ EDADB adapter 的目标不是 dump 完整 C++ 对象，而是贴近 iEDA 原始 
 - Original Write Semantics: 原始 writer 输出哪些字段。
 - Original Read Semantics: 原始 parser 如何重建对象。
 - EDADB Schema: 当前 DB 中保存哪些 class/member。
+- Field Mapping To Original DEF Flow: 按 DB 域列出对应的 `DefWrite` / `DefRead` 函数和源码行范围。
 - Child Storage View: root 下有哪些子节点、direct/shadow 选择、为什么不用原始类。
 - EDADB Write Path: `writeIdbT()` 是否贴近原始 writer。
 - EDADB Read Path: `readIdbT()` 是否贴近原始 parser。

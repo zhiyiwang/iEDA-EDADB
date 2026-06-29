@@ -19,6 +19,9 @@
 - optional `SOURCE`、`ORIGINAL`、`WEIGHT`。
 - special wire list，按 wire vector 顺序输出。
 - wire segment：按 segment vector 顺序输出 point/via/rect 三类路径。
+  - `segment->is_via()`：输出 layer、width、shape、point 和 via name。
+  - `segment->is_rect()`：输出 shape、layer 和 rect。
+  - 其它：输出 layer、width、shape 和两点线段。
 
 原始 writer 对 shield wire 当前直接返回 `kDbFail`，但 caller 不检查这个局部返回值；当前 adapter 不扩大该语义。
 
@@ -33,7 +36,7 @@
   - `*` instance 表示 pin string，加入 `pin_string_list`。
   - `PIN` instance 表示 IO pin，按 pin name 查找并设置 special net pointer。
   - 其它 instance/pin pair 按 instance name 和 term pin name 查找，并设置 special net pointer。
-- 如果存在 pin string，则调用 `get_pin_list_by_names()` 补回 instance pin list 和 instance list。
+- 如果存在 pin string，则调用 `get_pin_list_by_names()` 补回 instance pin list 和 instance list；此时 DEF 文本并没有显式 IO/instance pin refs。
 - `parse_pdn_wire()` 读取 routed/fixed/cover/shield wire、layer、via、width、point、shape、style。
 - `parse_pdn_rects()` 读取 special net rect，作为 rect segment 重建。
 
@@ -59,13 +62,82 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbSpecialNet>, "iSpecNetSD",
 
 保存字段覆盖当前 DEF writer/read 需要的 net header、pin refs、wire list、segment list、points/via/rect。
 
+连接字段必须遵守原始 writer/parser 的互斥语义：
+
+- 如果 `_pin_string_list_sd` 非空，只保存 pin-string 形式，不保存 resolved IO/instance refs。
+- 如果 `_pin_string_list_sd` 为空，才保存 `_io_pin_name_list_sd` 和 `_instance_pin_list_sd`。
+
+## Field Mapping To Original DEF Flow
+
+以下按 EDADB shadow 域列出它对应的原始 DEF read/write 代码位置。这里记录的是语义来源，不是 C++ object dump。
+
+- Net identity / root order: `_net_name_sd`, `_order_sd`
+  - Write source: `DefWrite::write_special_net()` 遍历 `special_net_list->get_net_list()` 并输出 net name，见 `src/database/manager/builder/def_builder/def_write.cpp:775-778`。
+  - Read source: `DefRead::parse_pdn()` 按 DEF 出现顺序 `net_list->add_net(def_net->name())`，见 `src/database/manager/builder/def_builder/def_read.cpp:1315-1320`。
+  - EDADB adapter: `_net_name_sd` 作为 identity，`_order_sd` 保存 root list 顺序；read 使用 `ORDER BY "_order_sd"`，见 `src/database/manager/builder/def_builder/def_read_edadb.cpp:1015-1019`。
+
+- Net header: `_connect_type_sd`, `_source_type_sd`, `_original_net_name_sd`, `_weight_sd`
+  - Write source: `USE/SOURCE/ORIGINAL/WEIGHT` 输出，见 `src/database/manager/builder/def_builder/def_write.cpp:796-810`。
+  - Read source: `hasUse()/hasSource()/hasWeight()/hasOriginal()` 恢复字段，见 `src/database/manager/builder/def_builder/def_read.cpp:1322-1335`。
+  - EDADB adapter: `Shadow<IdbSpecialNet>::toShadow()` 保存字段，见 `src/database/edadb/idb/shadow/shadow_idb_special_net.h:132-137`；`readSpecialNet()` 恢复字段，见 `src/database/manager/builder/def_builder/def_read_edadb.cpp:1035-1039`。
+
+- Pin-string refs: `_pin_string_list_sd`
+  - Write source: `pin_string_list` 非空时输出 `( * pin )`，见 `src/database/manager/builder/def_builder/def_write.cpp:780-783`。
+  - Read source: `instance == "*"` 时 `add_pin_string()`，随后 `get_pin_list_by_names()` 计算 instance pin refs，见 `src/database/manager/builder/def_builder/def_read.cpp:1338-1342` 和 `src/database/manager/builder/def_builder/def_read.cpp:1368-1371`。
+  - EDADB adapter: `toShadow()` 保存 pin strings，且非空时不保存 resolved IO/instance refs，见 `src/database/edadb/idb/shadow/shadow_idb_special_net.h:139-156`；read 时同样走 pin-string 分支，见 `src/database/manager/builder/def_builder/def_read_edadb.cpp:1041-1047`。
+
+- Explicit IO pin refs: `_io_pin_name_list_sd`
+  - Write source: 仅当没有 `pin_string_list` 时输出 `( PIN pin )`，见 `src/database/manager/builder/def_builder/def_write.cpp:784-787`。
+  - Read source: `instance == "PIN"` 时按 pin name lookup，并设置 `pin->set_special_net(net)`，见 `src/database/manager/builder/def_builder/def_read.cpp:1343-1350`。
+  - EDADB adapter: 仅在 `_pin_string_list_sd` 为空时保存/恢复，见 `src/database/edadb/idb/shadow/shadow_idb_special_net.h:143-146` 和 `src/database/manager/builder/def_builder/def_read_edadb.cpp:1047-1054`。
+
+- Explicit instance pin refs: `_instance_pin_list_sd`
+  - Write source: 仅当没有 `pin_string_list` 时输出 `( inst pin )`，见 `src/database/manager/builder/def_builder/def_write.cpp:789-791`。
+  - Read source: 普通 instance/pin pair 按 instance name 和 term pin name lookup，并设置 `pin->set_special_net(net)`，见 `src/database/manager/builder/def_builder/def_read.cpp:1351-1365`。
+  - EDADB adapter: `SpecialNetPinRef` 保存 instance name、pin name 和 pin ref order，且仅在 `_pin_string_list_sd` 为空时启用，见 `src/database/edadb/idb/shadow/shadow_idb_special_net.h:148-155`；read 时按 `_order_sd` 恢复，见 `src/database/manager/builder/def_builder/def_read_edadb.cpp:1056-1068`。
+
+- Wire root: `Shadow<IdbSpecialWire>::_wire_state_sd`, `_shield_name_sd`, `_segment_list_sd`
+  - Write source: `write_special_net()` 遍历 wire list 并调用 `write_specialnet_wire(wire)`，见 `src/database/manager/builder/def_builder/def_write.cpp:813-815`；`write_specialnet_wire()` 输出 wire state 并按 segment 顺序调用 segment writer，见 `src/database/manager/builder/def_builder/def_write.cpp:744-764`。
+  - Read source: `parse_pdn_wire()` 为每个 DEF wire 创建 `IdbSpecialWire`，设置 wire state/shield name，并按 path 创建 segment，见 `src/database/manager/builder/def_builder/def_read.cpp:1394-1405`。
+  - EDADB adapter: `Shadow<IdbSpecialWire>::toShadow()` 保存 wire state、shield name 和 segment vector，见 `src/database/edadb/idb/shadow/shadow_idb_special_net.h:94-103`；read 时恢复 wire 并初始化 segment list，见 `src/database/manager/builder/def_builder/def_read_edadb.cpp:1071-1078`。
+
+- Segment dispatch: `_is_via_sd`, `_is_rect_sd`
+  - Write source: `write_specialnet_wire_segment()` 按 `is_via()` / `is_rect()` / points 三分支分发，见 `src/database/manager/builder/def_builder/def_write.cpp:731-739`。
+  - Read source: DEF path 中 `DEFIPATH_VIA` 设置 `set_is_via(true)`，见 `src/database/manager/builder/def_builder/def_read.cpp:1416-1431`；DEF rectangles 在 `parse_pdn_rects()` 中设置 `set_is_rect(true)`，见 `src/database/manager/builder/def_builder/def_read.cpp:1486-1508`。
+  - EDADB adapter: segment shadow 保存 `_is_via_sd/_is_rect_sd`，见 `src/database/edadb/idb/shadow/shadow_idb_special_net.h:49-50`；read 时恢复 flag，见 `src/database/manager/builder/def_builder/def_read_edadb.cpp:1080-1084`。
+
+- Segment layer / width / shape / style: `_layer_name_sd`, `_route_width_sd`, `_shape_type_sd`, `_style_sd`
+  - Write source: point/via segment 输出 layer、route width 和 optional shape，见 `src/database/manager/builder/def_builder/def_write.cpp:651-710`；rect segment 输出 shape/layer/rect，见 `src/database/manager/builder/def_builder/def_write.cpp:712-728`。
+  - Read source: `DEFIPATH_LAYER/WIDTH/SHAPE/STYLE` 分别恢复 layer、route width、shape、style，见 `src/database/manager/builder/def_builder/def_read.cpp:1412-1455`；rect layer/shape 在 `parse_pdn_rects()` 中恢复，见 `src/database/manager/builder/def_builder/def_read.cpp:1494-1505`。
+  - EDADB adapter: segment shadow 保存字段，见 `src/database/edadb/idb/shadow/shadow_idb_special_net.h:44-48`；read 时按 layer name lookup，并恢复 width/shape/style，见 `src/database/manager/builder/def_builder/def_read_edadb.cpp:1080-1095`。
+
+- Segment via: `_via_name_sd`
+  - Write source: via segment 输出 via name，见 `src/database/manager/builder/def_builder/def_write.cpp:677-710`。
+  - Read source: `DEFIPATH_VIA` 按 DEF via list、LEF via list lookup，`copy_via()` 后设置 coordinate，见 `src/database/manager/builder/def_builder/def_read.cpp:1416-1430`。
+  - EDADB adapter: segment shadow 保存 via name，见 `src/database/edadb/idb/shadow/shadow_idb_special_net.h:45`；read 时优先 DEF via、再 LEF via lookup，并 `copy_via()`，见 `src/database/manager/builder/def_builder/def_read_edadb.cpp:1106-1121`。
+
+- Segment points: `_point_list_sd`
+  - Write source: point/via segment 输出 point list 中的起点和可选第二点，见 `src/database/manager/builder/def_builder/def_write.cpp:651-710`。
+  - Read source: `DEFIPATH_POINT` 调用 `segment->add_point(x, y)`，见 `src/database/manager/builder/def_builder/def_read.cpp:1439-1445`。
+  - EDADB adapter: segment shadow 保存 point vector，见 `src/database/edadb/idb/shadow/shadow_idb_special_net.h:56-59`；read 时顺序恢复 points，见 `src/database/manager/builder/def_builder/def_read_edadb.cpp:1097-1099`。
+
+- Segment rect: `_delta_rect_sd`
+  - Write source: rect segment 输出 `RECT` 坐标，见 `src/database/manager/builder/def_builder/def_write.cpp:712-728`。
+  - Read source: `parse_pdn_rects()` 读取 `xl/yl/xh/yh` 并 `set_delta_rect()`，见 `src/database/manager/builder/def_builder/def_read.cpp:1494-1508`。
+  - EDADB adapter: segment shadow 保存 delta rect，见 `src/database/edadb/idb/shadow/shadow_idb_special_net.h:52-54`；read 时恢复 delta rect，见 `src/database/manager/builder/def_builder/def_read_edadb.cpp:1101-1104`。
+
+- Computed geometry: segment bounding box
+  - Write source: DEF writer 不直接输出 bounding box，只由 segment points/rect/via 间接决定。
+  - Read source: 原始 parser 在 wire path 和 rect path 末尾调用 `segment->set_bounding_box()`，见 `src/database/manager/builder/def_builder/def_read.cpp:1474` 和 `src/database/manager/builder/def_builder/def_read.cpp:1508`。
+  - EDADB adapter: 不保存 bounding box；read 末尾重新调用 `set_bounding_box()`，见 `src/database/manager/builder/def_builder/def_read_edadb.cpp:1124`。
+
 ## Child Storage View
 
 `IdbSpecialNet` 是 `SPECIALNETS` root，当前子节点/引用处理如下：
 
-- `_pin_string_list_sd`：primitive string vector，保存 `( * pin )` 形式和顺序。
-- `_io_pin_name_list_sd`：primitive string vector，保存 IO pin names；read 时按 name 查找 `IdbPin*`。
-- `_instance_pin_list_sd`：`SpecialNetPinRef` vector，保存 instance name、pin name 和 pin ref order。
+- `_pin_string_list_sd`：primitive string vector，保存 `( * pin )` 形式和顺序；非空时作为唯一连接存储视图。
+- `_io_pin_name_list_sd`：primitive string vector，保存 IO pin names；仅在没有 pin string 时启用，read 时按 name 查找 `IdbPin*`。
+- `_instance_pin_list_sd`：`SpecialNetPinRef` vector，保存 instance name、pin name 和 pin ref order；仅在没有 pin string 时启用。
 - `_wire_list_sd`：`Shadow<IdbSpecialWire>` vector，保存 wire order。
 - `_segment_list_sd`：`Shadow<IdbSpecialWireSegment>` vector，保存 segment order。
 - `_point_list_sd`：coordinate child vector，保存 path point order。
@@ -92,6 +164,8 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbSpecialNet>, "iSpecNetSD",
 - 空列表返回 `kDbSuccess`，避免 EDADB dispatcher 中断整个写流程。
 - 非空时按 list 顺序构造 `Shadow<IdbSpecialNet>` pointer vector。
 - 写入 `_order_sd`、net header、pin refs、wire/segment/point nested vectors。
+- pin refs 按 `DefWrite::write_special_net()` 的分支写入：`pin_string_list` 非空时只写 pin strings；否则写 IO pin refs 和 instance pin refs。
+- segment shadow 按 `DefWrite::write_specialnet_wire_segment()` 的分支保存：via/rect/point 三类由 `_is_via_sd`、`_is_rect_sd` 和对应字段决定。
 - 使用 `edadb::insertVector<Shadow<IdbSpecialNet>>()` 写入。
 
 这与原始 DEF writer 输出字段一致；空列表返回值是 adapter 层为 dispatcher 做的语义调整。
@@ -102,7 +176,8 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbSpecialNet>, "iSpecNetSD",
 
 - 通过 `ORDER BY "_order_sd"` 读取 root records，恢复 `IdbSpecialNetList` 原始 append 顺序。
 - 创建 special net，恢复 original/use/source/weight。
-- 恢复 pin string、IO pin refs、instance pin refs，并设置 pin 的 special net pointer。
+- 如果存在 pin string，只恢复 pin string，然后按原始 `parse_pdn()` 调用 `get_pin_list_by_names()` 补回 instance pin list 和 instance list。
+- 如果不存在 pin string，才恢复 IO pin refs、instance pin refs，并设置 pin 的 special net pointer。
 - 按 wire/segment/point vector 顺序重建 special wire。
 - layer name 通过 LEF `IdbLayers` 查找。
 - via name 优先查 DEF via list，找不到再查 LEF via list，并调用 `segment->copy_via()`。
@@ -118,6 +193,7 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbSpecialNet>, "iSpecNetSD",
 - pin/instance/layer/via pointers：由 name lookup 重建。
 - segment bounding box：由 points/rect/via 信息调用 `set_bounding_box()` 重建。
 - copied via coordinate：由 `segment->copy_via()` 后设置 point start。
+- pin-string resolved instance pin refs：由 `get_pin_list_by_names()` 根据当前 instance list 计算，不作为 DB 显式连接记录保存。
 - edge segment array：后续按 special wire geometry 重新构建或由使用方维护。
 
 ## Order / Index
@@ -139,7 +215,7 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbSpecialNet>, "iSpecNetSD",
 ## Tests
 
 - demo `sky130_gcd` 覆盖非空 special net：`writeSpecialNet insert special_net_count=2 segment_count=639`，`readSpecialNet restored special_net_count=2 segment_count=639`。
-- `src/database/edadb/test/run_idb_roundtrip_regression.sh` 的 default case 检查 special net root order、header fields、pin string/wire/segment/point child counts。
+- `src/database/edadb/test/run_idb_roundtrip_regression.sh` 的 default case 检查 special net root order、header fields、pin string/wire/segment/point child counts、pin-string 与 resolved pin refs 的互斥、via/rect/point segment dispatch 类型。
 - `aux_optional` case 检查 optional original/source/weight。
 - `routed_irt` case 间接覆盖 routed database 与 regular net 共存场景。
 

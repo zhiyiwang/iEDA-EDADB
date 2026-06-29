@@ -48,6 +48,26 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbBlockage>, "iBlockageSD",
 
 保存字段覆盖当前 DEF writer 实际输出的 blockage type、layer/component 引用、flags 和 rectangle vector。
 
+## Field Mapping To Original DEF Flow
+
+以下按 EDADB shadow 域列出它对应的原始 DEF read/write 代码位置。
+
+- Root identity / order: `primary_key`, `_order_sd`
+  - Write source: `DefWrite::write_blockage()` 按 blockage list 顺序输出 blockage records，见 `src/database/manager/builder/def_builder/def_write.cpp:588-648`。
+  - Read source: `blockageCallback()` / `parse_blockage()` 按 DEF 出现顺序创建 blockage，见 `src/database/manager/builder/def_builder/def_read.cpp:1937-2032`。
+
+- Blockage type and flags: `_type_sd`, `_is_pushdown_sd`, `_is_except_pgnet_sd`
+  - Write source: `write_blockage()` 区分 routing/placement blockage，并输出 pushdown/except pgnet 等 flags，见 `src/database/manager/builder/def_builder/def_write.cpp:588-648`。
+  - Read source: `parse_blockage()` 读取 routing/placement 类型和 flags，见 `src/database/manager/builder/def_builder/def_read.cpp:1955-2032`。
+
+- Layer and instance refs: `_layer_name_sd`, `_instance_name_sd`
+  - Write source: `write_blockage()` 输出 routing layer 或 placement component refs，见 `src/database/manager/builder/def_builder/def_write.cpp:588-648`。
+  - Read source: `parse_blockage()` 按 layer/instance name lookup 并设置引用，见 `src/database/manager/builder/def_builder/def_read.cpp:1955-2032`。
+
+- Rect geometry: `_rect_list_sd`
+  - Write source: `write_blockage()` 输出 blockage rect list，见 `src/database/manager/builder/def_builder/def_write.cpp:588-648`。
+  - Read source: `parse_blockage()` 读取 rects 并加入 blockage，见 `src/database/manager/builder/def_builder/def_read.cpp:1955-2032`。
+
 ## Child Storage View
 
 `IdbBlockage` 是 `BLOCKAGES` root，当前子节点/引用处理如下：

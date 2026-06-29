@@ -50,6 +50,26 @@ TABLE4CLASS(edadb::Shadow<idb::IdbRow>, "iRow", (_name_sd, _order_sd, _site_name
 
 当前采用 `Shadow<IdbRow>`，只保存 DEF row 语义字段和 root list order。
 
+## Field Mapping To Original DEF Flow
+
+以下按 EDADB shadow 域列出它对应的原始 DEF read/write 代码位置。
+
+- Row identity / root order: `_name_sd`, `_order_sd`
+  - Write source: `DefWrite::write_row()` 按 `IdbRowList` 顺序输出 row name，见 `src/database/manager/builder/def_builder/def_write.cpp:437-458`。
+  - Read source: `rowCallback()` / `parse_row()` 按 DEF 出现顺序创建 row，见 `src/database/manager/builder/def_builder/def_read.cpp:789-841`。
+
+- Site name and orient: `_site_name_sd`, `_site_orient_sd`
+  - Write source: `write_row()` 输出 site name 和 row orient，见 `src/database/manager/builder/def_builder/def_write.cpp:437-458`。
+  - Read source: `parse_row()` 从 LEF site clone row-local site，并设置 orient，见 `src/database/manager/builder/def_builder/def_read.cpp:807-841`。
+
+- Origin / DO-BY / STEP: `_origin_x_sd`, `_origin_y_sd`, `_row_num_x_sd`, `_row_num_y_sd`, `_step_x_sd`, `_step_y_sd`
+  - Write source: `write_row()` 输出 origin、DO/BY、STEP，见 `src/database/manager/builder/def_builder/def_write.cpp:437-458`。
+  - Read source: `parse_row()` 设置 origin、row num、step，见 `src/database/manager/builder/def_builder/def_read.cpp:807-841`。
+
+- Row bounding box: computed from site/origin/count/step
+  - Write source: DEF writer 不直接输出 bbox，只输出 ROW scalar fields，见 `src/database/manager/builder/def_builder/def_write.cpp:437-458`。
+  - Read source: `parse_row()` 恢复 row fields 后调用 `row->set_bounding_box()`，见 `src/database/manager/builder/def_builder/def_read.cpp:807-841`。
+
 ## Child Storage View
 
 `IdbRow` 是 `ROW` root，当前没有持久化 owning child object：

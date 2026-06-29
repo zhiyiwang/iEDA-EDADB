@@ -40,6 +40,22 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbFill>, "iFillSD",
 
 保存字段覆盖当前 DEF writer/read 需要的 fill type、layer/via name、rect vector 和 coordinate vector。
 
+## Field Mapping To Original DEF Flow
+
+以下按 EDADB shadow 域列出它对应的原始 DEF read/write 代码位置。
+
+- Root identity / order: `primary_key`, `_order_sd`
+  - Write source: `DefWrite::write_fill()` 按 fill list 顺序输出 fill records，见 `src/database/manager/builder/def_builder/def_write.cpp:1140-1188`。
+  - Read source: `fillsCallback()` / `parse_fill_number()` reserve list，`fillCallback()` / `parse_fill()` 按 DEF 出现顺序创建 fill，见 `src/database/manager/builder/def_builder/def_read.cpp:2313-2396`。
+
+- Fill type and refs: `_type_sd`, `_layer_name_sd`, `_via_name_sd`
+  - Write source: `write_fill()` 区分 layer fill 和 via fill，并输出 layer/via name，见 `src/database/manager/builder/def_builder/def_write.cpp:1140-1188`。
+  - Read source: `parse_fill()` 读取 layer/via fill 类型，并按 layer/via name lookup，见 `src/database/manager/builder/def_builder/def_read.cpp:2352-2396`。
+
+- Fill geometry: `_rect_list_sd`, `_coordinate_list_sd`
+  - Write source: `write_fill()` 输出 layer fill rects 或 via fill coordinates，见 `src/database/manager/builder/def_builder/def_write.cpp:1140-1188`。
+  - Read source: `parse_fill()` 读取 rect list 或 coordinate list，见 `src/database/manager/builder/def_builder/def_read.cpp:2352-2396`。
+
 ## Child Storage View
 
 `IdbFill` 是 `FILLS` root，当前子节点按 type flatten 到同一张 root shadow 表：

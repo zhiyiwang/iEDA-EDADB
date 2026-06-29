@@ -1042,30 +1042,30 @@ bool DefReadEdadb::readSpecialNet(void) {
             special_net->add_pin_string(pin_name_sd);
         }
 
-        for (auto& pin_name_sd : special_net_sd->_io_pin_name_list_sd) {
-            IdbPin* pin = io_pin_list->find_pin(pin_name_sd);
-            if (pin != nullptr) {
-                special_net->add_io_pin(pin);
-                pin->set_special_net(special_net);
-            }
-        }
-
-        std::sort(special_net_sd->_instance_pin_list_sd.begin(), special_net_sd->_instance_pin_list_sd.end(),
-                  [](const auto& lhs, const auto& rhs) { return lhs._order_sd < rhs._order_sd; });
-        for (auto& pin_ref_sd : special_net_sd->_instance_pin_list_sd) {
-            IdbInstance* instance = instance_list->find_instance(pin_ref_sd.instance_name);
-            if (instance != nullptr) {
-                special_net->add_instance(instance);
-                IdbPin* pin = instance->get_pin_by_term(pin_ref_sd.pin_name);
+        if (!special_net->get_pin_string_list().empty()) {
+            instance_list->get_pin_list_by_names(special_net->get_pin_string_list(), special_net->get_instance_pin_list(), special_net->get_instance_list());
+        } else {
+            for (auto& pin_name_sd : special_net_sd->_io_pin_name_list_sd) {
+                IdbPin* pin = io_pin_list->find_pin(pin_name_sd);
                 if (pin != nullptr) {
-                    special_net->add_instance_pin(pin);
+                    special_net->add_io_pin(pin);
                     pin->set_special_net(special_net);
                 }
             }
-        }
 
-        if (!special_net->get_pin_string_list().empty()) {
-            instance_list->get_pin_list_by_names(special_net->get_pin_string_list(), special_net->get_instance_pin_list(), special_net->get_instance_list());
+            std::sort(special_net_sd->_instance_pin_list_sd.begin(), special_net_sd->_instance_pin_list_sd.end(),
+                      [](const auto& lhs, const auto& rhs) { return lhs._order_sd < rhs._order_sd; });
+            for (auto& pin_ref_sd : special_net_sd->_instance_pin_list_sd) {
+                IdbInstance* instance = instance_list->find_instance(pin_ref_sd.instance_name);
+                if (instance != nullptr) {
+                    special_net->add_instance(instance);
+                    IdbPin* pin = instance->get_pin_by_term(pin_ref_sd.pin_name);
+                    if (pin != nullptr) {
+                        special_net->add_instance_pin(pin);
+                        pin->set_special_net(special_net);
+                    }
+                }
+            }
         }
 
         IdbSpecialWireList* wire_list = special_net->get_wire_list();

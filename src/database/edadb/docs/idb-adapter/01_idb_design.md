@@ -53,6 +53,26 @@
 
 当前采用 direct class mapping，不需要 `Shadow<IdbDesign>`。
 
+## Field Mapping To Original DEF Flow
+
+以下按 EDADB 持久化域列出它对应的原始 DEF read/write 代码位置。这里记录的是 DEF-visible design header 语义。
+
+- DEF version: `_version`
+  - Write source: `DefWrite::write_version()` 输出 `VERSION`，见 `src/database/manager/builder/def_builder/def_write.cpp:270-279`。
+  - Read source: `versionCallback()` / `parse_version()` 设置 version，见 `src/database/manager/builder/def_builder/def_read.cpp:619-638`。
+
+- Design name: `_design_name`
+  - Write source: `DefWrite::write_design()` 输出 `DESIGN`，见 `src/database/manager/builder/def_builder/def_write.cpp:308-316`。
+  - Read source: `designCallback()` / `parse_design()` 设置 design name，见 `src/database/manager/builder/def_builder/def_read.cpp:640-659`。
+
+- Units: `_units->_micron_dbu`
+  - Write source: `DefWrite::write_units()` 输出 `UNITS DISTANCE MICRONS`，并按 DEF/LEF units fallback 取值，见 `src/database/manager/builder/def_builder/def_write.cpp:318-338`。
+  - Read source: `unitsCallback()` / `parse_units()` 设置 micron DBU，见 `src/database/manager/builder/def_builder/def_read.cpp:661-689`。
+
+- Bus bit chars: `_bus_bit_chars`
+  - Write source: `DefWrite::write_busbit_char()` 输出 `BUSBITCHARS`，见 `src/database/manager/builder/def_builder/def_write.cpp:288-306`。
+  - Read source: `busBitCharsCallBack()` / `parse_bus_bit_chars()` 设置左右 delimiter，见 `src/database/manager/builder/def_builder/def_read.cpp:2398-2434`。
+
 ## Child Storage View
 
 `IdbDesign` 是 DEF design header 的 root，当前只有两个持久化子节点：

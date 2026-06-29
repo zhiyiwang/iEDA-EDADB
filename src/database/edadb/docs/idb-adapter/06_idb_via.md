@@ -51,6 +51,26 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbLayerShape>, "iLayerShapeSD", ...);
 
 `IdbVia` 不定义 root shadow：root identity 是 `_name`，`_master_instance` 内部由 EDADB 的 `Shadow<IdbViaMaster>` 隐式转换。
 
+## Field Mapping To Original DEF Flow
+
+以下按 EDADB direct/shadow 域列出它对应的原始 DEF read/write 代码位置。
+
+- Via identity: `IdbVia::_name`
+  - Write source: `DefWrite::write_via()` 输出每个 DEF via name，见 `src/database/manager/builder/def_builder/def_write.cpp:390-435`。
+  - Read source: `viaBeginCallback()` / `parse_via_num()` reserve via list，`viaCallback()` / `parse_via()` 创建 DEF via，见 `src/database/manager/builder/def_builder/def_read.cpp:1759-1935`。
+
+- Via generate rule: via master generate fields
+  - Write source: `write_via()` 对 generate via 输出 `VIARULE`、cut size、cut rows/cols、enclosure、spacing、row/col offset、origin、pattern 等字段，见 `src/database/manager/builder/def_builder/def_write.cpp:390-435`。
+  - Read source: `parse_via()` 读取 generated via rule/cut size/layers/spacing/enclosure/offset/origin/pattern，见 `src/database/manager/builder/def_builder/def_read.cpp:1800-1935`。
+
+- Via layer-shape rects: layer name and rect list
+  - Write source: `write_via()` 对 fixed via 输出 layer + rect geometry，见 `src/database/manager/builder/def_builder/def_write.cpp:390-435`。
+  - Read source: `parse_via()` 读取 via layer rects 并绑定 LEF layer，见 `src/database/manager/builder/def_builder/def_read.cpp:1800-1935`。
+
+- Runtime layer/via-rule pointers: computed by lookup
+  - Write source: DEF writer 输出 name/geometry，不输出 raw pointers，见 `src/database/manager/builder/def_builder/def_write.cpp:390-435`。
+  - Read source: 原始 parser 通过 layout via rules/layers lookup 重建 pointer 关系，见 `src/database/manager/builder/def_builder/def_read.cpp:1800-1935`。
+
 ## Child Storage View
 
 `IdbVia` 是 `VIAS` root，root 本身 direct mapping，但子节点必须使用 storage view：
