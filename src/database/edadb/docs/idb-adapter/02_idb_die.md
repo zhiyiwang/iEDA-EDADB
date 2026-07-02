@@ -9,6 +9,12 @@
 - EDADB Write: `DefWriteEdadb::writeIdbDie()`
 - EDADB Read: `DefReadEdadb::readIdbDie()`
 
+本文件按 `src/database/edadb/docs/def-ieda-mapping-and-order.md` 的约束检查：
+
+- DEF section 映射：`DIEAREA`。
+- root-vector order 等级：Level D，但原因是 singleton geometry，没有 `vector<IdbDie>` root list。
+- nested vector 约束：`IdbDie::_points` 是 deeper nested vector，必须保序，不能参与 D-level root record sort。
+
 ## Original Write Semantics
 
 原始 `DefWrite::write_die()`：
@@ -50,11 +56,32 @@ TABLE4SHADOW_WVEC(idb::IdbDie);
 TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbDie>, "iDieSD", (primary_key), (points_sd));
 ```
 
+Schema / init 代码位置：
+
+- `Shadow<IdbCoordinate<int32_t>>` table macro: `src/database/edadb/idb/edadb_idb_schema.h:33`
+- `iCoordSD` table macro: `src/database/edadb/idb/edadb_idb_schema.h:34`
+- `TABLE4SHADOW_WVEC(idb::IdbDie)`: `src/database/edadb/idb/edadb_idb_schema.h:37`
+- `iDieSD` table macro: `src/database/edadb/idb/edadb_idb_schema.h:38`
+- Primary-key setup: `src/database/edadb/idb/edadb_idb_init.cpp:21`
+- Table registration: `src/database/edadb/idb/edadb_idb_init.cpp:80`
+
 `points_sd` 中的元素使用 `Shadow<IdbCoordinate<int32_t>>` / `iCoordSD` 存储：
 
 - `_vec_idx`
 - `_x_sd`
 - `_y_sd`
+
+Schema 与新 order/index 约束的关系：
+
+- `IdbDie` 是 singleton root object，不需要 `_order_sd`。
+- `primary_key` 只用于把 nested point rows 归属到 singleton die，不表示 DEF root list order。
+- `points_sd` 是 nested vector，必须通过 `_vec_idx` 恢复原始点序。
+
+Primary-key 约束：
+
+- `initPrimKeys()` 显式关闭 `Shadow<IdbCoordinate<int32_t>>` 的 primary-key 行为；coordinate 是 nested vector element，身份来自 owner + `_vec_idx`。
+- `initPrimKeys()` 没有关闭 `Shadow<IdbDie>` 的 primary-key 行为；`primary_key` 是 `iDieSD` 的 root owner key，用来归属 `points_sd` child rows。
+- `initReadDb()` / `initWriteDb()` 都先调用 `initPrimKeys()`，再调用 `initAllTables()`，因此 read/write 的 table metadata 一致。
 
 ## Field Mapping To Original DEF Flow
 
@@ -96,6 +123,11 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbDie>, "iDieSD", (primary_key), (points_sd
 
 当前 `writeIdbDie()`：
 
+- Code: `src/database/manager/builder/def_builder/def_write_edadb.cpp:188`
+- Shadow conversion: `src/database/manager/builder/def_builder/def_write_edadb.cpp:196`
+- EDADB insert: `src/database/manager/builder/def_builder/def_write_edadb.cpp:202`
+- `Shadow<IdbDie>::toShadow()`: `src/database/edadb/idb/shadow/shadow_idb_die.h:22`
+
 - 从 `layout->get_die()` 取 active die。
 - 调用 `Shadow<IdbDie>::toShadow(die)`。
 - `toShadow()` 只把 `die->get_points()` 赋给 `points_sd`。
@@ -107,11 +139,19 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbDie>, "iDieSD", (primary_key), (points_sd
 
 当前 `readIdbDie()`：
 
+- Code: `src/database/manager/builder/def_builder/def_read_edadb.cpp:290`
+- Reset active die: `src/database/manager/builder/def_builder/def_read_edadb.cpp:298`
+- EDADB read op: `src/database/manager/builder/def_builder/def_read_edadb.cpp:300`
+- Shadow restore: `src/database/manager/builder/def_builder/def_read_edadb.cpp:308`
+- Rebuild bounding box: `src/database/manager/builder/def_builder/def_read_edadb.cpp:312`
+- `Shadow<IdbDie>::fromShadow()`: `src/database/edadb/idb/shadow/shadow_idb_die.h:34`
+
 - 从 `layout->get_die()` 取 active die。
 - 先调用 `die->reset()` 清空旧点。
 - 从 EDADB 读取一个 `Shadow<IdbDie>`。
 - 调用 `fromShadow(die)`。
-- `fromShadow()` 按 `points_sd` 顺序把点加入 active die，并调用 `set_bounding_box()`。
+- `fromShadow()` 按 `points_sd` 顺序把点加入 active die。
+- `readIdbDie()` 显式调用 `die->set_bounding_box()`，与原始 `parse_die()` 的控制流保持一致。
 
 这与原始 `parse_die()` 一致：点来自持久化数据，bounding box 由点重建。
 
@@ -119,7 +159,7 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbDie>, "iDieSD", (primary_key), (points_sd
 
 这些字段不入库：
 
-- bounding box：读回后由 `set_bounding_box()` 根据点列表计算。
+- bounding box：读回后由 `readIdbDie()` 调用 `set_bounding_box()` 根据点列表计算。
 - `_area`：`get_area()` lazy 计算。
 - `_polygon`：`add_point()` 时同步构建。
 
@@ -127,13 +167,26 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbDie>, "iDieSD", (primary_key), (points_sd
 
 `IdbDie` 是 singleton root object，不存在 `vector<IdbDie>` root list 顺序问题。
 
+按 `def-ieda-mapping-and-order.md` 的等级定义：
+
+- Level: D。
+- 具体含义：不是“可排序 root list”，而是“无 root vector / singleton geometry”。
+- 测试要求：比较 `DIEAREA` 点序列和由点重建出的 geometry；不能通过排序处理点序差异。
+
 `IdbDie` 的 point vector 是 nested member，必须保存顺序：
 
 - DEF `DIEAREA` 输出按 `die->get_points()` 顺序写点。
 - polygon/bounding box 重建也依赖点序。
 - 当前 `Shadow<IdbCoordinate<int32_t>>` 使用 `_vec_idx` 保存 vector index，这是必要字段。
+- D-level normalized diff 不能重排 `DIEAREA` points；`IdbDie` 没有可排序 root records。
 
 当前状态：root order 不需要；nested point order 已由 shadow `_vec_idx` 实现。
+
+对 normalized diff 的影响：
+
+- `DIEAREA` 是 singleton statement。
+- 如果点坐标或点顺序不同，normalized diff 必须失败。
+- D-level root record 排序规则不适用于 `DIEAREA` points。
 
 ## Risks / TODO
 
@@ -142,4 +195,5 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbDie>, "iDieSD", (primary_key), (points_sd
 - `Shadow<IdbDie>::toShadow()` 直接引用 active die 的 point pointers，不深拷贝；这是写入期间的 non-owning view，要求 `insertObject()` 在 die 生命周期内同步完成。
 - `Shadow<IdbDie>::fromShadow()` 会把 EDADB 读出的 point pointers 转移给 active die，并清空 `points_sd`；这依赖 EDADB read 为 vector child 分配新对象。
 - `die->reset()` 会删除旧点，因此必须在 `fromShadow()` 前执行。
+- `readIdbDie()` 必须在 `fromShadow()` 后调用 `die->set_bounding_box()`，保持与原始 `parse_die()` 一致。
 - 如果未来 EDADB 支持 root vector child 的隐式 owner key，`Shadow<IdbDie>` 可以再评估是否删除；当前阶段不建议改。

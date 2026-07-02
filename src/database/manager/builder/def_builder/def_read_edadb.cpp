@@ -309,6 +309,7 @@ bool DefReadEdadb::readIdbDie(void) {
         std::cerr << "DefReadEdadb::readIdbDie failed to restore shadow" << std::endl;
         return false;
     }
+    die->set_bounding_box();
 
     EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] readIdbDie restored point_count="
               << die->get_points().size() << std::endl;

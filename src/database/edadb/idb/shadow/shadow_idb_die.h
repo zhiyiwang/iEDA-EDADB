@@ -39,7 +39,6 @@ public:
             obj->add_point(point);
         }
         points_sd.clear();
-        obj->set_bounding_box();
         return true;
     } // fromShadow 
 

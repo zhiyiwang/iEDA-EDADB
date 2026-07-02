@@ -57,6 +57,14 @@
 - `TABLE4CLASS(idb::IdbBusBitChars, "iBusBitChars", (_left_delimiter, _right_delimiter))`
 - `TABLE4CLASS(idb::IdbDesign, "iDesign", (_design_name, _version, _units, _bus_bit_chars))`
 
+Schema / init 代码位置：
+
+- `IdbUnits` table macro: `src/database/edadb/idb/edadb_idb_schema.h:23`
+- `IdbBusBitChars` table macro: `src/database/edadb/idb/edadb_idb_schema.h:26`
+- `IdbDesign` table macro: `src/database/edadb/idb/edadb_idb_schema.h:29`
+- Primary-key setup: `src/database/edadb/idb/edadb_idb_init.cpp:21`
+- Table registration: `src/database/edadb/idb/edadb_idb_init.cpp:79`
+
 当前采用 direct class mapping，不需要 `Shadow<IdbDesign>`。
 
 Schema 与新 order/index 约束的关系：
@@ -64,6 +72,12 @@ Schema 与新 order/index 约束的关系：
 - `IdbDesign` 是 singleton root object，不需要 `_order_sd`。
 - `IdbUnits` 和 `IdbBusBitChars` 是 inline singleton value object，不属于 root list。
 - 当前 direct mapping 覆盖 DEF-visible singleton 字段；不涉及 ABCD 中的 root-vector reorder 问题。
+
+Primary-key 约束：
+
+- `initPrimKeys()` 显式关闭 `IdbUnits` 和 `IdbBusBitChars` 的 primary-key 行为，因为它们作为 `IdbDesign` 的 inline child/value object 使用。
+- `initPrimKeys()` 没有关闭 `IdbDesign` 的 primary-key 行为；`IdbDesign` 是 root singleton table，按 EDADB 默认 root table key 规则处理。
+- `initReadDb()` / `initWriteDb()` 都先调用 `initPrimKeys()`，再调用 `initAllTables()`，因此 read/write 的 table metadata 一致。
 
 ## Field Mapping To Original DEF Flow
 
