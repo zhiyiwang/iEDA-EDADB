@@ -16,6 +16,12 @@
 
 `DIVIDERCHAR` 目前由原始 writer 固定输出 `/`，不是 `IdbDesign` 成员，当前不进入 EDADB `IdbDesign` schema。
 
+本文件按 `src/database/edadb/docs/def-ieda-mapping-and-order.md` 的约束检查：
+
+- DEF section 映射：`VERSION`、`BUSBITCHARS`、`DESIGN`、`UNITS`。
+- root-vector order 等级：Level D，但原因是 singleton fields，没有 root list 可排序。
+- normalized diff：不应对 `IdbDesign` 做 record sort；只要求 singleton 字段值一致。
+
 ## Original Write Semantics
 
 原始 `DefWrite` 输出字段：
@@ -53,6 +59,12 @@
 
 当前采用 direct class mapping，不需要 `Shadow<IdbDesign>`。
 
+Schema 与新 order/index 约束的关系：
+
+- `IdbDesign` 是 singleton root object，不需要 `_order_sd`。
+- `IdbUnits` 和 `IdbBusBitChars` 是 inline singleton value object，不属于 root list。
+- 当前 direct mapping 覆盖 DEF-visible singleton 字段；不涉及 ABCD 中的 root-vector reorder 问题。
+
 ## Field Mapping To Original DEF Flow
 
 以下按 EDADB 持久化域列出它对应的原始 DEF read/write 代码位置。这里记录的是 DEF-visible design header 语义。
@@ -86,6 +98,9 @@
 
 当前 `writeIdbDesign()` 已贴近原始 writer：
 
+- Code: `src/database/manager/builder/def_builder/def_write_edadb.cpp:145`
+- EDADB insert: `src/database/manager/builder/def_builder/def_write_edadb.cpp:180`
+
 - 检查 active `design`。
 - 按 `write_units()` 语义计算 `micron_dbu`：优先 DEF units，否则 LEF units。
 - 如果 DEF units 无效但 LEF units 有效，会把 active `def_units->_micron_dbu` 规范化成实际 DEF 输出值。
@@ -97,6 +112,10 @@
 ## EDADB Read Path
 
 当前 `readIdbDesign()`：
+
+- Code: `src/database/manager/builder/def_builder/def_read_edadb.cpp:236`
+- EDADB read op: `src/database/manager/builder/def_builder/def_read_edadb.cpp:237`
+- Active design restore: `src/database/manager/builder/def_builder/def_read_edadb.cpp:252`
 
 - 从 EDADB 读取一个 `IdbDesign got` 作为安全缓冲。
 - 设置 active `design->_design_name` 和 `_version`。
@@ -117,12 +136,25 @@
 
 `IdbDesign` 是 singleton root object，不存在 `vector<IdbDesign>` root list 顺序问题。
 
+按 `def-ieda-mapping-and-order.md` 的等级定义：
+
+- Level: D。
+- 具体含义：不是“可排序 root list”，而是“无 root vector / singleton data”。
+- 测试要求：比较 `_design_name`、`_version`、`_units->_micron_dbu`、`_bus_bit_chars` 左右 delimiter 的值；不能通过排序处理 Design 差异。
+
 依据：
 
 - 原始 DEF read/write 只恢复一个 active `IdbDesign`。
 - `IdbUnits` 和 `IdbBusBitChars` 是 inline/member object，不是 DEF statement list。
+- 点工具没有 `vector<IdbDesign>` order/index 使用点。
 
 当前状态：已满足，不需要 `_order`。
+
+对 normalized diff 的影响：
+
+- `VERSION`、`BUSBITCHARS`、`DESIGN`、`UNITS` 是 singleton statements。
+- 如果这些字段不同，normalized diff 必须失败。
+- D-level root record 排序规则不适用于本类，因为没有可排序 root records。
 
 ## Risks / TODO
 
