@@ -28,18 +28,23 @@ TABLE4CLASS(idb::IdbBusBitChars, "iBusBitChars", (_left_delimiter, _right_delimi
 #include "database/data/design/IdbDesign.h"
 TABLE4CLASS(idb::IdbDesign, "iDesign", (_design_name, _version, _units, _bus_bit_chars));
 
+
 #include "shadow/shadow_idb_geometry.h"
 TABLE4SHADOW(idb::IdbCoordinate<int32_t>);
 TABLE4CLASS (edadb::Shadow<idb::IdbCoordinate<int32_t>>, "iCoordSD", (_vec_idx, _x_sd, _y_sd));
-
 
 #include "shadow/shadow_idb_die.h"
 TABLE4SHADOW_WVEC(idb::IdbDie);
 TABLE4CLASS_WVEC (edadb::Shadow<idb::IdbDie>, "iDieSD", (primary_key), (points_sd));
 
 
+// EDADB_TODO: Row adapter stores only site name/orient and rebuilds row-local
+// IdbSite from LEF layout sites. Re-enable this only when a real EDADB iSite
+// reader/writer is added.
+#if 0
 #include "database/data/design/db_layout/IdbSite.h"
 TABLE4CLASS(idb::IdbSite, "iSite", (_name, _width, _heigtht, _b_overlap, _site_class, _symmetry, _orient, _type));
+#endif
 
 #include "shadow/shadow_idb_row.h"
 TABLE4SHADOW(idb::IdbRow);

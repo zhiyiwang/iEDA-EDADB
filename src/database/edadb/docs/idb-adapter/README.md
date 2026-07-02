@@ -21,6 +21,7 @@ EDADB adapter 的目标不是 dump 完整 C++ 对象，而是贴近 iEDA 原始 
 - computed fields 不入库；read path 按原始 parser 语义重新计算或重建。
 - 每个 root 文档必须说明 child storage view：哪些子节点 direct mapping，哪些子节点 shadow，哪些运行时 pointer/cache 不入库以及如何重建。
 - 每启用一个 `readIdbXXX/writeIdbXXX`，必须同步 schema/init、DEF callback、测试 SQL 和文档。
+- 未被任何 enabled adapter 读写、注册或验证的 schema macro 必须休眠并标 `EDADB_TODO`，不能因为原始类存在就默认建表。
 
 ## Per-Class Checklist
 
@@ -31,11 +32,13 @@ EDADB adapter 的目标不是 dump 完整 C++ 对象，而是贴近 iEDA 原始 
 3. 找到 `def_read.cpp` 中对应的 callback / `parse_xxx()`，一个 `T` 可能对应多个 parser。
 4. 列出 parser 从 DEF 文本读取并设置的字段。
 5. 区分 DB 读取字段和读后计算字段；计算字段必须说明依赖和计算方式。
-6. 检查 `edadb_idb_schema.h` 中 `TABLE4CLASS` / `TABLE4SHADOW` 是否覆盖上述字段。
-7. 判断是否需要 shadow：优先直接映射；只有 direct mapping 无法表达 PK、vector ownership、引用查找、重建视图时才定义 shadow。
-8. 检查 `edadb_idb_init.cpp` 中表初始化是否和 schema、write/read 启用范围一致。
-9. 检查 `DefReadEdadb::createDbByDef()` 是否只禁用了已由 EDADB 完整恢复的 DEF callbacks。
-10. 用 demo roundtrip、DB 表内容和关键对象数量验证。
+6. 检查 `def-ieda-mapping-and-order.md` 中对应 DEF section 的 root order 等级，并在类文档中记录该约束。
+7. 检查 `edadb_idb_schema.h` 中 `TABLE4CLASS` / `TABLE4SHADOW` 是否覆盖上述字段，并记录宏定义代码位置。
+8. 判断是否需要 shadow：优先直接映射；只有 direct mapping 无法表达 PK、vector ownership、引用查找、重建视图时才定义 shadow。
+9. 检查 `edadb_idb_init.cpp` 中 primary-key 设置和表初始化是否和 schema、write/read 启用范围一致，并记录代码位置。
+10. 任何 helper/child class table macro 如果没有 enabled adapter 使用，必须休眠；文档要说明为什么不需要建表。
+11. 检查 `DefReadEdadb::createDbByDef()` 是否只禁用了已由 EDADB 完整恢复的 DEF callbacks。
+12. 用 demo roundtrip、DB 表内容和关键对象数量验证。
 
 ## Order / Index Policy
 
@@ -90,6 +93,7 @@ EDADB adapter 的目标不是 dump 完整 C++ 对象，而是贴近 iEDA 原始 
 - Original Write Semantics: 原始 writer 输出哪些字段。
 - Original Read Semantics: 原始 parser 如何重建对象。
 - EDADB Schema: 当前 DB 中保存哪些 class/member。
+- Schema / Init: 记录 `TABLE4CLASS` / `TABLE4SHADOW` 宏、`initPrimKeys()`、`EDADB_INIT_TABLE()` 的代码位置；同时说明 PK 是否启用。
 - Field Mapping To Original DEF Flow: 按 DB 域列出对应的 `DefWrite` / `DefRead` 函数和源码行范围。
 - Child Storage View: root 下有哪些子节点、direct/shadow 选择、为什么不用原始类。
 - EDADB Write Path: `writeIdbT()` 是否贴近原始 writer。
