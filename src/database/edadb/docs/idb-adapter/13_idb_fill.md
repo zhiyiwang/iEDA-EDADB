@@ -62,7 +62,7 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbFill>, "iFillSD",
 
 - layer fill 使用 `_layer_name_sd` 和 `_rect_list_sd`。
 - via fill 使用 `_via_name_sd` 和 `_coordinate_list_sd`。
-- `_rect_list_sd` 使用 direct `IdbRect` child rows，保存 rect 顺序。
+- `_rect_list_sd` 使用 `Shadow<IdbRect>` child rows；`_vec_idx` 保存并恢复 rect 顺序。
 - `_coordinate_list_sd` 使用 `Shadow<IdbCoordinate<int32_t>>` child rows，保存 coordinate 顺序。
 
 不直接保存 `IdbLayer*` 或 `IdbVia*`：它们是运行时引用。read 时按 name lookup layer/via；via 会按原始 parser 语义 clone 后挂到 fill。

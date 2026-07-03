@@ -131,7 +131,7 @@ check_default_sql() {
         "clk|clk|1|1|0|1000,9990|1" "$name pin fields"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || ':' || _pin_name_sd, ',') from (select _order_sd, _pin_name_sd from iPinSD order by _order_sd limit 5);")" \
         "0:clk,1:req_msg[0],2:req_msg[1],3:req_msg[2],4:req_msg[3]" "$name pin order prefix"
-    assert_eq "$(sql_value "$edadb_db" "select (select count(*) from iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD) || '|' || (select count(*) from iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD__layer_shape_list_sd_iLayerShapeSD) || '|' || (select count(*) from iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD__layer_shape_list_sd_iLayerShapeSD__rect_list_sd_IdbRect);")" \
+    assert_eq "$(sql_value "$edadb_db" "select (select count(*) from iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD) || '|' || (select count(*) from iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD__layer_shape_list_sd_iLayerShapeSD) || '|' || (select count(*) from iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD__layer_shape_list_sd_iLayerShapeSD__rect_list_sd_IdbRectSD);")" \
         "56|56|56" "$name pin port/layer/rect child counts"
     assert_eq "$(sql_value "$edadb_db" "select _net_name_sd || '|' || _connect_type_sd || '|' || _source_type_sd || '|' || _weight_sd from iSpecNetSD where _net_name_sd='VSS';")" \
         "VSS|4|0|0" "$name special net default fields"
@@ -166,17 +166,17 @@ check_aux_optional_sql() {
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || '|' || _type_sd || '|' || coalesce(_layer_name_sd,'') || '|' || _is_pushdown_sd || '|' || _is_except_pgnet_sd, ';') from (select * from iBlockageSD order by _order_sd);")" \
         "0|1|met1|1|1;1|2||0|0" "$name blockage fields"
     assert_eq "$(sql_value "$edadb_db" "select _name || '|' || _type from iRegion;")" "test_region|1" "$name region fields"
-    assert_eq "$(sql_value "$edadb_db" "select _lx || '|' || _ly || '|' || _hx || '|' || _hy from iRegion__boudary_list_IdbRect;")" \
-        "1000|1000|10000|10000" "$name region rect"
+    assert_eq "$(sql_value "$edadb_db" "select _vec_idx || '|' || _lx_sd || '|' || _ly_sd || '|' || _hx_sd || '|' || _hy_sd from iRegion__boudary_list_IdbRectSD;")" \
+        "0|1000|1000|10000|10000" "$name region rect"
     assert_eq "$(sql_value "$edadb_db" "select _order_sd || '|' || _layer_name_sd from iSlotSD;")" "0|met1" "$name slot layer"
-    assert_eq "$(sql_value "$edadb_db" "select _lx || '|' || _ly || '|' || _hx || '|' || _hy from iSlotSD__rect_list_sd_IdbRect;")" \
-        "5000|5000|6000|6000" "$name slot rect"
+    assert_eq "$(sql_value "$edadb_db" "select _vec_idx || '|' || _lx_sd || '|' || _ly_sd || '|' || _hx_sd || '|' || _hy_sd from iSlotSD__rect_list_sd_IdbRectSD;")" \
+        "0|5000|5000|6000|6000" "$name slot rect"
     assert_eq "$(sql_value "$edadb_db" "select _group_name_sd || '|' || _order_sd || '|' || _region_name_sd from iGroupSD;")" "test_group|0|test_region" "$name group region"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(__edadb_vec_idx || ':' || value, ',') from (select __edadb_vec_idx, value from iGroupSD__instance_name_vec_sd___edadb_primitive_vector order by __edadb_vec_idx);")" \
         "0:ctrl/_34_,1:ctrl/_35_" "$name group member order"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || '|' || _type_sd || '|' || coalesce(_layer_name_sd,'') || '|' || coalesce(_via_name_sd,''), ';') from (select * from iFillSD order by _order_sd);")" \
         "0|1|met1|;1|2||via_1600x480" "$name fill typed rows"
-    assert_eq "$(sql_value "$edadb_db" "select count(*) from iFillSD__rect_list_sd_IdbRect;")" "1" "$name fill rect count"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from iFillSD__rect_list_sd_IdbRectSD;")" "1" "$name fill rect count"
     assert_eq "$(sql_value "$edadb_db" "select count(*) from iFillSD__coordinate_list_sd_iCoordSD;")" "1" "$name fill via coordinate count"
     assert_eq "$(sql_value "$edadb_db" "select _original_net_name_sd || '|' || _source_type_sd || '|' || _weight_sd from iSpecNetSD where _net_name_sd='VDD';")" \
         "orig_vdd_net|1|5" "$name special net optional fields"

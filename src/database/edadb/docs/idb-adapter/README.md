@@ -63,6 +63,7 @@ EDADB adapter 的目标不是 dump 完整 C++ 对象，而是贴近 iEDA 原始 
 | `IdbTrackGridList` | Yes | vector traversal, layer back links, DEF writer order | Implemented with `primary_key` as identity, `_order_sd` as list order, and ordered read. |
 | `IdbGCellGridList` | No | Level D; no point-tool root index/order dependency found | Direct no-shadow/no-order mapping; normalized diff handles root order-only differences. |
 | `IdbRegionList` | No | Level D; references are name-based and no point-tool root index/order dependency found | Direct no-shadow/no-order mapping; normalized diff handles root order-only differences. |
+| `IdbSlotList` | Yes | anonymous `SLOTS` records should preserve DEF append order for raw roundtrip | `primary_key` identity plus `_order_sd` ordered read; rect vector uses `Shadow<IdbRect>::_vec_idx`. |
 | `IdbBlockageList` | Yes | vector traversal and DEF writer order; no natural name identity | Implemented with `primary_key` as identity, `_order_sd` as list order, and ordered read. |
 
 ## Current Progress
@@ -79,7 +80,7 @@ EDADB adapter 的目标不是 dump 完整 C++ 对象，而是贴近 iEDA 原始 
 | Pin | Done | `_pin_name_sd` identity, `_order_sd` root order, port/layer shape relative geometry preserved. |
 | Blockage | Done | `primary_key` identity, `_order_sd` root order, layer/instance references rebuilt by name. |
 | Region | Done | Direct `IdbRegion`; `_name` identity, no `_order_sd`, boundary vector preserved. |
-| Slot | Done | `primary_key` identity, `_order_sd` root order, rectangle vector preserved. |
+| Slot | Done | `primary_key` identity for anonymous root records, `_order_sd` root order, rectangle vector uses `Shadow<IdbRect>::_vec_idx`. |
 | Group | Done | `_group_name_sd` identity, `_order_sd` root order, member vector order preserved. |
 | Fill | Done | `primary_key` identity, `_order_sd` root order, layer/via references rebuilt by name. |
 | SpecialNet | Done | `_net_name_sd` identity, `_order_sd` root order, pin/wire/segment vectors preserved. |
@@ -114,7 +115,7 @@ EDADB adapter 的目标不是 dump 完整 C++ 对象，而是贴近 iEDA 原始 
 - `08_idb_pin.md`: `IdbPin` for `PINS`, including IO term, port/layer shape storage, computed absolute geometry, and explicit root order.
 - `09_idb_blockage.md`: `IdbBlockage` for `BLOCKAGES`, including routing/placement polymorphism, rect vector, name references, and explicit root order.
 - `10_idb_region.md`: `IdbRegion` for `REGIONS`, including name/type and boundary rectangle vector persistence.
-- `11_idb_slot.md`: `IdbSlot` for `SLOTS`, including layer name, rectangle vector, and explicit root order.
+- `11_idb_slot.md`: `IdbSlot` for `SLOTS`, including layer name, rectangle vector, and anonymous root identity.
 - `12_idb_group.md`: `IdbGroup` for `GROUPS`, including region/member name references and explicit root/member order.
 - `13_idb_fill.md`: `IdbFill` for `FILLS`, including layer/via typed storage, geometry vectors, and explicit root order.
 - `14_idb_special_net.md`: `IdbSpecialNet` for `SPECIALNETS`, including pin refs, special wires, segments, geometry, and explicit root order.

@@ -66,7 +66,8 @@ TABLE4CLASS(idb::IdbGCellGrid, "iGCellGrid", (_direction, _start, _num, _space))
 TABLE4CLASS(edadb::Shadow<idb::IdbViaMasterGenerate>, "iViaMasterGenerateSD", (_rule_name_sd,  _cut_size_x_sd, _cut_size_y_sd, _cut_spacing_x_sd, _cut_spacing_y_sd, _enclosure_bottom_x_sd, _enclosure_bottom_y_sd, _enclosure_top_x_sd, _enclosure_top_y_sd, _num_cut_rows_sd, _num_cut_cols_sd, _original_offset_x_sd, _original_offset_y_sd, _offset_bottom_x_sd, _offset_bottom_y_sd, _offset_top_x_sd, _offset_top_y_sd, _layer_bottom_name_sd, _layer_cut_name_sd, _layer_top_name_sd, _pattern_name_sd));
 
 #include "database/basic/geometry/IdbGeometry.h"
-TABLE4CLASS(idb::IdbRect, "IdbRect", (_lx, _ly, _hx, _hy));
+TABLE4SHADOW(idb::IdbRect);
+TABLE4CLASS(edadb::Shadow<idb::IdbRect>, "IdbRectSD", (_vec_idx, _lx_sd, _ly_sd, _hx_sd, _hy_sd));
 
 #include "shadow/shadow_idb_layer_shape.h"
 TABLE4SHADOW_WVEC(idb::IdbLayerShape);

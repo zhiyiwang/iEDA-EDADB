@@ -72,7 +72,8 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbBlockage>, "iBlockageSD",
 
 `IdbBlockage` 是 `BLOCKAGES` root，当前子节点/引用处理如下：
 
-- `_rect_list_sd`：`vector<IdbRect>` child，保存 rect 几何和 child order；`IdbRect` 是纯标量，不需要 shadow。
+- `_rect_list_sd`：`vector<IdbRect>` child，使用 `Shadow<IdbRect>` 保存 rect 几何和 child order。
+- `Shadow<IdbRect>` 保存 `_vec_idx/_lx_sd/_ly_sd/_hx_sd/_hy_sd`，用 `_vec_idx` 恢复 rectangle vector 的原始顺序。
 - `_instance`：不作为 child 存库；保存 `_instance_name_sd`，read 时通过 `IdbInstanceList::find_instance()` 恢复。
 - `_layer`：不作为 child 存库；routing blockage 保存 `_layer_name_sd`，read 时通过 `IdbLayers::find_layer()` 恢复。
 

@@ -60,7 +60,7 @@ Schema 与 order/index 约束的关系：
 Primary-key 约束：
 
 - `initPrimKeys()` 没有关闭 `IdbRegion` 的 primary-key 行为；`iRegion` 使用 table macro 第一列 `_name` 作为 root identity。
-- `_boudary_list` 是 owned child vector，EDADB vector child 机制保存其 nested order。
+- `_boudary_list` 是 owned child vector，使用 `Shadow<IdbRect>::_vec_idx` 保存其 nested order。
 - `initReadDb()` / `initWriteDb()` 都先调用 `initPrimKeys()`，再调用 `initAllTables()`，因此 read/write 的 table metadata 一致。
 
 ## Field Mapping To Original DEF Flow
@@ -83,8 +83,8 @@ Primary-key 约束：
 
 `IdbRegion` 是 `REGIONS` root，当前持久化子节点是 boundary rectangle vector：
 
-- `_boudary_list`：`vector<IdbRect*>`，使用 direct `IdbRect` child table；字段名沿用 iEDA 原始类中的拼写。
-- `IdbRect` 只包含 `_lx/_ly/_hx/_hy` 纯几何标量，不需要 shadow。
+- `_boudary_list`：`vector<IdbRect*>`，使用 `Shadow<IdbRect>` child table；字段名沿用 iEDA 原始类中的拼写。
+- `Shadow<IdbRect>` 保存 `_vec_idx/_lx_sd/_ly_sd/_hx_sd/_hy_sd`，用 `_vec_idx` 恢复 boundary rectangle vector 的原始顺序。
 
 不保存 `_instance_list`：它不是 DEF `REGIONS` section 的直接输出字段，而是由 `COMPONENTS` 中的 region name 在 `readIdbInstance()` 阶段反向补回。
 
@@ -158,7 +158,7 @@ Primary-key 约束：
 - 排序单位必须是完整 region record；record 内部 boundary rectangle vector 不排序。
 - 如果 name/type/boundary rectangle 内容不同，normalized diff 必须失败。
 
-boundary rectangle vector 也应保持原始 DEF 顺序；当前由 `TABLE4CLASS_WVEC` 的 vector child 机制负责。
+boundary rectangle vector 也应保持原始 DEF 顺序；当前由 `Shadow<IdbRect>::_vec_idx` 负责，不依赖 SQLite child-row 返回顺序。
 
 ## Tests
 
