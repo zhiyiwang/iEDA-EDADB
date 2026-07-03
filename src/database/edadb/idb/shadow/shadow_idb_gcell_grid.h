@@ -11,6 +11,11 @@
 
 namespace edadb {
 
+// EDADB_TODO: IdbGCellGrid now uses direct TABLE4CLASS mapping because DEF
+// GCELLGRID only needs four scalar fields and has no child ownership or
+// non-owning pointer references. Keep this old shadow dormant unless those
+// requirements change.
+#if 0
 template<>
 class Shadow<idb::IdbGCellGrid> {
  public:
@@ -56,5 +61,6 @@ class Shadow<idb::IdbGCellGrid> {
  private:
   static inline uint64_t next_primary_key = 1;
 };
+#endif
 
 }  // namespace edadb

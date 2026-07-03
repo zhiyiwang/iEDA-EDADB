@@ -277,14 +277,7 @@ int32_t DefWriteEdadb::writeIdbGCellGrid(void) {
         return kDbSuccess;
     }
 
-    vector<edadb::Shadow<idb::IdbGCellGrid>> gcell_grid_sd_vec;
-    gcell_grid_sd_vec.reserve(gcell_grid_vec.size());
-    for (uint32_t gcell_grid_idx = 0; gcell_grid_idx < gcell_grid_vec.size(); ++gcell_grid_idx) {
-        gcell_grid_sd_vec.emplace_back();
-        gcell_grid_sd_vec.back().toShadow(gcell_grid_vec[gcell_grid_idx], &gcell_grid_idx);
-    }
-
-    if (!edadb::insertVector<edadb::Shadow<idb::IdbGCellGrid>>(gcell_grid_sd_vec)) {
+    if (!edadb::insertVector<idb::IdbGCellGrid>(gcell_grid_vec)) {
         std::cerr << "DefWriteEdadb::writeIdbGCellGrid failed to insertVector" << std::endl;
         return kDbFail;
     }

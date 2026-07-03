@@ -59,9 +59,7 @@ TABLE4CLASS_WVEC (edadb::Shadow<idb::IdbTrackGrid>, "iTrackGridSD", (primary_key
 
 
 #include "database/data/design/db_layout/IdbGCellGrid.h"
-#include "shadow/shadow_idb_gcell_grid.h"
-TABLE4SHADOW(idb::IdbGCellGrid);
-TABLE4CLASS(edadb::Shadow<idb::IdbGCellGrid>, "iGCellGrid", (primary_key, _order_sd, _direction_sd, _start_sd, _num_sd, _space_sd));
+TABLE4CLASS(idb::IdbGCellGrid, "iGCellGrid", (_direction, _start, _num, _space));
 
 
 #include "shadow/shadow_idb_via_master.h"

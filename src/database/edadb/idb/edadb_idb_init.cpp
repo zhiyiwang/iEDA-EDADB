@@ -80,7 +80,7 @@ int initAllTables(bool crt_tab) {
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbDie>, crt_tab);
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbRow>, crt_tab);
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbTrackGrid>, crt_tab);
-    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbGCellGrid>, crt_tab);
+    EDADB_INIT_TABLE(idb::IdbGCellGrid, crt_tab);
 
     EDADB_INIT_TABLE(idb::IdbVia, crt_tab);
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbInstance>, crt_tab);

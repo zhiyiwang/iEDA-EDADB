@@ -105,12 +105,13 @@ Primary-key 约束：
 
 当前需要 `Shadow<IdbTrackGrid>`：
 
+- shadow 的必要性来自 `_layer_list` 的存储视图转换，而不是来自 root order。
 - `IdbTrackGrid` 没有天然 name/ID，需要 `primary_key` 作为 root record 标识。
 - `IdbTrackGridList` 的顺序不是对象身份，不能把 vector index 作为 PK；因此用 `primary_key` 做 root identity，`_order_sd` 单独保存 list order。
 - `_layer_list` 是 `vector<IdbLayer*>`，属于对 LEF layer 的非 owning 引用；DB 中应保存 layer name，而不是持久化完整 layer 对象或裸指针。
 - read 时必须用 layer name 回查当前 layout 的 LEF layer，并重建 routing layer 到 track grid 的反向引用。
 
-如果未来 EDADB 支持稳定的 `IdbLayer*` name-reference 隐式转换，可以重新评估是否去掉 shadow；当前 direct mapping 不合适。
+如果未来 EDADB 支持稳定的 `IdbLayer*` name-reference 隐式转换，可以重新评估是否去掉 shadow；当前 direct mapping 不合适。`_order_sd` 不是 Level D 语义必需字段，只是当前 raw DEF roundtrip 的额外稳定性字段；若完全依赖 normalized diff，可再评估是否删除。
 
 ## EDADB Write Path
 

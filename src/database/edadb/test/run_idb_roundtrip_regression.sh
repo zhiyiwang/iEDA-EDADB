@@ -11,6 +11,7 @@ SKY130_WORKSPACE="$REPO_ROOT/scripts/design/sky130_gcd"
 BASE_DEF="$SKY130_WORKSPACE/result/iPL_result.def"
 ROUTED_DEF="$SKY130_WORKSPACE/result/iRT_result.def"
 DESIGN_TCL_SCRIPT_DIR="$SKY130_WORKSPACE/script"
+NORMALIZE_DEF_FOR_DIFF="$SCRIPT_DIR/normalize_def_for_diff.py"
 
 export WORKSPACE="$SKY130_WORKSPACE"
 export CONFIG_DIR="$WORKSPACE/iEDA_config"
@@ -68,16 +69,32 @@ assert_contains() {
     echo "PASS: $label contains '$pattern'"
 }
 
-assert_diff_clean() {
+assert_def_equivalent() {
     local expected="$1"
     local actual="$2"
     local diff_file="$3"
-    if ! diff -u "$expected" "$actual" >"$diff_file"; then
-        echo "FAIL: DEF mismatch: $expected vs $actual" >&2
-        echo "diff saved to: $diff_file" >&2
-        exit 1
+    if diff -u "$expected" "$actual" >"$diff_file"; then
+        echo "PASS: DEF files match: $actual"
+        return
     fi
-    echo "PASS: DEF files match: $actual"
+
+    local expected_norm="${diff_file%.diff}.expected.norm.def"
+    local actual_norm="${diff_file%.diff}.actual.norm.def"
+    local norm_diff="${diff_file%.diff}.normalized.diff"
+
+    python3 "$NORMALIZE_DEF_FOR_DIFF" "$expected" >"$expected_norm"
+    python3 "$NORMALIZE_DEF_FOR_DIFF" "$actual" >"$actual_norm"
+
+    if diff -u "$expected_norm" "$actual_norm" >"$norm_diff"; then
+        echo "PASS: DEF semantic match with D-level root order differences: $actual"
+        echo "raw diff saved to: $diff_file"
+        return
+    fi
+
+    echo "FAIL: DEF mismatch: $expected vs $actual" >&2
+    echo "raw diff saved to: $diff_file" >&2
+    echo "normalized diff saved to: $norm_diff" >&2
+    exit 1
 }
 
 check_default_sql() {
@@ -174,8 +191,8 @@ check_routed_sql() {
     local edadb2def_log="$4"
 
     assert_eq "$(sql_value "$edadb_db" "select count(*) from iGCellGrid;")" "6" "$name gcell grid count"
-    assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || ':' || _direction_sd || ':' || _start_sd || ':' || _num_sd || ':' || _space_sd, ';') from (select * from iGCellGrid order by _order_sd);")" \
-        "0:1:0:2:3600;1:1:3600:43:3360;2:1:144720:2:5240;3:2:0:2:3600;4:2:3600:43:3360;5:2:144720:2:5408" "$name gcell grid fields"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_direction || ':' || _start || ':' || _num || ':' || _space, ';') from (select * from iGCellGrid order by _direction, _start, _num, _space);")" \
+        "1:0:2:3600;1:3600:43:3360;1:144720:2:5240;2:0:2:3600;2:3600:43:3360;2:144720:2:5408" "$name gcell grid fields"
     assert_eq "$(sql_value "$edadb_db" "select count(*) from iNetSD;")" "677" "$name net count"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || ':' || _net_name_sd, ',') from (select _order_sd, _net_name_sd from iNetSD order by _order_sd limit 5);")" \
         "0:ctrl\$a_mux_sel[0],1:ctrl\$a_mux_sel[1],2:ctrl\$a_reg_en,3:ctrl\$b_mux_sel,4:ctrl\$b_reg_en" "$name routed net order prefix"
@@ -270,7 +287,7 @@ run_case() {
     export OUTPUT_DEF="$edadb_def"
     run_ieda "$SCRIPT_DIR/tcl/edadb2def_generic.tcl" "$case_dir/edadb2def.log"
 
-    assert_diff_clean "$direct_def" "$edadb_def" "$case_dir/direct_vs_edadb.diff"
+    assert_def_equivalent "$direct_def" "$edadb_def" "$case_dir/direct_vs_edadb.diff"
     case "$check_mode" in
         default)
             check_default_sql "$name" "$edadb_db" "$case_dir/def2edadb.log" "$case_dir/edadb2def.log"
@@ -299,7 +316,9 @@ main() {
     require_file "$ROUTED_DEF"
     require_file "$DESIGN_TCL_SCRIPT_DIR/DB_script/db_path_setting.tcl"
     require_file "$DESIGN_TCL_SCRIPT_DIR/DB_script/db_init_lef.tcl"
+    require_file "$NORMALIZE_DEF_FOR_DIFF"
     command -v sqlite3 >/dev/null
+    command -v python3 >/dev/null
 
     rm -rf "$OUT_DIR"
     mkdir -p "$OUT_DIR/fixtures"
