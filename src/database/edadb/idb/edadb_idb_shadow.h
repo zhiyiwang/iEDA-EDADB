@@ -22,7 +22,8 @@
 #include "shadow/shadow_idb_term.h"
 #include "shadow/shadow_idb_pin.h"
 #include "shadow/shadow_idb_blockage.h"
-#include "shadow/shadow_idb_region.h"
+// EDADB_TODO: IdbRegion currently uses direct TABLE4CLASS_WVEC mapping. Keep
+// shadow_idb_region.h dormant unless Region later needs an adapter view.
 #include "shadow/shadow_idb_slot.h"
 #include "shadow/shadow_idb_group.h"
 #include "shadow/shadow_idb_fill.h"

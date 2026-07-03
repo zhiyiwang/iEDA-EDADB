@@ -466,14 +466,7 @@ int32_t DefWriteEdadb::writeIdbRegion(void) {
       return kDbSuccess;
     }
 
-    vector<edadb::Shadow<idb::IdbRegion>> region_sd_vec;
-    region_sd_vec.reserve(region_vec.size());
-    for (uint32_t region_idx = 0; region_idx < region_vec.size(); ++region_idx) {
-        region_sd_vec.emplace_back();
-        region_sd_vec.back().toShadow(region_vec[region_idx], &region_idx);
-    }
-
-    if (!edadb::insertVector<edadb::Shadow<idb::IdbRegion>>(region_sd_vec)) {
+    if (!edadb::insertVector<idb::IdbRegion>(region_vec)) {
         std::cerr << "DefWriteEdadb::writeIdbRegion failed to insertVector" << std::endl;
         return kDbFail;
     }

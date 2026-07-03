@@ -521,17 +521,12 @@ bool DefReadEdadb::readIdbRegion(void) {
         return false;
     }
 
-    auto region_reader = edadb::makeGenericQueryOp<edadb::Shadow<idb::IdbRegion>>();
-    if (region_reader.preparePredicate("ORDER BY \"_order_sd\"") < 0) {
-        std::cerr << "DefReadEdadb::readIdbRegion failed to prepare ordered region query!" << std::endl;
-        return false;
-    }
+    auto region_reader = edadb::makeReadAllOp<idb::IdbRegion>();
 
     int32_t region_count = 0;
     while (true) {
         IdbRegion* region = new IdbRegion();
-        edadb::Shadow<idb::IdbRegion> region_sd;
-        const int read_count = edadb::readNext<edadb::Shadow<idb::IdbRegion>>(region_reader, &region_sd);
+        const int read_count = edadb::readNext<idb::IdbRegion>(region_reader, region);
         if (read_count == 0) {
             delete region;
             break;
@@ -542,7 +537,6 @@ bool DefReadEdadb::readIdbRegion(void) {
             return false;
         }
 
-        region_sd.fromShadow(region);
         region_list->add_region(region);
         ++region_count;
     }

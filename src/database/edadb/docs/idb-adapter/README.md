@@ -62,7 +62,7 @@ EDADB adapter 的目标不是 dump 完整 C++ 对象，而是贴近 iEDA 原始 
 | `IdbRowList` | Yes | vector traversal plus `front()` / index-derived row logic | Implemented with `_order_sd` and ordered read. |
 | `IdbTrackGridList` | Yes | vector traversal, layer back links, DEF writer order | Implemented with `primary_key` as identity, `_order_sd` as list order, and ordered read. |
 | `IdbGCellGridList` | No | Level D; no point-tool root index/order dependency found | Direct no-shadow/no-order mapping; normalized diff handles root order-only differences. |
-| `IdbRegionList` | Yes | name lookup for references, but vector traversal assigns internal order/id and DEF writer order | Implemented with `_name_sd` as identity, `_order_sd` as list order, and ordered read. |
+| `IdbRegionList` | No | Level D; references are name-based and no point-tool root index/order dependency found | Direct no-shadow/no-order mapping; normalized diff handles root order-only differences. |
 | `IdbBlockageList` | Yes | vector traversal and DEF writer order; no natural name identity | Implemented with `primary_key` as identity, `_order_sd` as list order, and ordered read. |
 
 ## Current Progress
@@ -78,7 +78,7 @@ EDADB adapter 的目标不是 dump 完整 C++ 对象，而是贴近 iEDA 原始 
 | Instance | Done | `_name_sd` identity, `_order_sd` root order, master/region/layer references rebuilt by name. |
 | Pin | Done | `_pin_name_sd` identity, `_order_sd` root order, port/layer shape relative geometry preserved. |
 | Blockage | Done | `primary_key` identity, `_order_sd` root order, layer/instance references rebuilt by name. |
-| Region | Done | `_name_sd` identity, `_order_sd` root order, boundary vector preserved. |
+| Region | Done | Direct `IdbRegion`; `_name` identity, no `_order_sd`, boundary vector preserved. |
 | Slot | Done | `primary_key` identity, `_order_sd` root order, rectangle vector preserved. |
 | Group | Done | `_group_name_sd` identity, `_order_sd` root order, member vector order preserved. |
 | Fill | Done | `primary_key` identity, `_order_sd` root order, layer/via references rebuilt by name. |

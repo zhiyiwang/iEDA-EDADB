@@ -11,6 +11,11 @@
 
 namespace edadb {
 
+// EDADB_TODO: IdbRegion now uses direct TABLE4CLASS_WVEC mapping because DEF
+// REGIONS only needs name/type plus boundary rectangles; instance/group
+// references are rebuilt by name in their own adapters. Keep this old shadow
+// dormant unless those requirements change.
+#if 0
 template<>
 class Shadow<idb::IdbRegion> {
  public:
@@ -49,5 +54,6 @@ class Shadow<idb::IdbRegion> {
   idb::IdbRegionType _type_sd = idb::IdbRegionType::kNone;
   std::vector<idb::IdbRect*> _boundary_list_sd;
 };
+#endif
 
 }  // namespace edadb
