@@ -2,6 +2,41 @@
 
 This file keeps only the branch facts, EDADB layout, validation command, and current C-branch rules.
 
+## Demo Branch Overlay
+
+Current branch: `demo/20260703`.
+
+This branch is a progress-report snapshot, not the full `edadb-idb` development line.
+
+Enabled EDADB DEF object families:
+
+- `IdbDesign` / `IdbUnits` / `IdbBusBitChars`
+- `IdbDie`
+- `IdbRow`
+- `IdbTrackGrid`
+- `IdbGCellGrid`
+- `IdbVia`
+- `IdbRegion`
+- `IdbSlot`
+
+Disabled in this demo branch and restored from DEF text callbacks:
+
+- `IdbInstance`
+- `IdbPin`
+- `IdbBlockage`
+- `IdbGroup`
+- `IdbFill`
+- `IdbSpecialNet`
+- `IdbNet`
+
+Demo validation on this branch:
+
+- Build: `cmake --build build -j40 --target db_edadb def_builder iEDA`
+- Run: `cd bin && bash /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/demo/demo.sh 2>&1 | tee run.out`
+- Result: `Input def and output def are the same.`
+- EDADB tables created only for enabled families plus required child tables:
+  `iDesign`, `iDieSD`, `iRow`, `iTrackGridSD`, `iGCellGrid`, `iVia`, `iRegion`, `iSlotSD`.
+
 ## Validation Rule
 
 Use the iEDA superproject commit as the source of truth:

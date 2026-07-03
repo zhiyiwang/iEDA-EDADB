@@ -86,7 +86,7 @@ Primary-key audit:
 - `_boudary_list`：`vector<IdbRect*>`，使用 `Shadow<IdbRect>` child table；字段名沿用 iEDA 原始类中的拼写。
 - `Shadow<IdbRect>` 保存 `_vec_idx/_lx_sd/_ly_sd/_hx_sd/_hy_sd`，用 `_vec_idx` 恢复 boundary rectangle vector 的原始顺序。
 
-不保存 `_instance_list`：它不是 DEF `REGIONS` section 的直接输出字段，而是由 `COMPONENTS` 中的 region name 在 `readIdbInstance()` 阶段反向补回。
+不保存 `_instance_list`：它不是 DEF `REGIONS` section 的直接输出字段；demo 分支中 `COMPONENTS` 仍由 DEF 文本 callback 读取，并可按 region name 关联到 EDADB 已恢复的 region。
 
 ## Why Direct Mapping
 
@@ -128,7 +128,7 @@ Primary-key audit:
 - 直接加入 `design->get_region_list()`。
 - `createDbByDef()` 不注册 region callback，避免 DEF 文本重复创建 region。
 
-读取顺序在 `readIdbInstance()` / `readIdbGroup()` 之前，因此 instance/group 可通过 region name 查找并恢复引用。
+读取顺序在 DEF 文本的 component/group callbacks 之前，因此 instance/group 可通过 region name 查找并恢复引用。
 
 ## Computed Fields
 

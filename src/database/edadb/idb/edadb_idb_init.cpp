@@ -29,8 +29,6 @@ void initPrimKeys(void) {
     edadb::Cpp2SqlTypeTrait<idb::IdbRect>::hasPrimKey = false;
     edadb::Cpp2SqlTypeTrait<edadb::Shadow<idb::IdbRect>>::hasPrimKey = false;
     edadb::Cpp2SqlTypeTrait<edadb::Shadow<idb::IdbViaMasterGenerate>>::hasPrimKey = false;
-    edadb::Cpp2SqlTypeTrait<idb::IdbHalo>::hasPrimKey = false;
-    edadb::Cpp2SqlTypeTrait<edadb::Shadow<idb::IdbRouteHalo>>::hasPrimKey = false;
 
 } // initPrimKeys
 
@@ -74,7 +72,7 @@ int initAllTables(bool crt_tab) {
 #if EDADB_OUTPUT_DEBUG
     EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] initAllTables create=" << (crt_tab ? "true" : "false") << std::endl;
 #endif
-    EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] initAllTables register Design/Die/Row/TrackGrid/GCell/Via/Region/Instance/Pin/Blockage/Slot/Group/Fill/SpecialNet/Net groups"
+    EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] initAllTables register Design/Die/Row/TrackGrid/GCell/Via/Region/Slot groups"
               << std::endl;
 
     EDADB_INIT_TABLE(idb::IdbDesign, crt_tab);
@@ -84,21 +82,8 @@ int initAllTables(bool crt_tab) {
     EDADB_INIT_TABLE(idb::IdbGCellGrid, crt_tab);
 
     EDADB_INIT_TABLE(idb::IdbVia, crt_tab);
-    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbInstance>, crt_tab);
-    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbPin>, crt_tab);
-    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbBlockage>, crt_tab);
     EDADB_INIT_TABLE(idb::IdbRegion, crt_tab);
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbSlot>, crt_tab);
-    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbGroup>, crt_tab);
-    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbFill>, crt_tab);
-    EDADB_INIT_TABLE(idb::edadb_adapter::SpecialNetPinRef, crt_tab);
-    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbSpecialWireSegment>, crt_tab);
-    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbSpecialWire>, crt_tab);
-    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbSpecialNet>, crt_tab);
-    EDADB_INIT_TABLE(idb::edadb_adapter::NetPinRef, crt_tab);
-    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbRegularWireSegment>, crt_tab);
-    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbRegularWire>, crt_tab);
-    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbNet>, crt_tab);
 
     return 0;
 } // createAllTables
