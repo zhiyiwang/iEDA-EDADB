@@ -9,6 +9,13 @@
 - EDADB Write: `DefWriteEdadb::writeIdbGroup()`
 - EDADB Read: `DefReadEdadb::readIdbGroup()`
 
+本文件按 `src/database/edadb/docs/def-ieda-mapping-and-order.md` 的约束检查：
+
+- DEF section 映射：`GROUPS` section。
+- root-vector order 等级：Level D，当前没有发现点工具依赖 `IdbGroupList::_group_list` 的 root index/order。
+- root identity 约束：group name 是 DEF-visible identity，当前用 `_group_name_sd` 作为 EDADB root PK；`_order_sd` 只保存 append order，不作为 PK。
+- nested vector 约束：group member vector 是 group record 内部成员顺序，必须随 root record 保持原始顺序，不参与 D-level root sort。
+
 ## Original Write Semantics
 
 原始 `DefWrite::write_group()` 输出：
@@ -25,7 +32,7 @@
 原始 group parser 分三步：
 
 - `parse_group_name()`：按 DEF 出现顺序 `group_list->add_group(group_name)`，并设置 `_cur_group`。
-- `parse_group_member()`：按 DEF member 顺序查找 exact instance；如果不是 exact name，则按 regex 扫描 instance list，并避免重复加入。
+- `parse_group_member()`：按 DEF member 顺序查找 exact instance；如果不是 exact name，则按 regex 扫描 instance list，并避免重复加入；iDB 最终保存的是展开后的 instance list，不保存原始 pattern 文本。
 - `parse_group()`：设置 region 引用，最后清空 `_cur_group`。
 
 property 当前仍是 TBD，不进入 iDB 状态。
@@ -38,7 +45,27 @@ property 当前仍是 TBD，不进入 iDB 状态。
 TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbGroup>, "iGroupSD", (_group_name_sd, _order_sd, _region_name_sd), (_instance_name_vec_sd));
 ```
 
+Schema / init 代码位置：
+
+- `iGroupSD` table macro: `src/database/edadb/idb/edadb_idb_schema.h:112`
+- Primary-key setup: `src/database/edadb/idb/edadb_idb_init.cpp:21`
+- Table registration: `src/database/edadb/idb/edadb_idb_init.cpp:92`
+- Shadow definition: `src/database/edadb/idb/shadow/shadow_idb_group.h:15`
+
 保存字段覆盖原始 DEF writer/read 需要的 group name、region name 和 member instance names。
+
+Schema 与 order/index 约束的关系：
+
+- 依据 `src/database/edadb/docs/def-ieda-mapping-and-order.md`，`GROUPS` 映射到 `IdbGroupList::_group_list`，等级为 Level D。
+- Level D 的含义是当前未发现点工具依赖 root vector index/order；normalized diff 可以按 group name 排序 `GROUPS` root records。
+- 当前 adapter 仍保存 `_order_sd` 并 ordered read，用于贴近原始 DEF append/write 顺序；这不是点工具语义依赖。
+- `_instance_name_vec_sd` 是 group 内部 primitive string vector，EDADB primitive vector child table 使用 `__edadb_vec_idx` 保存 member order。
+
+Primary-key audit:
+
+- `initPrimKeys()` 没有关闭 `Shadow<IdbGroup>` 的 primary-key 行为；`_group_name_sd` 是 table 第一列和 root identity。
+- `_order_sd` 不是 PK，不能用它表达 group identity。
+- `initReadDb()` / `initWriteDb()` 都先调用 `initPrimKeys()`，再调用 `initAllTables()`，因此 read/write 的 table metadata 一致。
 
 ## Field Mapping To Original DEF Flow
 
@@ -48,7 +75,7 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbGroup>, "iGroupSD", (_group_name_sd, _ord
   - Write source: `DefWrite::write_group()` 按 group list 顺序输出 group name，见 `src/database/manager/builder/def_builder/def_write.cpp:1106-1138`。
   - Read source: `groupNameCallback()` / `parse_group_name()` 创建 group，见 `src/database/manager/builder/def_builder/def_read.cpp:2176-2192` 和 `src/database/manager/builder/def_builder/def_read.cpp:2238-2251`。
 
-- Member instance patterns: `_instance_name_vec_sd`
+- Member instance names: `_instance_name_vec_sd`
   - Write source: `write_group()` 输出 member instance list，见 `src/database/manager/builder/def_builder/def_write.cpp:1106-1138`。
   - Read source: `groupMemberCallback()` / `parse_group_member()` 保存 member pattern，见 `src/database/manager/builder/def_builder/def_read.cpp:2194-2236` 和 `src/database/manager/builder/def_builder/def_read.cpp:2253-2286`。
 
@@ -78,6 +105,12 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbGroup>, "iGroupSD", (_group_name_sd, _ord
 
 当前 `writeIdbGroup()`：
 
+- Code: `src/database/manager/builder/def_builder/def_write_edadb.cpp:520`
+- Group vector access: `src/database/manager/builder/def_builder/def_write_edadb.cpp:533`
+- Empty-list return: `src/database/manager/builder/def_builder/def_write_edadb.cpp:537`
+- Shadow construction: `src/database/manager/builder/def_builder/def_write_edadb.cpp:541`
+- EDADB insert: `src/database/manager/builder/def_builder/def_write_edadb.cpp:549`
+
 - 从 `design->get_group_list()` 取得 group vector。
 - 空列表返回 `kDbSuccess`，避免 EDADB dispatcher 中断整个写流程。
 - 非空时按 list 顺序构造 `Shadow<IdbGroup>` pointer vector。
@@ -90,10 +123,17 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbGroup>, "iGroupSD", (_group_name_sd, _ord
 
 当前 `readIdbGroup()`：
 
+- Code: `src/database/manager/builder/def_builder/def_read_edadb.cpp:593`
+- EDADB read op: `src/database/manager/builder/def_builder/def_read_edadb.cpp:608`
+- EDADB read loop: `src/database/manager/builder/def_builder/def_read_edadb.cpp:615`
+- Add to active list: `src/database/manager/builder/def_builder/def_read_edadb.cpp:628`
+- Region lookup: `src/database/manager/builder/def_builder/def_read_edadb.cpp:630`
+- Instance lookup: `src/database/manager/builder/def_builder/def_read_edadb.cpp:634`
+
 - 通过 `ORDER BY "_order_sd"` 读取 root records，恢复 `IdbGroupList` 原始 append 顺序。
 - `group_list->add_group(group_name)` 创建 group。
 - `fromShadow()` 恢复 group name。
-- 通过 region name 查找并设置 region pointer。
+- 通过 region name 查找并设置 region pointer；空 region name 保持 nullptr，贴近原始 `parse_group()` 的 optional region 判断。
 - 按 `_instance_name_vec_sd` 顺序查找 instance 并加入 group instance list。
 - `createDbByDef()` 不注册 group callbacks，避免 DEF 文本重复创建 group。
 
@@ -115,11 +155,18 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbGroup>, "iGroupSD", (_group_name_sd, _ord
 - 原始 `parse_group_name()` 按 DEF 出现顺序 append group。
 - 原始 `write_group()` 按 `group_list->get_group_list()` 当前顺序输出 group。
 - 原始 `write_group()` 也按 group instance list 当前顺序输出 members。
-- 当前 shadow 用 `_group_name_sd` 作为 root identity，用 `_order_sd` 保存 root list order。
+- `src/operation/iPL` 中的 `Group` 是 placer 自己的 topology group，不是 `IdbGroupList` root group；当前未发现点工具依赖 `IdbGroupList::_group_list` index。
+- 因此 `GROUPS` root order 在点工具语义上是 Level D；当前 shadow 用 `_group_name_sd` 作为 root identity，用 `_order_sd` 保存 root list order，主要用于稳定 raw DEF roundtrip。
 - member vector 顺序由 EDADB primitive vector child table 的 `__edadb_vec_idx` 保存。
 - read path 已显式按 `_order_sd` 恢复 root list，不依赖 EDADB/SQLite read-all 物理顺序。
 
 当前状态：已实现。root identity 和 root order 已分离，member vector order 已回归验证。
+
+对 normalized diff 的影响：
+
+- `GROUPS` 是 Level D root list；如果 raw diff 只因为不同 group root record 顺序失败，normalized diff 可以按 group name 排序后通过。
+- 排序单位必须是完整 group record；record 内部 member instance vector 不排序。
+- 如果 group name、region name 或 member instance 内容不同，normalized diff 必须失败。
 
 ## Tests
 

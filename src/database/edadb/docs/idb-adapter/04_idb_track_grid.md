@@ -70,7 +70,7 @@ Schema 与 order/index 约束的关系：
 - `primary_key` 是 root identity；`_order_sd` 只表达原始 append 顺序，禁止用 vector order index 作为 PK。
 - `_layer_name_vec_sd` 是 nested vector，必须保持该 `TRACKS` record 内部 layer name 顺序。
 
-Primary-key 约束：
+Primary-key audit:
 
 - `initPrimKeys()` 显式关闭 `IdbTrack` 的 primary-key 行为；`IdbTrack` 是 `Shadow<IdbTrackGrid>` 内部 inline 标量对象。
 - `initPrimKeys()` 没有关闭 `Shadow<IdbTrackGrid>` 的 primary-key 行为；`primary_key` 是 `iTrackGridSD` root identity。

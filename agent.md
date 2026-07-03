@@ -147,8 +147,24 @@ Current uncovered or weakly covered areas:
 - Persist the DEF storage view, not the whole C++ object graph.
 - Prefer direct mapping; use `Shadow<T>` only for stable PK, root order, name lookup,
   vector ownership, or reconstruction views.
+- EDADB automatically uses `Shadow<T>` for a member of type `T` or `T*` once `T` is
+  registered with `TABLE4SHADOW(T)` or `TABLE4SHADOW_WVEC(T)`. The root object can
+  stay direct-mapped while the member is stored through `edadb::Shadow<T>`. Example:
+  `IdbVia` uses direct `TABLE4CLASS(idb::IdbVia, ..., (_name, _master_instance))`,
+  and `_master_instance: IdbViaMaster*` is stored/restored through
+  `Shadow<IdbViaMaster>`.
+- Shadow conversion path: write calls `toShadow(cpp_ptr)` before traversing the
+  shadow store fields; read fills the shadow store fields, calls
+  `fromShadow(cpp_ptr)`, then writes the rebuilt pointer/value back to the original
+  member.
 - Never use vector order index as PK. Keep identity and order separate:
   `primary_key` or name for identity, `_order_sd` for root list order.
+- Primary-key rule: enable PK only for root identity or nested vector-owner storage
+  views that need a stable owner row. Disable PK for pure inline/nested scalar value
+  views. Example: `Shadow<IdbViaMasterGenerate>` is only
+  `Shadow<IdbViaMaster>::_master_generate_sd`, so its PK is disabled in
+  `initPrimKeys()`; `Shadow<IdbViaMaster>` owns `fixed_layer_shape_list_sd`, so it
+  keeps EDADB's default PK.
 - For root lists that affect DEF roundtrip, read back with `ORDER BY "_order_sd"`.
 - Update schema/init, builder read/write, DEF callbacks, regression SQL, and docs together.
 

@@ -73,7 +73,7 @@ Schema 与新 order/index 约束的关系：
 - `IdbUnits` 和 `IdbBusBitChars` 是 inline singleton value object，不属于 root list。
 - 当前 direct mapping 覆盖 DEF-visible singleton 字段；不涉及 ABCD 中的 root-vector reorder 问题。
 
-Primary-key 约束：
+Primary-key audit:
 
 - `initPrimKeys()` 显式关闭 `IdbUnits` 和 `IdbBusBitChars` 的 primary-key 行为，因为它们作为 `IdbDesign` 的 inline child/value object 使用。
 - `initPrimKeys()` 没有关闭 `IdbDesign` 的 primary-key 行为；`IdbDesign` 是 root singleton table，按 EDADB 默认 root table key 规则处理。

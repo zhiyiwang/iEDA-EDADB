@@ -77,7 +77,7 @@ Schema 与新 order/index 约束的关系：
 - `primary_key` 只用于把 nested point rows 归属到 singleton die，不表示 DEF root list order。
 - `points_sd` 是 nested vector，必须通过 `_vec_idx` 恢复原始点序。
 
-Primary-key 约束：
+Primary-key audit:
 
 - `initPrimKeys()` 显式关闭 `Shadow<IdbCoordinate<int32_t>>` 的 primary-key 行为；coordinate 是 nested vector element，身份来自 owner + `_vec_idx`。
 - `initPrimKeys()` 没有关闭 `Shadow<IdbDie>` 的 primary-key 行为；`primary_key` 是 `iDieSD` 的 root owner key，用来归属 `points_sd` child rows。

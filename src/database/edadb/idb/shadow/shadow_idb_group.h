@@ -19,6 +19,7 @@ public:
 
 public:
     void toShadow(idb::IdbGroup* obj, const uint32_t* idx_ptr = nullptr) {
+        assert(obj != nullptr);
         assert(idx_ptr != nullptr);
 
         _group_name_sd = obj->get_group_name();
@@ -33,13 +34,13 @@ public:
     }
 
     void fromShadow(idb::IdbGroup* obj, uint32_t* idx_ptr = nullptr) {
+        assert(obj != nullptr);
         if (idx_ptr != nullptr) {
             *idx_ptr = static_cast<uint32_t>(_order_sd);
         }
 
-        obj->set_group_name( _group_name_sd );
-        // use region name to lookup region during def read
-        // use instance names to lookup instances during def read
+        obj->set_group_name(_group_name_sd);
+        // Region and instance references are rebuilt by DefReadEdadb::readIdbGroup().
     }
 
 public:

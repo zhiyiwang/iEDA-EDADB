@@ -15,8 +15,11 @@ EDADB adapter 的目标不是 dump 完整 C++ 对象，而是贴近 iEDA 原始 
 - 先读原始 `DefWrite::write_xxx()` / `DefRead::parse_xxx()`，再改 EDADB adapter。
 - EDADB 表达的是 DEF 语义视图，不一定等于完整 C++ object dump。
 - 优先 direct mapping；只有需要 PK、root order、name lookup、vector ownership 或重建视图时才引入 `Shadow<T>`。
+- 如果某个成员类型 `T` 已注册 `TABLE4SHADOW(T)` 或 `TABLE4SHADOW_WVEC(T)`，则包含它的 root class 可以继续 direct mapping；EDADB 遍历成员时会自动把 `T` / `T*` 的 store type 改写为 `edadb::Shadow<T>`。
+- Shadow 自动转换流程：write 阶段对原始成员指针/对象调用 `toShadow()` 后写 shadow fields；read 阶段先读 shadow fields，再调用 `fromShadow()` 重建原始成员，最后写回 root object。
 - 对 root list，identity 和 order 必须分开：不要用 vector order index 当 PK。
 - 没有天然 identity 的 root record 用 `primary_key`；有天然 name 的对象用 name 做 PK。
+- Primary key 只用于 root identity 或 nested vector-owner storage view；纯 inline/nested scalar value view 必须关闭 PK。例如 `Shadow<IdbViaMasterGenerate>` 只是 `Shadow<IdbViaMaster>::_master_generate_sd`，不是独立 root/vector owner，因此在 `initPrimKeys()` 中关闭 PK；`Shadow<IdbViaMaster>` owns `fixed_layer_shape_list_sd`，保留 EDADB 默认 PK。
 - 只有 iEDA 语义需要保序或明确要求 raw roundtrip 保序的 root list 才增加 `_order_sd`；Level D root list 可优先依赖 normalized diff。
 - computed fields 不入库；read path 按原始 parser 语义重新计算或重建。
 - 每个 root 文档必须说明 child storage view：哪些子节点 direct mapping，哪些子节点 shadow，哪些运行时 pointer/cache 不入库以及如何重建。

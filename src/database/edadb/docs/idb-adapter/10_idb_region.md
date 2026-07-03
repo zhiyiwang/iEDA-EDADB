@@ -57,7 +57,7 @@ Schema 与 order/index 约束的关系：
 - 当前 adapter 不保存 `_order_sd`；如果 DB 读回顺序不同，测试应通过 Level-D normalized diff 判断语义一致性。
 - `_name` 是 direct table 的 primary key，表达 region identity；它不表达 vector order。
 
-Primary-key 约束：
+Primary-key audit:
 
 - `initPrimKeys()` 没有关闭 `IdbRegion` 的 primary-key 行为；`iRegion` 使用 table macro 第一列 `_name` 作为 root identity。
 - `_boudary_list` 是 owned child vector，使用 `Shadow<IdbRect>::_vec_idx` 保存其 nested order。

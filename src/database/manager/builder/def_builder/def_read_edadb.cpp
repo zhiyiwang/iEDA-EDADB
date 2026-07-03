@@ -627,7 +627,9 @@ bool DefReadEdadb::readIdbGroup(void) {
 
         IdbGroup* group = group_list->add_group(group_sd->_group_name_sd);
         group_sd->fromShadow(group);
-        group->set_region(region_list->find_region(group_sd->_region_name_sd));
+        if (!group_sd->_region_name_sd.empty()) {
+            group->set_region(region_list->find_region(group_sd->_region_name_sd));
+        }
 
         for (auto& instance_name_sd : group_sd->_instance_name_vec_sd) {
             IdbInstance* instance = instance_list->find_instance(instance_name_sd);

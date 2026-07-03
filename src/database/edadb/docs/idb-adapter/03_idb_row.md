@@ -72,7 +72,7 @@ Schema 与 order/index 约束的关系：
 - `_order_sd` 只表达 `IdbRows::_row_list` append 顺序，读回时用于 `ORDER BY "_order_sd"`。
 - `IdbSite` table macro 当前休眠；row adapter 不注册/创建 `iSite` 表，也不通过 `iSite` 持久化 row site。
 
-Primary-key 约束：
+Primary-key audit:
 
 - `initPrimKeys()` 没有关闭 `Shadow<IdbRow>` 的 primary-key 行为；`iRow` 使用 table macro 的第一列 `_name_sd` 作为 root identity。
 - `initPrimKeys()` 没有专门处理 `_order_sd`；它不是 PK，只是 order key。

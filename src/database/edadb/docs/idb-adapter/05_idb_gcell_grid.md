@@ -58,7 +58,7 @@ Schema 与 order/index 约束的关系：
 - 当前 adapter 不保存 `_order_sd`；如果 DB 读回顺序不同，测试应通过 Level-D normalized diff 判断语义一致性。
 - 当前 adapter 不定义 synthetic `primary_key`；`IdbGCellGrid` 没有 child rows 或 owner relationship 需要 root PK。
 
-Primary-key 约束：
+Primary-key audit:
 
 - `initPrimKeys()` 显式关闭 `idb::IdbGCellGrid` 的 primary-key 行为；direct table 允许多条无 PK rows。
 - `initReadDb()` / `initWriteDb()` 都先调用 `initPrimKeys()`，再调用 `initAllTables()`，因此 read/write 的 table metadata 一致。

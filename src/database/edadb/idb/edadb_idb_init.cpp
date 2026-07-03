@@ -28,7 +28,7 @@ void initPrimKeys(void) {
 
     edadb::Cpp2SqlTypeTrait<idb::IdbRect>::hasPrimKey = false;
     edadb::Cpp2SqlTypeTrait<edadb::Shadow<idb::IdbRect>>::hasPrimKey = false;
-    edadb::Cpp2SqlTypeTrait<idb::IdbViaMaster>::hasPrimKey = false;
+    edadb::Cpp2SqlTypeTrait<edadb::Shadow<idb::IdbViaMasterGenerate>>::hasPrimKey = false;
     edadb::Cpp2SqlTypeTrait<idb::IdbHalo>::hasPrimKey = false;
     edadb::Cpp2SqlTypeTrait<edadb::Shadow<idb::IdbRouteHalo>>::hasPrimKey = false;
 

@@ -59,7 +59,7 @@ Schema 与 order/index 约束的关系：
 - `primary_key` 只表达 root record identity，用来支持同 layer、多 rectangle-signature 甚至重复 slot record；`_order_sd` 单独表达 vector order。
 - `_rect_list_sd` 是 slot 内部 owned geometry vector，使用 `Shadow<IdbRect>::_vec_idx` 保存 nested order。
 
-Primary-key 约束：
+Primary-key audit:
 
 - `IdbSlot` 原始类没有天然唯一 name；不能用 `_layer_name` 作为 PK，因为同一 layer 可以有多个 slot record。
 - `initPrimKeys()` 没有关闭 `Shadow<IdbSlot>` 的 primary-key 行为；`primary_key` 是 table 第一列和 root identity。
