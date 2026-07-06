@@ -129,8 +129,8 @@ check_default_sql() {
         "-1|" "$name instance default weight region"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || ':' || _name_sd, ',') from (select _order_sd, _name_sd from iInstSD order by _order_sd limit 5);")" \
         "0:ctrl/_17_,1:ctrl/_18_,2:ctrl/_19_,3:ctrl/_20_,4:ctrl/_21_" "$name instance order prefix"
-    assert_eq "$(sql_value "$edadb_db" "select _pin_name_sd || '|' || _net_name_sd || '|' || _io_term_sd__direction_sd || '|' || _io_term_sd__type_sd || '|' || _io_term_sd__has_port_sd || '|' || _location_sd__x_sd || ',' || _location_sd__y_sd || '|' || _layer_num_sd from iPinSD where _pin_name_sd='clk';")" \
-        "clk|clk|1|1|0|1000,9990|1" "$name pin fields"
+    assert_eq "$(sql_value "$edadb_db" "select _pin_name_sd || '|' || _net_name_sd || '|' || _io_term_sd__direction_sd || '|' || _io_term_sd__type_sd || '|' || _io_term_sd__has_port_sd || '|' || _location_sd__x_sd || ',' || _location_sd__y_sd || '|' || _layer_num_sd from iPinSD where _pin_name_sd='req_msg[0]';")" \
+        "req_msg[0]|req_msg[0]|1|1|0|1000,18645|1" "$name pin fields"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || ':' || _pin_name_sd, ',') from (select _order_sd, _pin_name_sd from iPinSD order by _order_sd limit 5);")" \
         "0:clk,1:req_msg[0],2:req_msg[1],3:req_msg[2],4:req_msg[3]" "$name pin order prefix"
     assert_eq "$(sql_value "$edadb_db" "select (select count(*) from iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD) || '|' || (select count(*) from iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD__layer_shape_list_sd_iLayerShapeSD) || '|' || (select count(*) from iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD__layer_shape_list_sd_iLayerShapeSD__rect_list_sd_IdbRectSD);")" \
@@ -176,6 +176,14 @@ check_aux_optional_sql() {
     assert_eq "$(sql_value "$edadb_db" "select _group_name_sd || '|' || _order_sd || '|' || _region_name_sd from iGroupSD;")" "test_group|0|test_region" "$name group region"
     assert_eq "$(sql_value "$edadb_db" "select _weight_sd || '|' || _region_name_sd from iInstSD where _name_sd='ctrl/_34_';")" \
         "13|test_region" "$name instance weight region"
+    assert_eq "$(sql_value "$edadb_db" "select _io_term_sd__has_port_sd || '|' || _io_term_sd__is_special_net_sd || '|' || _io_term_sd__placement_status_sd from iPinSD where _pin_name_sd='clk';")" \
+        "1|1|3" "$name explicit special port term fields"
+    assert_eq "$(sql_value "$edadb_db" "select _placement_status_sd || '|' || _coordinate_sd__x_sd || ',' || _coordinate_sd__y_sd || '|' || _orient_sd from iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD where iPinSD__pin_name_sd='clk';")" \
+        "3|1000,9990|1" "$name explicit port placement"
+    assert_eq "$(sql_value "$edadb_db" "select _layer_name_sd || '|' || _type_sd from iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD__layer_shape_list_sd_iLayerShapeSD where iPinSD__pin_name_sd='clk';")" \
+        "met5|1" "$name explicit port layer shape"
+    assert_eq "$(sql_value "$edadb_db" "select _vec_idx || '|' || _lx_sd || '|' || _ly_sd || '|' || _hx_sd || '|' || _hy_sd from iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD__layer_shape_list_sd_iLayerShapeSD__rect_list_sd_IdbRectSD where iPinSD__pin_name_sd='clk';")" \
+        "0|-1000|-1000|1000|1000" "$name explicit port rect"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(__edadb_vec_idx || ':' || value, ',') from (select __edadb_vec_idx, value from iGroupSD__instance_name_vec_sd___edadb_primitive_vector order by __edadb_vec_idx);")" \
         "0:ctrl/_34_,1:ctrl/_35_" "$name group member order"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || '|' || _type_sd || '|' || coalesce(_layer_name_sd,'') || '|' || coalesce(_via_name_sd,''), ';') from (select * from iFillSD order by _order_sd);")" \
@@ -221,6 +229,20 @@ generate_aux_optional_fixture() {
     local output="$2"
     awk '
         {
+            if ($0 ~ /^ - clk /) {
+                print " - clk + NET clk + SPECIAL + DIRECTION INPUT  + USE SIGNAL"
+                print "  + PORT"
+                print "   + LAYER met5 ( -1000 -1000 ) ( 1000 1000 ) + PLACED ( 1000 9990 ) N"
+                print ";"
+                skip_pin = 1
+                next
+            }
+            if (skip_pin) {
+                if ($0 ~ /^;$/) {
+                    skip_pin = 0
+                }
+                next
+            }
             if ($0 ~ /^COMPONENTS /) {
                 print "REGIONS 1 ;"
                 print "    - test_region ( 1000 1000 ) ( 10000 10000 ) + TYPE FENCE ;"
