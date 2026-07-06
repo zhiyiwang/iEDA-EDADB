@@ -4,10 +4,17 @@
 
 `IdbPin` 对应 DEF 的 `PINS` section，只处理 design IO pins。
 
-- Write: `DefWrite::write_pin()`
-- Read: `pinBeginCallback()` / `pinCallback()` / `DefRead::parse_pin_number()` / `DefRead::parse_pin()`
-- EDADB Write: `DefWriteEdadb::writeIdbPin()`
-- EDADB Read: `DefReadEdadb::readIdbPin()`
+- Write: `DefWrite::write_pin()` at `src/database/manager/builder/def_builder/def_write.cpp:517`
+- Read: `DefRead::parse_pin_number()` / `DefRead::parse_pin()` at `src/database/manager/builder/def_builder/def_read.cpp:1543` and `src/database/manager/builder/def_builder/def_read.cpp:1573`
+- EDADB Write: `DefWriteEdadb::writeIdbPin()` at `src/database/manager/builder/def_builder/def_write_edadb.cpp:360`
+- EDADB Read: `DefReadEdadb::readIdbPin()` at `src/database/manager/builder/def_builder/def_read_edadb.cpp:812`
+
+本文件按 `src/database/edadb/docs/def-ieda-mapping-and-order.md` 的约束检查：
+
+- DEF section 映射：`PINS` section。
+- root-vector order 等级：`IdbPins::_pin_list` 需要显式保留 append order。
+- root identity 约束：IO pin name 是 DEF-visible identity，当前 `_pin_name_sd` 是 EDADB root PK；禁止用 vector order index 作为 PK。
+- nested vector 约束：term port vector、port layer-shape vector、layer-shape rect vector 都是 pin 内部几何语义，必须随 root pin 保持原始顺序。
 
 ## Original Write Semantics
 
@@ -59,6 +66,29 @@ TABLE4CLASS(edadb::Shadow<idb::IdbPin>, "iPinSD",
 - `Shadow<IdbPort>` 保存 port orient/status/coordinate 和 layer shape vector。
 - `Shadow<IdbLayerShape>` 保存 layer name、shape type 和 rect vector。
 
+Schema / init 代码位置：
+
+- `iPortSD` table macro: `src/database/edadb/idb/edadb_idb_schema.h:94`
+- `iTermSD` table macro: `src/database/edadb/idb/edadb_idb_schema.h:97`
+- `iPinSD` root table macro: `src/database/edadb/idb/edadb_idb_schema.h:100`
+- `Shadow<IdbPin>` PK uses EDADB default `true`; `_pin_name_sd` is the first table column and root identity.
+- `Shadow<IdbTerm>` is stored inline in `iPinSD`; it is not registered as an independent root table.
+- `Shadow<IdbPort>` owns `_layer_shape_list_sd`, so it uses explicit `primary_key` in the child table.
+- `Shadow<IdbLayerShape>` owns `_rect_list_sd` and uses layer name as child identity under its parent port.
+- `Shadow<IdbRect>` PK is disabled in `src/database/edadb/idb/edadb_idb_init.cpp:30`; rect order is represented by `_vec_idx`.
+- Table registration: `src/database/edadb/idb/edadb_idb_init.cpp:88`
+- Pin shadow definition: `src/database/edadb/idb/shadow/shadow_idb_pin.h:18`
+- Term shadow definition: `src/database/edadb/idb/shadow/shadow_idb_term.h:15`
+- Port shadow definition: `src/database/edadb/idb/shadow/shadow_idb_port.h:18`
+
+Primary-key audit:
+
+- `Shadow<IdbPin>` 保留默认 primary-key 行为，因为 `PINS` root record 有天然 DEF identity：pin name。
+- `_order_sd` 只表达 `IdbPins::_pin_list` append order，不作为 identity。
+- `Shadow<IdbPort>::primary_key` 是 nested vector-owner identity，用于挂接 port 的 layer-shape child rows；它不表示 DEF root identity。
+- `Shadow<IdbLayerShape>` 在同一 port 下用 layer name 作为 child identity；rect child rows 用 `IdbRectSD::_vec_idx` 保序。
+- `Shadow<IdbTerm>` 是 pin 的 inline value view；它不单独建 root table。
+
 ## Field Mapping To Original DEF Flow
 
 以下按 EDADB shadow 域列出它对应的原始 DEF read/write 代码位置。
@@ -67,9 +97,10 @@ TABLE4CLASS(edadb::Shadow<idb::IdbPin>, "iPinSD",
   - Write source: `DefWrite::write_pin()` 按 IO pin list 顺序输出 pin name，见 `src/database/manager/builder/def_builder/def_write.cpp:517-586`。
   - Read source: `pinsBeginCallback()` / `parse_pin_number()` reserve list，`pinCallback()` / `parse_pin()` 按 DEF 出现顺序创建 IO pin，见 `src/database/manager/builder/def_builder/def_read.cpp:1529-1746`。
 
-- Net ref and pin flags: `_net_name_sd`, `_is_io_pin_sd`, `_is_special_net_sd`
+- Net ref and pin flags: `_net_name_sd`, `_is_io_pin_sd`, `_is_special_net_sd`, `_io_term_sd._is_special_net_sd`
   - Write source: `write_pin()` 输出 pin net name 和 SPECIAL flag，见 `src/database/manager/builder/def_builder/def_write.cpp:517-586`。
   - Read source: `parse_pin()` 读取 net name、设置 IO pin，并读取 special flag，见 `src/database/manager/builder/def_builder/def_read.cpp:1573-1746`。
+  - DB decision: DEF `+ SPECIAL` 对应 `IdbTerm::_is_special_net`，即 `iPinSD._io_term_sd__is_special_net_sd`；root `_is_special_net_sd` 只是 `IdbPin::_special_net` pointer 是否非空的 runtime 状态，不能单独代表 DEF `+ SPECIAL`。
 
 - IO term fields: `_io_term_sd`
   - Write source: `write_pin()` 输出 direction/use，并根据 port/layer shape 输出 PORT 信息，见 `src/database/manager/builder/def_builder/def_write.cpp:517-586`。
@@ -104,6 +135,9 @@ TABLE4CLASS(edadb::Shadow<idb::IdbPin>, "iPinSD",
 
 当前 `writeIdbPin()`：
 
+- Code: `src/database/manager/builder/def_builder/def_write_edadb.cpp:360`
+- Enabled by chip writer: `src/database/manager/builder/def_builder/def_write_edadb.cpp:97`
+
 - 从 `design->get_io_pin_list()` 获取 IO pin vector。
 - 空列表返回成功，兼容 EDADB framework。
 - 按 vector 顺序构造 `Shadow<IdbPin>`，第 `idx` 个写 `_order_sd = idx`。
@@ -113,6 +147,9 @@ TABLE4CLASS(edadb::Shadow<idb::IdbPin>, "iPinSD",
 
 当前 `readIdbPin()`：
 
+- Code: `src/database/manager/builder/def_builder/def_read_edadb.cpp:812`
+- Enabled by EDADB read flow: `src/database/manager/builder/def_builder/def_read_edadb.cpp:217`
+
 - reset 当前 IO pin list，避免 DEF callback 重复创建。
 - 使用 `ORDER BY "_order_sd"` 读取 `iPinSD`，恢复 IO pin root list 原始顺序。
 - `fromShadow()` 恢复 pin name、net name、term、location、average coordinate、orient、IO flag。
@@ -120,7 +157,7 @@ TABLE4CLASS(edadb::Shadow<idb::IdbPin>, "iPinSD",
 - 如果 term has port，调用 `pin->set_port_layer_shape()` 重建 pin-level absolute shapes。
 - 如果没有 explicit port，则按原始 `parse_pin()` 逻辑重算 term average position、term bounding box 和 pin bounding box。
 
-`createDbByDef()` 已禁用 pin callback，因此 `PINS` 只来自 EDADB。
+`createDbByDef()` 使用 `defrUnsetPinCbk()` / `defrUnsetPinEndCbk()` / `defrUnsetStartPinsCbk()` 清掉 DEF pin callbacks，因此 `PINS` 只来自 EDADB。
 
 ## Computed Fields
 
@@ -149,10 +186,12 @@ TABLE4CLASS(edadb::Shadow<idb::IdbPin>, "iPinSD",
 - sample pin 的 name、net name、direction、use、has-port、location、layer count。
 - IO pin root order prefix。
 - port/layer/rect child row count。
+- aux optional fixture 将 `clk` 改成 explicit `+ PORT` 和 `+ SPECIAL`，并验证 `iPinSD._io_term_sd__has_port_sd`、`iPinSD._io_term_sd__is_special_net_sd`、port placement、layer name、rect geometry。
 - `writeIdbPin` / `readIdbPin` 日志。
 - demo DEF roundtrip diff clean。
 
 ## Risks / TODO
 
-- 当前测试主要覆盖无 explicit `+ PORT` 的 pin；special pin / explicit port 已由代码路径支持，但还需要更小 fixture 做边界覆盖。
+- 当前已覆盖无 explicit `+ PORT` 的默认 pin，以及一个 explicit `+ PORT` / `+ SPECIAL` pin。
+- 多 PORT、多 LAYER、多 rect、未放置 pin 等边界仍可继续扩展 fixture。
 - `_layer_num_sd` 是辅助校验字段，真实 geometry 仍来自 term/port/layer-shape nested rows。
