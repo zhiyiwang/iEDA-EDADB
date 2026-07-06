@@ -125,6 +125,8 @@ check_default_sql() {
     assert_contains "$edadb2def_log" "[EDADB-IDB] readIdbVia restored via_count=4" "$name read via log"
     assert_eq "$(sql_value "$edadb_db" "select _name_sd || '|' || _cell_master_name_sd || '|' || _status_sd || '|' || _orient_sd || '|' || _coordinate_sd__x_sd || ',' || _coordinate_sd__y_sd from iInstSD where _name_sd='ENDCAP_0';")" \
         "ENDCAP_0|sky130_fd_sc_hs__fill_1|1|7|9600,9990" "$name instance fields"
+    assert_eq "$(sql_value "$edadb_db" "select _weight_sd || '|' || _region_name_sd from iInstSD where _name_sd='ENDCAP_0';")" \
+        "-1|" "$name instance default weight region"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || ':' || _name_sd, ',') from (select _order_sd, _name_sd from iInstSD order by _order_sd limit 5);")" \
         "0:ctrl/_17_,1:ctrl/_18_,2:ctrl/_19_,3:ctrl/_20_,4:ctrl/_21_" "$name instance order prefix"
     assert_eq "$(sql_value "$edadb_db" "select _pin_name_sd || '|' || _net_name_sd || '|' || _io_term_sd__direction_sd || '|' || _io_term_sd__type_sd || '|' || _io_term_sd__has_port_sd || '|' || _location_sd__x_sd || ',' || _location_sd__y_sd || '|' || _layer_num_sd from iPinSD where _pin_name_sd='clk';")" \
@@ -172,6 +174,8 @@ check_aux_optional_sql() {
     assert_eq "$(sql_value "$edadb_db" "select _vec_idx || '|' || _lx_sd || '|' || _ly_sd || '|' || _hx_sd || '|' || _hy_sd from iSlotSD__rect_list_sd_IdbRectSD;")" \
         "0|5000|5000|6000|6000" "$name slot rect"
     assert_eq "$(sql_value "$edadb_db" "select _group_name_sd || '|' || _order_sd || '|' || _region_name_sd from iGroupSD;")" "test_group|0|test_region" "$name group region"
+    assert_eq "$(sql_value "$edadb_db" "select _weight_sd || '|' || _region_name_sd from iInstSD where _name_sd='ctrl/_34_';")" \
+        "13|test_region" "$name instance weight region"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(__edadb_vec_idx || ':' || value, ',') from (select __edadb_vec_idx, value from iGroupSD__instance_name_vec_sd___edadb_primitive_vector order by __edadb_vec_idx);")" \
         "0:ctrl/_34_,1:ctrl/_35_" "$name group member order"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || '|' || _type_sd || '|' || coalesce(_layer_name_sd,'') || '|' || coalesce(_via_name_sd,''), ';') from (select * from iFillSD order by _order_sd);")" \
@@ -217,6 +221,20 @@ generate_aux_optional_fixture() {
     local output="$2"
     awk '
         {
+            if ($0 ~ /^COMPONENTS /) {
+                print "REGIONS 1 ;"
+                print "    - test_region ( 1000 1000 ) ( 10000 10000 ) + TYPE FENCE ;"
+                print "END REGIONS"
+                print ""
+                print
+                next
+            }
+            if ($0 ~ /^    - ctrl\/_34_ /) {
+                print
+                print "      + WEIGHT 13"
+                print "      + REGION test_region"
+                next
+            }
             if ($0 ~ /^- VDD \( \* VPWR \)/) {
                 print
                 print "  + SOURCE NETLIST"
@@ -241,11 +259,6 @@ generate_aux_optional_fixture() {
                 print "    - LAYER met1 + PUSHDOWN + EXCEPTPGNET RECT ( 1000 1000 ) ( 2000 2000 ) ;"
                 print "    - PLACEMENT RECT ( 3000 3000 ) ( 4000 4000 ) ;"
                 print "END BLOCKAGES"
-                print ""
-                print "REGIONS 1 ;"
-                print "    - test_region ( 1000 1000 ) ( 10000 10000 ) + TYPE FENCE ;"
-                print "END REGIONS"
-                print ""
                 print "SLOTS 1 ;"
                 print "    - LAYER met1 RECT ( 5000 5000 ) ( 6000 6000 ) ;"
                 print "END SLOTS"
