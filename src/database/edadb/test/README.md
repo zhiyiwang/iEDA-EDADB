@@ -80,3 +80,14 @@ Current class coverage:
 | Instance / Pin | shadow | master/placement/halo fields, port/layer/rect child rows |
 | Blockage / Region / Slot / Group / Fill | direct or shadow | routing vs placement, region type, ordered group members, layer-fill vs via-fill |
 | SpecialNet / Net | shadow | ordered pin refs, optional fields, routed wire/segment/point rows |
+
+## Planned Order-Stress Tests
+
+Do not implement or run these yet; they are parked here for later test-design review.
+
+- Add a SQLite unordered-read stress mode using `PRAGMA reverse_unordered_selects=ON`; any EDADB read path that needs deterministic vector order must use explicit `ORDER BY`.
+- Add real DEF perturbation cases for root-order evidence:
+  - swap top-level `PINS` and run iFP `auto_place_pins`;
+  - swap top-level `ROWS` and run the iPDN follow-pin stripe path;
+  - swap top-level `COMPONENTS` and run iPL with the same seed;
+  - check `NETS` ID/list consistency with a targeted adapter/unit harness.

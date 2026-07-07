@@ -167,6 +167,34 @@ Current uncovered or weakly covered areas:
   keeps EDADB's default PK.
 - For root lists that affect DEF roundtrip, read back with `ORDER BY "_order_sd"`.
 - Update schema/init, builder read/write, DEF callbacks, regression SQL, and docs together.
+- Planned order-stress tests are documented but not implemented yet: SQLite
+  `PRAGMA reverse_unordered_selects=ON`, real DEF perturbations for `PINS`/iFP,
+  `ROWS`/iPDN, `COMPONENTS`/iPL, and a targeted `NETS` ID/list consistency harness.
+
+## Documentation Layout Rules
+
+- Canonical EDADB adapter documentation lives under `src/database/edadb/docs/`.
+- `src/database/edadb/idb/` should contain adapter code only: headers, source files,
+  schema, init, helper, and `shadow/*`.
+- Early scratch notes under `src/database/edadb/idb/docs/*.mk` were removed; useful
+  read/write flow information is now covered by `src/database/edadb/docs/` and
+  `md/ieda_architecture_learning/`.
+- Personal research and learning notes live under `md/`, especially `md/paper/` and
+  `md/ieda_architecture_learning/`.
+- To sync only documentation on another machine after pushing to GitHub, use sparse
+  checkout:
+
+```bash
+git clone --filter=blob:none --no-checkout git@github.com:<user>/<repo>.git
+cd <repo>
+git sparse-checkout init --cone
+git sparse-checkout set md src/database/edadb/docs
+git checkout edadb-idb
+```
+
+- `--filter=blob:none` avoids downloading file contents until needed; `--no-checkout`
+  prevents full workspace materialization; `sparse-checkout set` chooses only the
+  documentation directories to expand locally.
 
 Recent root-order milestones:
 
@@ -286,12 +314,12 @@ iEDA + EDADB wrapper/adapter code added by this branch:
   - `src/database/manager/builder/def_builder/def_write_edadb.cpp`
   - `src/database/manager/builder/def_builder/def_write_edadb.h`
   - `src/platform/data_manager/idm_edadb.cpp`
-- Adapter notes, old call-flow notes, demos, and repeatable regression tests:
+- Adapter notes, demos, and repeatable regression tests:
   - `agent.md`
   - `cmds.md`
   - `edadb_readme.md`
   - `scripts/edadb/demo/*`
-  - `src/database/edadb/idb/docs/*`
+  - `src/database/edadb/docs/*`
   - `src/database/edadb/test/*` (working tree addition on 2026-06-16)
 
 EDADB core code:
@@ -534,7 +562,7 @@ src/database/edadb/idb/
 - `edadb_idb_schema.h`: active iDB/shadow table mappings for Design through Net.
 - `edadb_idb_shadow.h`: shadow aggregation for active geometry/die/track/via/instance/pin/blockage/slot/group/fill/net mappings.
 - `shadow/*`: per-class iDB ↔ shadow conversion definitions used by current EDADB read/write paths.
-- `docs/*`: DEF/LEF parsing and ORM notes.
+- `src/database/edadb/docs/*`: canonical EDADB adapter documentation.
 
 ## Master vs C: What EDADB Adds
 
@@ -552,7 +580,7 @@ Adapter:
 
 - `src/database/edadb/idb/*`
 - `src/database/edadb/idb/shadow/*`
-- `src/database/edadb/idb/docs/*`
+- `src/database/edadb/docs/*`
 
 DEF builder:
 

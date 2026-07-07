@@ -6,7 +6,7 @@ Link targets:
 
 - From this directory: `def-ieda-mapping-and-order.md`
 - From `knowledge/05_ieda/`: `../01_file-formats/lef-def/def-ieda-mapping-and-order.md`
-- Related DEF standard summary: [def-file-spec-5.7.md](def-file-spec-5.7.md)
+- Related DEF standard summary: keep the extracted DEF 5.7 summary next to this file as `def-file-spec-5.7.md` when available.
 
 ## Scope
 
@@ -115,3 +115,13 @@ iEDA-aware normalized-diff rule:
 - If raw diff fails only because Level-D root-section element order changed, run normalized semantic diff.
 - Normalized diff may sort Level-D root records by stable key: track axis/start/layer set, gcell axis/start/step, via name, region name, blockage signature, slot/fill geometry signature, group name, or special-net name. Do this only for records that are not duplicate/update streams.
 - Normalized diff must not reorder Level A/B/C root lists and must not reorder deeper nested route/geometry vectors.
+
+## Planned Dynamic Order Tests
+
+These tests are planned evidence for the static point-tool analysis above. Do not generate or run them until the test design is reviewed.
+
+- SQLite unordered-read stress: run EDADB read paths with `PRAGMA reverse_unordered_selects=ON` to expose any adapter query that depends on implicit SQLite row order. SQLite documents that `SELECT` without `ORDER BY` has undefined row order, so every order-sensitive EDADB read must use explicit `ORDER BY`.
+- `PINS` / iFP physical-order test: swap two top-level IO pin records in a real sky130 DEF, run `auto_place_pins`, and compare pin coordinates. Expected result: order changes physical pin placement because iFP consumes `pin_list[pin_index++]`.
+- `ROWS` / iPDN physical-order test: swap two top-level row records, run the PDN path that assigns follow-pin stripes by row traversal parity, and compare VDD/VSS stripe assignment.
+- `COMPONENTS` / iPL reproducibility test: swap two component records before placement and compare placer IDs, logs, and final coordinates under the same fixed seed.
+- `NETS` / iDRC ID-consistency test: use a targeted adapter/unit harness to verify `IdbNet::_id` remains consistent with `IdbNetList::_net_list`; reordering the vector without rebuilding IDs should be caught because DRC reports use `idb_net_list[net_idx]`.
