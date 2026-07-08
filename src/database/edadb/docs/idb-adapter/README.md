@@ -70,7 +70,7 @@ EDADB adapter 文档的核心目标是：每个 root class 都必须按 `src/dat
 | `IdbGCellGridList` | No | Level D; no point-tool root index/order dependency found | Direct no-shadow/no-order mapping; normalized diff handles root order-only differences. |
 | `IdbRegionList` | No | Level D; references are name-based and no point-tool root index/order dependency found | Direct no-shadow/no-order mapping; normalized diff handles root order-only differences. |
 | `IdbSlotList` | Yes | anonymous `SLOTS` records should preserve DEF append order for raw roundtrip | `primary_key` identity plus `_order_sd` ordered read; rect vector uses `Shadow<IdbRect>::_vec_idx`. |
-| `IdbBlockageList` | Yes | vector traversal and DEF writer order; no natural name identity | Implemented with `primary_key` as identity, `_order_sd` as list order, and ordered read. |
+| `IdbBlockageList` | No | Level D; no point-tool root index/order dependency found | Synthetic `primary_key` identity; no `_order_sd`; rect vector uses `Shadow<IdbRect>::_vec_idx`. |
 
 ## Current Progress
 
@@ -84,7 +84,7 @@ EDADB adapter 文档的核心目标是：每个 root class 都必须按 `src/dat
 | Via | Done | Direct root object; member-level via master/layer-shape shadows handle rebuild. |
 | Instance | Done | `_name_sd` identity, `_order_sd` root order, master/region/layer references rebuilt by name. |
 | Pin | Done | `_pin_name_sd` identity, `_order_sd` root order, port/layer shape relative geometry preserved. |
-| Blockage | Done | `primary_key` identity, `_order_sd` root order, layer/instance references rebuilt by name. |
+| Blockage | Done | Level D root order; `primary_key` identity, no `_order_sd`, layer/instance references rebuilt by name. |
 | Region | Done | Direct `IdbRegion`; `_name` identity, no `_order_sd`, boundary vector preserved. |
 | Slot | Done | `primary_key` identity for anonymous root records, `_order_sd` root order, rectangle vector uses `Shadow<IdbRect>::_vec_idx`. |
 | Group | Done | `_group_name_sd` identity, `_order_sd` root order, member vector order preserved. |
@@ -119,7 +119,7 @@ EDADB adapter 文档的核心目标是：每个 root class 都必须按 `src/dat
 - `06_idb_via.md`: `IdbVia` for `VIAS`, including direct root storage and via-master/layer-shape shadow rebuild.
 - `07_idb_instance.md`: `IdbInstance` for `COMPONENTS`, including component fields, name references, and explicit root order.
 - `08_idb_pin.md`: `IdbPin` for `PINS`, including IO term, port/layer shape storage, computed absolute geometry, and explicit root order.
-- `09_idb_blockage.md`: `IdbBlockage` for `BLOCKAGES`, including routing/placement polymorphism, rect vector, name references, and explicit root order.
+- `09_idb_blockage.md`: `IdbBlockage` for `BLOCKAGES`, including routing/placement polymorphism, rect vector, name references, and Level D root-order policy.
 - `10_idb_region.md`: `IdbRegion` for `REGIONS`, including name/type and boundary rectangle vector persistence.
 - `11_idb_slot.md`: `IdbSlot` for `SLOTS`, including layer name, rectangle vector, and anonymous root identity.
 - `12_idb_group.md`: `IdbGroup` for `GROUPS`, including region/member name references and explicit root/member order.

@@ -67,7 +67,6 @@ public:
 
 public:
     uint64_t primary_key = 0; // primary key
-    int32_t _order_sd = 0;
 
 // members from IdbBlockage
     std::string _instance_name_sd;
