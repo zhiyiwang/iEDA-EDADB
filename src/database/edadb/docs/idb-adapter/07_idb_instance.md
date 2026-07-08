@@ -59,11 +59,27 @@ TABLE4CLASS(edadb::Shadow<idb::IdbInstance>, "iInstSD",
              _halo_sd, _route_halo_sd, _region_name_sd));
 ```
 
+相关 nested / inline storage schema：
+
+```cpp
+TABLE4SHADOW(idb::IdbCoordinate<int32_t>);
+TABLE4CLASS(edadb::Shadow<idb::IdbCoordinate<int32_t>>,
+            "iCoordSD", (_vec_idx, _x_sd, _y_sd));
+
+TABLE4CLASS(idb::IdbHalo, "iHalo",
+            (_extend_left, _extend_right, _extend_top,
+             _extend_bottom, _is_soft));
+
+TABLE4CLASS(edadb::Shadow<idb::IdbRouteHalo>, "iRouteHaloSD",
+            (_route_distance_sd, _layer_bottom_name_sd,
+             _layer_top_name_sd));
+```
+
 `iInstSD` 不是完整 C++ object dump，而是 `COMPONENTS` 的 DEF storage view。它还依赖以下 EDADB store types：
 
-- `Shadow<IdbCoordinate<int32_t>>` / `iCoordSD`：`_coordinate_sd` 的 storage view，保存 placement x/y。
-- `IdbHalo` / `iHalo`：`_halo_sd` 的 inline child，保存 `HALO [SOFT] left bottom right top`。
-- `Shadow<IdbRouteHalo>` / `iRouteHaloSD`：`_route_halo_sd` 的 storage view，保存 route distance、bottom layer name、top layer name。
+- `Shadow<IdbCoordinate<int32_t>>` / `iCoordSD`：`_coordinate_sd` 的 storage view，保存 placement x/y；instance 的 scalar coordinate 不使用 `_vec_idx` 表达 root order。
+- `IdbHalo` / `iHalo`：`_halo_sd` 的 inline child，保存 `HALO [SOFT] left bottom right top`；没有独立 root/list identity。
+- `Shadow<IdbRouteHalo>` / `iRouteHaloSD`：`_route_halo_sd` 的 inline child storage view，保存 route distance、bottom layer name、top layer name；layer pointer 不直接入库。
 - `IdbCellMaster`：不作为 child table 存储；只保存 `_cell_master_name_sd`，read 时从 LEF `IdbCellMasterList` lookup。
 - `IdbRegion`：不作为 child table 存储；只保存 `_region_name_sd`，read 时从 `IdbRegionList` lookup，并补回 region-instance 关系。
 - `IdbLayer`：不作为 child table 存储；route halo bottom/top layer 只保存 layer name，read 时从 LEF layer list lookup。

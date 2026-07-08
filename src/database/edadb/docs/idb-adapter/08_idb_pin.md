@@ -51,7 +51,7 @@
 
 ## EDADB Schema
 
-当前 schema：
+当前 root schema：
 
 ```cpp
 TABLE4CLASS(edadb::Shadow<idb::IdbPin>, "iPinSD",
@@ -60,14 +60,49 @@ TABLE4CLASS(edadb::Shadow<idb::IdbPin>, "iPinSD",
              _is_io_pin_sd, _is_special_net_sd, _layer_num_sd));
 ```
 
-相关 nested shadow：
+相关 nested / inline storage schema：
 
-- `Shadow<IdbTerm>` 保存 direction/use/special/has-port 和 port vector。
-- `Shadow<IdbPort>` 保存 port orient/status/coordinate 和 layer shape vector。
-- `Shadow<IdbLayerShape>` 保存 layer name、shape type 和 rect vector。
+```cpp
+TABLE4SHADOW(idb::IdbCoordinate<int32_t>);
+TABLE4CLASS(edadb::Shadow<idb::IdbCoordinate<int32_t>>,
+            "iCoordSD", (_vec_idx, _x_sd, _y_sd));
+
+TABLE4SHADOW(idb::IdbRect);
+TABLE4CLASS(edadb::Shadow<idb::IdbRect>, "IdbRectSD",
+            (_vec_idx, _lx_sd, _ly_sd, _hx_sd, _hy_sd));
+
+TABLE4SHADOW_WVEC(idb::IdbLayerShape);
+TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbLayerShape>,
+                  "iLayerShapeSD", (_layer_name_sd, _type_sd),
+                  (_rect_list_sd));
+
+TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbPort>, "iPortSD",
+                  (primary_key, _class_sd, _orient_sd,
+                   _placement_status_sd, _coordinate_sd),
+                  (_layer_shape_list_sd));
+
+TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbTerm>, "iTermSD",
+                  (_name_sd, _direction_sd, _type_sd, _shape_sd,
+                   _placement_status_sd, _has_port_sd,
+                   _is_special_net_sd, _is_instance_sd),
+                  (_port_list_sd));
+```
+
+`iPinSD` 不是完整 `IdbPin` object dump，而是 `PINS` 的 DEF storage view。它依赖以下 store views：
+
+- `Shadow<IdbTerm>` / `iTermSD`：`_io_term_sd` 的 inline child，保存 direction/use/shape/special/has-port，并拥有 port vector。
+- `Shadow<IdbPort>` / `iPortSD`：term port vector child，保存 port class、orient、placement status、coordinate，并拥有 layer-shape vector。
+- `Shadow<IdbLayerShape>` / `iLayerShapeSD`：port layer-shape vector child，保存 layer name、shape type，并拥有 rect vector。
+- `Shadow<IdbRect>` / `IdbRectSD`：layer-shape rect vector child，保存 DEF-relative rect，使用 `_vec_idx` 保持 rect append order。
+- `Shadow<IdbCoordinate<int32_t>>` / `iCoordSD`：保存 pin average coordinate、pin location、port coordinate；scalar coordinate 不使用 `_vec_idx` 表达 root order。
+- `IdbLayer`：不作为 child table 存储；layer shape 只保存 layer name，read 时从 LEF layer list lookup。
+- `IdbNet` / `IdbSpecialNet`：不作为 child table 存储；这里只保存 `_net_name_sd` 和 special flag，后续 net/special-net adapter 按 pin name/link name 恢复 pointer。
 
 Schema / init 代码位置：
 
+- `iCoordSD` table macro: `src/database/edadb/idb/edadb_idb_schema.h:34`
+- `IdbRectSD` table macro: `src/database/edadb/idb/edadb_idb_schema.h:70`
+- `iLayerShapeSD` table macro: `src/database/edadb/idb/edadb_idb_schema.h:74`
 - `iPortSD` table macro: `src/database/edadb/idb/edadb_idb_schema.h:94`
 - `iTermSD` table macro: `src/database/edadb/idb/edadb_idb_schema.h:97`
 - `iPinSD` root table macro: `src/database/edadb/idb/edadb_idb_schema.h:100`

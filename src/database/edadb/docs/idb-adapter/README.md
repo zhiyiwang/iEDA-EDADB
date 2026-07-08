@@ -4,8 +4,11 @@
 
 ## Goal
 
-EDADB adapter 的目标不是 dump 完整 C++ 对象，而是贴近 iEDA 原始 DEF 语义：
+EDADB adapter 文档的核心目标是：每个 root class 都必须按 `src/database/edadb/docs/def-ieda-mapping-and-order.md` 的约束检查，并把检查结论写进对应 `0X_idb_*.md`。
 
+在这个核心目标下，EDADB adapter 不是 dump 完整 C++ 对象，而是贴近 iEDA 原始 DEF 语义：
+
+- 先确认 DEF section 到 iEDA class/root list 的映射，以及 root order 等级 A/B/C/D。
 - `writeIdbT()` 对齐 `DefWrite::write_xxx()` 实际输出的 DEF 字段。
 - `readIdbT()` 对齐 `DefRead::parse_xxx()` 实际重建的 iDB 状态。
 - DB schema 只保存 DEF 语义需要的字段，以及 read 时无法从上下文重新计算的字段。

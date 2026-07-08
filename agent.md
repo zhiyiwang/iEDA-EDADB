@@ -142,6 +142,12 @@ Current uncovered or weakly covered areas:
 
 ## EDADB Adapter Current Rules
 
+- Core documentation goal: every `src/database/edadb/docs/idb-adapter/0X_*.md`
+  file must explicitly check the constraints from
+  `src/database/edadb/docs/def-ieda-mapping-and-order.md`: DEF section mapping,
+  iEDA root class/list, root order level A/B/C/D, and whether EDADB preserves or
+  intentionally normalizes that order. Nested `TABLE4CLASS*` details are useful
+  supporting evidence, not the primary goal.
 - Match original DEF semantics first: compare `DefWrite::write_xxx()` and
   `DefRead::parse_xxx()` before changing `writeIdbXXX/readIdbXXX`.
 - Persist the DEF storage view, not the whole C++ object graph.
