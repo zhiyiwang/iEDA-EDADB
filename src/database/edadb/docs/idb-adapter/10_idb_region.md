@@ -12,6 +12,7 @@
 本文件按 `src/database/edadb/docs/def-ieda-mapping-and-order.md` 的约束检查：
 
 - DEF section 映射：`REGIONS` section。
+- iEDA root container：`IdbRegionList::_region_list`。
 - root-vector order 等级：Level D，当前没有发现点工具依赖 `IdbRegionList::_region_list` 的 root index/order。
 - nested vector 约束：boundary rectangle vector 是 region 内部几何列表，必须随 root record 保持原始顺序，不参与 D-level root sort。
 
@@ -44,9 +45,9 @@ TABLE4CLASS_WVEC(idb::IdbRegion, "iRegion", (_name, _type), (_boudary_list));
 
 Schema / init 代码位置：
 
-- `iRegion` direct table macro: `src/database/edadb/idb/edadb_idb_schema.h:105`
+- `iRegion` direct table macro: `src/database/edadb/idb/edadb_idb_schema.h:106`
 - Primary-key setup: `src/database/edadb/idb/edadb_idb_init.cpp:21`
-- Table registration: `src/database/edadb/idb/edadb_idb_init.cpp:89`
+- Table registration: `src/database/edadb/idb/edadb_idb_init.cpp:90`
 
 保存字段覆盖原始 DEF writer/read 需要的 name、type 和 boundary rectangle vector。
 
@@ -98,14 +99,16 @@ Primary-key audit:
 - `_instance_list` 不入库；instance/group 到 region 的引用由它们各自的 adapter 保存 region name 后重建。
 - 当前没有需要通过 shadow 重建的 non-owning pointer。
 
+当前实现与 order 约束没有出入：schema 是 direct no-shadow/no-order，write/read 也都没有 `ORDER BY` 或 `_order_sd`。
+
 ## EDADB Write Path
 
 当前 `writeIdbRegion()`：
 
 - Code: `src/database/manager/builder/def_builder/def_write_edadb.cpp:448`
-- Region vector access: `src/database/manager/builder/def_builder/def_write_edadb.cpp:461`
-- Empty-list return: `src/database/manager/builder/def_builder/def_write_edadb.cpp:465`
-- EDADB direct insert: `src/database/manager/builder/def_builder/def_write_edadb.cpp:469`
+- Region vector access: `src/database/manager/builder/def_builder/def_write_edadb.cpp:459`
+- Empty-list return: `src/database/manager/builder/def_builder/def_write_edadb.cpp:463`
+- EDADB direct insert: `src/database/manager/builder/def_builder/def_write_edadb.cpp:467`
 
 - 从 `design->get_region_list()` 取得 region vector。
 - 空列表返回 `kDbSuccess`，避免 EDADB dispatcher 中断整个写流程。
@@ -148,6 +151,10 @@ Primary-key audit:
 - 原始 `write_region()` 按 `region_list->get_region_list()` 当前顺序输出，因此 raw text roundtrip 可能受 DB 读回顺序影响。
 - instance/group 对 region 的语义引用靠 `find_region(name)`，不是靠 list index。
 - `def-ieda-mapping-and-order.md` 中记录：iPL wrapping 会遍历 region，但后续语义主要通过 region name lookup；未发现 root index/front/order-derived ID 依赖。
+- `IDBWrapper::wrapRegions()` 按 `IdbRegionList` 遍历并创建 iPL `Region`，见 `src/operation/iPL/source/module/wrapper/IDBWrapper.cc:700-733`。
+- iPL `Design::add_region()` 会按插入顺序分配 `_region_id`，见 `src/operation/iPL/source/data/Design.hh:156-161`；但当前代码中只发现 `get_region_id()` 定义，未发现算法消费该 ID。
+- legalizer/detail placer 后续通过 region name map 查找实例所属 region，见 `src/operation/iPL/source/module/detail_placer/DetailPlacer.cc:205-210`、`src/operation/iPL/source/module/detail_placer/database/DPLayout.cc:58-75`。
+- `PlacerDB` / `MapFiller` / `NesterovPlace` 对 region list 的遍历用于插入 boundary geometry 或累积 blockage area，见 `src/operation/iPL/source/PlacerDB.cc:477-484`、`src/operation/iPL/source/module/filler/src/MapFiller.cpp:35-53`、`src/operation/iPL/source/module/global_placer/electrostatic_placer/NesterovPlace.cc:558-564`；这些使用没有 root index/front/order-derived ID。
 - 因为 root order 没有点工具语义依赖，当前不引入 `_order_sd`；如果 raw diff 只因 Level-D root order 变化失败，应使用 normalized diff。
 
 当前状态：已实现 direct no-shadow/no-order mapping。
