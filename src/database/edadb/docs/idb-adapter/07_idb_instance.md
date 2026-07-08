@@ -50,7 +50,7 @@
 
 ## EDADB Schema
 
-当前 schema：
+当前 root schema：
 
 ```cpp
 TABLE4CLASS(edadb::Shadow<idb::IdbInstance>, "iInstSD",
@@ -58,6 +58,16 @@ TABLE4CLASS(edadb::Shadow<idb::IdbInstance>, "iInstSD",
              _weight_sd, _cell_master_name_sd, _coordinate_sd,
              _halo_sd, _route_halo_sd, _region_name_sd));
 ```
+
+`iInstSD` 不是完整 C++ object dump，而是 `COMPONENTS` 的 DEF storage view。它还依赖以下 EDADB store types：
+
+- `Shadow<IdbCoordinate<int32_t>>` / `iCoordSD`：`_coordinate_sd` 的 storage view，保存 placement x/y。
+- `IdbHalo` / `iHalo`：`_halo_sd` 的 inline child，保存 `HALO [SOFT] left bottom right top`。
+- `Shadow<IdbRouteHalo>` / `iRouteHaloSD`：`_route_halo_sd` 的 storage view，保存 route distance、bottom layer name、top layer name。
+- `IdbCellMaster`：不作为 child table 存储；只保存 `_cell_master_name_sd`，read 时从 LEF `IdbCellMasterList` lookup。
+- `IdbRegion`：不作为 child table 存储；只保存 `_region_name_sd`，read 时从 `IdbRegionList` lookup，并补回 region-instance 关系。
+- `IdbLayer`：不作为 child table 存储；route halo bottom/top layer 只保存 layer name，read 时从 LEF layer list lookup。
+- instance pin list / obs box list / bbox：不存储；由 `set_cell_master()`、placement/orient/coordinate 设置和 iDB 计算流程重建。
 
 字段选择依据是 “DEF read 解析后 iDB 应恢复什么”，而不是只保存 “当前 writer 会输出什么”：
 
@@ -142,6 +152,40 @@ Primary-key audit:
 - 写入 `_name_sd`、cell master name、type/status/orient/weight、coordinate、halo、route halo、region name。
 
 这覆盖了原始 writer 输出字段，并保存 parser 语义字段 weight/region。原因是 EDADB read 会替代 `parse_component()`：如果 DB 不保存 weight/region，EDADB read 后的 active iDB 就无法完整等价于原始 DEF read 解析结果。
+
+## Write Performance Notes
+
+EDADB 当前公开写入路径有三类：
+
+- `insertObject<T>(obj)`：one-shot API；默认每次自带 transaction，并为每个 object 创建新的 `InsertOp`。
+- `insertVector<T>(vec)`：batch API；一次 transaction，创建一个 `InsertOp`，循环写入整个 vector，并复用 prepared statement。
+- `makeInsertOp<T>() + beginTransaction()`：streaming batch；一次 transaction，一个可复用 `InsertOp`，caller 逐个构造/写入 object。
+
+当前 `writeIdbInstance()` 先构造 `vector<Shadow<IdbInstance>*>`，再调用 `insertVector<Shadow<IdbInstance>>()`。因此 DB 写入阶段已经是 batch：一次 transaction、一个 reusable insert op、prepared statement 复用。主要额外成本不在 SQLite transaction，而在 adapter 先为所有 instance 创建 shadow 对象：
+
+- 时间：每个 instance 做一次 `toShadow()`，复制 name/master/region string，转换 route halo。
+- 内存：额外保存 `O(instance_count)` 个 shadow 指针和 shadow object；coordinate/halo 多数是借用 iDB 指针，route halo 会生成小 shadow object。
+- 对当前 sky130 demo 的 1k 级 instance 不构成问题；10w 级通常仍可接受；100w 级开始需要关注临时内存和 string allocation；500w+ 级不建议继续保留全量 shadow vector。
+
+如果后续需要优化，应优先改成 streaming batch，而不是退回逐个 `insertObject()`：
+
+```cpp
+auto op = edadb::makeInsertOp<edadb::Shadow<idb::IdbInstance>>();
+edadb::beginTransaction();
+for (...) {
+    edadb::Shadow<idb::IdbInstance> inst_sd;
+    inst_sd.toShadow(inst, &idx);
+    op.insert(&inst_sd);
+}
+edadb::commitTransaction();
+```
+
+这个方案与 `insertVector()` 的 DB 侧性能模型接近，仍保留 single transaction 和 prepared statement 复用，但 adapter 临时内存从 `O(instance_count)` 降到 `O(1)`。边界条件：
+
+- `Shadow<IdbInstance>` 在 `op.insert()` 返回前必须保持有效，返回后可销毁。
+- 需要显式 rollback：任一 insert 失败时调用 `rollbackTransaction()` 并返回失败。
+- 不能让 borrowed `_coordinate_sd` / `_halo_sd` 在 insert 期间失效；当前 iDB active design 生命周期满足这一点。
+- 如果 EDADB 后续支持 `insertVector` 的 lazy/generator 版本，可以把该模式沉到 EDADB core，避免每个 adapter 重复写 transaction/error handling。
 
 ## EDADB Read Path
 
