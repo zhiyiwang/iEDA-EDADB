@@ -175,7 +175,9 @@ check_aux_optional_sql() {
     assert_eq "$(sql_value "$edadb_db" "select _order_sd || '|' || _layer_name_sd from iSlotSD;")" "0|met1" "$name slot layer"
     assert_eq "$(sql_value "$edadb_db" "select _vec_idx || '|' || _lx_sd || '|' || _ly_sd || '|' || _hx_sd || '|' || _hy_sd from iSlotSD__rect_list_sd_IdbRectSD;")" \
         "0|5000|5000|6000|6000" "$name slot rect"
-    assert_eq "$(sql_value "$edadb_db" "select _group_name_sd || '|' || _order_sd || '|' || _region_name_sd from iGroupSD;")" "test_group|0|test_region" "$name group region"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from pragma_table_info('iGroupSD') where name='_order_sd';")" \
+        "0" "$name group has no root order column"
+    assert_eq "$(sql_value "$edadb_db" "select _group_name_sd || '|' || _region_name_sd from iGroupSD;")" "test_group|test_region" "$name group region"
     assert_eq "$(sql_value "$edadb_db" "select _weight_sd || '|' || _region_name_sd from iInstSD where _name_sd='ctrl/_34_';")" \
         "13|test_region" "$name instance weight region"
     assert_eq "$(sql_value "$edadb_db" "select _io_term_sd__has_port_sd || '|' || _io_term_sd__is_special_net_sd || '|' || _io_term_sd__placement_status_sd from iPinSD where _pin_name_sd='clk';")" \

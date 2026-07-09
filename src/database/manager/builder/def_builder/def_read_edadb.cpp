@@ -601,11 +601,7 @@ bool DefReadEdadb::readIdbGroup(void) {
         return false;
     }
 
-    auto group_reader = edadb::makeGenericQueryOp<edadb::Shadow<idb::IdbGroup>>();
-    if (group_reader.preparePredicate("ORDER BY \"_order_sd\"") < 0) {
-        std::cerr << "DefReadEdadb::readIdbGroup failed to prepare ordered group query!" << std::endl;
-        return false;
-    }
+    auto group_reader = edadb::makeReadAllOp<edadb::Shadow<idb::IdbGroup>>();
 
     int32_t group_count = 0;
     while (true) {

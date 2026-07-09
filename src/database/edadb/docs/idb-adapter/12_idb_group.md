@@ -12,8 +12,9 @@
 本文件按 `src/database/edadb/docs/def-ieda-mapping-and-order.md` 的约束检查：
 
 - DEF section 映射：`GROUPS` section。
+- iEDA root container：`IdbGroupList::_group_list`。
 - root-vector order 等级：Level D，当前没有发现点工具依赖 `IdbGroupList::_group_list` 的 root index/order。
-- root identity 约束：group name 是 DEF-visible identity，当前用 `_group_name_sd` 作为 EDADB root PK；`_order_sd` 只保存 append order，不作为 PK。
+- root identity 约束：group name 是 DEF-visible identity，当前用 `_group_name_sd` 作为 EDADB root PK；不使用 vector order index 作为 PK。
 - nested vector 约束：group member vector 是 group record 内部成员顺序，必须随 root record 保持原始顺序，不参与 D-level root sort。
 
 ## Original Write Semantics
@@ -42,7 +43,7 @@ property 当前仍是 TBD，不进入 iDB 状态。
 当前 schema：
 
 ```cpp
-TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbGroup>, "iGroupSD", (_group_name_sd, _order_sd, _region_name_sd), (_instance_name_vec_sd));
+TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbGroup>, "iGroupSD", (_group_name_sd, _region_name_sd), (_instance_name_vec_sd));
 ```
 
 Schema / init 代码位置：
@@ -58,20 +59,20 @@ Schema 与 order/index 约束的关系：
 
 - 依据 `src/database/edadb/docs/def-ieda-mapping-and-order.md`，`GROUPS` 映射到 `IdbGroupList::_group_list`，等级为 Level D。
 - Level D 的含义是当前未发现点工具依赖 root vector index/order；normalized diff 可以按 group name 排序 `GROUPS` root records。
-- 当前 adapter 仍保存 `_order_sd` 并 ordered read，用于贴近原始 DEF append/write 顺序；这不是点工具语义依赖。
+- 当前 adapter 不保存 `_order_sd`，read path 不指定 root order；root order-only 文本差异由 normalized diff 处理。
 - `_instance_name_vec_sd` 是 group 内部 primitive string vector，EDADB primitive vector child table 使用 `__edadb_vec_idx` 保存 member order。
 
 Primary-key audit:
 
 - `initPrimKeys()` 没有关闭 `Shadow<IdbGroup>` 的 primary-key 行为；`_group_name_sd` 是 table 第一列和 root identity。
-- `_order_sd` 不是 PK，不能用它表达 group identity。
+- 不定义 `_order_sd`；`GROUPS` root order 是 Level D，不作为 iEDA 点工具语义约束。
 - `initReadDb()` / `initWriteDb()` 都先调用 `initPrimKeys()`，再调用 `initAllTables()`，因此 read/write 的 table metadata 一致。
 
 ## Field Mapping To Original DEF Flow
 
 以下按 EDADB shadow 域列出它对应的原始 DEF read/write 代码位置。
 
-- Group identity / root order: `_group_name_sd`, `_order_sd`
+- Group identity: `_group_name_sd`
   - Write source: `DefWrite::write_group()` 按 group list 顺序输出 group name，见 `src/database/manager/builder/def_builder/def_write.cpp:1106-1138`。
   - Read source: `groupNameCallback()` / `parse_group_name()` 创建 group，见 `src/database/manager/builder/def_builder/def_read.cpp:2176-2192` 和 `src/database/manager/builder/def_builder/def_read.cpp:2238-2251`。
 
@@ -96,8 +97,7 @@ Primary-key audit:
 当前需要 `Shadow<IdbGroup>`：
 
 - `IdbGroup` 的 root identity 是 `_group_name`，因此 `_group_name_sd` 作为 PK。
-- `IdbGroupList` 需要恢复 DEF append 顺序，但不能用 vector order index 作为 PK。
-- `_order_sd` 单独保存 list order。
+- `IdbGroupList` 是 Level D root list；当前不保存 root append order，也不使用 vector order index。
 - `_region` 是 non-owning reference，DB 中保存 region name，read 时通过 `IdbRegionList::find_region()` 重建。
 - `_instance_list` 是 instance references，DB 中保存 instance name vector，read 时通过 `IdbInstanceList::find_instance()` 重建。
 
@@ -105,16 +105,16 @@ Primary-key audit:
 
 当前 `writeIdbGroup()`：
 
-- Code: `src/database/manager/builder/def_builder/def_write_edadb.cpp:520`
-- Group vector access: `src/database/manager/builder/def_builder/def_write_edadb.cpp:533`
-- Empty-list return: `src/database/manager/builder/def_builder/def_write_edadb.cpp:537`
+- Code: `src/database/manager/builder/def_builder/def_write_edadb.cpp:518`
+- Group vector access: `src/database/manager/builder/def_builder/def_write_edadb.cpp:531`
+- Empty-list return: `src/database/manager/builder/def_builder/def_write_edadb.cpp:535`
 - Shadow construction: `src/database/manager/builder/def_builder/def_write_edadb.cpp:541`
-- EDADB insert: `src/database/manager/builder/def_builder/def_write_edadb.cpp:549`
+- EDADB insert: `src/database/manager/builder/def_builder/def_write_edadb.cpp:547`
 
 - 从 `design->get_group_list()` 取得 group vector。
 - 空列表返回 `kDbSuccess`，避免 EDADB dispatcher 中断整个写流程。
-- 非空时按 list 顺序构造 `Shadow<IdbGroup>` pointer vector。
-- `toShadow()` 保存 `_group_name_sd`、`_order_sd`、`_region_name_sd` 和 `_instance_name_vec_sd`。
+- 非空时构造 `Shadow<IdbGroup>` pointer vector。
+- `toShadow()` 保存 `_group_name_sd`、`_region_name_sd` 和 `_instance_name_vec_sd`。
 - 使用 `edadb::insertVector<Shadow<IdbGroup>>()` 写入。
 
 这与原始 DEF 输出字段一致；空列表返回值是 adapter 层为 dispatcher 做的语义调整。
@@ -123,14 +123,14 @@ Primary-key audit:
 
 当前 `readIdbGroup()`：
 
-- Code: `src/database/manager/builder/def_builder/def_read_edadb.cpp:593`
-- EDADB read op: `src/database/manager/builder/def_builder/def_read_edadb.cpp:608`
-- EDADB read loop: `src/database/manager/builder/def_builder/def_read_edadb.cpp:615`
-- Add to active list: `src/database/manager/builder/def_builder/def_read_edadb.cpp:628`
-- Region lookup: `src/database/manager/builder/def_builder/def_read_edadb.cpp:630`
-- Instance lookup: `src/database/manager/builder/def_builder/def_read_edadb.cpp:634`
+- Code: `src/database/manager/builder/def_builder/def_read_edadb.cpp:589`
+- EDADB read op: `src/database/manager/builder/def_builder/def_read_edadb.cpp:604`
+- EDADB read loop: `src/database/manager/builder/def_builder/def_read_edadb.cpp:608`
+- Add to active list: `src/database/manager/builder/def_builder/def_read_edadb.cpp:620`
+- Region lookup: `src/database/manager/builder/def_builder/def_read_edadb.cpp:623`
+- Instance lookup: `src/database/manager/builder/def_builder/def_read_edadb.cpp:627`
 
-- 通过 `ORDER BY "_order_sd"` 读取 root records，恢复 `IdbGroupList` 原始 append 顺序。
+- 使用 EDADB read-all 读取 root records，不指定 root order。
 - `group_list->add_group(group_name)` 创建 group。
 - `fromShadow()` 恢复 group name。
 - 通过 region name 查找并设置 region pointer；空 region name 保持 nullptr，贴近原始 `parse_group()` 的 optional region 判断。
@@ -148,7 +148,7 @@ Primary-key audit:
 
 ## Order / Index
 
-`IdbGroupList` 和 group member vector 都需要保持顺序。
+`IdbGroupList` 不强制保持 root 顺序；group member vector 需要保持顺序。
 
 依据：
 
@@ -156,11 +156,11 @@ Primary-key audit:
 - 原始 `write_group()` 按 `group_list->get_group_list()` 当前顺序输出 group。
 - 原始 `write_group()` 也按 group instance list 当前顺序输出 members。
 - `src/operation/iPL` 中的 `Group` 是 placer 自己的 topology group，不是 `IdbGroupList` root group；当前未发现点工具依赖 `IdbGroupList::_group_list` index。
-- 因此 `GROUPS` root order 在点工具语义上是 Level D；当前 shadow 用 `_group_name_sd` 作为 root identity，用 `_order_sd` 保存 root list order，主要用于稳定 raw DEF roundtrip。
+- 因此 `GROUPS` root order 在点工具语义上是 Level D；当前 shadow 用 `_group_name_sd` 作为 root identity，不保存 root list order。
 - member vector 顺序由 EDADB primitive vector child table 的 `__edadb_vec_idx` 保存。
-- read path 已显式按 `_order_sd` 恢复 root list，不依赖 EDADB/SQLite read-all 物理顺序。
+- read path 不依赖 EDADB/SQLite read-all 物理顺序表达语义；root-order-only 文本差异由 normalized diff 处理。
 
-当前状态：已实现。root identity 和 root order 已分离，member vector order 已回归验证。
+当前状态：已实现。root identity 和 root order 已分离；root order 不保存，member vector order 已回归验证。
 
 对 normalized diff 的影响：
 
@@ -171,7 +171,7 @@ Primary-key audit:
 ## Tests
 
 - demo `sky130_gcd` 覆盖空列表路径：`writeIdbGroup insert group_count=0`，`readIdbGroup restored group_count=0`。
-- `src/database/edadb/test/run_idb_roundtrip_regression.sh` 的 `aux_optional` case 覆盖非空 group，并检查 `iGroupSD` count、`_order_sd`、region name 和 member order。
+- `src/database/edadb/test/run_idb_roundtrip_regression.sh` 的 `aux_optional` case 覆盖非空 group，并检查 `iGroupSD` count、确认没有 `_order_sd` column、region name 和 member order。
 
 ## Risks / TODO
 

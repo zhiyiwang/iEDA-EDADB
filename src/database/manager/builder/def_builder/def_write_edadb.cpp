@@ -538,9 +538,9 @@ int32_t DefWriteEdadb::writeIdbGroup(void) {
 
     vector<edadb::Shadow<idb::IdbGroup>*> group_sd_vec;
     group_sd_vec.reserve(group_vec.size());
-    for (uint32_t group_idx = 0; group_idx < group_vec.size(); ++group_idx) {
+    for (auto* group : group_vec) {
         auto* group_sd = new edadb::Shadow<idb::IdbGroup>();
-        group_sd->toShadow(group_vec[group_idx], &group_idx);
+        group_sd->toShadow(group);
         group_sd_vec.emplace_back(group_sd);
     }
 

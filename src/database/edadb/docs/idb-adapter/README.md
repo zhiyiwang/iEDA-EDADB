@@ -24,7 +24,7 @@ EDADB adapter 文档的核心目标是：每个 root class 都必须按 `src/dat
 - 没有天然 identity 的 root record 用 `primary_key`；有天然 name 的对象用 name 做 PK。
 - Primary key 只用于 root identity 或 nested vector-owner storage view；纯 inline/nested scalar value view 必须关闭 PK。例如 `Shadow<IdbViaMasterGenerate>` 只是 `Shadow<IdbViaMaster>::_master_generate_sd`，不是独立 root/vector owner，因此在 `initPrimKeys()` 中关闭 PK；`Shadow<IdbViaMaster>` owns `fixed_layer_shape_list_sd`，保留 EDADB 默认 PK。
 - 只有 iEDA 语义需要保序或明确要求 raw roundtrip 保序的 root list 才增加 `_order_sd`；Level D root list 默认不保存 root order，优先依赖 normalized diff。
-- `SLOTS` 是当前 01-11 的明确例外：它是 Level D，但 root record 没有 name，且 raw roundtrip 需要稳定 anonymous record 输出，因此保留 `primary_key + _order_sd`。
+- `SLOTS` 是当前已 review 类中的明确例外：它是 Level D，但 root record 没有 name，且 raw roundtrip 需要稳定 anonymous record 输出，因此保留 `primary_key + _order_sd`。
 - computed fields 不入库；read path 按原始 parser 语义重新计算或重建。
 - 每个 root 文档必须说明 child storage view：哪些子节点 direct mapping，哪些子节点 shadow，哪些运行时 pointer/cache 不入库以及如何重建。
 - 每启用一个 `readIdbXXX/writeIdbXXX`，必须同步 schema/init、DEF callback、测试 SQL 和文档。
@@ -72,6 +72,7 @@ EDADB adapter 文档的核心目标是：每个 root class 都必须按 `src/dat
 | `IdbRegionList` | No | Level D; references are name-based and no point-tool root index/order dependency found | Direct no-shadow/no-order mapping; normalized diff handles root order-only differences. |
 | `IdbSlotList` | Yes | Level D exception: anonymous `SLOTS` records preserve DEF append order for raw roundtrip | `primary_key` identity plus `_order_sd` ordered read; rect vector uses `Shadow<IdbRect>::_vec_idx`. |
 | `IdbBlockageList` | No | Level D; no point-tool root index/order dependency found | Synthetic `primary_key` identity; no `_order_sd`; rect vector uses `Shadow<IdbRect>::_vec_idx`. |
+| `IdbGroupList` | No | Level D; references are name-based and no point-tool root index/order dependency found | `_group_name_sd` identity; no `_order_sd`; member vector preserves order. |
 
 ## Current Progress
 
@@ -88,7 +89,7 @@ EDADB adapter 文档的核心目标是：每个 root class 都必须按 `src/dat
 | Blockage | Done | Level D root order; `primary_key` identity, no `_order_sd`, layer/instance references rebuilt by name. |
 | Region | Done | Direct `IdbRegion`; `_name` identity, no `_order_sd`, boundary vector preserved. |
 | Slot | Done | `primary_key` identity for anonymous root records, `_order_sd` root order, rectangle vector uses `Shadow<IdbRect>::_vec_idx`. |
-| Group | Done | `_group_name_sd` identity, `_order_sd` root order, member vector order preserved. |
+| Group | Done | Level D root order; `_group_name_sd` identity, no `_order_sd`, member vector order preserved. |
 | Fill | Done | `primary_key` identity, `_order_sd` root order, layer/via references rebuilt by name. |
 | SpecialNet | Done | `_net_name_sd` identity, `_order_sd` root order, pin/wire/segment vectors preserved. |
 | Net | Done | `_net_name_sd` identity, `_order_sd` root order, pin/wire/segment vectors preserved. |
@@ -123,7 +124,7 @@ EDADB adapter 文档的核心目标是：每个 root class 都必须按 `src/dat
 - `09_idb_blockage.md`: `IdbBlockage` for `BLOCKAGES`, including routing/placement polymorphism, rect vector, name references, and Level D root-order policy.
 - `10_idb_region.md`: `IdbRegion` for `REGIONS`, including name/type and boundary rectangle vector persistence.
 - `11_idb_slot.md`: `IdbSlot` for `SLOTS`, including layer name, rectangle vector, and anonymous root identity.
-- `12_idb_group.md`: `IdbGroup` for `GROUPS`, including region/member name references and explicit root/member order.
+- `12_idb_group.md`: `IdbGroup` for `GROUPS`, including region/member name references, Level D root-order policy, and member order.
 - `13_idb_fill.md`: `IdbFill` for `FILLS`, including layer/via typed storage, geometry vectors, and explicit root order.
 - `14_idb_special_net.md`: `IdbSpecialNet` for `SPECIALNETS`, including pin refs, special wires, segments, geometry, and explicit root order.
 - `15_idb_net.md`: `IdbNet` for `NETS`, including pin refs, regular wires, segments, geometry, and explicit root order.

@@ -175,7 +175,7 @@ Current uncovered or weakly covered areas:
 - For root lists that affect iEDA semantics or an explicitly documented raw-roundtrip
   requirement, read back with `ORDER BY "_order_sd"`. Level D root lists default to
   no `_order_sd` and rely on normalized diff for root-order-only differences.
-- Current 01-11 exception: `IdbSlotList` is Level D but keeps `primary_key +
+- Current reviewed-class exception: `IdbSlotList` is Level D but keeps `primary_key +
   _order_sd` because DEF `SLOTS` records are anonymous and raw roundtrip needs stable
   anonymous record output.
 - Update schema/init, builder read/write, DEF callbacks, regression SQL, and docs together.
@@ -214,6 +214,7 @@ Recent root-order milestones:
 - `IdbTrackGridList`: Level D; `primary_key` identity, no `_order_sd`; nested layer-name vector order remains preserved.
 - `IdbGCellGridList`: Level D; direct no-shadow/no-order.
 - `IdbRegionList`: Level D; direct no-shadow/no-order.
+- `IdbGroupList`: Level D; `_group_name_sd` identity, no `_order_sd`; member-name vector order remains preserved.
 
 Recommended next work:
 
@@ -500,6 +501,7 @@ Important rule:
 - Read `IdbRegion` before `IdbInstance` so instance region-name resolution can use the EDADB-restored region list.
 - `IdbSlot` uses shadow because DEF SLOTS has no natural unique root key: `_layer_name` is not guaranteed unique, while rect child rows still need a stable parent key.
 - `IdbGroup` uses shadow because DEF GROUPS stores region and member references by name; readback resolves region/instance names after Region and Instance are restored.
+  It is Level D for root order, so it does not store `_order_sd`; member-name vector order remains preserved by EDADB primitive-vector index.
 - `IdbFill` uses shadow because DEF FILLS is a typed layer/via storage view with pointer references converted to layer/via names and child geometry rows.
 - Non-empty layer-fill and via-fill paths are covered by the generated `aux_optional` fixture and SQLite checks.
 - `IdbSpecialNet` uses shadow because SPECIALNETS is a nested net/wire/segment storage view with layer/via/pin/instance references converted to names and synthetic keys for child rows.
