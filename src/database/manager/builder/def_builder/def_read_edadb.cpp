@@ -656,11 +656,7 @@ bool DefReadEdadb::readIdbFill(void) {
         return false;
     }
 
-    auto fill_reader = edadb::makeGenericQueryOp<edadb::Shadow<idb::IdbFill>>();
-    if (fill_reader.preparePredicate("ORDER BY \"_order_sd\"") < 0) {
-        std::cerr << "DefReadEdadb::readIdbFill failed to prepare ordered query!" << std::endl;
-        return false;
-    }
+    auto fill_reader = edadb::makeReadAllOp<edadb::Shadow<idb::IdbFill>>();
     int32_t fill_count = 0;
     while (true) {
         auto* fill_sd = new edadb::Shadow<idb::IdbFill>();

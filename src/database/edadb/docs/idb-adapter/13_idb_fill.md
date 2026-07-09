@@ -9,6 +9,14 @@
 - EDADB Write: `DefWriteEdadb::writeIdbFill()`
 - EDADB Read: `DefReadEdadb::readIdbFill()`
 
+本文件按 `src/database/edadb/docs/def-ieda-mapping-and-order.md` 的约束检查：
+
+- DEF section 映射：`FILLS` section。
+- iEDA root container：`IdbFillList::_fill_list`。
+- root-vector order 等级：Level D，当前没有发现点工具依赖 `IdbFillList::_fill_list` 的 root index/order。
+- anonymous/root identity 约束：fill record 没有 DEF-visible name，layer/via name 也不唯一；因此需要 adapter shadow 提供 `primary_key`。
+- nested vector 约束：layer fill rect vector、via fill coordinate vector 是 fill record 内部几何语义，必须随 root record 保持原始顺序，不参与 D-level root sort。
+
 ## Original Write Semantics
 
 原始 `DefWrite::write_fill()` 按 `IdbFillList` 顺序输出：
@@ -34,17 +42,38 @@
 
 ```cpp
 TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbFill>, "iFillSD",
-                 (primary_key, _order_sd, _type_sd, _layer_name_sd, _via_name_sd),
+                 (primary_key, _type_sd, _layer_name_sd, _via_name_sd),
                  (_rect_list_sd, _coordinate_list_sd));
 ```
 
+Schema / init 代码位置：
+
+- `iFillSD` table macro: `src/database/edadb/idb/edadb_idb_schema.h:115`
+- Primary-key setup: `src/database/edadb/idb/edadb_idb_init.cpp:21`
+- Table registration: `src/database/edadb/idb/edadb_idb_init.cpp:93`
+- Shadow definition: `src/database/edadb/idb/shadow/shadow_idb_fill.h:15`
+
 保存字段覆盖当前 DEF writer/read 需要的 fill type、layer/via name、rect vector 和 coordinate vector。
+
+Schema 与 order/index 约束的关系：
+
+- 依据 `src/database/edadb/docs/def-ieda-mapping-and-order.md`，`FILLS` 映射到 `IdbFillList::_fill_list`，等级为 Level D。
+- 当前 adapter 不保存 `_order_sd`，read path 不指定 root order；root order-only 文本差异由 normalized diff 处理。
+- `primary_key` 是 anonymous fill root identity，只用于挂接 child vectors，不表达 vector order。
+- `_rect_list_sd` 和 `_coordinate_list_sd` 是 fill 内部 child vectors，EDADB/shadow 机制使用 vector index 保存其原始顺序。
+
+Primary-key audit:
+
+- `initPrimKeys()` 没有关闭 `Shadow<IdbFill>` 的 primary-key 行为；`primary_key` 是 table 第一列和 root identity。
+- `Shadow<IdbRect>` 和 `Shadow<IdbCoordinate<int32_t>>` 的 PK 已关闭；它们是 child vector element storage view，通过 `_vec_idx`/child vector index 表达顺序。
+- 不定义 `_order_sd`；`FILLS` root order 是 Level D，不作为 iEDA 点工具语义约束。
+- `initReadDb()` / `initWriteDb()` 都先调用 `initPrimKeys()`，再调用 `initAllTables()`，因此 read/write 的 table metadata 一致。
 
 ## Field Mapping To Original DEF Flow
 
 以下按 EDADB shadow 域列出它对应的原始 DEF read/write 代码位置。
 
-- Root identity / order: `primary_key`, `_order_sd`
+- Root identity: `primary_key`
   - Write source: `DefWrite::write_fill()` 按 fill list 顺序输出 fill records，见 `src/database/manager/builder/def_builder/def_write.cpp:1140-1188`。
   - Read source: `fillsCallback()` / `parse_fill_number()` reserve list，`fillCallback()` / `parse_fill()` 按 DEF 出现顺序创建 fill，见 `src/database/manager/builder/def_builder/def_read.cpp:2313-2396`。
 
@@ -67,7 +96,7 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbFill>, "iFillSD",
 
 不直接保存 `IdbLayer*` 或 `IdbVia*`：它们是运行时引用。read 时按 name lookup layer/via；via 会按原始 parser 语义 clone 后挂到 fill。
 
-`Shadow<IdbFillLayer>` / `Shadow<IdbFillVia>` 当前不是 active schema；root `Shadow<IdbFill>` 已经表达 DEF-visible storage view，避免多一层无用 root table。
+`Shadow<IdbFillLayer>` / `Shadow<IdbFillVia>` 不再定义 active storage view；root `Shadow<IdbFill>` 已经表达 DEF-visible storage view，避免多一层无用 root table。
 
 ## Why Fill Shadow
 
@@ -75,18 +104,24 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbFill>, "iFillSD",
 
 - `IdbFill` 是 polymorphic-like wrapper：实际语义分 layer fill 和 via fill。
 - `IdbFill` 没有天然 name/ID，不能用 layer/via name 当 root identity。
-- `IdbFillList` 需要恢复 DEF append 顺序，不能用 vector order index 当 PK。
-- shadow 用 `primary_key` 作为 root identity，用 `_order_sd` 保存 root list order。
+- `IdbFillList` 是 Level D root list；当前不保存 root append order，也不使用 vector order index。
+- shadow 用 `primary_key` 作为 root identity。
 - shadow 用 name + vector child 替代运行时 pointer 和 owning geometry list。
 
 ## EDADB Write Path
 
 当前 `writeIdbFill()`：
 
+- Code: `src/database/manager/builder/def_builder/def_write_edadb.cpp:561`
+- Fill vector access: `src/database/manager/builder/def_builder/def_write_edadb.cpp:574`
+- Empty-list return: `src/database/manager/builder/def_builder/def_write_edadb.cpp:578`
+- Shadow construction: `src/database/manager/builder/def_builder/def_write_edadb.cpp:584`
+- EDADB insert: `src/database/manager/builder/def_builder/def_write_edadb.cpp:590`
+
 - 从 `design->get_fill_list()` 取得 fill vector。
 - 空列表返回 `kDbSuccess`，避免 EDADB dispatcher 中断整个写流程。
-- 非空时按 list 顺序构造 `Shadow<IdbFill>` pointer vector。
-- 写入 `_order_sd`、type、layer/via name、rect vector 或 coordinate vector。
+- 非空时构造 `Shadow<IdbFill>` pointer vector。
+- 写入 type、layer/via name、rect vector 或 coordinate vector。
 - 使用 `edadb::insertVector<Shadow<IdbFill>>()` 写入。
 
 这与原始 DEF 输出字段一致；空列表返回值是 adapter 层为 dispatcher 做的语义调整。
@@ -95,7 +130,13 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbFill>, "iFillSD",
 
 当前 `readIdbFill()`：
 
-- 通过 `ORDER BY "_order_sd"` 读取 root records，恢复 `IdbFillList` 原始 append 顺序。
+- Code: `src/database/manager/builder/def_builder/def_read_edadb.cpp:642`
+- EDADB read op: `src/database/manager/builder/def_builder/def_read_edadb.cpp:659`
+- EDADB read loop: `src/database/manager/builder/def_builder/def_read_edadb.cpp:662`
+- Layer lookup / add layer fill: `src/database/manager/builder/def_builder/def_read_edadb.cpp:675`
+- Via lookup / add via fill: `src/database/manager/builder/def_builder/def_read_edadb.cpp:688`
+
+- 使用 EDADB read-all 读取 root records，不指定 root order。
 - layer fill 按 `_layer_name_sd` 查找 LEF layer，调用 `add_fill_layer(layer)`，再恢复 rect list。
 - via fill 优先按 `_via_name_sd` 查找 DEF via，找不到再查 LEF via，clone 后调用 `add_fill_via(via_new)`，再恢复 coordinate list。
 - `createDbByDef()` 不注册 fill callback，避免 DEF 文本重复创建 fill。
@@ -112,23 +153,30 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbFill>, "iFillSD",
 
 ## Order / Index
 
-`IdbFillList`、rect vector 和 coordinate vector 都需要保持顺序。
+`IdbFillList` 不强制保持 root 顺序；rect vector 和 coordinate vector 需要保持顺序。
 
 依据：
 
 - 原始 `parse_fill()` 按 DEF 出现顺序 append fill。
 - 原始 `write_fill()` 按 `fill_list->get_fill_list()` 当前顺序输出。
 - layer fill rect 和 via fill coordinate 都按 vector 当前顺序输出。
-- 当前 shadow 用 `primary_key` 作为 root identity，用 `_order_sd` 保存 root list order。
+- `src/operation` 中当前未发现点工具依赖 `IdbFillList::_fill_list` root index/order。
+- 因此 `FILLS` root order 在点工具语义上是 Level D；当前 shadow 用 `primary_key` 作为 root identity，不保存 root list order。
 - child vector 顺序由 EDADB vector child 机制保存。
-- read path 已显式按 `_order_sd` 恢复 root list，不依赖 EDADB/SQLite read-all 物理顺序。
+- read path 不依赖 EDADB/SQLite read-all 物理顺序表达语义；root-order-only 文本差异由 normalized diff 处理。
 
-当前状态：已实现。root identity 和 root order 已分离，`primary_key` 不表达 vector order。
+当前状态：已实现。root identity 和 root order 已分离；root order 不保存，rect/coordinate child vector order 已回归验证。
+
+对 normalized diff 的影响：
+
+- `FILLS` 是 Level D root list；如果 raw diff 只因为不同 fill root record 顺序失败，normalized diff 可以按 layer/via/geometry signature 排序后通过。
+- 排序单位必须是完整 fill record；record 内部 rect/coordinate vector 不排序。
+- 如果 fill type、layer/via name 或 geometry 内容不同，normalized diff 必须失败。
 
 ## Tests
 
 - demo `sky130_gcd` 覆盖空列表路径：`writeIdbFill insert fill_count=0`，`readIdbFill restored fill_count=0`。
-- `src/database/edadb/test/run_idb_roundtrip_regression.sh` 的 `aux_optional` case 覆盖 layer fill 和 via fill，并检查 `iFillSD` count、`_order_sd`、type、layer/via name、rect count 和 coordinate count。
+- `src/database/edadb/test/run_idb_roundtrip_regression.sh` 的 `aux_optional` case 覆盖 layer fill 和 via fill，并检查 `iFillSD` count、确认没有 `_order_sd` column、type、layer/via name、rect count 和 coordinate count。
 
 ## Risks / TODO
 

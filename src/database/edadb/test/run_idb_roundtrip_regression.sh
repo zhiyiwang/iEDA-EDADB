@@ -190,8 +190,10 @@ check_aux_optional_sql() {
         "0|-1000|-1000|1000|1000" "$name explicit port rect"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(__edadb_vec_idx || ':' || value, ',') from (select __edadb_vec_idx, value from iGroupSD__instance_name_vec_sd___edadb_primitive_vector order by __edadb_vec_idx);")" \
         "0:ctrl/_34_,1:ctrl/_35_" "$name group member order"
-    assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || '|' || _type_sd || '|' || coalesce(_layer_name_sd,'') || '|' || coalesce(_via_name_sd,''), ';') from (select * from iFillSD order by _order_sd);")" \
-        "0|1|met1|;1|2||via_1600x480" "$name fill typed rows"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from pragma_table_info('iFillSD') where name='_order_sd';")" \
+        "0" "$name fill has no root order column"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_type_sd || '|' || coalesce(_layer_name_sd,'') || '|' || coalesce(_via_name_sd,''), ';') from (select * from iFillSD order by _type_sd, coalesce(_layer_name_sd,''), coalesce(_via_name_sd,''));")" \
+        "1|met1|;2||via_1600x480" "$name fill typed rows"
     assert_eq "$(sql_value "$edadb_db" "select count(*) from iFillSD__rect_list_sd_IdbRectSD;")" "1" "$name fill rect count"
     assert_eq "$(sql_value "$edadb_db" "select count(*) from iFillSD__coordinate_list_sd_iCoordSD;")" "1" "$name fill via coordinate count"
     assert_eq "$(sql_value "$edadb_db" "select _original_net_name_sd || '|' || _source_type_sd || '|' || _weight_sd from iSpecNetSD where _net_name_sd='VDD';")" \
