@@ -98,6 +98,7 @@ Primary-key audit:
 - boundary 是 owning vector child，可由 `TABLE4CLASS_WVEC` 直接表达。
 - `_instance_list` 不入库；instance/group 到 region 的引用由它们各自的 adapter 保存 region name 后重建。
 - 当前没有需要通过 shadow 重建的 non-owning pointer。
+- 旧的 dormant `shadow_idb_region.h` 已删除，避免保留未启用 shadow 造成误导。
 
 当前实现与 order 约束没有出入：schema 是 direct no-shadow/no-order，write/read 也都没有 `ORDER BY` 或 `_order_sd`。
 

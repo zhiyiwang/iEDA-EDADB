@@ -113,8 +113,10 @@ check_default_sql() {
         "ROW_0|unit|9600,9990|271|1|480|0" "$name row fields"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || ':' || _name_sd, ',') from (select _order_sd, _name_sd from iRow order by _order_sd limit 5);")" \
         "0:ROW_0,1:ROW_1,2:ROW_2,3:ROW_3,4:ROW_4" "$name row order prefix"
-    assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || ':' || _track_sd__direction || ':' || _track_sd__start || ':' || _track_num_sd || ':' || _track_sd__pitch, ';') from (select * from iTrackGridSD order by _order_sd limit 4);")" \
-        "0:1:240:311:480;1:2:185:405:370;2:1:185:404:370;3:2:185:405:370" "$name track fields"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from pragma_table_info('iTrackGridSD') where name='_order_sd';")" \
+        "0" "$name track grid has no root order column"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_track_sd__direction || ':' || _track_sd__start || ':' || _track_num_sd || ':' || _track_sd__pitch || ':' || value, ';') from (select g._track_sd__direction, g._track_sd__start, g._track_num_sd, g._track_sd__pitch, v.value from iTrackGridSD g join iTrackGridSD__layer_name_vec_sd___edadb_primitive_vector v on v.iTrackGridSD_primary_key=g.primary_key and v.__edadb_vec_idx=0 order by g._track_sd__direction, g._track_sd__start, g._track_num_sd, g._track_sd__pitch, v.value);")" \
+        "1:185:44:3330:met5;1:185:404:370:met1;1:240:311:480:li1;1:240:311:480:met2;1:370:202:740:met3;1:480:155:960:met4;2:185:45:3330:met5;2:185:405:370:li1;2:185:405:370:met1;2:240:312:480:met2;2:370:202:740:met3;2:480:155:960:met4" "$name track fields"
     assert_eq "$(sql_value "$edadb_db" "select count(*) || '|' || group_concat(value, ',') from (select value from iTrackGridSD__layer_name_vec_sd___edadb_primitive_vector order by iTrackGridSD_primary_key, __edadb_vec_idx);")" \
         "12|li1,li1,met1,met1,met2,met2,met3,met3,met4,met4,met5,met5" "$name track layer primitive vector"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_name, ',') from (select _name from iVia order by _name);")" \

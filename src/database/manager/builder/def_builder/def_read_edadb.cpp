@@ -382,11 +382,7 @@ bool DefReadEdadb::readIdbTrackGrid(void) {
 
     track_grid_list->reset();
 
-    auto track_grid_reader = edadb::makeGenericQueryOp<edadb::Shadow<idb::IdbTrackGrid>>();
-    if (track_grid_reader.preparePredicate("ORDER BY \"_order_sd\"") < 0) {
-        std::cerr << "DefReadEdadb::readIdbTrackGrid failed to prepare ordered track grid query!" << std::endl;
-        return false;
-    }
+    auto track_grid_reader = edadb::makeReadAllOp<edadb::Shadow<idb::IdbTrackGrid>>();
 
     int32_t track_grid_count = 0;
     int32_t layer_ref_count = 0;

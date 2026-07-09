@@ -12,7 +12,8 @@
 本文件按 `src/database/edadb/docs/def-ieda-mapping-and-order.md` 的约束检查：
 
 - DEF section 映射：`SLOTS` section。
-- root-vector order 等级：按 DEF read/write 兼容要求显式保留；虽然点工具暂无 root index 依赖，但 `SLOTS` root records 没有 name，raw roundtrip 应恢复 append 顺序。
+- iEDA root container：`IdbSlotList::_slot_list`。
+- root-vector order 等级：Level D exception；虽然点工具暂无 root index 依赖，但 `SLOTS` root records 没有 name，raw roundtrip 应恢复 append 顺序。
 - duplicate/root identity 约束：slot 没有 name，`_layer_name` 也不唯一；因此仍需要 adapter shadow 提供 `primary_key`。
 - nested vector 约束：rectangle vector 是 slot 内部几何列表，必须随 root record 保持原始顺序，不参与 D-level root sort。
 
@@ -47,7 +48,7 @@ Schema / init 代码位置：
 
 - `iSlotSD` table macro: `src/database/edadb/idb/edadb_idb_schema.h:109`
 - Primary-key setup: `src/database/edadb/idb/edadb_idb_init.cpp:21`
-- Table registration: `src/database/edadb/idb/edadb_idb_init.cpp:90`
+- Table registration: `src/database/edadb/idb/edadb_idb_init.cpp:91`
 - Shadow definition: `src/database/edadb/idb/shadow/shadow_idb_slot.h:15`
 
 保存字段覆盖原始 DEF writer/read 需要的 layer name 和 rectangle vector。
@@ -55,6 +56,7 @@ Schema / init 代码位置：
 Schema 与 order/index 约束的关系：
 
 - 依据 `src/database/edadb/docs/def-ieda-mapping-and-order.md`，`SLOTS` 映射到 `IdbSlotList::_slot_list`，等级为 Level D。
+- `SLOTS` 是当前 01-11 的 Level D exception：点工具语义不依赖 root order，但 anonymous record 没有 name，raw DEF roundtrip 需要稳定 append order。
 - 当前 adapter 保存 `_order_sd`；read path 通过 `ORDER BY "_order_sd"` 恢复 `IdbSlotList::_slot_list` append 顺序。
 - `primary_key` 只表达 root record identity，用来支持同 layer、多 rectangle-signature 甚至重复 slot record；`_order_sd` 单独表达 vector order。
 - `_rect_list_sd` 是 slot 内部 owned geometry vector，使用 `Shadow<IdbRect>::_vec_idx` 保存 nested order。
@@ -103,11 +105,11 @@ Primary-key audit:
 
 当前 `writeIdbSlot()`：
 
-- Code: `src/database/manager/builder/def_builder/def_write_edadb.cpp:477`
-- Slot vector access: `src/database/manager/builder/def_builder/def_write_edadb.cpp:490`
-- Empty-list return: `src/database/manager/builder/def_builder/def_write_edadb.cpp:494`
+- Code: `src/database/manager/builder/def_builder/def_write_edadb.cpp:475`
+- Slot vector access: `src/database/manager/builder/def_builder/def_write_edadb.cpp:488`
+- Empty-list return: `src/database/manager/builder/def_builder/def_write_edadb.cpp:492`
 - Shadow construction: `src/database/manager/builder/def_builder/def_write_edadb.cpp:498`
-- EDADB insert: `src/database/manager/builder/def_builder/def_write_edadb.cpp:506`
+- EDADB insert: `src/database/manager/builder/def_builder/def_write_edadb.cpp:504`
 
 - 从 `design->get_slot_list()` 取得 slot vector。
 - 空列表返回 `kDbSuccess`，避免 EDADB dispatcher 中断整个写流程。
@@ -121,10 +123,10 @@ Primary-key audit:
 
 当前 `readIdbSlot()`：
 
-- Code: `src/database/manager/builder/def_builder/def_read_edadb.cpp:549`
-- EDADB read op: `src/database/manager/builder/def_builder/def_read_edadb.cpp:562`
-- EDADB read loop: `src/database/manager/builder/def_builder/def_read_edadb.cpp:569`
-- Add to active list: `src/database/manager/builder/def_builder/def_read_edadb.cpp:582`
+- Code: `src/database/manager/builder/def_builder/def_read_edadb.cpp:545`
+- EDADB read op: `src/database/manager/builder/def_builder/def_read_edadb.cpp:558`
+- EDADB read loop: `src/database/manager/builder/def_builder/def_read_edadb.cpp:567`
+- Add to active list: `src/database/manager/builder/def_builder/def_read_edadb.cpp:578`
 
 - 使用 `makeGenericQueryOp<Shadow<IdbSlot>>()` 并 `ORDER BY "_order_sd"` 循环读取 root records。
 - `slot_list->add_slot()` 创建 slot。

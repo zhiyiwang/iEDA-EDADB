@@ -12,6 +12,7 @@
 本文件按 `src/database/edadb/docs/def-ieda-mapping-and-order.md` 的约束检查：
 
 - DEF section 映射：`ROW` statements。
+- iEDA root container：`IdbRows::_row_list`。
 - root-vector order 等级：Level B，`IdbRows::_row_list` 的 append 顺序会影响物理语义，需要显式保存和恢复。
 - nested vector 约束：`IdbRow` 当前 adapter 没有持久化 owning nested vector；site/bbox 都在 read 阶段重建。
 
@@ -60,7 +61,7 @@ Schema / init 代码位置：
 - `TABLE4SHADOW(idb::IdbRow)`: `src/database/edadb/idb/edadb_idb_schema.h:50`
 - `iRow` table macro: `src/database/edadb/idb/edadb_idb_schema.h:51`
 - Primary-key setup: `src/database/edadb/idb/edadb_idb_init.cpp:21`
-- Table registration: `src/database/edadb/idb/edadb_idb_init.cpp:81`
+- Table registration: `src/database/edadb/idb/edadb_idb_init.cpp:82`
 
 当前采用 `Shadow<IdbRow>`，只保存 DEF row 语义字段和 root list order。
 

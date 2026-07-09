@@ -12,6 +12,7 @@
 本文件按 `src/database/edadb/docs/def-ieda-mapping-and-order.md` 的约束检查：
 
 - DEF section 映射：`GCELLGRID` statements。
+- iEDA root container：`IdbGCellGridList::_gcelll_grid_list`。
 - root-vector order 等级：Level D，当前没有发现点工具依赖 `IdbGCellGridList::_gcelll_grid_list` 的 root index/order。
 - nested vector 约束：`IdbGCellGrid` 当前没有持久化 nested vector。
 
@@ -47,7 +48,7 @@ Schema / init 代码位置：
 
 - `iGCellGrid` direct table macro: `src/database/edadb/idb/edadb_idb_schema.h:62`
 - Primary-key setup: `src/database/edadb/idb/edadb_idb_init.cpp:21`
-- Table registration: `src/database/edadb/idb/edadb_idb_init.cpp:83`
+- Table registration: `src/database/edadb/idb/edadb_idb_init.cpp:84`
 
 保存字段正好覆盖原始 DEF writer/read 需要的四个字段。
 
@@ -93,6 +94,7 @@ Primary-key audit:
 - 当前只需要保存 DEF 四个标量字段，原始类成员正好匹配。
 - Level D 下 root order 不是 iEDA 点工具语义必需，因此不额外保存 `_order_sd`。
 - 没有 child rows 需要 owner key，因此不额外定义 `primary_key`。
+- 旧的 dormant `shadow_idb_gcell_grid.h` 已删除，避免保留未启用 shadow 造成误导。
 
 ## EDADB Write Path
 

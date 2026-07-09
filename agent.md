@@ -151,8 +151,9 @@ Current uncovered or weakly covered areas:
 - Match original DEF semantics first: compare `DefWrite::write_xxx()` and
   `DefRead::parse_xxx()` before changing `writeIdbXXX/readIdbXXX`.
 - Persist the DEF storage view, not the whole C++ object graph.
-- Prefer direct mapping; use `Shadow<T>` only for stable PK, root order, name lookup,
-  vector ownership, or reconstruction views.
+- Prefer direct mapping; use `Shadow<T>` only when direct mapping cannot express
+  polymorphism, anonymous root identity, non-owning pointer/name-reference rebuild,
+  nested vector owner/order, or a reduced DEF storage view.
 - EDADB automatically uses `Shadow<T>` for a member of type `T` or `T*` once `T` is
   registered with `TABLE4SHADOW(T)` or `TABLE4SHADOW_WVEC(T)`. The root object can
   stay direct-mapped while the member is stored through `edadb::Shadow<T>`. Example:
@@ -171,7 +172,12 @@ Current uncovered or weakly covered areas:
   `Shadow<IdbViaMaster>::_master_generate_sd`, so its PK is disabled in
   `initPrimKeys()`; `Shadow<IdbViaMaster>` owns `fixed_layer_shape_list_sd`, so it
   keeps EDADB's default PK.
-- For root lists that affect DEF roundtrip, read back with `ORDER BY "_order_sd"`.
+- For root lists that affect iEDA semantics or an explicitly documented raw-roundtrip
+  requirement, read back with `ORDER BY "_order_sd"`. Level D root lists default to
+  no `_order_sd` and rely on normalized diff for root-order-only differences.
+- Current 01-11 exception: `IdbSlotList` is Level D but keeps `primary_key +
+  _order_sd` because DEF `SLOTS` records are anonymous and raw roundtrip needs stable
+  anonymous record output.
 - Update schema/init, builder read/write, DEF callbacks, regression SQL, and docs together.
 - Planned order-stress tests are documented but not implemented yet: SQLite
   `PRAGMA reverse_unordered_selects=ON`, real DEF perturbations for `PINS`/iFP,
@@ -205,9 +211,9 @@ git checkout edadb-idb
 Recent root-order milestones:
 
 - `IdbRowList`: `_name_sd` identity, `_order_sd` order; committed `74420696a`.
-- `IdbTrackGridList`: `primary_key` identity, `_order_sd` order; committed `9679335f7`.
-- `IdbGCellGridList`: `primary_key` identity, `_order_sd` order; committed `3deb1105e`.
-- `IdbRegionList`: `_name_sd` identity, `_order_sd` order; committed `35e3999cf`.
+- `IdbTrackGridList`: Level D; `primary_key` identity, no `_order_sd`; nested layer-name vector order remains preserved.
+- `IdbGCellGridList`: Level D; direct no-shadow/no-order.
+- `IdbRegionList`: Level D; direct no-shadow/no-order.
 
 Recommended next work:
 
@@ -484,7 +490,7 @@ Important rule:
 - Keep adapter code direct and close to the existing `def_write/read_edadb` style. Do not use hidden raw-pointer swaps or temporary ownership tricks when a simple explicit update is enough.
 - For owning raw-pointer iDB objects such as `IdbDesign`, do not use `edadb::readAll(std::vector<T>&)` unless copy/move ownership is safe. Use a cursor op (`makeReadAllOp()` + `readNext()`) and transfer ownership as in the original DbMap implementation.
 - `readIdbDesign()` currently uses a temporary `got` object as a safe buffer. Directly reading into active `design` is closer to original iEDA reuse semantics, but it risks EDADB NULL inline pointer columns clearing active pointers.
-- `IdbTrackGrid` uses shadow because `_layer_name_vec_sd` is a vector child table and needs the shadow root `primary_key` to group layer names by track grid. Do not hide this grouping as an implicit EDADB replacement.
+- `IdbTrackGrid` uses shadow because `_layer_name_vec_sd` is a vector child table and needs the shadow root `primary_key` to group layer names by track grid. It is Level D for root order, so it does not store `_order_sd`.
 - `IdbGCellGrid` does not use shadow because DEF read/write uses only scalar fields: direction, start, count, and step.
 - `IdbVia` does not use a root shadow. Its `_master_instance` is converted by EDADB through the member type's StoreType; only `IdbViaMaster` / `IdbLayerShape` keep minimal member-level shadow views for layer-name lookup and fixed/generate geometry rebuild.
 - `IdbInstance` uses shadow because DEF COMPONENT persistence stores a reduced view and must convert pointers to names: cell master, region, route-halo layers. Readback resolves those names and uses normal iDB setters.

@@ -12,6 +12,7 @@
 本文件按 `src/database/edadb/docs/def-ieda-mapping-and-order.md` 的约束检查：
 
 - DEF section 映射：`DIEAREA`。
+- iEDA root container：无 root list；使用 `IdbLayout::_die` singleton。
 - root-vector order 等级：Level D，但原因是 singleton geometry，没有 `vector<IdbDie>` root list。
 - nested vector 约束：`IdbDie::_points` 是 deeper nested vector，必须保序，不能参与 D-level root record sort。
 
@@ -63,7 +64,7 @@ Schema / init 代码位置：
 - `TABLE4SHADOW_WVEC(idb::IdbDie)`: `src/database/edadb/idb/edadb_idb_schema.h:37`
 - `iDieSD` table macro: `src/database/edadb/idb/edadb_idb_schema.h:38`
 - Primary-key setup: `src/database/edadb/idb/edadb_idb_init.cpp:21`
-- Table registration: `src/database/edadb/idb/edadb_idb_init.cpp:80`
+- Table registration: `src/database/edadb/idb/edadb_idb_init.cpp:81`
 
 `points_sd` 中的元素使用 `Shadow<IdbCoordinate<int32_t>>` / `iCoordSD` 存储：
 

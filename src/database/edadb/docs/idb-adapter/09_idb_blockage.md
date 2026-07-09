@@ -7,7 +7,7 @@
 - Write: `DefWrite::write_blockage()`
 - Read: `blockageCallback()` / `DefRead::parse_blockage()`
 - EDADB Write: `DefWriteEdadb::writeIdbBlockage()`，见 `src/database/manager/builder/def_builder/def_write_edadb.cpp:403`
-- EDADB Read: `DefReadEdadb::readIdbBlockage()`，见 `src/database/manager/builder/def_builder/def_read_edadb.cpp:918`
+- EDADB Read: `DefReadEdadb::readIdbBlockage()`，见 `src/database/manager/builder/def_builder/def_read_edadb.cpp:914`
 
 本文件按 `src/database/edadb/docs/def-ieda-mapping-and-order.md` 的约束检查：
 

@@ -17,13 +17,14 @@ EDADB adapter 文档的核心目标是：每个 root class 都必须按 `src/dat
 
 - 先读原始 `DefWrite::write_xxx()` / `DefRead::parse_xxx()`，再改 EDADB adapter。
 - EDADB 表达的是 DEF 语义视图，不一定等于完整 C++ object dump。
-- 优先 direct mapping；只有需要 PK、root order、name lookup、vector ownership 或重建视图时才引入 `Shadow<T>`。
+- 优先 direct mapping；只有 direct mapping 无法表达 polymorphism、anonymous root identity、non-owning pointer/name-reference rebuild、nested vector owner/order，或 reduced DEF storage view 时才引入 `Shadow<T>`。
 - 如果某个成员类型 `T` 已注册 `TABLE4SHADOW(T)` 或 `TABLE4SHADOW_WVEC(T)`，则包含它的 root class 可以继续 direct mapping；EDADB 遍历成员时会自动把 `T` / `T*` 的 store type 改写为 `edadb::Shadow<T>`。
 - Shadow 自动转换流程：write 阶段对原始成员指针/对象调用 `toShadow()` 后写 shadow fields；read 阶段先读 shadow fields，再调用 `fromShadow()` 重建原始成员，最后写回 root object。
 - 对 root list，identity 和 order 必须分开：不要用 vector order index 当 PK。
 - 没有天然 identity 的 root record 用 `primary_key`；有天然 name 的对象用 name 做 PK。
 - Primary key 只用于 root identity 或 nested vector-owner storage view；纯 inline/nested scalar value view 必须关闭 PK。例如 `Shadow<IdbViaMasterGenerate>` 只是 `Shadow<IdbViaMaster>::_master_generate_sd`，不是独立 root/vector owner，因此在 `initPrimKeys()` 中关闭 PK；`Shadow<IdbViaMaster>` owns `fixed_layer_shape_list_sd`，保留 EDADB 默认 PK。
-- 只有 iEDA 语义需要保序或明确要求 raw roundtrip 保序的 root list 才增加 `_order_sd`；Level D root list 可优先依赖 normalized diff。
+- 只有 iEDA 语义需要保序或明确要求 raw roundtrip 保序的 root list 才增加 `_order_sd`；Level D root list 默认不保存 root order，优先依赖 normalized diff。
+- `SLOTS` 是当前 01-11 的明确例外：它是 Level D，但 root record 没有 name，且 raw roundtrip 需要稳定 anonymous record 输出，因此保留 `primary_key + _order_sd`。
 - computed fields 不入库；read path 按原始 parser 语义重新计算或重建。
 - 每个 root 文档必须说明 child storage view：哪些子节点 direct mapping，哪些子节点 shadow，哪些运行时 pointer/cache 不入库以及如何重建。
 - 每启用一个 `readIdbXXX/writeIdbXXX`，必须同步 schema/init、DEF callback、测试 SQL 和文档。
@@ -55,7 +56,7 @@ EDADB adapter 文档的核心目标是：每个 root class 都必须按 `src/dat
 - 不要为了稳定输出对 iDB list 做 name sort；这会改变原始 DEF statement order。
 - 先区分使用方式：对象是通过 name lookup 找到，还是通过 vector traversal / index 使用。
 - 如果代码使用 `front()`、`operator[]`、row id、按 vector 遍历生成内部 id，则 root list 顺序更重要。
-- 如果对象主要通过 name lookup 引用，EDA 语义通常不依赖顺序，但 DEF roundtrip 仍需要保持 insertion order。
+- 如果对象主要通过 name lookup 引用，EDA 语义通常不依赖顺序；Level D 的 raw text order 差异优先交给 normalized diff，除非该类文档明确列为 raw-roundtrip exception。
 - 如果 EDADB API/DB backend 不能明确保证 `insertVector()` / `readAll` 顺序稳定，A/B/C root list 必须补显式 `_order`；Level D 不强制。
 - 成员 vector child 的顺序由对应 shadow/EDADB vector 机制处理；本表只判断 root list 顺序。
 
@@ -66,10 +67,10 @@ EDADB adapter 文档的核心目标是：每个 root class 都必须按 `src/dat
 | `IdbDesign` | No | singleton object | No root list order. |
 | `IdbDie` | No for root; yes for points | singleton root; point order is geometry/DEF semantics | Root no order; point order already handled by nested shadow `_vec_idx`. |
 | `IdbRowList` | Yes | vector traversal plus `front()` / index-derived row logic | Implemented with `_order_sd` and ordered read. |
-| `IdbTrackGridList` | Yes | vector traversal, layer back links, DEF writer order | Implemented with `primary_key` as identity, `_order_sd` as list order, and ordered read. |
+| `IdbTrackGridList` | No | Level D; no point-tool root index/order dependency found | `primary_key` identity; no `_order_sd`; nested layer-name vector preserves order. |
 | `IdbGCellGridList` | No | Level D; no point-tool root index/order dependency found | Direct no-shadow/no-order mapping; normalized diff handles root order-only differences. |
 | `IdbRegionList` | No | Level D; references are name-based and no point-tool root index/order dependency found | Direct no-shadow/no-order mapping; normalized diff handles root order-only differences. |
-| `IdbSlotList` | Yes | anonymous `SLOTS` records should preserve DEF append order for raw roundtrip | `primary_key` identity plus `_order_sd` ordered read; rect vector uses `Shadow<IdbRect>::_vec_idx`. |
+| `IdbSlotList` | Yes | Level D exception: anonymous `SLOTS` records preserve DEF append order for raw roundtrip | `primary_key` identity plus `_order_sd` ordered read; rect vector uses `Shadow<IdbRect>::_vec_idx`. |
 | `IdbBlockageList` | No | Level D; no point-tool root index/order dependency found | Synthetic `primary_key` identity; no `_order_sd`; rect vector uses `Shadow<IdbRect>::_vec_idx`. |
 
 ## Current Progress
@@ -79,7 +80,7 @@ EDADB adapter 文档的核心目标是：每个 root class 都必须按 `src/dat
 | Design / Units / BusBitChars | Done | Direct `IdbDesign`; only DEF-visible fields are persisted. |
 | Die | Done | Shadow root plus ordered point vector. |
 | Row | Done | `Shadow<IdbRow>`; `_name_sd` identity, `_order_sd` root order, site cloned from LEF. |
-| TrackGrid | Done | `primary_key` identity, `_order_sd` root order, layer names rebuild LEF/routing references. |
+| TrackGrid | Done | Level D root order; `primary_key` identity, no `_order_sd`, layer names rebuild LEF/routing references. |
 | GCellGrid | Done | Direct `IdbGCellGrid`; no shadow, no `_order_sd`, DEF four-field view. |
 | Via | Done | Direct root object; member-level via master/layer-shape shadows handle rebuild. |
 | Instance | Done | `_name_sd` identity, `_order_sd` root order, master/region/layer references rebuilt by name. |
@@ -131,5 +132,5 @@ EDADB adapter 文档的核心目标是：每个 root class 都必须按 `src/dat
 ## Suggested Next Steps
 
 1. Keep each new root adapter aligned with original `DefWrite` / `DefRead` semantics.
-2. For each root list, decide whether order needs explicit `_order_sd`; A/B/C preserve order, Level D may use normalized diff.
+2. For each root list, decide whether order needs explicit `_order_sd`; A/B/C preserve order, Level D defaults to normalized diff unless documented as an exception.
 3. After each class: update schema/read/write if needed, extend SQL assertions, run demo and regression, then commit.

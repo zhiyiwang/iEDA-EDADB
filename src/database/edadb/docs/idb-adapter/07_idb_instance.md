@@ -7,12 +7,13 @@
 - Write: `DefWrite::write_component()` at `src/database/manager/builder/def_builder/def_write.cpp:460`
 - Read: `DefRead::parse_component_number()` / `DefRead::parse_component()` at `src/database/manager/builder/def_builder/def_read.cpp:857` and `src/database/manager/builder/def_builder/def_read.cpp:884`
 - EDADB Write: `DefWriteEdadb::writeIdbInstance()` at `src/database/manager/builder/def_builder/def_write_edadb.cpp:317`
-- EDADB Read: `DefReadEdadb::readIdbInstance()` at `src/database/manager/builder/def_builder/def_read_edadb.cpp:727`
+- EDADB Read: `DefReadEdadb::readIdbInstance()` at `src/database/manager/builder/def_builder/def_read_edadb.cpp:723`
 
 本文件按 `src/database/edadb/docs/def-ieda-mapping-and-order.md` 的约束检查：
 
 - DEF section 映射：`COMPONENTS` section。
-- root-vector order 等级：`IdbInstanceList::_instance_list` 需要显式保留 append order。
+- iEDA root container：`IdbInstanceList::_instance_list`。
+- root-vector order 等级：Level C，`IdbInstanceList::_instance_list` 需要显式保留 append order，以保持 placer IDs / fixed-seed behavior 可复现。
 - root identity 约束：component instance name 是 DEF-visible identity，当前 `_name_sd` 是 EDADB root PK；禁止用 vector order index 作为 PK。
 - nested vector 约束：`IdbInstance` 本身不直接持久化 pin list / obs box list；这些由 cell master、placement 和后续 pin/net adapter 重建。
 
@@ -207,7 +208,7 @@ edadb::commitTransaction();
 
 当前 `readIdbInstance()`：
 
-- Code: `src/database/manager/builder/def_builder/def_read_edadb.cpp:727`
+- Code: `src/database/manager/builder/def_builder/def_read_edadb.cpp:723`
 - Enabled by EDADB read flow: `src/database/manager/builder/def_builder/def_read_edadb.cpp:216`
 
 - reset 当前 instance list，避免 DEF 文本 callback 与 EDADB 读回重复。

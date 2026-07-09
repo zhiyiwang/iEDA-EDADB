@@ -12,6 +12,7 @@
 本文件按 `src/database/edadb/docs/def-ieda-mapping-and-order.md` 的约束检查：
 
 - DEF section 映射：`VIAS` section。
+- iEDA root container：`IdbVias::_via_list`。
 - root-vector order 等级：Level D，当前点工具主要按 via name 查找 `IdbVias::_via_list`，没有发现依赖 root index/order。
 - root identity 约束：via name 是 DEF-visible identity，当前 direct `IdbVia::_name` 是 EDADB root PK；禁止用 vector order index 作为 PK。
 - nested vector 约束：fixed via 的 layer-shape vector 和 rect vector 是 via 内部几何语义，必须随 root via 保持原始顺序，不参与 D-level root sort。

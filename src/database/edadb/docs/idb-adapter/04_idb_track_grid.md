@@ -12,6 +12,7 @@
 本文件按 `src/database/edadb/docs/def-ieda-mapping-and-order.md` 的约束检查：
 
 - DEF section 映射：`TRACKS` statements。
+- iEDA root container：`IdbTrackGridList::_track_grid_list`。
 - root-vector order 等级：Level D，当前没有发现点工具依赖 `IdbTrackGridList::_track_grid_list` 的 root index/order。
 - nested vector 约束：`_layer_name_vec_sd` 是 track grid 内部的 layer-name list，应随 root record 保持原始顺序，不参与 D-level root sort。
 
@@ -49,7 +50,7 @@
 ```cpp
 TABLE4CLASS(idb::IdbTrack, "iTrack", (_start, _direction, _pitch));
 TABLE4SHADOW_WVEC(idb::IdbTrackGrid);
-TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbTrackGrid>, "iTrackGridSD", (primary_key, _order_sd, _track_num_sd, _track_sd), (_layer_name_vec_sd));
+TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbTrackGrid>, "iTrackGridSD", (primary_key, _track_num_sd, _track_sd), (_layer_name_vec_sd));
 ```
 
 Schema / init 代码位置：
@@ -58,7 +59,7 @@ Schema / init 代码位置：
 - `TABLE4SHADOW_WVEC(idb::IdbTrackGrid)`: `src/database/edadb/idb/edadb_idb_schema.h:57`
 - `iTrackGridSD` table macro: `src/database/edadb/idb/edadb_idb_schema.h:58`
 - Primary-key setup: `src/database/edadb/idb/edadb_idb_init.cpp:21`
-- Table registration: `src/database/edadb/idb/edadb_idb_init.cpp:82`
+- Table registration: `src/database/edadb/idb/edadb_idb_init.cpp:83`
 
 保存字段覆盖原始 DEF writer 需要的内容：direction、start、pitch、track number、layer name vector。
 
@@ -66,8 +67,8 @@ Schema 与 order/index 约束的关系：
 
 - 依据 `src/database/edadb/docs/def-ieda-mapping-and-order.md`，`TRACKS` 映射到 `IdbTrackGridList::_track_grid_list`，等级为 Level D。
 - Level D 的含义是当前未发现点工具依赖 root vector index/order；normalized diff 可以按 stable key 排序 `TRACKS` root records。
-- 当前 adapter 仍保存 `_order_sd` 并按它读回，这是为了严格 raw DEF roundtrip 和可重复输出；它比 Level D 最低要求更严格。
-- `primary_key` 是 root identity；`_order_sd` 只表达原始 append 顺序，禁止用 vector order index 作为 PK。
+- 当前 adapter 不保存 `_order_sd`；如果 DB 读回 root record 顺序不同，测试应通过 Level-D normalized diff 判断语义一致性。
+- `primary_key` 是 root identity；它不表达 vector order。
 - `_layer_name_vec_sd` 是 nested vector，必须保持该 `TRACKS` record 内部 layer name 顺序。
 
 Primary-key audit:
@@ -80,9 +81,10 @@ Primary-key audit:
 
 以下按 EDADB shadow 域列出它对应的原始 DEF read/write 代码位置。
 
-- Root identity / order: `primary_key`, `_order_sd`
+- Root identity / no root order: `primary_key`
   - Write source: `DefWrite::write_track_grid()` 按 `IdbTrackGridList` 顺序输出 `TRACKS`，见 `src/database/manager/builder/def_builder/def_write.cpp:362-388`。
   - Read source: `trackGridCallback()` / `parse_track_grid()` 按 DEF 出现顺序创建 track grid，见 `src/database/manager/builder/def_builder/def_read.cpp:731-787`。
+  - EDADB adapter: 只保存 synthetic `primary_key` 作为 anonymous root identity；不保存 root append order。
 
 - Track axis fields: `_track_sd`, `_track_num_sd`
   - Write source: `write_track_grid()` 输出 direction/start/track count/pitch，见 `src/database/manager/builder/def_builder/def_write.cpp:362-388`。
@@ -107,11 +109,11 @@ Primary-key audit:
 
 - shadow 的必要性来自 `_layer_list` 的存储视图转换，而不是来自 root order。
 - `IdbTrackGrid` 没有天然 name/ID，需要 `primary_key` 作为 root record 标识。
-- `IdbTrackGridList` 的顺序不是对象身份，不能把 vector index 作为 PK；因此用 `primary_key` 做 root identity，`_order_sd` 单独保存 list order。
+- `IdbTrackGridList` 的顺序不是对象身份，不能把 vector index 作为 PK；因此只用 `primary_key` 做 root identity。
 - `_layer_list` 是 `vector<IdbLayer*>`，属于对 LEF layer 的非 owning 引用；DB 中应保存 layer name，而不是持久化完整 layer 对象或裸指针。
 - read 时必须用 layer name 回查当前 layout 的 LEF layer，并重建 routing layer 到 track grid 的反向引用。
 
-如果未来 EDADB 支持稳定的 `IdbLayer*` name-reference 隐式转换，可以重新评估是否去掉 shadow；当前 direct mapping 不合适。`_order_sd` 不是 Level D 语义必需字段，只是当前 raw DEF roundtrip 的额外稳定性字段；若完全依赖 normalized diff，可再评估是否删除。
+如果未来 EDADB 支持稳定的 `IdbLayer*` name-reference 隐式转换，可以重新评估是否去掉 shadow；当前 direct mapping 不合适。由于 `TRACKS` 是 Level D root list，当前不再保存 `_order_sd`。
 
 ## EDADB Write Path
 
@@ -125,7 +127,7 @@ Primary-key audit:
 
 - 从 `layout->get_track_grid_list()` 取得 track grid list。
 - 对每个 `IdbTrackGrid` 调用 `Shadow<IdbTrackGrid>::toShadow()`。
-- `toShadow()` 保存 `_order_sd`、track number、`IdbTrack` 的 DEF 字段、layer name vector。
+- `toShadow()` 保存 track number、`IdbTrack` 的 DEF 字段、layer name vector。
 - 使用 `edadb::insertVector<Shadow<IdbTrackGrid>>()` 写入。
 
 这与原始 writer 输出字段一致。
@@ -136,14 +138,14 @@ Primary-key audit:
 
 - Code: `src/database/manager/builder/def_builder/def_read_edadb.cpp:374`
 - Reset active track grids: `src/database/manager/builder/def_builder/def_read_edadb.cpp:383`
-- Ordered query: `src/database/manager/builder/def_builder/def_read_edadb.cpp:385`
-- EDADB read loop: `src/database/manager/builder/def_builder/def_read_edadb.cpp:393`
-- Shadow restore: `src/database/manager/builder/def_builder/def_read_edadb.cpp:405`
-- Layer lookup / back link rebuild: `src/database/manager/builder/def_builder/def_read_edadb.cpp:407`
-- `Shadow<IdbTrackGrid>::fromShadow()`: `src/database/edadb/idb/shadow/shadow_idb_track_grid.h:35`
+- EDADB read op: `src/database/manager/builder/def_builder/def_read_edadb.cpp:385`
+- EDADB read loop: `src/database/manager/builder/def_builder/def_read_edadb.cpp:391`
+- Shadow restore: `src/database/manager/builder/def_builder/def_read_edadb.cpp:401`
+- Layer lookup / back link rebuild: `src/database/manager/builder/def_builder/def_read_edadb.cpp:403`
+- `Shadow<IdbTrackGrid>::fromShadow()`: `src/database/edadb/idb/shadow/shadow_idb_track_grid.h:33`
 
 - `track_grid_list->reset()` 清空旧 track grid。
-- 通过 `ORDER BY "_order_sd"` 读取 root records，恢复 `IdbTrackGridList` 原始 append 顺序。
+- 使用 EDADB read-all 读取 root records，不指定 root order；Level D root order 只由 normalized diff 处理。
 - 循环读取 `Shadow<IdbTrackGrid>`。
 - `fromShadow()` 恢复 track number 和 track 基本字段。
 - 对 `_layer_name_vec_sd` 中每个 layer name 回查 LEF layer。
@@ -163,24 +165,30 @@ Primary-key audit:
 
 ## Order / Index
 
-`IdbTrackGridList` 在 iEDA 点工具语义上是 Level D，但当前 adapter 仍保存并恢复原始 append 顺序。
+`IdbTrackGridList` 在 iEDA 点工具语义上是 Level D；当前 adapter 不保存 root order。
 
 依据：
 
 - 原始 `parse_track_grid()` 按 DEF 出现顺序 append track grid。
-- DEF writer 会按 `track_grid_list` 当前顺序输出，因此严格 raw text roundtrip 需要稳定 root order。
+- DEF writer 会按 `track_grid_list` 当前顺序输出，因此 raw text roundtrip 可能受 DB 读回顺序影响。
 - `def-ieda-mapping-and-order.md` 中记录：iFP/iRT 会遍历或重建 track grid，但未发现 root index/front/order-derived ID 依赖。
-- 当前 shadow 用 `primary_key` 作为 root identity，用 `_order_sd` 保存 list order；禁止把 vector order index 当作 PK。
-- read path 已显式按 `_order_sd` 恢复，不依赖 EDADB/SQLite read-all 物理顺序。
+- 当前 shadow 用 `primary_key` 作为 root identity，不保存 `_order_sd`；禁止把 vector order index 当作 PK。
+- 因为 root order 没有点工具语义依赖，当前不引入 `_order_sd`；如果 raw diff 只因 Level-D root order 变化失败，应使用 normalized diff。
 - `_layer_name_vec_sd` 是 layer name vector，必须保持 DEF 中 layer name 的原始顺序。
 
-当前状态：已实现。root identity 和 root order 已分离，`primary_key` 不表达 vector order。
+当前状态：root identity 和 root order 已分离；Level D 不强制 ordered read，nested layer-name vector order 仍由 primitive vector `__edadb_vec_idx` 保证。
 
 对 normalized diff 的影响：
 
 - `TRACKS` 是 Level D root list；如果 raw diff 只因为不同 `TRACKS` root record 顺序失败，normalized diff 可以按 stable key 排序后通过。
 - 排序单位必须是完整 `TRACKS` record；record 内部 layer-name list 不排序。
 - 如果 direction/start/DO/STEP/layer-name list 内容不同，normalized diff 必须失败。
+
+## Tests
+
+- demo `sky130_gcd` 覆盖非空 track grid：`writeIdbTrackGrid insert track_grid_count=12`，`readIdbTrackGrid restored track_grid_count=12`。
+- `src/database/edadb/test/run_idb_roundtrip_regression.sh` 检查 `iTrackGridSD` count、确认 root table 没有 `_order_sd` column、track direction/start/count/pitch，以及 primitive layer-name vector order。
+- normalized diff 覆盖 Level D `TRACKS` root order-only differences；track record 内部 layer-name vector 不排序。
 
 ## Risks / TODO
 

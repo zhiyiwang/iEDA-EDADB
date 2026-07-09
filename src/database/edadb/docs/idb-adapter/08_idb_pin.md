@@ -7,12 +7,13 @@
 - Write: `DefWrite::write_pin()` at `src/database/manager/builder/def_builder/def_write.cpp:517`
 - Read: `DefRead::parse_pin_number()` / `DefRead::parse_pin()` at `src/database/manager/builder/def_builder/def_read.cpp:1543` and `src/database/manager/builder/def_builder/def_read.cpp:1573`
 - EDADB Write: `DefWriteEdadb::writeIdbPin()` at `src/database/manager/builder/def_builder/def_write_edadb.cpp:360`
-- EDADB Read: `DefReadEdadb::readIdbPin()` at `src/database/manager/builder/def_builder/def_read_edadb.cpp:812`
+- EDADB Read: `DefReadEdadb::readIdbPin()` at `src/database/manager/builder/def_builder/def_read_edadb.cpp:808`
 
 本文件按 `src/database/edadb/docs/def-ieda-mapping-and-order.md` 的约束检查：
 
 - DEF section 映射：`PINS` section。
-- root-vector order 等级：`IdbPins::_pin_list` 需要显式保留 append order。
+- iEDA root container：`IdbPins::_pin_list`。
+- root-vector order 等级：Level B，`IdbPins::_pin_list` 需要显式保留 append order，因为 iFP IO placement 会按 pin list 顺序分配物理位置。
 - root identity 约束：IO pin name 是 DEF-visible identity，当前 `_pin_name_sd` 是 EDADB root PK；禁止用 vector order index 作为 PK。
 - nested vector 约束：term port vector、port layer-shape vector、layer-shape rect vector 都是 pin 内部几何语义，必须随 root pin 保持原始顺序。
 
@@ -182,7 +183,7 @@ Primary-key audit:
 
 当前 `readIdbPin()`：
 
-- Code: `src/database/manager/builder/def_builder/def_read_edadb.cpp:812`
+- Code: `src/database/manager/builder/def_builder/def_read_edadb.cpp:808`
 - Enabled by EDADB read flow: `src/database/manager/builder/def_builder/def_read_edadb.cpp:217`
 
 - reset 当前 IO pin list，避免 DEF callback 重复创建。

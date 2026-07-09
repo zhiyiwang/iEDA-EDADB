@@ -55,7 +55,7 @@ TABLE4CLASS(idb::IdbTrack, "iTrack", (_start, _direction, _pitch));
 
 #include "shadow/shadow_idb_track_grid.h"
 TABLE4SHADOW_WVEC(idb::IdbTrackGrid);
-TABLE4CLASS_WVEC (edadb::Shadow<idb::IdbTrackGrid>, "iTrackGridSD", (primary_key, _order_sd, _track_num_sd, _track_sd), (_layer_name_vec_sd));
+TABLE4CLASS_WVEC (edadb::Shadow<idb::IdbTrackGrid>, "iTrackGridSD", (primary_key, _track_num_sd, _track_sd), (_layer_name_vec_sd));
 
 
 #include "database/data/design/db_layout/IdbGCellGrid.h"

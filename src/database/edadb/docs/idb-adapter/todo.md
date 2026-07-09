@@ -11,7 +11,7 @@
 - `IdbDesign`: singleton，无 root list order。
 - `IdbDie`: singleton；nested point order 已由 `Shadow<IdbCoordinate<int32_t>>::_vec_idx` 处理。
 - `IdbRowList`: root order 已由 `Shadow<IdbRow>::_order_sd` 和 ordered read 保证。
-- `IdbTrackGridList`: root identity 使用 `primary_key`，root order 已由 `Shadow<IdbTrackGrid>::_order_sd` 和 ordered read 保证。
+- `IdbTrackGridList`: Level D，root identity 使用 `primary_key`；当前不保存 `_order_sd`，root order-only diff 由 normalized diff 处理；nested layer-name vector order 已由 primitive vector `__edadb_vec_idx` 保证。
 - `IdbGCellGridList`: Level D，当前 direct no-shadow/no-order；root order-only diff 由 normalized diff 处理。
 - `IdbViaList`: root identity 使用 `IdbVia::_name`；当前使用点主要按 name lookup，未发现 design via root vector index 语义，因此不新增 root shadow/order 字段。
 - `IdbInstanceList`: root identity 使用 `Shadow<IdbInstance>::_name_sd`，root order 已由 `_order_sd` 和 ordered read 保证。

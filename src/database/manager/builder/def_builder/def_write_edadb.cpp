@@ -245,9 +245,9 @@ int32_t DefWriteEdadb::writeIdbTrackGrid(void) {
     vector<edadb::Shadow<idb::IdbTrackGrid>> track_grid_sd_vec;
     vector<IdbTrackGrid*>& track_grid_vec = track_grid_list->get_track_grid_list();
     track_grid_sd_vec.reserve(track_grid_vec.size());
-    for (uint32_t track_grid_idx = 0; track_grid_idx < track_grid_vec.size(); ++track_grid_idx) {
+    for (auto* track_grid : track_grid_vec) {
         track_grid_sd_vec.emplace_back();
-        track_grid_sd_vec.back().toShadow(track_grid_vec[track_grid_idx], &track_grid_idx);
+        track_grid_sd_vec.back().toShadow(track_grid);
     }
 
     EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] writeIdbTrackGrid insert track_grid_count="

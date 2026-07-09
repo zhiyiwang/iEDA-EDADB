@@ -19,6 +19,7 @@
 本文件按 `src/database/edadb/docs/def-ieda-mapping-and-order.md` 的约束检查：
 
 - DEF section 映射：`VERSION`、`BUSBITCHARS`、`DESIGN`、`UNITS`。
+- iEDA root container：无 root list；使用 active singleton `IdbDesign` 及 inline children `IdbUnits` / `IdbBusBitChars`。
 - root-vector order 等级：Level D，但原因是 singleton fields，没有 root list 可排序。
 - normalized diff：不应对 `IdbDesign` 做 record sort；只要求 singleton 字段值一致。
 
@@ -63,7 +64,7 @@ Schema / init 代码位置：
 - `IdbBusBitChars` table macro: `src/database/edadb/idb/edadb_idb_schema.h:26`
 - `IdbDesign` table macro: `src/database/edadb/idb/edadb_idb_schema.h:29`
 - Primary-key setup: `src/database/edadb/idb/edadb_idb_init.cpp:21`
-- Table registration: `src/database/edadb/idb/edadb_idb_init.cpp:79`
+- Table registration: `src/database/edadb/idb/edadb_idb_init.cpp:80`
 
 当前采用 direct class mapping，不需要 `Shadow<IdbDesign>`。
 
