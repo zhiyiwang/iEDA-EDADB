@@ -1010,25 +1010,22 @@ bool DefReadEdadb::readIdbSpecialNet(void) {
 
 bool DefReadEdadb::readIdbNet(void) {
     IdbDesign* design = _def_service->get_design();  // Def
-    IdbLayout* layout = _def_service->get_layout();  // Lef
-    if (design == nullptr || layout == nullptr) {
-        std::cerr << "DefReadEdadb::readIdbNet failed, design or layout is nullptr!" << std::endl;
+    if (design == nullptr) {
+        std::cerr << "DefReadEdadb::readIdbNet failed, design is nullptr!" << std::endl;
         return false;
     }
 
-    IdbLayers* layer_list = layout->get_layers();
-    IdbVias* via_list_def = design->get_via_list();
-    IdbVias* via_list_lef = layout->get_via_list();
-    IdbPins* io_pin_list = design->get_io_pin_list();
-    IdbInstanceList* instance_list = design->get_instance_list();
     IdbNetList* net_list = design->get_net_list();
-    if (layer_list == nullptr || via_list_def == nullptr || via_list_lef == nullptr || io_pin_list == nullptr || instance_list == nullptr || net_list == nullptr) {
-        std::cerr << "DefReadEdadb::readIdbNet failed, required list is nullptr!" << std::endl;
+    if (net_list == nullptr) {
+        std::cerr << "DefReadEdadb::readIdbNet failed, net_list is nullptr!" << std::endl;
         return false;
     }
 
     auto net_reader = edadb::makeGenericQueryOp<edadb::Shadow<idb::IdbNet>>();
-    net_reader.preparePredicate("ORDER BY \"_order_sd\"");
+    if (net_reader.preparePredicate("ORDER BY \"_order_sd\"") < 0) {
+        std::cerr << "DefReadEdadb::readIdbNet failed to prepare ordered query!" << std::endl;
+        return false;
+    }
     int32_t net_count = 0;
     int32_t segment_count = 0;
     while (true) {
@@ -1051,106 +1048,11 @@ bool DefReadEdadb::readIdbNet(void) {
             return false;
         }
 
-        net->set_original_net_name(net_sd->_original_net_name_sd);
-        net->set_connect_type(net_sd->_connect_type_sd);
-        net->set_source_type(net_sd->_source_type_sd);
-        net->set_weight(net_sd->_weight_sd);
-        net->set_xtalk(net_sd->_xtalk_sd);
-        net->set_fix_bump(net_sd->_fix_bump_sd);
-        net->set_frequency(net_sd->_frequency_sd);
-
-        const int32_t num_connections = net_sd->_io_pin_name_list_sd.size() + net_sd->_instance_pin_list_sd.size();
-        auto setPinNet = [net, num_connections](IdbPin* pin) {
-            if (num_connections < 2) {
-                if (pin->get_net() == nullptr) {
-                    pin->set_net(net);
-                }
-            } else {
-                pin->set_net(net);
-            }
-        };
-
-        for (auto& pin_name_sd : net_sd->_io_pin_name_list_sd) {
-            IdbPin* pin = io_pin_list->find_pin(pin_name_sd);
-            if (pin != nullptr) {
-                net->add_io_pin(pin);
-                setPinNet(pin);
-            }
+        if (!net_sd->fromShadow(net)) {
+            delete net_sd;
+            return false;
         }
-
-        std::sort(net_sd->_instance_pin_list_sd.begin(), net_sd->_instance_pin_list_sd.end(),
-                  [](const auto& lhs, const auto& rhs) { return lhs._order_sd < rhs._order_sd; });
-        for (auto& pin_ref_sd : net_sd->_instance_pin_list_sd) {
-            IdbInstance* instance = instance_list->find_instance(pin_ref_sd.instance_name);
-            if (instance != nullptr) {
-                net->get_instance_list()->add_instance(instance);
-                IdbPin* pin = instance->get_pin_by_term(pin_ref_sd.pin_name);
-                if (pin != nullptr) {
-                    net->add_instance_pin(pin);
-                    setPinNet(pin);
-                }
-            }
-        }
-
-        IdbRegularWireList* wire_list = net->get_wire_list();
-        for (auto wire_sd : net_sd->_wire_list_sd) {
-            IdbRegularWire* wire = wire_list->add_wire(nullptr);
-            wire->set_wire_state(wire_sd->_wire_state_sd);
-            wire->set_shield_name(wire_sd->_shield_name_sd);
-            wire->init(wire_sd->_segment_list_sd.size());
-
-            for (auto segment_sd : wire_sd->_segment_list_sd) {
-                IdbRegularWireSegment* segment = wire->add_segment(nullptr);
-                segment->set_is_via(segment_sd->_is_via_sd);
-                segment->set_is_rect(segment_sd->_is_rect_sd);
-
-                if (!segment_sd->_layer_name_sd.empty()) {
-                    segment->set_layer_name(segment_sd->_layer_name_sd);
-                    IdbLayer* layer = layer_list->find_layer(segment_sd->_layer_name_sd);
-                    if (layer == nullptr) {
-                        std::cerr << "DefReadEdadb::readIdbNet failed to find layer: "
-                                  << segment_sd->_layer_name_sd << std::endl;
-                        delete net_sd;
-                        return false;
-                    }
-                    segment->set_layer(layer);
-                }
-
-                for (size_t point_idx = 0; point_idx < segment_sd->_point_list_sd.size(); ++point_idx) {
-                    auto point_sd = segment_sd->_point_list_sd.at(point_idx);
-                    if (point_idx == _POINT_SECOND_ && segment_sd->_is_second_point_virtual_sd) {
-                        segment->add_virtual_point(point_sd->get_x(), point_sd->get_y());
-                    } else {
-                        segment->add_point(point_sd->get_x(), point_sd->get_y());
-                    }
-                }
-
-                if (segment_sd->_delta_rect_sd != nullptr) {
-                    segment->set_delta_rect(segment_sd->_delta_rect_sd->get_low_x(), segment_sd->_delta_rect_sd->get_low_y(),
-                                            segment_sd->_delta_rect_sd->get_high_x(), segment_sd->_delta_rect_sd->get_high_y());
-                }
-
-                if (segment_sd->_is_via_sd) {
-                    IdbVia* via = via_list_def->find_via(segment_sd->_via_name_sd);
-                    if (via == nullptr) {
-                        via = via_list_lef->find_via(segment_sd->_via_name_sd);
-                    }
-                    if (via == nullptr) {
-                        std::cerr << "DefReadEdadb::readIdbNet failed to find via: "
-                                  << segment_sd->_via_name_sd << std::endl;
-                        delete net_sd;
-                        return false;
-                    }
-
-                    IdbVia* via_new = segment->copy_via(via);
-                    if (via_new != nullptr) {
-                        via_new->set_coordinate(segment->get_point_end());
-                    }
-                }
-
-                ++segment_count;
-            }
-        }
+        segment_count += net_sd->getSegmentCount();
 
         delete net_sd;
         ++net_count;

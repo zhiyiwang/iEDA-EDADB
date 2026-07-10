@@ -228,6 +228,7 @@ check_routed_sql() {
     local edadb_db="$2"
     local def2edadb_log="$3"
     local edadb2def_log="$4"
+    local expected_virtual_count="${5:-0}"
 
     assert_eq "$(sql_value "$edadb_db" "select count(*) from iGCellGrid;")" "6" "$name gcell grid count"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_direction || ':' || _start || ':' || _num || ':' || _space, ';') from (select * from iGCellGrid order by _direction, _start, _num, _space);")" \
@@ -239,7 +240,7 @@ check_routed_sql() {
     assert_eq "$(sql_value "$edadb_db" "select count(*) from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD;")" "8997" "$name regular wire segment count"
     assert_eq "$(sql_value "$edadb_db" "select count(*) from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__point_list_sd_iCoordSD;")" "14256" "$name regular wire point count"
     assert_eq "$(sql_value "$edadb_db" "select (select count(*) from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD where _is_via_sd=1) || '|' || (select count(*) from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD where _is_rect_sd=1) || '|' || (select count(*) from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD where _is_second_point_virtual_sd=1) || '|' || (select count(*) from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD where _via_name_sd is not null and _via_name_sd != '');")" \
-        "3716|22|0|3716" "$name regular wire segment types"
+        "3716|22|${expected_virtual_count}|3716" "$name regular wire segment types"
     assert_eq "$(sql_value "$edadb_db" "select min(_order_sd) || '|' || max(_order_sd) || '|' || count(*) from iNetSD__instance_pin_list_sd_iNetPinRef where iNetSD__net_name_sd='clk_0';")" \
         "0|18|19" "$name clk_0 ordered pin refs"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || ':' || instance_name || ':' || pin_name, ',') from (select _order_sd, instance_name, pin_name from iNetSD__instance_pin_list_sd_iNetPinRef where iNetSD__net_name_sd='clk_0' order by _order_sd limit 5);")" \
@@ -249,6 +250,21 @@ check_routed_sql() {
 
     assert_contains "$def2edadb_log" "[EDADB-IDB] writeIdbNet insert net_count=677" "$name write routed net log"
     assert_contains "$edadb2def_log" "[EDADB-IDB] readIdbNet restored net_count=677" "$name read routed net log"
+}
+
+check_net_branch_sql() {
+    local name="$1"
+    local edadb_db="$2"
+    local def2edadb_log="$3"
+    local edadb2def_log="$4"
+
+    check_routed_sql "$name" "$edadb_db" "$def2edadb_log" "$edadb2def_log" "1"
+    assert_eq "$(sql_value "$edadb_db" "select _wire_state_sd from iNetSD__wire_list_sd_iRegWireSD where iNetSD__net_name_sd='ctrl\$a_mux_sel[0]' order by primary_key limit 1;")" \
+        "2" "$name fixed wire state"
+    assert_eq "$(sql_value "$edadb_db" "select _wire_state_sd from iNetSD__wire_list_sd_iRegWireSD where iNetSD__net_name_sd='ctrl\$a_mux_sel[1]' order by primary_key limit 1;")" \
+        "1" "$name cover wire state"
+    assert_eq "$(sql_value "$edadb_db" "select _wire_state_sd from iNetSD__wire_list_sd_iRegWireSD where iNetSD__net_name_sd='ctrl\$a_reg_en' order by primary_key limit 1;")" \
+        "4" "$name no-shield wire state"
 }
 
 generate_aux_optional_fixture() {
@@ -338,6 +354,33 @@ generate_aux_optional_fixture() {
     ' "$input" >"$output"
 }
 
+generate_net_branch_fixture() {
+    local input="$1"
+    local output="$2"
+    awk '
+        /^NETS / {
+            in_nets = 1
+        }
+        in_nets && /^END NETS$/ {
+            in_nets = 0
+        }
+        in_nets && /^  \+ ROUTED/ {
+            ++wire_index
+            if (wire_index == 1) {
+                sub(/\+ ROUTED[[:space:]]+/, "+ FIXED ")
+            } else if (wire_index == 2) {
+                sub(/\+ ROUTED[[:space:]]+/, "+ COVER ")
+            } else if (wire_index == 3) {
+                sub(/\+ ROUTED[[:space:]]+/, "+ NOSHIELD ")
+            } else if (!virtual_done && $0 ~ /\)[[:space:]]+\(/) {
+                sub(/\)[[:space:]]+\(/, ") VIRTUAL (")
+                virtual_done = 1
+            }
+        }
+        { print }
+    ' "$input" >"$output"
+}
+
 run_case() {
     local name="$1"
     local input_def="$2"
@@ -374,6 +417,9 @@ run_case() {
         routed)
             check_routed_sql "$name" "$edadb_db" "$case_dir/def2edadb.log" "$case_dir/edadb2def.log"
             ;;
+        net_branches)
+            check_net_branch_sql "$name" "$edadb_db" "$case_dir/def2edadb.log" "$case_dir/edadb2def.log"
+            ;;
         none)
             ;;
         *)
@@ -399,16 +445,20 @@ main() {
     mkdir -p "$OUT_DIR/fixtures"
 
     local aux_def="$OUT_DIR/fixtures/aux_optional.def"
+    local net_branch_def="$OUT_DIR/fixtures/net_branches.def"
     generate_aux_optional_fixture "$BASE_DEF" "$aux_def"
+    generate_net_branch_fixture "$ROUTED_DEF" "$net_branch_def"
 
     echo "EDADB regression output dir: $OUT_DIR"
     echo "iEDA binary: $IEDA_BIN"
     echo "base fixture: $BASE_DEF"
     echo "generated fixture: $aux_def"
+    echo "generated fixture: $net_branch_def"
 
     run_case "default_ipl" "$BASE_DEF" "default"
     run_case "aux_optional" "$aux_def" "aux"
     run_case "routed_irt" "$ROUTED_DEF" "routed"
+    run_case "net_branches" "$net_branch_def" "net_branches"
 
     echo "All EDADB iDB roundtrip regression tests passed."
 }
