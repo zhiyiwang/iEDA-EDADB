@@ -57,7 +57,7 @@ protected:
     bool readIdbSlot(void);
     bool readIdbGroup(void);
     bool readIdbFill(void);
-    bool readSpecialNet(void);
+    bool readIdbSpecialNet(void);
     bool readIdbNet(void);
 
 }; // class DefReadEdadb

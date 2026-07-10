@@ -82,7 +82,6 @@ int initAllTables(bool crt_tab) {
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbRow>, crt_tab);
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbTrackGrid>, crt_tab);
     EDADB_INIT_TABLE(idb::IdbGCellGrid, crt_tab);
-
     EDADB_INIT_TABLE(idb::IdbVia, crt_tab);
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbInstance>, crt_tab);
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbPin>, crt_tab);
@@ -91,9 +90,6 @@ int initAllTables(bool crt_tab) {
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbSlot>, crt_tab);
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbGroup>, crt_tab);
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbFill>, crt_tab);
-    EDADB_INIT_TABLE(idb::edadb_adapter::SpecialNetPinRef, crt_tab);
-    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbSpecialWireSegment>, crt_tab);
-    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbSpecialWire>, crt_tab);
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbSpecialNet>, crt_tab);
     EDADB_INIT_TABLE(idb::edadb_adapter::NetPinRef, crt_tab);
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbRegularWireSegment>, crt_tab);

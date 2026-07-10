@@ -112,7 +112,7 @@ bool DefWriteEdadb::writeChip2Edadb() {
     if (writeIdbFill() != kDbSuccess) {
         return false;
     }
-    if (writeSpecialNet() != kDbSuccess) {
+    if (writeIdbSpecialNet() != kDbSuccess) {
         return false;
     }
     if (writeIdbNet() != kDbSuccess) {
@@ -601,10 +601,10 @@ int32_t DefWriteEdadb::writeIdbFill(void) {
     return kDbSuccess;
 }
 
-int32_t DefWriteEdadb::writeSpecialNet(void) {
+int32_t DefWriteEdadb::writeIdbSpecialNet(void) {
     IdbDesign* design = _def_service->get_design();  // def
     if (design == nullptr) {
-        std::cerr << "writeSpecialNet failed: design is nullptr" << std::endl;
+        std::cerr << "writeIdbSpecialNet failed: design is nullptr" << std::endl;
         return kDbFail;
     }
 
@@ -615,7 +615,7 @@ int32_t DefWriteEdadb::writeSpecialNet(void) {
     }
 
     vector<idb::IdbSpecialNet*>& special_net_vec = special_net_list->get_net_list();
-    EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] writeSpecialNet insert special_net_count="
+    EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] writeIdbSpecialNet insert special_net_count="
               << special_net_vec.size() << " segment_count="
               << special_net_list->get_segment_num() << std::endl;
 
@@ -625,11 +625,9 @@ int32_t DefWriteEdadb::writeSpecialNet(void) {
 
     vector<edadb::Shadow<idb::IdbSpecialNet>*> special_net_sd_vec;
     special_net_sd_vec.reserve(special_net_vec.size());
-    uint64_t special_net_order = 0;
     for (auto& special_net : special_net_vec) {
         auto* special_net_sd = new edadb::Shadow<idb::IdbSpecialNet>();
         special_net_sd->toShadow(special_net);
-        special_net_sd->_order_sd = special_net_order++;
         special_net_sd_vec.emplace_back(special_net_sd);
     }
 
@@ -640,7 +638,7 @@ int32_t DefWriteEdadb::writeSpecialNet(void) {
     }
 
     if (!ok) {
-        std::cerr << "DefWriteEdadb::writeSpecialNet failed to insertVector" << std::endl;
+        std::cerr << "DefWriteEdadb::writeIdbSpecialNet failed to insertVector" << std::endl;
         return kDbFail;
     }
 

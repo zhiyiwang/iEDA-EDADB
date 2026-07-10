@@ -25,6 +25,10 @@ public:
             return false;
         }
 
+        if (s_def_service == def_service) {
+            return true;
+        }
+
         if (s_def_service != nullptr) {
             std::cout << "EdabIdbHelper Error: setIdbDefService s_def_service is already set";
             std::cout << std::endl;
@@ -37,6 +41,58 @@ public:
 
     static idb::IdbDefService* getIdbDefService() {
         return s_def_service;
+    }
+
+    static idb::IdbDesign* getIdbDesign() {
+        if (s_def_service == nullptr) {
+            std::cout << "EdabIdbHelper Error: getIdbDesign s_def_service is nullptr";
+            std::cout << std::endl;
+            assert(s_def_service != nullptr);
+            return nullptr;
+        }
+        return s_def_service->get_design();
+    }
+
+    static idb::IdbLayout* getIdbLayout() {
+        if (s_def_service == nullptr) {
+            std::cout << "EdabIdbHelper Error: getIdbLayout s_def_service is nullptr";
+            std::cout << std::endl;
+            assert(s_def_service != nullptr);
+            return nullptr;
+        }
+        return s_def_service->get_layout();
+    }
+
+    static idb::IdbPins* getIdbIoPins() {
+        idb::IdbDesign* design = getIdbDesign();
+        if (design == nullptr) {
+            return nullptr;
+        }
+        return design->get_io_pin_list();
+    }
+
+    static idb::IdbInstanceList* getIdbInstanceList() {
+        idb::IdbDesign* design = getIdbDesign();
+        if (design == nullptr) {
+            return nullptr;
+        }
+        return design->get_instance_list();
+    }
+
+    static idb::IdbVias* getIdbDefVias() {
+        idb::IdbDesign* design = getIdbDesign();
+        if (design == nullptr) {
+            return nullptr;
+        }
+        return design->get_via_list();
+    }
+
+    static idb::IdbVias* getIdbLefVias() {
+        idb::IdbLayout* layout = getIdbLayout();
+        if (layout == nullptr) {
+            return nullptr;
+        }
+        return layout->get_via_list();
     }
 
 
