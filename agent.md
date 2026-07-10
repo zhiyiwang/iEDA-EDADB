@@ -41,27 +41,29 @@ Current cases:
 
 - `default_ipl`: sky130_gcd `iPL_result.def`, direct iDB DEF output compared with EDADB output.
 - `aux_optional`: generated from `iPL_result.def`; adds non-empty `BLOCKAGES`, `REGIONS`,
-  `SLOTS`, `GROUPS`, `FILLS`, plus special-net and regular-net optional fields.
+  `SLOTS`, `GROUPS`, `FILLS`, plus special-net explicit pin refs, special-net `RECT`,
+  and regular/special-net optional fields.
 - `routed_irt`: sky130_gcd `iRT_result.def`; covers non-empty regular NETS routed wires
   and segments.
 
 The `aux_optional` case also checks SQLite table content for blockage/region/slot/group/fill
-counts, group region/member rows, fill child rows, special-net optional fields, and regular-net
-optional fields.
+counts, group region/member rows, fill child rows, special-net optional fields, explicit IO/instance
+pin refs, special-net rect segments, and regular-net optional fields.
 The `routed_irt` case checks SQLite counts for `iNetSD`, regular wire child rows, regular
 wire segment child rows, and regular wire point child rows.
 
-Latest run on 2026-06-24:
+Latest run on 2026-07-09:
 
-- Command: `bash src/database/edadb/test/run_idb_roundtrip_regression.sh`
-- Output directory: `/tmp/iedadb_regression`
+- Command: `OUT_DIR=/tmp/iedadb_specialnet_verify_now bash src/database/edadb/test/run_idb_roundtrip_regression.sh`
+- Output directory: `/tmp/iedadb_specialnet_verify_now`
 - Result: passed.
 - `default_ipl`: direct iDB DEF output matched EDADB DEF output.
 - `aux_optional`: direct iDB DEF output matched EDADB DEF output; SQLite checks passed for
-  non-empty Blockage/Region/Slot/Group/Fill tables and optional regular/special net fields.
+  non-empty Blockage/Region/Slot/Group/Fill tables, optional regular/special net fields,
+  special-net explicit IO/instance pin refs, and special-net rect segment geometry.
 - `routed_irt`: direct iDB DEF output matched EDADB DEF output; SQLite checks passed for
   `iNetSD=677`, regular wire rows `677`, regular wire segment rows `8997`, and point rows `14256`.
-- EDADB/core check at `src/database/edadb/core @ 3077132`: `cd build && ctest --output-on-failure`
+- Previous EDADB/core check at `src/database/edadb/core @ 3077132`: `cd build && ctest --output-on-failure`
   passed `13/13` tests on 2026-06-24.
 
 When the request is about EDADB internal support or adapter correctness, also run:
@@ -91,7 +93,7 @@ Recent issue found after the first green demo/CTest pass:
   `DefReadEdadb` did not restore it.
 - Fix: add enum setters `IdbNet::set_source_type(IdbInstanceType)` and
   `IdbSpecialNet::set_source_type(IdbInstanceType)`, then restore `_source_type_sd`
-  in `readIdbNet()` and `readSpecialNet()`.
+  in `readIdbNet()` and `readIdbSpecialNet()`.
 - Follow-up fix: `DefWrite::write_net()` and `DefWrite::write_special_net()` now emit
   `+ SOURCE <type>` when source type is not `kNone`.
 - Validation: a routed `iRT_result.def` fixture with `+ SOURCE USER` on
@@ -150,6 +152,11 @@ Current uncovered or weakly covered areas:
   supporting evidence, not the primary goal.
 - Match original DEF semantics first: compare `DefWrite::write_xxx()` and
   `DefRead::parse_xxx()` before changing `writeIdbXXX/readIdbXXX`.
+- Adapter class documents use the two-table format established by
+  `src/database/edadb/docs/idb-adapter/14_idb_special_net.md`: one table follows
+  original `DefWrite` execution order, one follows original `DefRead` execution
+  order, and the third column records the DEF field, iDB member, and EDADB field.
+  Do not organize this mapping by shadow class or database-column order.
 - Persist the DEF storage view, not the whole C++ object graph.
 - Prefer direct mapping; use `Shadow<T>` only when direct mapping cannot express
   polymorphism, anonymous root identity, non-owning pointer/name-reference rebuild,
@@ -216,6 +223,7 @@ Recent root-order milestones:
 - `IdbRegionList`: Level D; direct no-shadow/no-order.
 - `IdbGroupList`: Level D; `_group_name_sd` identity, no `_order_sd`; member-name vector order remains preserved.
 - `IdbFillList`: Level D; `primary_key` identity, no `_order_sd`; rect/coordinate vector order remains preserved.
+- `IdbSpecialNetList`: Level D; `_net_name_sd` identity, no root `_order_sd`; pin/wire/segment/point vector order remains preserved.
 
 Recommended next work:
 
@@ -363,7 +371,7 @@ Active persistence groups:
 
 - `writeIdbDesign()` / `readIdbDesign()` are enabled.
 - `writeIdbDie()` / `readIdbDie()` are enabled through `edadb::Shadow<idb::IdbDie>`.
-- `writeIdbRow()` / `readIdbRow()` are enabled directly on `IdbRow`.
+- `writeIdbRow()` / `readIdbRow()` are enabled through `edadb::Shadow<idb::IdbRow>` to preserve row identity and append order.
 - `writeIdbTrackGrid()` / `readIdbTrackGrid()` are enabled through `edadb::Shadow<idb::IdbTrackGrid>`.
 - `writeIdbGCellGrid()` / `readIdbGCellGrid()` are enabled directly on `IdbGCellGrid`.
 - `writeIdbVia()` / `readIdbVia()` are enabled directly on root `IdbVia`.
@@ -374,7 +382,7 @@ Active persistence groups:
 - `writeIdbSlot()` / `readIdbSlot()` are enabled through `edadb::Shadow<idb::IdbSlot>`.
 - `writeIdbGroup()` / `readIdbGroup()` are enabled through `edadb::Shadow<idb::IdbGroup>`.
 - `writeIdbFill()` / `readIdbFill()` are enabled through `edadb::Shadow<idb::IdbFill>`.
-- `writeSpecialNet()` / `readSpecialNet()` are enabled through `edadb::Shadow<idb::IdbSpecialNet>`.
+- `writeIdbSpecialNet()` / `readIdbSpecialNet()` are enabled through `edadb::Shadow<idb::IdbSpecialNet>`.
 - `writeIdbNet()` / `readIdbNet()` are enabled through `edadb::Shadow<idb::IdbNet>`.
 - `iDesign` stores `IdbUnits` and `IdbBusBitChars` as inline columns.
 - `iTrackGridSD` stores track grid scalar data and owns vector child rows for layer names.
@@ -463,9 +471,12 @@ Validation:
 - Demo logs on 2026-06-15 show `writeIdbFill insert fill_count=0`.
 - Demo logs on 2026-06-15 show `readIdbFill restored fill_count=0`.
 - SQLite fill check: `select count(*) from iFillSD;` returns `0`; the default sky130_gcd demo validates the empty-table path, while `aux_optional` validates non-empty layer/via fill rows.
-- Demo logs on 2026-06-15 show `writeSpecialNet insert special_net_count=2 segment_count=639`.
-- Demo logs on 2026-06-15 show `readSpecialNet restored special_net_count=2 segment_count=639`.
+- Demo logs on 2026-06-15 show `writeIdbSpecialNet insert special_net_count=2 segment_count=639`.
+- Demo logs on 2026-06-15 show `readIdbSpecialNet restored special_net_count=2 segment_count=639`.
 - SQLite special-net check: `iSpecNetSD=2`, nested `wire_list=2`, nested `segment_list=639`, nested `point_list=697`.
+- `aux_optional` now also checks special-net explicit refs and rect branch:
+  pin-string/io-pin/instance-pin counts `3|1|1`, segment dispatch counts `581|1|58`,
+  and rect geometry `met1|11000,11000,13000,14000`.
 - Demo logs on 2026-06-15 show `writeIdbNet insert net_count=675 segment_count=0`.
 - Demo logs on 2026-06-15 show `readIdbNet restored net_count=675 segment_count=0`.
 - SQLite net check: `iNetSD=675`, nested IO pin refs `54`, nested instance pin refs `1726`, nested regular wire rows `0`.
@@ -504,6 +515,7 @@ Important rule:
 - `IdbGroup` uses shadow because DEF GROUPS stores region and member references by name; readback resolves region/instance names after Region and Instance are restored.
   It is Level D for root order, so it does not store `_order_sd`; member-name vector order remains preserved by EDADB primitive-vector index.
 - `IdbFill` uses shadow because DEF FILLS stores anonymous layer/via records with geometry vectors and layer/via references by name. It is Level D for root order, so it does not store `_order_sd`; rect/coordinate vector order remains preserved by EDADB child-vector indexes.
+- `IdbSpecialNet` uses shadow because DEF SPECIALNETS stores name references plus nested pin/wire/segment/point vectors. It is Level D for root order, so the root does not store `_order_sd`; `SpecialNetPinRef::_order_sd` remains only for nested instance-pin order.
 - `IdbFill` uses shadow because DEF FILLS is a typed layer/via storage view with pointer references converted to layer/via names and child geometry rows.
 - Non-empty layer-fill and via-fill paths are covered by the generated `aux_optional` fixture and SQLite checks.
 - `IdbSpecialNet` uses shadow because SPECIALNETS is a nested net/wire/segment storage view with layer/via/pin/instance references converted to names and synthetic keys for child rows.
@@ -650,7 +662,7 @@ Class-level EDADB storage map:
 | --- | --- | --- | --- |
 | Design / Units / BusBit | `iDesign` with inline `iUnits` / `iBusBitChars` | no | `default_ipl` DEF diff and logs |
 | Die | `iDieSD` + `iCoordSD` points | yes | `default_ipl` DEF diff |
-| Row | `iRow` direct table | no | `default_ipl` DEF diff |
+| Row | `iRow` shadow table with `_name_sd` identity and `_order_sd` order | yes | `default_ipl` DEF diff |
 | TrackGrid | `iTrackGridSD` + primitive vector layer names | yes | `default_ipl` DEF diff |
 | GCellGrid | `iGCellGrid` direct table | no | `default_ipl` DEF diff |
 | Via | `iVia` direct root with via-master/layer-shape member shadows | no root shadow | `default_ipl` DEF diff |
@@ -661,7 +673,7 @@ Class-level EDADB storage map:
 | Slot | `iSlotSD` + rect rows | yes | `aux_optional` DEF diff + SQLite count |
 | Group | `iGroupSD` + primitive vector instance names | yes | `aux_optional` DEF diff + SQLite member check |
 | Fill | `iFillSD` flattened layer/via records | yes | `aux_optional` DEF diff + SQLite child checks |
-| SpecialNet | `iSpecNetSD` nested wires/segments/pins | yes | `aux_optional` optional fields + `default_ipl` segment logs |
+| SpecialNet | `iSpecNetSD` nested wires/segments/pins | yes | `default_ipl` pin-string/via/point + `aux_optional` explicit refs/rect |
 | Net | `iNetSD` nested regular wires/segments/pins | yes | `aux_optional` optional fields + `routed_irt` wire/segment checks |
 
 For future EDADB API changes or new object families, restore or harden persistence class by class:
@@ -701,19 +713,20 @@ Verification discipline for future classes:
 
 Latest repeatable regression:
 
-- Command: `bash src/database/edadb/test/run_idb_roundtrip_regression.sh`
-- Output root: `/tmp/iedadb_regression`
-- Result on 2026-06-24: passed after updating EDADB core to `3077132`; rerun during completion audit also passed.
+- Command: `OUT_DIR=/tmp/iedadb_specialnet_verify_now bash src/database/edadb/test/run_idb_roundtrip_regression.sh`
+- Output root: `/tmp/iedadb_specialnet_verify_now`
+- Result on 2026-07-09: passed with EDADB core `3077132`.
 - `default_ipl`: direct iDB DEF output matches EDADB DEF output.
-- `aux_optional`: non-empty BLOCKAGES / REGIONS / SLOTS / GROUPS / FILLS and optional
-  regular/special net fields match direct iDB output; SQLite content checks pass.
+- `aux_optional`: non-empty BLOCKAGES / REGIONS / SLOTS / GROUPS / FILLS, optional
+  regular/special net fields, special-net explicit IO/instance pin refs, and special-net
+  rect segment geometry match direct iDB output; SQLite content checks pass.
 - `routed_irt`: non-empty regular routed NETS match direct iDB output; SQLite checks show
   `iNetSD=677`, regular wire rows `677`, segment rows `8997`, point rows `14256`.
-- EDADB core completion-audit check: `cd build && ctest --output-on-failure` passed `13/13`
-  in `428.08 sec`.
-- Detailed regression was strengthened after this audit: `default_ipl` now checks design fields,
+- Previous EDADB core completion-audit check: `cd build && ctest --output-on-failure` passed
+  `13/13` in `428.08 sec`.
+- Detailed regression now checks design fields,
   core object-family counts, die/row/track/via/instance/pin/special-net/net fields, pin child rows,
-  special-net child rows, and key write/read logs; `aux_optional` now uses a two-member group and
+  special-net child rows, and key write/read logs; `aux_optional` uses a two-member group and
   checks blockage/region/slot/fill field values; `routed_irt` now checks GCell fields, regular-net
   wire/segment/point counts, segment type counters, ordered `clk_0` pin refs, and largest routed
   segment nets.
@@ -728,6 +741,6 @@ Current audit target: EDADB core `3077132` with iEDA branch `edadb-idb`.
 | Decide direct vs shadow per iEDA class and update shadows | `src/database/edadb/idb/edadb_idb_schema.h` maps direct roots and shadows; `src/database/edadb/idb/shadow/*` implements reduced storage views for classes that need names, synthetic keys, vector child ownership, or DEF-only views. | done |
 | Migrate DEF read/write by object family | `DefWriteEdadb::writeChip2Edadb()` writes Design, Die, Row, TrackGrid, GCell, Via, Instance, Pin, Blockage, Region, Slot, Group, Fill, SpecialNet, Net; `DefReadEdadb::createDbByEdadb()` reads the matching families and `createDbByDef()` disables matching DEF callbacks. | done |
 | Commit by object-family increments | Git history on `edadb-idb` contains per-family commits from Design/Die/Row through Net, plus follow-up hardening commits for optional net fields, fill variants, primitive vectors, and documentation audits. | done |
-| Verify each migrated family | `default_ipl` covers baseline families; `aux_optional` covers non-empty Blockage/Region/Slot/Group/Fill and optional net fields with SQLite assertions; `routed_irt` covers non-empty regular routed NETS with SQLite assertions. | done |
+| Verify each migrated family | `default_ipl` covers baseline families; `aux_optional` covers non-empty Blockage/Region/Slot/Group/Fill, optional net fields, special-net explicit refs and rect branch with SQLite assertions; `routed_irt` covers non-empty regular routed NETS with SQLite assertions. | done |
 | Compare against original master and prove logic | `edadb_readme.md` section “对照 master 的正确性结论” defines the proof strategy: compare direct iDB DEF roundtrip with EDADB DEF roundtrip, preserving master DEF writer/parser semantics while replacing the persistence middle step. | done |
 | Use server resources efficiently | Build/test commands use `-j40` where applicable; regression script runs focused EDADB adapter cases instead of unrelated full design flow. | done |

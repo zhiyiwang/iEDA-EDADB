@@ -74,26 +74,29 @@ Primary-key audit:
 - `Shadow<IdbBlockage>` intentionally has no `_order_sd`; Level D root semantics do not require preserving original append order.
 - `Shadow<IdbRect>` has no root identity; its `_vec_idx` preserves rect vector order under each blockage.
 
-## Field Mapping To Original DEF Flow
+## Original DEF Write/Read Roundtrip Mapping
 
-以下按 EDADB shadow 域列出它对应的原始 DEF read/write 代码位置。
+### Original DEF Write Flow
 
-- Root identity / no root order: `primary_key`
-  - Write source: `DefWrite::write_blockage()` 按 blockage list 顺序输出 blockage records，见 `src/database/manager/builder/def_builder/def_write.cpp:588-648`。
-  - Read source: `blockageCallback()` / `parse_blockage()` 按 DEF 出现顺序创建 blockage，见 `src/database/manager/builder/def_builder/def_read.cpp:1937-2032`。
-  - EDADB adapter: 只保存 synthetic `primary_key` 作为 anonymous root identity；不保存 root append order。
+| 原始 `DefWrite` 执行顺序 | EDADB write / `toShadow` 对应 | DEF 域 / iDB 变量 / EDADB 域 |
+| --- | --- | --- |
+| 1. `write_blockage()` 对 null/empty list 失败，输出 count 并遍历 root vector，见 `def_write.cpp:588-603` | `writeIdbBlockage()` 对 null 失败、empty 成功；shadow synthetic `primary_key` 只表示 anonymous identity，不保存 root order，见 `def_write_edadb.cpp:403-432` | `BLOCKAGES <N>` / `IdbBlockageList::_blockage_list` / `iBlockageSD.primary_key` |
+| 2. routing 分支输出 `LAYER`，然后条件输出 `PUSHDOWN/EXCEPTPGNET/COMPONENT`，见 `def_write.cpp:604-619` | `_type_sd` 标记派生类，保存 `_layer_name_sd/_is_pushdown_sd/_is_except_pgnet_sd/_instance_name_sd`，见 `shadow_idb_blockage.h:31-46` | routing tags / `IdbRoutingBlockage` fields / corresponding blockage shadow fields |
+| 3. routing 分支按 rect vector 顺序输出 geometry，见 `def_write.cpp:621-623` | `_rect_list_sd` 保存 rect values，registered rect shadow index 保存 child order，见 `shadow_idb_blockage.h:37-40` | `RECT` / `IdbBlockage::_rect_list` / `_rect_list_sd` → `IdbRectSD` |
+| 4. placement 分支输出 `PLACEMENT`，然后条件输出 `PUSHDOWN/COMPONENT`，见 `def_write.cpp:624-635` | 同一 shadow 用 `_type_sd` 和 common fields 表示 placement subtype | `PLACEMENT/PUSHDOWN/COMPONENT` / `IdbPlacementBlockage` fields / `_type_sd/_is_pushdown_sd/_instance_name_sd` |
+| 5. placement 分支按 rect vector 输出 geometry，见 `def_write.cpp:637-639` | 同一 `_rect_list_sd` child storage | `RECT` / placement rect list / `_rect_list_sd` |
+| 6. writer 没有输出 parser 支持的 routing `SLOTS/FILLS/SPACING/DESIGNRULEWIDTH` 或 placement `SOFT/PARTIAL` | 当前 shadow 也不存储这些 parser-only fields | parser-only blockage tags / slots/fills/min-spacing/effective-width/soft/density / 无 EDADB 字段 |
 
-- Blockage type and flags: `_type_sd`, `_is_pushdown_sd`, `_is_except_pgnet_sd`
-  - Write source: `write_blockage()` 区分 routing/placement blockage，并输出 pushdown/except pgnet 等 flags，见 `src/database/manager/builder/def_builder/def_write.cpp:588-648`。
-  - Read source: `parse_blockage()` 读取 routing/placement 类型和 flags，见 `src/database/manager/builder/def_builder/def_read.cpp:1955-2032`。
+### Original DEF Read Flow
 
-- Layer and instance refs: `_layer_name_sd`, `_instance_name_sd`
-  - Write source: `write_blockage()` 输出 routing layer 或 placement component refs，见 `src/database/manager/builder/def_builder/def_write.cpp:588-648`。
-  - Read source: `parse_blockage()` 按 layer/instance name lookup 并设置引用，见 `src/database/manager/builder/def_builder/def_read.cpp:1955-2032`。
-
-- Rect geometry: `_rect_list_sd`
-  - Write source: `write_blockage()` 输出 blockage rect list，见 `src/database/manager/builder/def_builder/def_write.cpp:588-648`。
-  - Read source: `parse_blockage()` 读取 rects 并加入 blockage，见 `src/database/manager/builder/def_builder/def_read.cpp:1955-2032`。
+| 原始 `DefRead` 执行顺序 | EDADB read / `fromShadow` 对应 | DEF 域 / iDB 变量 / EDADB 域 |
+| --- | --- | --- |
+| 1. `parse_blockage()` 用 `hasLayer()` 区分 routing/placement；routing 创建后按 name lookup layer，见 `def_read.cpp:1955-1970` | `readIdbBlockage()` 根据 `_type_sd` 调用对应 list factory；routing 按 `_layer_name_sd` lookup layer，见 `def_read_edadb.cpp:895-935` | subtype/LAYER / blockage derived type + layer ref / `_type_sd/_layer_name_sd` |
+| 2. routing parser 依次恢复 `SLOTS/FILLS/PUSHDOWN/EXCEPTPGNET`，见 `def_read.cpp:1972-1986` | shadow 只恢复 `PUSHDOWN/EXCEPTPGNET`；`SLOTS/FILLS` 无存储，见 `shadow_idb_blockage.h:49-65` | routing flags / routing blockage fields / `_is_pushdown_sd/_is_except_pgnet_sd`; slots/fills missing |
+| 3. routing parser 条件恢复 COMPONENT pointer/name、SPACING、DESIGNRULEWIDTH，见 `def_read.cpp:1988-2000` | builder 按 `_instance_name_sd` lookup；当前 lookup 失败直接返回 false，比原始 parser 更严格；spacing/width 未存储，见 `def_read_edadb.cpp:941-949` | `COMPONENT/SPACING/DESIGNRULEWIDTH` / instance ref, spacing, width / `_instance_name_sd`; spacing/width missing |
+| 4. routing parser 按 DEF 顺序 append rects，见 `def_read.cpp:2002-2004` | `fromShadow()` 按 child order `add_rect()`，见 `shadow_idb_blockage.h:55-59` | `RECT` / routing rect list / `_rect_list_sd` |
+| 5. placement parser 创建 subtype，依次恢复 `SOFT/PARTIAL/COMPONENT`，见 `def_read.cpp:2008-2024` | factory 创建 placement subtype；shadow 恢复 common pushdown/instance fields，但 `SOFT/PARTIAL` 未存储 | placement tags / soft/density/instance / `_instance_name_sd`; soft/density missing |
+| 6. placement parser 按 DEF 顺序 append rects，见 `def_read.cpp:2026-2028` | 共用 `_rect_list_sd` 恢复 | `RECT` / placement rect list / `_rect_list_sd` |
 
 ## Child Storage View
 
@@ -172,4 +175,7 @@ Primary-key audit:
 ## Risks / TODO
 
 - 当前 EDADB adapter 不保存原始 writer 不输出的 blockage fields；如果后续要保持 parser state 而不是 DEF writer-visible state，需要同步扩展 writer、schema、read/write 和测试。
+- 未保存的 parser-supported fields 包括 routing `SLOTS/FILLS/SPACING/DESIGNRULEWIDTH` 和 placement `SOFT/PARTIAL`。
 - component name 查找依赖 instance 已先从 EDADB 恢复。
+- component lookup 失败时，EDADB read 返回失败；原始 parser 会设置可能为 null 的 pointer 后继续，错误策略并不一致。
+- 原始 writer 对空 blockage list 返回失败，EDADB writer 对空 vector 返回成功。

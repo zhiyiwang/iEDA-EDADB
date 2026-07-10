@@ -125,34 +125,34 @@ Primary-key audit:
 - `Shadow<IdbLayerShape>` 在同一 port 下用 layer name 作为 child identity；rect child rows 用 `IdbRectSD::_vec_idx` 保序。
 - `Shadow<IdbTerm>` 是 pin 的 inline value view；它不单独建 root table。
 
-## Field Mapping To Original DEF Flow
+## Original DEF Write/Read Roundtrip Mapping
 
-以下按 EDADB shadow 域列出它对应的原始 DEF read/write 代码位置。
+### Original DEF Write Flow
 
-- Pin identity / root order: `_pin_name_sd`, `_order_sd`
-  - Write source: `DefWrite::write_pin()` 按 IO pin list 顺序输出 pin name，见 `src/database/manager/builder/def_builder/def_write.cpp:517-586`。
-  - Read source: `pinsBeginCallback()` / `parse_pin_number()` reserve list，`pinCallback()` / `parse_pin()` 按 DEF 出现顺序创建 IO pin，见 `src/database/manager/builder/def_builder/def_read.cpp:1529-1746`。
+| 原始 `DefWrite` 执行顺序 | EDADB write / `toShadow` 对应 | DEF 域 / iDB 变量 / EDADB 域 |
+| --- | --- | --- |
+| 1. `write_pin()` 输出 pin count，再按 `IdbPins::_pin_list` 顺序遍历，见 `def_write.cpp:517-528` | `writeIdbPin()` 按 index 保存 `_order_sd`；empty vector 同样成功，见 `def_write_edadb.cpp:360-389` | `PINS <N>`, pin order / `IdbPins::_pin_list` / `iPinSD._order_sd` |
+| 2. 输出 pin name、net name、optional SPECIAL、DIRECTION，见 `def_write.cpp:529-534` | pin shadow 保存 name/net/io/special，term shadow 保存 direction/special，见 `shadow_idb_pin.h:29-47`, `shadow_idb_term.h:25-33` | `- <pin> + NET ... + SPECIAL + DIRECTION` / `IdbPin::_pin_name/_net_name`, `IdbTerm::_direction/_is_special_net` / `_pin_name_sd/_net_name_sd/_io_term_sd` |
+| 3. term use 非空时输出 `USE`，见 `def_write.cpp:536-540` | term shadow 保存 `_type_sd`，见 `shadow_idb_term.h:28` | `+ USE` / `IdbTerm::_type` / `_io_term_sd._type_sd` |
+| 4. `term->is_port_exist()` 或 `pin->is_special_net_pin()` 为真时进入 explicit PORT 分支，按 port vector 输出 `+ PORT`，见 `def_write.cpp:542-545` | term/port shadows 保存 `_has_port_sd` 和有序 `_port_list_sd`，见 `shadow_idb_term.h:31,35-41` | `+ PORT` / `IdbTerm::_has_port/_port_list` / `_io_term_sd._has_port_sd/_port_list_sd` |
+| 5. explicit PORT 中按 layer-shape/rect vector 输出 layer 和 relative rect，见 `def_write.cpp:546-553` | port → layer-shape → rect shadow 树保存 layer name/type 和 rect order，见 `shadow_idb_port.h:61-76`, `shadow_idb_layer_shape.h:57-66` | `+ LAYER ... (xl yl)(xh yh)` / `IdbPort::_layer_shape_list`, `IdbLayerShape::_rect_list` / `_layer_shape_list_sd`, `_rect_list_sd` |
+| 6. explicit port placed 时输出 port status、coordinate、orient，见 `def_write.cpp:554-556` | port shadow 保存 `_placement_status_sd/_coordinate_sd/_orient_sd`，见 `shadow_idb_port.h:61-68` | port placement / `IdbPort::_placement_status/_coordinate/_orient` / corresponding port shadow fields |
+| 7. 否则进入 legacy no-PORT 分支：输出 term-port layer/rect，term placed 时输出 term status、pin location、pin orient，见 `def_write.cpp:560-575` | 仍使用 term/port/layer-shape tree；pin shadow 另存 `_location_sd/_orient_sd`，term shadow 存 placement status | legacy `LAYER` + placement / `IdbTerm::_placement_status/_port_list`, `IdbPin::_location/_orient` / `_io_term_sd`, `_location_sd`, `_orient_sd` |
 
-- Net ref and pin flags: `_net_name_sd`, `_is_io_pin_sd`, `_is_special_net_sd`, `_io_term_sd._is_special_net_sd`
-  - Write source: `write_pin()` 输出 pin net name 和 SPECIAL flag，见 `src/database/manager/builder/def_builder/def_write.cpp:517-586`。
-  - Read source: `parse_pin()` 读取 net name、设置 IO pin，并读取 special flag，见 `src/database/manager/builder/def_builder/def_read.cpp:1573-1746`。
-  - DB decision: DEF `+ SPECIAL` 对应 `IdbTerm::_is_special_net`，即 `iPinSD._io_term_sd__is_special_net_sd`；root `_is_special_net_sd` 只是 `IdbPin::_special_net` pointer 是否非空的 runtime 状态，不能单独代表 DEF `+ SPECIAL`。
+### Original DEF Read Flow
 
-- IO term fields: `_io_term_sd`
-  - Write source: `write_pin()` 输出 direction/use，并根据 port/layer shape 输出 PORT 信息，见 `src/database/manager/builder/def_builder/def_write.cpp:517-586`。
-  - Read source: `parse_pin()` 创建 `IdbTerm`，设置 direction/use/special/port，见 `src/database/manager/builder/def_builder/def_read.cpp:1573-1746`。
+| 原始 `DefRead` 执行顺序 | EDADB read / `fromShadow` 对应 | DEF 域 / iDB 变量 / EDADB 域 |
+| --- | --- | --- |
+| 1. pin-count callback 初始化 list，`parse_pin()` trim name、append pin，恢复 net name/orient/IO flag，见 `def_read.cpp:1543-1549,1573-1601` | `readIdbPin()` reset list，按 `_order_sd` 读取，`pin.fromShadow()` 恢复 name/net/orient/io/location，见 `def_read_edadb.cpp:797-837`, `shadow_idb_pin.h:50-69` | pin root/header / `IdbPin::_pin_name/_net_name/_orient/_is_io_pin` / root pin shadow fields |
+| 2. parser 创建 term，设 term name，条件恢复 DIRECTION/USE/SPECIAL，见 `def_read.cpp:1603-1615` | term shadow `fromShadow()` 恢复 name/direction/type/special/has-port/status，见 `shadow_idb_term.h:44-57` | `DIRECTION/USE/SPECIAL` / `IdbTerm` fields / `_io_term_sd` scalar fields |
+| 3. `numPorts()>0` 时设 has-port，按 port 顺序创建 port、恢复 orient，见 `def_read.cpp:1617-1623` | builder 按 `_port_list_sd` 顺序创建 port，port shadow 恢复 orient/status/coordinate，见 `def_read_edadb.cpp:848-850`, `shadow_idb_port.h:79-90` | explicit `PORT` / `IdbTerm::_port_list`, `IdbPort` scalars / `_port_list_sd` |
+| 4. 每个 port 按 layer order lookup LEF layer、创建 rect，见 `def_read.cpp:1624-1632` | builder 按 layer-shape child order调 `fromShadow()`，按 layer name lookup 并恢复 rect，见 `def_read_edadb.cpp:852-857`, `shadow_idb_layer_shape.h:71-88` | `LAYER/RECT` / `IdbLayerShape`, `IdbRect` / layer-shape/rect shadow fields |
+| 5. explicit port 有 placement 时恢复 port status/coordinate，第一个 port 同步 term status，见 `def_read.cpp:1634-1666` | port/term shadow 已恢复这些 scalars；几何恢复后调 `port->set_io_bounding_box()`，见 `def_read_edadb.cpp:872-875` | explicit port placement / port + term status/coordinate / port/term shadow fields |
+| 6. explicit ports 完成后调 `pin->set_port_layer_shape()` 生成 pin absolute geometry，见 `def_read.cpp:1669` | `_has_port_sd` 为 true 时调同一几何计算，见 `def_read_edadb.cpp:877-879` | computed absolute layer shapes/bbox / `IdbPin` derived geometry / 不需要独立 DB 字段 |
+| 7. no-PORT 分支创建一个 port，按 pin layer 恢复 layer/rect，同时统计 bbox 和中点和，见 `def_read.cpp:1671-1707` | builder 恢复同一 child tree，当 `_has_port_sd` 为 false 时同样统计 rect bbox/中点，见 `def_read_edadb.cpp:859-869` | legacy layer geometry / term port/layer shapes / `_port_list_sd/_layer_shape_list_sd` |
+| 8. layer 数非零时计算 term average/bbox；pin 有 placement 时设 term status、pin location/absolute average/bbox，见 `def_read.cpp:1709-1735` | builder 重算 term average/bbox 并调 `pin->set_bounding_box()`，见 `def_read_edadb.cpp:879-885`；`_average_coordinate_sd` 虽被存储/恢复，仍会被此逻辑重算 | computed average/bbox + placement / term/pin derived fields, `_location` / geometry child fields, `_location_sd` |
 
-- Port placement: `_location_sd`, `_orient_sd`, `_average_coordinate_sd`
-  - Write source: `write_pin()` 输出 port/pin placement status、location、orient，见 `src/database/manager/builder/def_builder/def_write.cpp:517-586`。
-  - Read source: `parse_pin()` 读取 placement，并计算 pin/term bounding box，见 `src/database/manager/builder/def_builder/def_read.cpp:1573-1746`。
-
-- Layer shapes and rects: port/layer-shape child shadows, `_layer_num_sd`
-  - Write source: `write_pin()` 输出 layer name 和 rect geometry，见 `src/database/manager/builder/def_builder/def_write.cpp:517-586`。
-  - Read source: `parse_pin()` 为每个 port layer 创建 `IdbLayerShape`，按 layer name lookup 并保存 rect，见 `src/database/manager/builder/def_builder/def_read.cpp:1573-1746`。
-
-- Computed absolute geometry
-  - Write source: DEF writer 输出 DEF-relative pin/port geometry，不输出 runtime bbox cache，见 `src/database/manager/builder/def_builder/def_write.cpp:517-586`。
-  - Read source: `parse_pin()` 调用 term/pin bbox 计算逻辑，见 `src/database/manager/builder/def_builder/def_read.cpp:1573-1746`。
+审计结论：`_layer_num_sd` 当前写入 schema 但 `readIdbPin()` 不使用；root `_is_special_net_sd` 也未在 `Shadow<IdbPin>::fromShadow()` 恢复。DEF `+ SPECIAL` 依靠 term shadow 的 `_is_special_net_sd` 恢复，因此当前 writer 的 `pin special || term special` 仍可输出 SPECIAL，但 root flag 本身不是完整 roundtrip。
 
 ## Child Storage View
 
@@ -230,4 +230,6 @@ Primary-key audit:
 
 - 当前已覆盖无 explicit `+ PORT` 的默认 pin，以及一个 explicit `+ PORT` / `+ SPECIAL` pin。
 - 多 PORT、多 LAYER、多 rect、未放置 pin 等边界仍可继续扩展 fixture。
-- `_layer_num_sd` 是辅助校验字段，真实 geometry 仍来自 term/port/layer-shape nested rows。
+- `_layer_num_sd` 当前被写入但 `readIdbPin()` 不使用；真实 geometry 来自 term/port/layer-shape nested rows，应评估是否删除该冗余字段。
+- root `_is_special_net_sd` 未由 `Shadow<IdbPin>::fromShadow()` 恢复；当前 DEF `+ SPECIAL` 依靠 term shadow 恢复，但 root flag 本身不是完整 roundtrip。
+- `IdbTerm::_shape/_is_instance` 与 `IdbPort::_class` 被 EDADB 保存，但原始 `parse_pin()` 不从 `PINS` section 设置这些字段，需要确认是否属于 adapter 应保存的状态。

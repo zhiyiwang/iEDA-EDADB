@@ -77,22 +77,23 @@ Primary-key audit:
 - `initPrimKeys()` 没有关闭 `Shadow<IdbTrackGrid>` 的 primary-key 行为；`primary_key` 是 `iTrackGridSD` root identity。
 - `initReadDb()` / `initWriteDb()` 都先调用 `initPrimKeys()`，再调用 `initAllTables()`，因此 read/write 的 table metadata 一致。
 
-## Field Mapping To Original DEF Flow
+## Original DEF Write/Read Roundtrip Mapping
 
-以下按 EDADB shadow 域列出它对应的原始 DEF read/write 代码位置。
+### Original DEF Write Flow
 
-- Root identity / no root order: `primary_key`
-  - Write source: `DefWrite::write_track_grid()` 按 `IdbTrackGridList` 顺序输出 `TRACKS`，见 `src/database/manager/builder/def_builder/def_write.cpp:362-388`。
-  - Read source: `trackGridCallback()` / `parse_track_grid()` 按 DEF 出现顺序创建 track grid，见 `src/database/manager/builder/def_builder/def_read.cpp:731-787`。
-  - EDADB adapter: 只保存 synthetic `primary_key` 作为 anonymous root identity；不保存 root append order。
+| 原始 `DefWrite` 执行顺序 | EDADB write / `toShadow` 对应 | DEF 域 / iDB 变量 / EDADB 域 |
+| --- | --- | --- |
+| 1. `write_track_grid()` 按 root vector 遍历 anonymous `TRACKS` records，见 `def_write.cpp:362-371` | `writeIdbTrackGrid()` 按当前 vector 构造 shadow，但不存 root order；`primary_key` 只是 DB identity，见 `def_write_edadb.cpp:237-256`, `shadow_idb_track_grid.h:18-20` | `TRACKS` root / `IdbTrackGridList::_track_grid_list` / `iTrackGridSD.primary_key` |
+| 2. 输出 direction、start、DO count、STEP pitch，见 `def_write.cpp:372-375` | `toShadow()` 保存 `_track_num_sd` 和 inline `_track_sd`，见 `shadow_idb_track_grid.h:20-25` | `TRACKS <dir> <start> DO <num> STEP <pitch>` / `IdbTrack::_direction/_start/_pitch`, `IdbTrackGrid::_track_num` / `_track_sd`, `_track_num_sd` |
+| 3. 按 layer vector 顺序输出 layer names，见 `def_write.cpp:377-383` | 将 non-owning `IdbLayer*` 转为有序 `_layer_name_vec_sd`，见 `shadow_idb_track_grid.h:26-29` | `LAYER <names>` / `IdbTrackGrid::_layer_list` / `_layer_name_vec_sd` |
 
-- Track axis fields: `_track_sd`, `_track_num_sd`
-  - Write source: `write_track_grid()` 输出 direction/start/track count/pitch，见 `src/database/manager/builder/def_builder/def_write.cpp:362-388`。
-  - Read source: `parse_track_grid()` 设置 direction/start/num/pitch，见 `src/database/manager/builder/def_builder/def_read.cpp:749-787`。
+### Original DEF Read Flow
 
-- Layer refs: `_layer_name_vec_sd`
-  - Write source: `write_track_grid()` 输出 `LAYER` 后的 layer name list，见 `src/database/manager/builder/def_builder/def_write.cpp:362-388`。
-  - Read source: `parse_track_grid()` 按 DEF layer list lookup LEF layer，并维护 routing layer track-grid back link，见 `src/database/manager/builder/def_builder/def_read.cpp:749-787`。
+| 原始 `DefRead` 执行顺序 | EDADB read / `fromShadow` 对应 | DEF 域 / iDB 变量 / EDADB 域 |
+| --- | --- | --- |
+| 1. `parse_track_grid()` append 新 grid 并获取 inline track，见 `def_read.cpp:749-760` | `readIdbTrackGrid()` reset list，无 `ORDER BY`地读 root row 并 append grid，见 `def_read_edadb.cpp:379-405` | `TRACKS` root / `IdbTrackGridList::_track_grid_list` / `iTrackGridSD` |
+| 2. 从 DEF macro/x/xStep/xNum 恢复 direction、start、pitch、count，见 `def_read.cpp:762-769` | `fromShadow()` 恢复 `_track_sd/_track_num_sd`，见 `shadow_idb_track_grid.h:33-38` | axis fields / `IdbTrack`, `IdbTrackGrid::_track_num` / `_track_sd`, `_track_num_sd` |
+| 3. 按 DEF layer list 查找 LEF layer，append reference；routing layer 增加 backlink，见 `def_read.cpp:771-784` | builder 按 `_layer_name_vec_sd` 执行同样 lookup、append 和 backlink 重建，见 `def_read_edadb.cpp:408-420` | `LAYER <names>` / `_layer_list`, `IdbLayerRouting::_track_grid_list` / `_layer_name_vec_sd` |
 
 ## Child Storage View
 
@@ -151,7 +152,7 @@ Primary-key audit:
 - 对 `_layer_name_vec_sd` 中每个 layer name 回查 LEF layer。
 - 当前在 `DefReadEdadb::readIdbTrackGrid()` 中使用局部 `layout->get_layers()->find_layer()`，贴近原始 `parse_track_grid()`。
 - 如果后续把 layer lookup 下沉到 `Shadow<IdbTrackGrid>::fromShadow()`，应使用 `idb::edadb_adapter::EdadbIdbHelper::findIdbLayerByName()` 获取全局 `IdbLayer`。
-- 使用 helper 前必须确保 `EdadbIdbHelper::setIdbDefService(_def_service)` 已设置；当前其他 shadow 如 `IdbLayerShape` / via master 已按这个模式使用。
+- helper context 在 `DefReadEdadb::createDbFromEdadb()` 入口统一绑定；不要在单个 `readIdbXXX()` 中重复设置。
 - 找到 layer 时，加入 track grid，并同步挂到 routing layer 的 `_track_grid_list`。
 - 找不到 layer 时按原始 parser 语义打印错误并继续。
 

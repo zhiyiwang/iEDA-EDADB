@@ -26,6 +26,8 @@ EDADB adapter 文档的核心目标是：每个 root class 都必须按 `src/dat
 - 只有 iEDA 语义需要保序或明确要求 raw roundtrip 保序的 root list 才增加 `_order_sd`；Level D root list 默认不保存 root order，优先依赖 normalized diff。
 - `SLOTS` 是当前已 review 类中的明确例外：它是 Level D，但 root record 没有 name，且 raw roundtrip 需要稳定 anonymous record 输出，因此保留 `primary_key + _order_sd`。
 - computed fields 不入库；read path 按原始 parser 语义重新计算或重建。
+- Roundtrip mapping 必须拆成 `Original DEF Write Flow` 和 `Original DEF Read Flow` 两张表，分别以原始 `DefWrite` / `DefRead` 实际执行顺序为主线，不按 shadow class 或 DB 列顺序组织。
+- 两张 roundtrip 表固定为三列：原始执行顺序、EDADB `write/toShadow` 或 `read/fromShadow` 对应、`DEF 域 / iDB 变量 / EDADB 域`。分支、fallback、name lookup、computed field 和 parser-only/writer-only 差异必须在对应执行步骤中写明。
 - 每个 root 文档必须说明 child storage view：哪些子节点 direct mapping，哪些子节点 shadow，哪些运行时 pointer/cache 不入库以及如何重建。
 - 每启用一个 `readIdbXXX/writeIdbXXX`，必须同步 schema/init、DEF callback、测试 SQL 和文档。
 - 未被任何 enabled adapter 读写、注册或验证的 schema macro 必须休眠并标 `EDADB_TODO`，不能因为原始类存在就默认建表。
@@ -74,6 +76,7 @@ EDADB adapter 文档的核心目标是：每个 root class 都必须按 `src/dat
 | `IdbBlockageList` | No | Level D; no point-tool root index/order dependency found | Synthetic `primary_key` identity; no `_order_sd`; rect vector uses `Shadow<IdbRect>::_vec_idx`. |
 | `IdbGroupList` | No | Level D; references are name-based and no point-tool root index/order dependency found | `_group_name_sd` identity; no `_order_sd`; member vector preserves order. |
 | `IdbFillList` | No | Level D; no point-tool root index/order dependency found | `primary_key` identity; no `_order_sd`; rect/coordinate vectors preserve order. |
+| `IdbSpecialNetList` | No | Level D; PDN tools resolve nets by name, no root index/order dependency found | `_net_name_sd` identity; no root `_order_sd`; pin refs and wire/segment/point vectors preserve order. |
 
 ## Current Progress
 
@@ -92,7 +95,7 @@ EDADB adapter 文档的核心目标是：每个 root class 都必须按 `src/dat
 | Slot | Done | `primary_key` identity for anonymous root records, `_order_sd` root order, rectangle vector uses `Shadow<IdbRect>::_vec_idx`. |
 | Group | Done | Level D root order; `_group_name_sd` identity, no `_order_sd`, member vector order preserved. |
 | Fill | Done | Level D root order; `primary_key` identity, no `_order_sd`, layer/via references rebuilt by name. |
-| SpecialNet | Done | `_net_name_sd` identity, `_order_sd` root order, pin/wire/segment vectors preserved. |
+| SpecialNet | Done | Level D root order; `_net_name_sd` identity, no root `_order_sd`, pin-string/explicit pin refs plus via/rect/point segment branches covered. |
 | Net | Done | `_net_name_sd` identity, `_order_sd` root order, pin/wire/segment vectors preserved. |
 
 ## Output Template
@@ -104,7 +107,7 @@ EDADB adapter 文档的核心目标是：每个 root class 都必须按 `src/dat
 - Original Read Semantics: 原始 parser 如何重建对象。
 - EDADB Schema: 当前 DB 中保存哪些 class/member。
 - Schema / Init: 记录 `TABLE4CLASS` / `TABLE4SHADOW` 宏、`initPrimKeys()`、`EDADB_INIT_TABLE()` 的代码位置；同时说明 PK 是否启用。
-- Field Mapping To Original DEF Flow: 按 DB 域列出对应的 `DefWrite` / `DefRead` 函数和源码行范围。
+- Original DEF Write/Read Roundtrip Mapping: 使用两张三列表；write 表按原始 `DefWrite` 执行顺序，read 表按原始 `DefRead` 执行顺序，逐步标明 EDADB 实现、DEF tag、iDB 成员和 EDADB 字段。
 - Child Storage View: root 下有哪些子节点、direct/shadow 选择、为什么不用原始类。
 - EDADB Write Path: `writeIdbT()` 是否贴近原始 writer。
 - EDADB Read Path: `readIdbT()` 是否贴近原始 parser。
@@ -127,7 +130,7 @@ EDADB adapter 文档的核心目标是：每个 root class 都必须按 `src/dat
 - `11_idb_slot.md`: `IdbSlot` for `SLOTS`, including layer name, rectangle vector, and anonymous root identity.
 - `12_idb_group.md`: `IdbGroup` for `GROUPS`, including region/member name references, Level D root-order policy, and member order.
 - `13_idb_fill.md`: `IdbFill` for `FILLS`, including layer/via typed storage, geometry vectors, and Level D root-order policy.
-- `14_idb_special_net.md`: `IdbSpecialNet` for `SPECIALNETS`, including pin refs, special wires, segments, geometry, and explicit root order.
+- `14_idb_special_net.md`: `IdbSpecialNet` for `SPECIALNETS`, including pin refs, special wires, segments, geometry, and Level D root-order policy.
 - `15_idb_net.md`: `IdbNet` for `NETS`, including pin refs, regular wires, segments, geometry, and explicit root order.
 - `todo.md`: root list order guarantees that still need implementation or verification.
 

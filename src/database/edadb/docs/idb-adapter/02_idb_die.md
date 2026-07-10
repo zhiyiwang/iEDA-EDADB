@@ -84,21 +84,23 @@ Primary-key audit:
 - `initPrimKeys()` 没有关闭 `Shadow<IdbDie>` 的 primary-key 行为；`primary_key` 是 `iDieSD` 的 root owner key，用来归属 `points_sd` child rows。
 - `initReadDb()` / `initWriteDb()` 都先调用 `initPrimKeys()`，再调用 `initAllTables()`，因此 read/write 的 table metadata 一致。
 
-## Field Mapping To Original DEF Flow
+## Original DEF Write/Read Roundtrip Mapping
 
-以下按 EDADB shadow 域列出它对应的原始 DEF read/write 代码位置。
+### Original DEF Write Flow
 
-- Die points: `_points_sd`
-  - Write source: `DefWrite::write_die()` 输出 `DIEAREA` 点序列，见 `src/database/manager/builder/def_builder/def_write.cpp:340-360`。
-  - Read source: `dieAreaCallback()` / `parse_die()` 按 DEF point 顺序创建 die points，见 `src/database/manager/builder/def_builder/def_read.cpp:691-729`。
+| 原始 `DefWrite` 执行顺序 | EDADB write / `toShadow` 对应 | DEF 域 / iDB 变量 / EDADB 域 |
+| --- | --- | --- |
+| 1. `write_die()` 获取 layout singleton die 并输出 `DIEAREA`，见 `def_write.cpp:340-350` | `writeIdbDie()` 获取同一 singleton，用 synthetic `primary_key` 作为 child owner identity，见 `def_write_edadb.cpp:188-202` | `DIEAREA` singleton / `IdbLayout::_die` / `iDieSD.primary_key` 仅为 DB owner key |
+| 2. 按 `die->get_points()` vector 顺序输出 x/y，见 `def_write.cpp:352-354` | `Shadow<IdbDie>::toShadow()` 保存 `points_sd`；coordinate shadow/child index 保存点序，见 `shadow_idb_die.h:22-31` | `( x y )` / `IdbDie::_points`, `IdbCoordinate::_x/_y` / `iDieSD.points_sd` → `iCoordSD._vec_idx/_x_sd/_y_sd` |
+| 3. 输出 `;`；bbox、area、polygon cache 均不输出，见 `def_write.cpp:356-359` | 不存储 derived geometry | terminator / `IdbDie` derived state / 无 EDADB 字段 |
 
-- Die bounding box: computed from points
-  - Write source: DEF writer 不直接输出 bounding box，只输出 die points，见 `src/database/manager/builder/def_builder/def_write.cpp:340-360`。
-  - Read source: 原始 `parse_die()` 在 points 恢复后调用 `die->set_bounding_box()`，见 `src/database/manager/builder/def_builder/def_read.cpp:709-729`。
+### Original DEF Read Flow
 
-- Root identity: `primary_key`
-  - Write source: 原始 DEF 中 `DIEAREA` 是 singleton section，没有 name identity，见 `src/database/manager/builder/def_builder/def_write.cpp:340-360`。
-  - Read source: 原始 `parse_die()` 写入当前 layout singleton `IdbDie`，见 `src/database/manager/builder/def_builder/def_read.cpp:709-729`。
+| 原始 `DefRead` 执行顺序 | EDADB read / `fromShadow` 对应 | DEF 域 / iDB 变量 / EDADB 域 |
+| --- | --- | --- |
+| 1. `dieAreaCallback()` 校验 input 后调 `parse_die()`，获取 active layout singleton die，见 `def_read.cpp:691-721` | `readIdbDie()` 获取同一 active die 并先 `reset()`，见 `def_read_edadb.cpp:295-305` | `DIEAREA` / `IdbLayout::_die` / `iDieSD` root row |
+| 2. 按 DEF point 顺序调 `die->add_point(x,y)`，见 `def_read.cpp:721-724` | `fromShadow()` 按 `points_sd` child order 调 `add_point()` 并转移 point ownership，见 `shadow_idb_die.h:34-42` | point sequence / `IdbDie::_points/_polygon` / `points_sd`, `iCoordSD._vec_idx/_x_sd/_y_sd` |
+| 3. points 恢复后调 `set_bounding_box()`，见 `def_read.cpp:726` | builder 在 `fromShadow()` 后显式调用同一计算，见 `def_read_edadb.cpp:313-317` | computed bbox / `IdbDie::_bounding_box` / 不存储，读时计算 |
 
 ## Child Storage View
 

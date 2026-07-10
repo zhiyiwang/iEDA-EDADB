@@ -64,17 +64,21 @@ Primary-key audit:
 - `initPrimKeys()` 显式关闭 `idb::IdbGCellGrid` 的 primary-key 行为；direct table 允许多条无 PK rows。
 - `initReadDb()` / `initWriteDb()` 都先调用 `initPrimKeys()`，再调用 `initAllTables()`，因此 read/write 的 table metadata 一致。
 
-## Field Mapping To Original DEF Flow
+## Original DEF Write/Read Roundtrip Mapping
 
-以下按 EDADB shadow 域列出它对应的原始 DEF read/write 代码位置。
+### Original DEF Write Flow
 
-- Root record: no explicit PK/order field
-  - Write source: `DefWrite::write_gcell_grid()` 按 `IdbGCellGridList` 顺序输出，见 `src/database/manager/builder/def_builder/def_write.cpp:1013-1038`。
-  - Read source: `gcellGridCallback()` / `parse_gcell_grid()` 按 DEF 出现顺序创建 grid，见 `src/database/manager/builder/def_builder/def_read.cpp:2034-2073`。
+| 原始 `DefWrite` 执行顺序 | EDADB write 对应 | DEF 域 / iDB 变量 / EDADB 域 |
+| --- | --- | --- |
+| 1. `write_gcell_grid()` 检查 list；null 或 empty 都返回 `kDbFail`，见 `def_write.cpp:1013-1025` | `writeIdbGCellGrid()` 对 null 失败，但 empty vector 返回成功，见 `def_write_edadb.cpp:264-277` | `GCELLGRID` root/count / `IdbGCellGridList::_gcell_grid_list` / root rows，无 count/order 字段 |
+| 2. 按 root vector 遍历，输出 direction、start、DO count、STEP space，见 `def_write.cpp:1029-1034` | direct `insertVector<IdbGCellGrid>()` 写入四个 scalar，见 `def_write_edadb.cpp:272-280` | `GCELLGRID <dir> <start> DO <num> STEP <space>` / `_direction/_start/_num/_space` / `iGCellGrid._direction/_start/_num/_space` |
 
-- GCell fields: `_direction`, `_start`, `_num`, `_space`
-  - Write source: `write_gcell_grid()` 输出 direction/start/count/space，见 `src/database/manager/builder/def_builder/def_write.cpp:1013-1038`。
-  - Read source: `parse_gcell_grid()` 设置 direction/start/num/space，见 `src/database/manager/builder/def_builder/def_read.cpp:2052-2073`。
+### Original DEF Read Flow
+
+| 原始 `DefRead` 执行顺序 | EDADB read 对应 | DEF 域 / iDB 变量 / EDADB 域 |
+| --- | --- | --- |
+| 1. `gcellGridCallback()` 校验 input 后调 `parse_gcell_grid()`，见 `def_read.cpp:2034-2050` | `readIdbGCellGrid()` 清空 active list，然后逐行 direct read，见 `def_read_edadb.cpp:432-447` | `GCELLGRID` root / `IdbGCellGridList` / `iGCellGrid` |
+| 2. parser append grid，按 macro 恢复 direction，再设 num/start/space，见 `def_read.cpp:2059-2070` | EDADB 已将四个 scalar 直接读入新 `IdbGCellGrid`，builder 只 append，见 `def_read_edadb.cpp:446-459` | direction/start/DO/STEP / `_direction/_start/_num/_space` / `iGCellGrid._direction/_start/_num/_space` |
 
 ## Child Storage View
 
@@ -169,4 +173,5 @@ Primary-key audit:
 ## Risks / TODO
 
 - demo 只覆盖空列表，正向字段持久化应以 regression 的 routed case 为准。
+- 原始 writer 对空 gcell-grid list 返回失败，EDADB writer 对空 vector 返回成功。
 - direct no-PK rows 允许重复字段组合；如果未来需要 update/delete 单条 `GCELLGRID` record，再重新评估是否需要 synthetic identity。

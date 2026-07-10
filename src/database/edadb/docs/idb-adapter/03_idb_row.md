@@ -79,25 +79,26 @@ Primary-key audit:
 - `initPrimKeys()` 没有专门处理 `_order_sd`；它不是 PK，只是 order key。
 - `initReadDb()` / `initWriteDb()` 都先调用 `initPrimKeys()`，再调用 `initAllTables()`，因此 read/write 的 table metadata 一致。
 
-## Field Mapping To Original DEF Flow
+## Original DEF Write/Read Roundtrip Mapping
 
-以下按 EDADB shadow 域列出它对应的原始 DEF read/write 代码位置。
+### Original DEF Write Flow
 
-- Row identity / root order: `_name_sd`, `_order_sd`
-  - Write source: `DefWrite::write_row()` 按 `IdbRowList` 顺序输出 row name，见 `src/database/manager/builder/def_builder/def_write.cpp:437-458`。
-  - Read source: `rowCallback()` / `parse_row()` 按 DEF 出现顺序创建 row，见 `src/database/manager/builder/def_builder/def_read.cpp:789-841`。
+| 原始 `DefWrite` 执行顺序 | EDADB write / `toShadow` 对应 | DEF 域 / iDB 变量 / EDADB 域 |
+| --- | --- | --- |
+| 1. `write_row()` 按 `IdbRows::_row_list` 顺序遍历，输出 row name，见 `def_write.cpp:437-449` | `writeIdbRow()` 按 vector index 构造 shadow，`toShadow()` 保存 `_name_sd/_order_sd`，见 `def_write_edadb.cpp:210-229`, `shadow_idb_row.h:17-25` | `ROW <name>` / `IdbRow::_name`, `IdbRows::_row_list` order / `_name_sd`, `_order_sd` |
+| 2. 输出 site name 和 site orientation，见 `def_write.cpp:447-451` | 不存储完整 `IdbSite`；flatten 为 `_site_name_sd/_site_orient_sd`，见 `shadow_idb_row.h:26-27` | site/orient / `IdbRow::_site->_name/_orient` / `_site_name_sd`, `_site_orient_sd` |
+| 3. 输出 origin x/y，见 `def_write.cpp:449-451` | flatten original coordinate，见 `shadow_idb_row.h:28-29` | origin / `IdbRow::_original_coordinate` / `_origin_x_sd`, `_origin_y_sd` |
+| 4. 输出 `DO/BY/STEP`，见 `def_write.cpp:449-451` | 保存 row count 和 step scalars，见 `shadow_idb_row.h:30-33` | `DO/BY/STEP` / `_row_num_x/_row_num_y/_step_x/_step_y` / `_row_num_x_sd/_row_num_y_sd/_step_x_sd/_step_y_sd` |
 
-- Site name and orient: `_site_name_sd`, `_site_orient_sd`
-  - Write source: `write_row()` 输出 site name 和 row orient，见 `src/database/manager/builder/def_builder/def_write.cpp:437-458`。
-  - Read source: `parse_row()` 从 LEF site clone row-local site，并设置 orient，见 `src/database/manager/builder/def_builder/def_read.cpp:807-841`。
+### Original DEF Read Flow
 
-- Origin / DO-BY / STEP: `_origin_x_sd`, `_origin_y_sd`, `_row_num_x_sd`, `_row_num_y_sd`, `_step_x_sd`, `_step_y_sd`
-  - Write source: `write_row()` 输出 origin、DO/BY、STEP，见 `src/database/manager/builder/def_builder/def_write.cpp:437-458`。
-  - Read source: `parse_row()` 设置 origin、row num、step，见 `src/database/manager/builder/def_builder/def_read.cpp:807-841`。
-
-- Row bounding box: computed from site/origin/count/step
-  - Write source: DEF writer 不直接输出 bbox，只输出 ROW scalar fields，见 `src/database/manager/builder/def_builder/def_write.cpp:437-458`。
-  - Read source: `parse_row()` 恢复 row fields 后调用 `row->set_bounding_box()`，见 `src/database/manager/builder/def_builder/def_read.cpp:807-841`。
+| 原始 `DefRead` 执行顺序 | EDADB read / `fromShadow` 对应 | DEF 域 / iDB 变量 / EDADB 域 |
+| --- | --- | --- |
+| 1. `parse_row()` 在 row list 中 append 新 row，见 `def_read.cpp:807-816` | `readIdbRow()` 先 reset list，再使用 `ORDER BY _order_sd` 读取，见 `def_read_edadb.cpp:324-344` | row record/order / `IdbRows::_row_list` / `_order_sd` |
+| 2. 设置 name 和 origin，见 `def_read.cpp:818-819` | `fromShadow()` 恢复 `_name_sd` 和 origin scalars，见 `shadow_idb_row.h:38-47` | `ROW <name> x y` / `IdbRow::_name/_original_coordinate` / `_name_sd`, `_origin_x_sd`, `_origin_y_sd` |
+| 3. 按 site name 取 LEF site，clone row-local site，设置 site/row orient，见 `def_read.cpp:821-826` | builder 按 `_site_name_sd` 获取 LEF site、clone，并用 `_site_orient_sd` 设置两处 orient，见 `def_read_edadb.cpp:353-367` | site/orient / `IdbRow::_site`, `_orient` / `_site_name_sd`, `_site_orient_sd` |
+| 4. `hasDo()` 时恢复 DO/BY，`hasDoStep()` 时恢复 STEP，见 `def_read.cpp:828-835` | `fromShadow()` 直接恢复四个 scalar，见 `shadow_idb_row.h:47-50` | `DO/BY/STEP` / `_row_num_x/_row_num_y/_step_x/_step_y` / `_row_num_x_sd/_row_num_y_sd/_step_x_sd/_step_y_sd` |
+| 5. 最后计算 bbox，见 `def_read.cpp:837` | site 和 scalar 恢复后调同一 `set_bounding_box()`，再 append row，见 `def_read_edadb.cpp:368-370` | computed bbox / `IdbRow::_bounding_box` / 不存储，读时计算 |
 
 ## Child Storage View
 

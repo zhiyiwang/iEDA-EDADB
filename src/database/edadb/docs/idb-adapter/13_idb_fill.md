@@ -69,21 +69,29 @@ Primary-key audit:
 - 不定义 `_order_sd`；`FILLS` root order 是 Level D，不作为 iEDA 点工具语义约束。
 - `initReadDb()` / `initWriteDb()` 都先调用 `initPrimKeys()`，再调用 `initAllTables()`，因此 read/write 的 table metadata 一致。
 
-## Field Mapping To Original DEF Flow
+## Original DEF Write/Read Roundtrip Mapping
 
-以下按 EDADB shadow 域列出它对应的原始 DEF read/write 代码位置。
+### Original DEF Write Flow
 
-- Root identity: `primary_key`
-  - Write source: `DefWrite::write_fill()` 按 fill list 顺序输出 fill records，见 `src/database/manager/builder/def_builder/def_write.cpp:1140-1188`。
-  - Read source: `fillsCallback()` / `parse_fill_number()` reserve list，`fillCallback()` / `parse_fill()` 按 DEF 出现顺序创建 fill，见 `src/database/manager/builder/def_builder/def_read.cpp:2313-2396`。
+| 原始 `DefWrite` 执行顺序 | EDADB write / `toShadow` 对应 | DEF 域 / iDB 变量 / EDADB 域 |
+| --- | --- | --- |
+| 1. `write_fill()` 检查 list；空 list 返回失败；用完整 list size 输出 count，见 `def_write.cpp:1142-1154` | `writeIdbFill()` 检查 list；空 vector 返回成功；每个 fill 转 shadow 后 batch insert，见 `def_write_edadb.cpp:561-597` | `FILLS <N>` / `IdbFillList::_fill_list` / `iFillSD` row count |
+| 2. 遍历 fill；type 为 layer 但 layer object/ref 无效时直接跳过 record，见 `def_write.cpp:1156-1162` | `toShadow()` 仍保存 `_type_sd`；缺失 layer ref 时 `_layer_name_sd` 为空，见 `shadow_idb_fill.h:35-40`。这与原 writer“跳过 record”不完全一致 | layer fill kind/name / `IdbFill::_type`, `IdbFillLayer::_layer` / `_type_sd`, `_layer_name_sd` |
+| 3. layer branch 按 rect vector 顺序输出 geometry，见 `def_write.cpp:1164-1168` | `toShadow()` 按顺序复制 `_rect_list_sd`，nested rect order 由 child-vector index 保留，见 `shadow_idb_fill.h:40-43` | `- LAYER ... RECT` / `IdbFillLayer::_rect_list` / `_rect_list_sd` |
+| 4. type 为 via 但 via object/ref 无效时直接跳过 record，见 `def_write.cpp:1169-1174` | `toShadow()` 仍保存 `_type_sd`；缺失 via ref 时 `_via_name_sd` 为空，见 `shadow_idb_fill.h:44-46`。这与原 writer“跳过 record”不完全一致 | via fill kind/name / `IdbFill::_type`, `IdbFillVia::_via` / `_type_sd`, `_via_name_sd` |
+| 5. via branch 按 coordinate vector 顺序输出 points，见 `def_write.cpp:1176-1180` | `toShadow()` 按顺序复制 `_coordinate_list_sd`，nested coordinate order 由 child-vector index 保留，见 `shadow_idb_fill.h:46-49` | `- VIA ... (x y)` / `IdbFillVia::_coordinate_list` / `_coordinate_list_sd` |
+| 6. 输出 section terminator，见 `def_write.cpp:1184` | 由 root/child row 边界重建，不存文本终止符 | `END FILLS` / 无 iDB 成员 / 无 EDADB 字段 |
 
-- Fill type and refs: `_type_sd`, `_layer_name_sd`, `_via_name_sd`
-  - Write source: `write_fill()` 区分 layer fill 和 via fill，并输出 layer/via name，见 `src/database/manager/builder/def_builder/def_write.cpp:1140-1188`。
-  - Read source: `parse_fill()` 读取 layer/via fill 类型，并按 layer/via name lookup，见 `src/database/manager/builder/def_builder/def_read.cpp:2352-2396`。
+### Original DEF Read Flow
 
-- Fill geometry: `_rect_list_sd`, `_coordinate_list_sd`
-  - Write source: `write_fill()` 输出 layer fill rects 或 via fill coordinates，见 `src/database/manager/builder/def_builder/def_write.cpp:1140-1188`。
-  - Read source: `parse_fill()` 读取 rect list 或 coordinate list，见 `src/database/manager/builder/def_builder/def_read.cpp:2352-2396`。
+| 原始 `DefRead` 执行顺序 | EDADB read / `fromShadow` 对应 | DEF 域 / iDB 变量 / EDADB 域 |
+| --- | --- | --- |
+| 1. `fillsCallback()` 把 section count 传给 `parse_fill_number()`，但后者当前不使用 count，见 `def_read.cpp:2313-2332` | EDADB 不存独立 count；由 `iFillSD` row count 推导 | `FILLS <N>` / 当前无 iDB 状态更新 / row count |
+| 2. `fillCallback()` 校验参数后调用 `parse_fill()`，见 `def_read.cpp:2334-2350` | `readIdbFill()` 逐条读取 `Shadow<IdbFill>`，按 `_type_sd` dispatch，见 `def_read_edadb.cpp:639-681` | fill record/type / `IdbFill::_type` / `_type_sd` |
+| 3. layer branch 按 name lookup LEF layer，创建 `IdbFillLayer`，再按 DEF 顺序 add rect，见 `def_read.cpp:2363-2369` | EDADB 按 `_layer_name_sd` lookup layer；lookup 失败直接报错，否则按 `_rect_list_sd` child order add rect，见 `def_read_edadb.cpp:664-676` | `LAYER/RECT` / `IdbFillLayer::_layer/_rect_list` / `_layer_name_sd/_rect_list_sd` |
+| 4. layer polygon 分支仍为 TODO，见 `def_read.cpp:2371-2372` | schema 不保存 polygon，与原始 parser 最终 iDB 状态一致 | polygon / 无已实现 iDB 成员 / 无 EDADB 字段 |
+| 5. via branch 先查 DEF via，再查 LEF via，然后 clone 并创建 `IdbFillVia`，见 `def_read.cpp:2376-2385` | EDADB 按 `_via_name_sd` 执行同样 DEF→LEF lookup；但在 clone 前显式检查 null，见 `def_read_edadb.cpp:677-694` | `VIA <name>` / `IdbFillVia::_via` / `_via_name_sd` |
+| 6. 按所有 via-point groups/token 顺序 append coordinates，见 `def_read.cpp:2386-2391` | 按 `_coordinate_list_sd` child order add coordinate，见 `def_read_edadb.cpp:695-697` | via points / `IdbFillVia::_coordinate_list` / `_coordinate_list_sd` |
 
 ## Child Storage View
 
@@ -182,3 +190,6 @@ Primary-key audit:
 
 - 当前只覆盖原始 parser/writer 已实现的 rect/coordinate 语义；polygon 后续如果实现，需要同步扩展 schema/read/write/test。
 - Via fill read 会 clone via；这与原始 parser 一致，但也意味着 fill 持有的是 cloned via object，不是 via list 中的原始 pointer。
+- 原始 writer 用完整 fill-list size 声明 count，却会跳过 layer/via ref 无效的 record，可能造成 section count 与实际输出记录数不一致；EDADB 当前还会把这些无效记录写成空引用 shadow。
+- 原始 `parse_fill()` 在确认 via lookup 成功前调用 `via->clone()`，lookup 失败会空指针解引用；EDADB read 在 clone 前显式失败，行为更安全但不完全相同。
+- 原始 writer 对空 fill list 返回失败，EDADB writer 对空 vector 返回成功；`readIdbFill()` 也不清空现有 list。
