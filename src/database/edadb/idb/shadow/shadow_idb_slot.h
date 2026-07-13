@@ -21,10 +21,7 @@ public:
     Shadow<idb::IdbSlot>& operator=(const Shadow& other) = delete;
 
 public:
-    void toShadow(idb::IdbSlot* obj, const uint32_t* idx_ptr = nullptr) {
-        assert(idx_ptr != nullptr);
-
-        _order_sd = *idx_ptr;
+    void toShadow(idb::IdbSlot* obj) {
         _layer_name_sd = obj->get_layer_name();
 
         assert(_rect_list_sd.empty());
@@ -33,11 +30,7 @@ public:
         }
     } // toShadow
 
-    void fromShadow(idb::IdbSlot* obj, uint32_t* idx_ptr = nullptr) {
-        if (idx_ptr != nullptr) {
-            *idx_ptr = static_cast<uint32_t>(_order_sd);
-        }
-
+    void fromShadow(idb::IdbSlot* obj) {
         obj->set_layer_name(_layer_name_sd);
 
         assert(obj->get_rect_list().empty());
@@ -49,7 +42,6 @@ public:
 
 public:
     uint64_t primary_key = 0;
-    uint64_t _order_sd = 0;
     std::string _layer_name_sd;
     std::vector<idb::IdbRect> _rect_list_sd;
 

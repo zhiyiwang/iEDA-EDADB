@@ -16,10 +16,10 @@
 - DEF mapping：`NETS` → `IdbDesign::_net_list`、`IdbNetList::_net_list/_net_map`、`IdbNet`、`IdbRegularWire`。
 - Root order level：A。
 - 依据：`IdbNetList::add_net()` 按 append 顺序设置 `IdbNet::_id`；iDRC 把该 ID 保存为 `net_idx`，随后使用 `idb_net_list[net_idx]` 取回 net。只改变 vector 顺序会造成 ID 与对象错配。
-- Adapter requirement：`_net_name_sd` 作为 identity/PK，`_order_sd` 单独保存 root append order；read 必须 `ORDER BY "_order_sd"` 后调用 `add_net()`，使新 `_id` 与 vector index 同步重建。
+- Experiment override：本 no-sort 分支只用 `_net_name_sd` 作为 identity/PK，不保存 root append order；read-all 后调用 `add_net()`，新 `_id` 只与本次 DB 返回顺序一致。
 - Nested vectors：IO pin refs、instance pin refs、wire、segment、point 都按 order-sensitive 处理。
 
-当前实现满足该约束，见 `def_read_edadb.cpp:1024-1058`。
+当前实现刻意不满足 Level-A root-order 要求，用于验证不保序对点工具和 roundtrip 的实际影响；nested order 仍满足约束。
 
 ## Original Write Semantics
 
@@ -59,7 +59,7 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbRegularWire>, "iRegWireSD",
                  (primary_key, _wire_state_sd, _shield_name_sd),
                  (_segment_list_sd));
 TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbNet>, "iNetSD",
-                 (_net_name_sd, _order_sd, _original_net_name_sd,
+                 (_net_name_sd, _original_net_name_sd,
                   _connect_type_sd, _source_type_sd, _weight_sd,
                   _xtalk_sd, _fix_bump_sd, _frequency_sd),
                  (_io_pin_name_list_sd, _instance_pin_list_sd,
@@ -68,7 +68,7 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbNet>, "iNetSD",
 
 Primary-key audit：
 
-- `Shadow<IdbNet>::_net_name_sd` 是 root PK；`_order_sd` 只负责 Level-A root order，不作为 identity。
+- `Shadow<IdbNet>::_net_name_sd` 是 root PK；schema 不包含 root order column。
 - `NetPinRef::_order_sd` 是 owning net 内的 child-local PK/order。
 - `Shadow<IdbRegularWire>` 和 `Shadow<IdbRegularWireSegment>` 使用 synthetic `primary_key` 标识 nested records，并保持构造顺序。
 - point vector 使用 `Shadow<IdbCoordinate<int32_t>>::_vec_idx` 保持 nested point order。
@@ -89,7 +89,7 @@ Primary-key audit：
 | 原始 `DefWrite` 执行顺序 | EDADB write / `toShadow` 对应 | DEF 域 / iDB 变量 / EDADB 域 |
 | --- | --- | --- |
 | 1. `write_net()` 检查 list；空 list 返回失败；输出 section count，见 `def_write.cpp:829-841` | `writeIdbNet()` 检查 list；空 vector 返回成功；count 由 root rows 推导，见 `def_write_edadb.cpp:648-668` | `NETS <N>` / `IdbNetList::_net_list` / `iNetSD` row count |
-| 2. 按 root vector 输出 escaped net name，见 `def_write.cpp:843-846` | `Shadow<IdbNet>::toShadow()` 保存 `_net_name_sd`；builder 单独保存 `_order_sd`，见 `shadow_idb_net.h:206-207`, `def_write_edadb.cpp:670-677` | `- <net_name>` / `IdbNet::_net_name` / `_net_name_sd`, `_order_sd` |
+| 2. 按 root vector 输出 escaped net name，见 `def_write.cpp:843-846` | `Shadow<IdbNet>::toShadow()` 保存 `_net_name_sd`；builder 不保存 root vector index | `- <net_name>` / `IdbNet::_net_name` / `_net_name_sd` |
 | 3. 先按 IO pin vector 输出 `( PIN pin )`，见 `def_write.cpp:848-851` | 保存有序 primitive `_io_pin_name_list_sd`，见 `shadow_idb_net.h:209-212` | IO connection / `IdbNet::_io_pin_list` / `_io_pin_name_list_sd` |
 | 4. 再按 instance-pin vector 输出 `( instance pin )`，见 `def_write.cpp:853-855` | 保存 `NetPinRef{_order_sd, instance_name, pin_name}`，见 `shadow_idb_net.h:214-220` | instance connection / `IdbNet::_instance_pin_list`, `IdbPin::_instance/_pin_name` / `_instance_pin_list_sd` |
 | 5. connect type 有效时输出 `USE`，见 `def_write.cpp:859-862` | 保存 `_connect_type_sd`，见 `shadow_idb_net.h:223-224` | `+ USE` / `IdbNet::_connect_type` / `_connect_type_sd` |
@@ -110,8 +110,8 @@ Primary-key audit：
 
 | 原始 `DefRead` 执行顺序 | EDADB read / `fromShadow` 对应 | DEF 域 / iDB 变量 / EDADB 域 |
 | --- | --- | --- |
-| 1. `netBeginCallback()` 调 `parse_net_number()` reserve root list，见 `def_read.cpp:987-1007` | EDADB 不保存独立 count；ordered cursor 逐 root row读取 | `NETS <N>` / `IdbNetList` capacity / row count |
-| 2. `parse_net()` trim escaped name 并 `add_net()`，由 append 顺序设置 `_id`，见 `def_read.cpp:1028-1053` | `readIdbNet()` 按 `_order_sd` 查询并用 `_net_name_sd` 调 `add_net()`，见 `def_read_edadb.cpp:1024-1054` | root name/order/ID / `IdbNet::_net_name/_id`, `IdbNetList::_net_list/_net_map` / `_net_name_sd/_order_sd` |
+| 1. `netBeginCallback()` 调 `parse_net_number()` reserve root list，见 `def_read.cpp:987-1007` | EDADB 不保存独立 count；read-all 逐 root row 读取 | `NETS <N>` / `IdbNetList` capacity / row count |
+| 2. `parse_net()` trim escaped name 并 `add_net()`，由 append 顺序设置 `_id`，见 `def_read.cpp:1028-1053` | `readIdbNet()` 按 DB 返回顺序用 `_net_name_sd` 调 `add_net()`，不指定 root order | root name/ID / `IdbNet::_net_name/_id`, `IdbNetList::_net_list/_net_map` / `_net_name_sd` |
 | 3. 依次恢复 `USE/SOURCE/WEIGHT/XTALK/FIXEDBUMP/FREQUENCY/ORIGINAL`，见 `def_read.cpp:1055-1081` | `Shadow<IdbNet>::fromShadow()` 按相同 parser 顺序恢复 fields，见 `shadow_idb_net.h:241-249` | optional net fields / `IdbNet` header members / corresponding root `_sd` fields |
 | 4. 根据 connection count 创建 `setPinNet` 规则：单连接只填空 pointer，多连接直接覆盖，见 `def_read.cpp:1083-1092` | `fromShadow()` 使用保存的 IO/instance ref 总数执行同一规则，见 `shadow_idb_net.h:257-267` | pin back-reference policy / `IdbPin::_net` / 由 child rows 计算，不单独存储 |
 | 5. connection 为 `PIN` 时按 name lookup IO pin，append 并设置 back-reference，见 `def_read.cpp:1094-1106` | 遍历 `_io_pin_name_list_sd`，执行同样 lookup/add/set，见 `shadow_idb_net.h:269-277` | `( PIN pin )` / `IdbNet::_io_pin_list`, `IdbPin::_net` / `_io_pin_name_list_sd` |
@@ -128,7 +128,7 @@ Primary-key audit：
 
 ## Child Storage View
 
-- `Shadow<IdbNet>`：root header、root order、connection refs、wire vector。
+- `Shadow<IdbNet>`：root header、connection refs、wire vector；不保存 root order。
 - `NetPinRef`：instance name、pin name和 owning-net-local order。
 - `Shadow<IdbRegularWire>`：wire state、shield name和 segment vector。
 - `Shadow<IdbRegularWireSegment>`：layer/via names、segment flags、virtual-second flag、delta rect和 point vector。
@@ -138,7 +138,7 @@ Primary-key audit：
 
 ## Why Net Shadows Are Required
 
-- root 需要同时保存 name identity 和 Level-A append order。
+- root 需要 name identity；Level-A append order 在本实验分支刻意不保存。
 - pin、instance、layer和via 是 non-owning/runtime references，必须转换为 names。
 - regular wire包含多层 owned vectors，需要明确 owner和nested order。
 - segment只保存 DEF/parser-visible state，不持久化运行时 pointer。
@@ -148,23 +148,22 @@ Primary-key audit：
 `writeIdbNet()` 位于 `src/database/manager/builder/def_builder/def_write_edadb.cpp:648`：
 
 1. 获取 `IdbNetList`；
-2. 按 root vector 顺序构造 `Shadow<IdbNet>`；
-3. 单独写入 `_order_sd`；
-4. `insertVector<Shadow<IdbNet>>()` 递归写入 root和所有 child tables。
+2. 遍历 root vector 构造 `Shadow<IdbNet>`，但不保存 root index；
+3. `insertVector<Shadow<IdbNet>>()` 递归写入 root和所有 child tables。
 
 ## EDADB Read Path
 
 `readIdbNet()` 位于 `src/database/manager/builder/def_builder/def_read_edadb.cpp:1011`：
 
-1. 使用 `ORDER BY "_order_sd"` 读取 root shadows；
-2. 按顺序 `net_list->add_net(_net_name_sd)`，重建 list/map/ID一致性；
+1. 使用 read-all 读取 root shadows，不指定 root order；
+2. 按 DB 返回顺序 `net_list->add_net(_net_name_sd)`，重建 list/map，并按该顺序重新分配 ID；
 3. 只调用唯一标准接口 `Shadow<IdbNet>::fromShadow(IdbNet*)`；
 4. Net shadow继续调用 wire/segment shadow的 `fromShadow()`；
 5. builder只保留 cursor、root creation、错误传播和统计。
 
 ## Computed And Rebuilt State
 
-- `IdbNet::_id`：由 ordered `add_net()` 重新分配。
+- `IdbNet::_id`：由 read-all 返回顺序下的 `add_net()` 重新分配。
 - `IdbNetList::_net_map`：由 `add_net()` 重建。
 - `IdbPin::_net`：由 connection count和原始 `setPinNet` 规则重建。
 - pin/instance/layer/via pointers：按 name lookup。
@@ -172,7 +171,7 @@ Primary-key audit：
 
 ## Order / Index
 
-- Root `IdbNetList::_net_list`：必须保序，`_order_sd + ORDER BY` 已实现。
+- Root `IdbNetList::_net_list`：Level A，但本实验分支不保序；schema 无 root `_order_sd`，read path 无 root `ORDER BY`。
 - IO pin refs：primitive vector index保序。
 - Instance pin refs：`NetPinRef::_order_sd` 保序。
 - Wire和segment：nested synthetic PK/child query顺序保序。
@@ -188,7 +187,7 @@ OUT_DIR=/tmp/iedadb_net15_review bash src/database/edadb/test/run_idb_roundtrip_
 
 当前覆盖：
 
-- `default_ipl`：675 regular nets、default header和root order。
+- `default_ipl`：675 regular nets、default header，并确认 root `_order_sd` column 不存在。
 - `aux_optional`：`ORIGINAL/SOURCE/WEIGHT/XTALK/FIXEDBUMP/FREQUENCY`。
 - `routed_irt`：677 nets、677 wires、8997 segments、14256 points、3716 via segments、22 rect segments和ordered instance refs。
 - `net_branches`：真实 routed DEF派生 fixture，覆盖 `FIXED/COVER/NOSHIELD/VIRTUAL`，同时保持完整 via/rect/point regression。

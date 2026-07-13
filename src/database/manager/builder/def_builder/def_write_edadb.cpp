@@ -218,9 +218,9 @@ int32_t DefWriteEdadb::writeIdbRow(void) {
     vector<IdbRow*>& row_vec = rows->get_row_list();
     vector<edadb::Shadow<idb::IdbRow>> row_sd_vec;
     row_sd_vec.reserve(row_vec.size());
-    for (uint32_t row_idx = 0; row_idx < row_vec.size(); ++row_idx) {
+    for (auto* row : row_vec) {
         row_sd_vec.emplace_back();
-        row_sd_vec.back().toShadow(row_vec[row_idx], &row_idx);
+        row_sd_vec.back().toShadow(row);
     }
 
     EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] writeIdbRow insert row_count="
@@ -337,9 +337,9 @@ int32_t DefWriteEdadb::writeIdbInstance(void) {
 
     vector<edadb::Shadow<idb::IdbInstance>*> inst_sd_vec;
     inst_sd_vec.reserve(inst_vec.size());
-    for (uint32_t inst_idx = 0; inst_idx < inst_vec.size(); ++inst_idx) {
+    for (auto* inst : inst_vec) {
         auto* inst_sd = new edadb::Shadow<idb::IdbInstance>();
-        inst_sd->toShadow(inst_vec[inst_idx], &inst_idx);
+        inst_sd->toShadow(inst);
         inst_sd_vec.emplace_back(inst_sd);
     }
 
@@ -380,9 +380,9 @@ int32_t DefWriteEdadb::writeIdbPin(void) {
 
     vector<edadb::Shadow<idb::IdbPin>*> pin_sd_vec;
     pin_sd_vec.reserve(pin_vec.size());
-    for (uint32_t pin_idx = 0; pin_idx < pin_vec.size(); ++pin_idx) {
+    for (auto* pin : pin_vec) {
         auto* pin_sd = new edadb::Shadow<idb::IdbPin>();
-        pin_sd->toShadow(pin_vec[pin_idx], &pin_idx);
+        pin_sd->toShadow(pin);
         pin_sd_vec.emplace_back(pin_sd);
     }
 
@@ -495,9 +495,9 @@ int32_t DefWriteEdadb::writeIdbSlot(void) {
 
     vector<edadb::Shadow<idb::IdbSlot>*> slot_sd_vec;
     slot_sd_vec.reserve(slot_vec.size());
-    for (uint32_t slot_idx = 0; slot_idx < slot_vec.size(); ++slot_idx) {
+    for (auto* slot : slot_vec) {
         auto* slot_sd = new edadb::Shadow<idb::IdbSlot>();
-        slot_sd->toShadow(slot_vec[slot_idx], &slot_idx);
+        slot_sd->toShadow(slot);
         slot_sd_vec.emplace_back(slot_sd);
     }
 
@@ -669,11 +669,9 @@ int32_t DefWriteEdadb::writeIdbNet(void) {
 
     vector<edadb::Shadow<idb::IdbNet>*> net_sd_vec;
     net_sd_vec.reserve(net_vec.size());
-    uint64_t net_order = 0;
     for (auto& net : net_vec) {
         auto* net_sd = new edadb::Shadow<idb::IdbNet>();
         net_sd->toShadow(net);
-        net_sd->_order_sd = net_order++;
         net_sd_vec.emplace_back(net_sd);
     }
 

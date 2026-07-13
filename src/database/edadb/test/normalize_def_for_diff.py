@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Normalize DEF files for EDADB regression semantic diff.
 
-Only D-level root records may be reordered. A/B/C root records and nested
-record contents are kept exactly in their original order.
+All A/B/C/D root records may be reordered for the no-sort experiment branch.
+Nested record contents are kept exactly in their original order.
 """
 
 from __future__ import annotations
@@ -14,7 +14,10 @@ from pathlib import Path
 from typing import Callable, Iterable, List, Sequence, Tuple
 
 
-D_BLOCK_SECTIONS = {
+ROOT_BLOCK_SECTIONS = {
+    "COMPONENTS",
+    "PINS",
+    "NETS",
     "VIAS",
     "REGIONS",
     "BLOCKAGES",
@@ -88,7 +91,7 @@ def key_fill(record: Sequence[str]) -> Tuple[str, ...]:
 
 
 def block_key(section: str) -> Callable[[Sequence[str]], Tuple[str, ...]]:
-    if section in {"VIAS", "REGIONS", "GROUPS", "SPECIALNETS"}:
+    if section in {"COMPONENTS", "PINS", "NETS", "VIAS", "REGIONS", "GROUPS", "SPECIALNETS"}:
         return key_named
     if section == "BLOCKAGES":
         return key_blockage
@@ -100,6 +103,8 @@ def block_key(section: str) -> Callable[[Sequence[str]], Tuple[str, ...]]:
 
 
 def statement_key(kind: str) -> Callable[[Sequence[str]], Tuple[str, ...]]:
+    if kind == "ROW":
+        return key_named
     if kind == "TRACKS":
         return key_track
     if kind == "GCELLGRID":
@@ -113,14 +118,14 @@ def section_name_from_header(line: str) -> str | None:
     if not match:
         return None
     name = match.group(1)
-    if name in D_BLOCK_SECTIONS:
+    if name in ROOT_BLOCK_SECTIONS:
         return name
     return None
 
 
 def top_statement_name(line: str) -> str | None:
     stripped = line.strip()
-    match = re.match(r"^(TRACKS|GCELLGRID)\b", stripped)
+    match = re.match(r"^(ROW|TRACKS|GCELLGRID)\b", stripped)
     return match.group(1) if match else None
 
 
@@ -225,7 +230,7 @@ def normalize_file(path: Path) -> str:
 
 
 def main(argv: Iterable[str]) -> int:
-    parser = argparse.ArgumentParser(description="Normalize DEF for D-level root-order diff")
+    parser = argparse.ArgumentParser(description="Normalize DEF for no-sort ABCD root-order diff")
     parser.add_argument("def_file", type=Path)
     args = parser.parse_args(list(argv))
     sys.stdout.write(normalize_file(args.def_file))

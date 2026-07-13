@@ -13,7 +13,7 @@
 
 - DEF section 映射：`ROW` statements。
 - iEDA root container：`IdbRows::_row_list`。
-- root-vector order 等级：Level B，`IdbRows::_row_list` 的 append 顺序会影响物理语义，需要显式保存和恢复。
+- root-vector order 等级：Level B；本 no-sort 实验分支保留该风险结论，但不保存或恢复 root append order。
 - nested vector 约束：`IdbRow` 当前 adapter 没有持久化 owning nested vector；site/bbox 都在 read 阶段重建。
 
 ## Original Write Semantics
@@ -52,7 +52,7 @@
 
 ```cpp
 TABLE4SHADOW(idb::IdbRow);
-TABLE4CLASS(edadb::Shadow<idb::IdbRow>, "iRow", (_name_sd, _order_sd, _site_name_sd, _site_orient_sd, _origin_x_sd, _origin_y_sd, _row_num_x_sd, _row_num_y_sd, _step_x_sd, _step_y_sd));
+TABLE4CLASS(edadb::Shadow<idb::IdbRow>, "iRow", (_name_sd, _site_name_sd, _site_orient_sd, _origin_x_sd, _origin_y_sd, _row_num_x_sd, _row_num_y_sd, _step_x_sd, _step_y_sd));
 ```
 
 Schema / init 代码位置：
@@ -63,20 +63,20 @@ Schema / init 代码位置：
 - Primary-key setup: `src/database/edadb/idb/edadb_idb_init.cpp:21`
 - Table registration: `src/database/edadb/idb/edadb_idb_init.cpp:82`
 
-当前采用 `Shadow<IdbRow>`，只保存 DEF row 语义字段和 root list order。
+当前采用 `Shadow<IdbRow>`，只保存 DEF row 语义字段，不保存 root list order。
 
 Schema 与 order/index 约束的关系：
 
 - 依据 `src/database/edadb/docs/def-ieda-mapping-and-order.md`，`ROWS` 映射到 `IdbRows::_row_list`，等级为 Level B。
-- Level B 的含义是 root vector 顺序会影响物理语义；因此 `ROW` 不能被 normalized diff 排序，也不能依赖 DB 物理读出顺序。
-- `_name_sd` 是 `iRow` 的 primary key，表达 row identity；不要用 `_order_sd` 做 PK。
-- `_order_sd` 只表达 `IdbRows::_row_list` append 顺序，读回时用于 `ORDER BY "_order_sd"`。
+- Level B 是 iEDA 使用证据；本实验分支刻意移除 root order，用于验证该证据在真实流程中的影响。
+- `_name_sd` 是 `iRow` 的 primary key，只表达 row identity。
+- read path 使用无 `ORDER BY` 的 read-all；root-order-only DEF 差异由 A/B/C/D normalizer 处理。
 - `IdbSite` table macro 当前休眠；row adapter 不注册/创建 `iSite` 表，也不通过 `iSite` 持久化 row site。
 
 Primary-key audit:
 
 - `initPrimKeys()` 没有关闭 `Shadow<IdbRow>` 的 primary-key 行为；`iRow` 使用 table macro 的第一列 `_name_sd` 作为 root identity。
-- `initPrimKeys()` 没有专门处理 `_order_sd`；它不是 PK，只是 order key。
+- schema 不包含 root order column；`initPrimKeys()` 只保留 `_name_sd` 的默认 PK 行为。
 - `initReadDb()` / `initWriteDb()` 都先调用 `initPrimKeys()`，再调用 `initAllTables()`，因此 read/write 的 table metadata 一致。
 
 ## Original DEF Write/Read Roundtrip Mapping
@@ -85,7 +85,7 @@ Primary-key audit:
 
 | 原始 `DefWrite` 执行顺序 | EDADB write / `toShadow` 对应 | DEF 域 / iDB 变量 / EDADB 域 |
 | --- | --- | --- |
-| 1. `write_row()` 按 `IdbRows::_row_list` 顺序遍历，输出 row name，见 `def_write.cpp:437-449` | `writeIdbRow()` 按 vector index 构造 shadow，`toShadow()` 保存 `_name_sd/_order_sd`，见 `def_write_edadb.cpp:210-229`, `shadow_idb_row.h:17-25` | `ROW <name>` / `IdbRow::_name`, `IdbRows::_row_list` order / `_name_sd`, `_order_sd` |
+| 1. `write_row()` 按 `IdbRows::_row_list` 顺序遍历，输出 row name，见 `def_write.cpp:437-449` | `writeIdbRow()` 遍历 root vector，`toShadow()` 只保存 `_name_sd`，不保存 vector index | `ROW <name>` / `IdbRow::_name` / `_name_sd` |
 | 2. 输出 site name 和 site orientation，见 `def_write.cpp:447-451` | 不存储完整 `IdbSite`；flatten 为 `_site_name_sd/_site_orient_sd`，见 `shadow_idb_row.h:26-27` | site/orient / `IdbRow::_site->_name/_orient` / `_site_name_sd`, `_site_orient_sd` |
 | 3. 输出 origin x/y，见 `def_write.cpp:449-451` | flatten original coordinate，见 `shadow_idb_row.h:28-29` | origin / `IdbRow::_original_coordinate` / `_origin_x_sd`, `_origin_y_sd` |
 | 4. 输出 `DO/BY/STEP`，见 `def_write.cpp:449-451` | 保存 row count 和 step scalars，见 `shadow_idb_row.h:30-33` | `DO/BY/STEP` / `_row_num_x/_row_num_y/_step_x/_step_y` / `_row_num_x_sd/_row_num_y_sd/_step_x_sd/_step_y_sd` |
@@ -94,7 +94,7 @@ Primary-key audit:
 
 | 原始 `DefRead` 执行顺序 | EDADB read / `fromShadow` 对应 | DEF 域 / iDB 变量 / EDADB 域 |
 | --- | --- | --- |
-| 1. `parse_row()` 在 row list 中 append 新 row，见 `def_read.cpp:807-816` | `readIdbRow()` 先 reset list，再使用 `ORDER BY _order_sd` 读取，见 `def_read_edadb.cpp:324-344` | row record/order / `IdbRows::_row_list` / `_order_sd` |
+| 1. `parse_row()` 在 row list 中 append 新 row，见 `def_read.cpp:807-816` | `readIdbRow()` reset list 后使用 read-all 逐条 append，不指定 root order | row record / `IdbRows::_row_list` / `iRow` rows |
 | 2. 设置 name 和 origin，见 `def_read.cpp:818-819` | `fromShadow()` 恢复 `_name_sd` 和 origin scalars，见 `shadow_idb_row.h:38-47` | `ROW <name> x y` / `IdbRow::_name/_original_coordinate` / `_name_sd`, `_origin_x_sd`, `_origin_y_sd` |
 | 3. 按 site name 取 LEF site，clone row-local site，设置 site/row orient，见 `def_read.cpp:821-826` | builder 按 `_site_name_sd` 获取 LEF site、clone，并用 `_site_orient_sd` 设置两处 orient，见 `def_read_edadb.cpp:353-367` | site/orient / `IdbRow::_site`, `_orient` / `_site_name_sd`, `_site_orient_sd` |
 | 4. `hasDo()` 时恢复 DO/BY，`hasDoStep()` 时恢复 STEP，见 `def_read.cpp:828-835` | `fromShadow()` 直接恢复四个 scalar，见 `shadow_idb_row.h:47-50` | `DO/BY/STEP` / `_row_num_x/_row_num_y/_step_x/_step_y` / `_row_num_x_sd/_row_num_y_sd/_step_x_sd/_step_y_sd` |
@@ -114,10 +114,8 @@ schema 文件中保留但休眠 `TABLE4CLASS(idb::IdbSite, ...)`；当前 row ad
 
 当前需要 `Shadow<IdbRow>`：
 
-- `IdbRowList` root 顺序需要显式保存，不能依赖 DB 物理顺序。
 - DEF row 语义只需要 site name、site orient、origin、DO/BY、STEP，不需要保存完整 `IdbSite`。
 - shadow 使用 `_name_sd` 作为 `iRow` primary key，表达 row identity。
-- shadow 使用 `_order_sd` 作为 order key，表达 `IdbRowList` append 顺序。
 - shadow 用纯标量字段表达 DEF row，避免保存完整 `IdbSite` 对象。
 
 ## EDADB Write Path
@@ -131,8 +129,7 @@ schema 文件中保留但休眠 `TABLE4CLASS(idb::IdbSite, ...)`；当前 row ad
 - `Shadow<IdbRow>::toShadow()`: `src/database/edadb/idb/shadow/shadow_idb_row.h:17`
 
 - 从 `layout->get_rows()` 取得 row list。
-- 按 `row_vec` 当前顺序构造 `Shadow<IdbRow>`。
-- 第 `idx` 个 row 写入 `_order_sd = idx`。
+- 遍历 `row_vec` 构造 `Shadow<IdbRow>`，但不保存 root vector index。
 - 使用 `edadb::insertVector<Shadow<IdbRow>>(row_sd_vec)` 写入。
 
 这覆盖了原始 writer 需要的 row name、site name/orient、origin、DO/BY、STEP 字段。
@@ -143,7 +140,7 @@ schema 文件中保留但休眠 `TABLE4CLASS(idb::IdbSite, ...)`；当前 row ad
 
 - Code: `src/database/manager/builder/def_builder/def_read_edadb.cpp:319`
 - Reset active rows: `src/database/manager/builder/def_builder/def_read_edadb.cpp:328`
-- Ordered query: `src/database/manager/builder/def_builder/def_read_edadb.cpp:330`
+- Read-all query: `src/database/manager/builder/def_builder/def_read_edadb.cpp`
 - EDADB read loop: `src/database/manager/builder/def_builder/def_read_edadb.cpp:337`
 - Shadow restore: `src/database/manager/builder/def_builder/def_read_edadb.cpp:349`
 - LEF site clone: `src/database/manager/builder/def_builder/def_read_edadb.cpp:351`
@@ -151,7 +148,7 @@ schema 文件中保留但休眠 `TABLE4CLASS(idb::IdbSite, ...)`；当前 row ad
 - `Shadow<IdbRow>::fromShadow()`: `src/database/edadb/idb/shadow/shadow_idb_row.h:38`
 
 - `rows->reset()` 清空旧 row。
-- 使用 `ORDER BY "_order_sd"` 循环读取 `Shadow<IdbRow>`。
+- 使用 read-all 循环读取 `Shadow<IdbRow>`，不指定 root order。
 - 从 shadow 中取出 site name 和 site orient。
 - 按原始 `parse_row()` 语义调用 `sites->add_site_list(site_name)` 获取/创建 LEF site。
 - clone site，设置 orient，并挂回 row。
@@ -173,7 +170,7 @@ schema 文件中保留但休眠 `TABLE4CLASS(idb::IdbSite, ...)`；当前 row ad
 
 ## Order / Index
 
-`IdbRowList` 需要保持原始 append 顺序，且不应该按 name 排序。
+`IdbRowList` 的 Level B 顺序证据仍成立，但本实验分支不保存原始 append 顺序。
 
 依据：
 
@@ -182,12 +179,12 @@ schema 文件中保留但休眠 `TABLE4CLASS(idb::IdbSite, ...)`；当前 row ad
 - iEDA 后续代码存在 `rows->get_row_list().front()` / `rows->get_row_list()[0]` 获取 site width/height/orient。
 - iPL wrapper 按 row vector 遍历顺序分配 row id；部分 placer/legalizer 再按 row index 使用。
 
-当前状态：已显式实现 root order。写入保存 `_order_sd`，读回使用 `ORDER BY "_order_sd"`，不依赖 EDADB/SQLite root table 物理顺序。
+当前状态：`_name_sd` 保留 identity；schema 无 `_order_sd`，read path 无 root `ORDER BY`。
 
 对 normalized diff 的影响：
 
-- `ROW` 属于不能排序规避差异的 root list；测试应保持 row root record 顺序。
-- 如果 `ROW` 顺序、name、site、origin、orient、DO/BY、STEP 任一项不同，normalized diff 必须失败。
+- no-sort regression 允许完整 `ROW` root record 按 stable key 重排；record 内字段不变。
+- 如果 row name、site、origin、orient、DO/BY、STEP 任一项不同，normalized diff 必须失败。
 - deeper nested vector 规则当前不涉及 `IdbRow`，因为 adapter 没有持久化 row 的 owning nested vector。
 
 ## Risks / TODO

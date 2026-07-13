@@ -13,7 +13,7 @@
 
 - DEF section 映射：`SLOTS` section。
 - iEDA root container：`IdbSlotList::_slot_list`。
-- root-vector order 等级：Level D exception；虽然点工具暂无 root index 依赖，但 `SLOTS` root records 没有 name，raw roundtrip 应恢复 append 顺序。
+- root-vector order 等级：Level D；本 no-sort 实验分支不再把 raw roundtrip 当作例外，不保存 root append order。
 - duplicate/root identity 约束：slot 没有 name，`_layer_name` 也不唯一；因此仍需要 adapter shadow 提供 `primary_key`。
 - nested vector 约束：rectangle vector 是 slot 内部几何列表，必须随 root record 保持原始顺序，不参与 D-level root sort。
 
@@ -41,7 +41,7 @@
 当前 schema：
 
 ```cpp
-TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbSlot>, "iSlotSD", (primary_key, _order_sd, _layer_name_sd), (_rect_list_sd));
+TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbSlot>, "iSlotSD", (primary_key, _layer_name_sd), (_rect_list_sd));
 ```
 
 Schema / init 代码位置：
@@ -56,9 +56,8 @@ Schema / init 代码位置：
 Schema 与 order/index 约束的关系：
 
 - 依据 `src/database/edadb/docs/def-ieda-mapping-and-order.md`，`SLOTS` 映射到 `IdbSlotList::_slot_list`，等级为 Level D。
-- `SLOTS` 是当前 01-11 的 Level D exception：点工具语义不依赖 root order，但 anonymous record 没有 name，raw DEF roundtrip 需要稳定 append order。
-- 当前 adapter 保存 `_order_sd`；read path 通过 `ORDER BY "_order_sd"` 恢复 `IdbSlotList::_slot_list` append 顺序。
-- `primary_key` 只表达 root record identity，用来支持同 layer、多 rectangle-signature 甚至重复 slot record；`_order_sd` 单独表达 vector order。
+- `SLOTS` 是 anonymous root record；`primary_key` 只表达 DB identity，用来支持同 layer、多 rectangle-signature甚至重复 slot record。
+- schema 不包含 `_order_sd`，read path 使用 read-all；root-order-only DEF 差异由 A/B/C/D normalizer 处理。
 - `_rect_list_sd` 是 slot 内部 owned geometry vector，使用 `Shadow<IdbRect>::_vec_idx` 保存 nested order。
 
 Primary-key audit:
@@ -73,8 +72,8 @@ Primary-key audit:
 
 | 原始 `DefWrite` 执行顺序 | EDADB write / `toShadow` 对应 | DEF 域 / iDB 变量 / EDADB 域 |
 | --- | --- | --- |
-| 1. `write_slot()` 检查 list；空 list 返回失败；输出 section count，见 `def_write.cpp:1076-1088` | `writeIdbSlot()` 检查 list；空 vector 返回成功；为每个 root shadow 保存 `_order_sd` 后 batch insert，见 `def_write_edadb.cpp:475-512` | `SLOTS <N>` / `IdbSlotList::_slot_list` / `iSlotSD` row count, `_order_sd` |
-| 2. 按 slot vector 顺序输出匿名 root record 和 layer name，见 `def_write.cpp:1090-1091` | `toShadow()` 用 synthetic `primary_key` 标识匿名 root，并保存 `_order_sd/_layer_name_sd`，见 `shadow_idb_slot.h:15-29` | `- LAYER <name>` / `IdbSlot::_layer_name` / `primary_key`, `_order_sd`, `_layer_name_sd` |
+| 1. `write_slot()` 检查 list；空 list 返回失败；输出 section count，见 `def_write.cpp:1076-1088` | `writeIdbSlot()` 检查 list；空 vector 返回成功；batch insert root shadows，但不保存 root index | `SLOTS <N>` / `IdbSlotList::_slot_list` / `iSlotSD` row count |
+| 2. 按 slot vector 顺序输出匿名 root record 和 layer name，见 `def_write.cpp:1090-1091` | `toShadow()` 用 synthetic `primary_key` 标识匿名 root，并保存 `_layer_name_sd` | `- LAYER <name>` / `IdbSlot::_layer_name` / `primary_key`, `_layer_name_sd` |
 | 3. 按 rect vector 顺序输出 geometry，见 `def_write.cpp:1093-1095` | `toShadow()` 按原顺序复制 `_rect_list_sd`；nested rect index 由 EDADB child-vector storage 保留，见 `shadow_idb_slot.h:31-34` | `RECT` / `IdbSlot::_rect_list` / `_rect_list_sd` |
 | 4. 输出 record/section terminator，见 `def_write.cpp:1097-1100` | 由 root/child row 边界重建，不存文本终止符 | `;`, `END SLOTS` / 无 iDB 成员 / 无 EDADB 字段 |
 
@@ -82,7 +81,7 @@ Primary-key audit:
 
 | 原始 `DefRead` 执行顺序 | EDADB read / `fromShadow` 对应 | DEF 域 / iDB 变量 / EDADB 域 |
 | --- | --- | --- |
-| 1. `slotsCallback()` 校验参数后调用 `parse_slot()`，后者无条件 `add_slot()`，见 `def_read.cpp:2117-2143` | `readIdbSlot()` 按 `_order_sd` 查询 root rows，并逐条 `add_slot()`，见 `def_read_edadb.cpp:542-575` | anonymous slot root/order / `IdbSlotList::_slot_list` / `primary_key`, `_order_sd` |
+| 1. `slotsCallback()` 校验参数后调用 `parse_slot()`，后者无条件 `add_slot()`，见 `def_read.cpp:2117-2143` | `readIdbSlot()` read-all root rows，并逐条 `add_slot()`；不指定 root order | anonymous slot root / `IdbSlotList::_slot_list` / `primary_key` |
 | 2. 有 `LAYER` 时恢复 layer name，见 `def_read.cpp:2145-2146` | `fromShadow()` 调 `set_layer_name(_layer_name_sd)`；与原 parser 一样不恢复 `IdbLayer*` pointer，见 `shadow_idb_slot.h:36-42` | `LAYER` / `IdbSlot::_layer_name` / `_layer_name_sd` |
 | 3. 按 DEF rectangle 顺序调用 `add_rect()`，见 `def_read.cpp:2147-2149` | `fromShadow()` 按 `_rect_list_sd` child order 创建并复制 `IdbRect`，见 `shadow_idb_slot.h:44-48` | `RECT` / `IdbSlot::_rect_list` / `_rect_list_sd` |
 | 4. polygon 分支仍为 TODO，见 `def_read.cpp:2152-2153` | schema 不保存 polygon，与原始 parser 最终 iDB 状态一致 | polygon / 无已实现 iDB 成员 / 无 EDADB 字段 |
@@ -102,7 +101,6 @@ Primary-key audit:
 
 - `IdbSlot` 没有天然 name/ID，`_layer_name` 不保证唯一，direct `TABLE4CLASS_WVEC(idb::IdbSlot, ...)` 难以给 root record 和 child rect vector 提供稳定 identity。
 - `primary_key` 是 EDADB root identity，解决 duplicate/anonymous slot record 存储问题。
-- `_order_sd` 单独保存 `IdbSlotList` append 顺序；它不是 PK，也不表达 object identity。
 - rectangle vector 是 owning child data，由 `TABLE4CLASS_WVEC` 发现 child rows，再由 `Shadow<IdbRect>::_vec_idx` 恢复 child order。
 
 ## EDADB Write Path
@@ -118,7 +116,7 @@ Primary-key audit:
 - 从 `design->get_slot_list()` 取得 slot vector。
 - 空列表返回 `kDbSuccess`，避免 EDADB dispatcher 中断整个写流程。
 - 非空时构造 `Shadow<IdbSlot>` pointer vector。
-- `toShadow()` 保存 `primary_key`、`_order_sd`、`_layer_name_sd` 和 `_rect_list_sd`。
+- `toShadow()` 保存 `primary_key`、`_layer_name_sd` 和 `_rect_list_sd`，不保存 root index。
 - 使用 `edadb::insertVector<Shadow<IdbSlot>>()` 写入。
 
 这与原始 DEF 输出字段一致；空列表返回值是 adapter 层为 dispatcher 做的语义调整。
@@ -132,7 +130,7 @@ Primary-key audit:
 - EDADB read loop: `src/database/manager/builder/def_builder/def_read_edadb.cpp:567`
 - Add to active list: `src/database/manager/builder/def_builder/def_read_edadb.cpp:578`
 
-- 使用 `makeGenericQueryOp<Shadow<IdbSlot>>()` 并 `ORDER BY "_order_sd"` 循环读取 root records。
+- 使用 `makeReadAllOp<Shadow<IdbSlot>>()` 循环读取 root records，不指定 root order。
 - `slot_list->add_slot()` 创建 slot。
 - `fromShadow()` 恢复 layer name 和 rectangle list。
 - `createDbByDef()` 不注册 slot callback，避免 DEF 文本重复创建 slot。
@@ -147,28 +145,27 @@ Primary-key audit:
 
 ## Order / Index
 
-`IdbSlotList` 当前显式保存 root order。
+`IdbSlotList` 当前不保存 root order。
 
 依据：
 
 - 原始 `parse_slot()` 按 DEF 出现顺序 `add_slot()`。
 - 原始 `write_slot()` 按 `slot_list->get_slot_list()` 当前顺序输出。
-- `SLOTS` root record 没有 name；如果仅靠 DB read-all 顺序，raw DEF roundtrip 可能被 child/root row order 扰动。
-- `src/operation` 中没有发现 `IdbSlotList::_slot_list` 的点工具 root order/index 消费者；但为了贴近原始 DEF read/write，仍保存 root append 顺序。
+- `SLOTS` root record 没有 name；DB identity 由 synthetic `primary_key` 提供，但 identity 不等于 list order。
+- `src/operation` 中没有发现 `IdbSlotList::_slot_list` 的点工具 root order/index 消费者。
 - `src/platform/data_manager/idm_transform.cpp:335` 仅遍历 slot rectangles 做坐标变换；该遍历不依赖 slot root index。
 
-当前状态：已实现 shadow identity + `_order_sd` ordered read。
+当前状态：已实现 shadow identity；无 `_order_sd`，无 ordered root read。
 
 对 normalized diff 的影响：
 
-- `SLOTS` root order 当前由 `_order_sd` 保证，正常不应依赖 normalized diff 才通过。
-- 如果未来重新判定为 Level D no-order，normalized diff 排序单位必须是完整 slot record；record 内部 rectangle vector 不排序。
+- normalized diff 的排序单位是完整 slot record；record 内部 rectangle vector 不排序并随 root record 整体移动。
 - 如果 layer name 或 rectangle 内容不同，normalized diff 必须失败。
 
 ## Tests
 
 - demo `sky130_gcd` 覆盖空列表路径：`writeIdbSlot insert slot_count=0`，`readIdbSlot restored slot_count=0`。
-- `src/database/edadb/test/run_idb_roundtrip_regression.sh` 的 `aux_optional` case 覆盖非空 slot，并检查 `iSlotSD` count、`_order_sd`、layer name、rect `_vec_idx` 和 rectangle。
+- `src/database/edadb/test/run_idb_roundtrip_regression.sh` 的 `aux_optional` case 覆盖非空 slot，并检查 `iSlotSD` count、确认不存在 `_order_sd`、layer name、rect `_vec_idx` 和 rectangle。
 
 ## Risks / TODO
 
@@ -176,4 +173,3 @@ Primary-key audit:
 - 原始 writer 对空 slot list 返回失败，EDADB writer 对空 vector 返回成功。
 - `readIdbSlot()` 不清空现有 list，依赖“新 design、单次恢复”的调用前提。
 - 若未来原始 DEF parser 支持 slot polygon，需要同步扩展 schema 和 read/write。
-- 如果未来重新决定按 Level D no-order 存储 slot root records，需要同步修改 raw diff/normalized diff 预期。

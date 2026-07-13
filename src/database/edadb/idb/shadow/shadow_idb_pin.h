@@ -26,11 +26,8 @@ public:
     Shadow<idb::IdbPin>& operator=(const Shadow& other) = delete;
 
 public:
-    void toShadow(idb::IdbPin* obj, const uint32_t* idx_ptr = nullptr) {
-        assert(idx_ptr != nullptr);
-
+    void toShadow(idb::IdbPin* obj) {
         _pin_name_sd = obj->get_pin_name();
-        _order_sd = *idx_ptr;
         _net_name_sd = obj->get_net_name();
 
         idb::IdbTerm* term = obj->get_term();
@@ -47,11 +44,7 @@ public:
         _layer_num_sd = obj->get_port_box_list().size();
     } // toShadow
 
-    void fromShadow(idb::IdbPin* obj, uint32_t* idx_ptr = nullptr) {
-        if (idx_ptr != nullptr) {
-            *idx_ptr = static_cast<uint32_t>(_order_sd);
-        }
-
+    void fromShadow(idb::IdbPin* obj) {
         obj->set_pin_name(_pin_name_sd);
         obj->set_net_name(_net_name_sd);
 
@@ -73,7 +66,6 @@ public:
 public:
     // columns
     std::string _pin_name_sd;
-    uint64_t _order_sd = 0;
     std::string _net_name_sd;
     edadb::Shadow<idb::IdbTerm> *_io_term_sd = nullptr; 
 

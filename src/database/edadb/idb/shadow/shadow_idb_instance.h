@@ -34,11 +34,8 @@ public:
 
 
 public:
-    void toShadow(idb::IdbInstance* obj, const uint32_t* idx_ptr = nullptr) {
-        assert(idx_ptr != nullptr);
-
+    void toShadow(idb::IdbInstance* obj) {
         _name_sd = obj->get_name();
-        _order_sd = *idx_ptr;
         _cell_master_name_sd = obj->get_cell_master() ? obj->get_cell_master()->get_name() : "";
 
         _type_sd = obj->get_type();
@@ -60,11 +57,7 @@ public:
         _region_name_sd = obj->get_region() ? obj->get_region()->get_name() : "";
     }
 
-    void fromShadow(idb::IdbInstance* obj, uint32_t* idx_ptr = nullptr) {
-        if (idx_ptr != nullptr) {
-            *idx_ptr = static_cast<uint32_t>(_order_sd);
-        }
-
+    void fromShadow(idb::IdbInstance* obj) {
         obj->set_name( _name_sd );
         obj->set_type( _type_sd );
         obj->set_status( _status_sd );
@@ -88,7 +81,6 @@ public:
 
 public:
     std::string _name_sd;
-    uint64_t _order_sd = 0;
     std::string _cell_master_name_sd;
 
     idb::IdbInstanceType _type_sd;

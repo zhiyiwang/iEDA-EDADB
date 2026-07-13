@@ -14,14 +14,12 @@ namespace edadb {
 template<>
 class Shadow<idb::IdbRow> {
  public:
-  bool toShadow(idb::IdbRow* obj, const uint32_t* idx_ptr = nullptr)
+  bool toShadow(idb::IdbRow* obj)
   {
     assert(obj != nullptr);
-    assert(idx_ptr != nullptr);
     assert(obj->get_site() != nullptr);
     assert(obj->get_original_coordinate() != nullptr);
 
-    _order_sd = *idx_ptr;
     _name_sd = obj->get_name();
     _site_name_sd = obj->get_site()->get_name();
     _site_orient_sd = obj->get_site()->get_orient();
@@ -35,12 +33,9 @@ class Shadow<idb::IdbRow> {
     return true;
   }
 
-  bool fromShadow(idb::IdbRow* obj, uint32_t* idx_ptr = nullptr)
+  bool fromShadow(idb::IdbRow* obj)
   {
     assert(obj != nullptr);
-    if (idx_ptr != nullptr) {
-      *idx_ptr = static_cast<uint32_t>(_order_sd);
-    }
 
     obj->set_name(_name_sd);
     obj->set_original_coordinate(_origin_x_sd, _origin_y_sd);
@@ -54,7 +49,6 @@ class Shadow<idb::IdbRow> {
   }
 
  public:
-  uint64_t _order_sd = 0;
   std::string _name_sd;
   std::string _site_name_sd;
   idb::IdbOrient _site_orient_sd = idb::IdbOrient::kNone;

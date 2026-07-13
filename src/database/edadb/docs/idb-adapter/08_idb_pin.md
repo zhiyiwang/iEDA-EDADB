@@ -13,7 +13,7 @@
 
 - DEF section 映射：`PINS` section。
 - iEDA root container：`IdbPins::_pin_list`。
-- root-vector order 等级：Level B，`IdbPins::_pin_list` 需要显式保留 append order，因为 iFP IO placement 会按 pin list 顺序分配物理位置。
+- root-vector order 等级：Level B；本 no-sort 实验分支保留该风险结论，但不保存或恢复 root append order。
 - root identity 约束：IO pin name 是 DEF-visible identity，当前 `_pin_name_sd` 是 EDADB root PK；禁止用 vector order index 作为 PK。
 - nested vector 约束：term port vector、port layer-shape vector、layer-shape rect vector 都是 pin 内部几何语义，必须随 root pin 保持原始顺序。
 
@@ -56,7 +56,7 @@
 
 ```cpp
 TABLE4CLASS(edadb::Shadow<idb::IdbPin>, "iPinSD",
-            (_pin_name_sd, _order_sd, _net_name_sd, _io_term_sd,
+            (_pin_name_sd, _net_name_sd, _io_term_sd,
              _average_coordinate_sd, _location_sd, _orient_sd,
              _is_io_pin_sd, _is_special_net_sd, _layer_num_sd));
 ```
@@ -120,7 +120,7 @@ Schema / init 代码位置：
 Primary-key audit:
 
 - `Shadow<IdbPin>` 保留默认 primary-key 行为，因为 `PINS` root record 有天然 DEF identity：pin name。
-- `_order_sd` 只表达 `IdbPins::_pin_list` append order，不作为 identity。
+- schema 不包含 root order column；`_pin_name_sd` 只负责 IO pin identity。
 - `Shadow<IdbPort>::primary_key` 是 nested vector-owner identity，用于挂接 port 的 layer-shape child rows；它不表示 DEF root identity。
 - `Shadow<IdbLayerShape>` 在同一 port 下用 layer name 作为 child identity；rect child rows 用 `IdbRectSD::_vec_idx` 保序。
 - `Shadow<IdbTerm>` 是 pin 的 inline value view；它不单独建 root table。
@@ -131,7 +131,7 @@ Primary-key audit:
 
 | 原始 `DefWrite` 执行顺序 | EDADB write / `toShadow` 对应 | DEF 域 / iDB 变量 / EDADB 域 |
 | --- | --- | --- |
-| 1. `write_pin()` 输出 pin count，再按 `IdbPins::_pin_list` 顺序遍历，见 `def_write.cpp:517-528` | `writeIdbPin()` 按 index 保存 `_order_sd`；empty vector 同样成功，见 `def_write_edadb.cpp:360-389` | `PINS <N>`, pin order / `IdbPins::_pin_list` / `iPinSD._order_sd` |
+| 1. `write_pin()` 输出 pin count，再按 `IdbPins::_pin_list` 顺序遍历，见 `def_write.cpp:517-528` | `writeIdbPin()` 遍历并 batch insert；不保存 root index，empty vector 同样成功 | `PINS <N>` / `IdbPins::_pin_list` / `iPinSD` row count |
 | 2. 输出 pin name、net name、optional SPECIAL、DIRECTION，见 `def_write.cpp:529-534` | pin shadow 保存 name/net/io/special，term shadow 保存 direction/special，见 `shadow_idb_pin.h:29-47`, `shadow_idb_term.h:25-33` | `- <pin> + NET ... + SPECIAL + DIRECTION` / `IdbPin::_pin_name/_net_name`, `IdbTerm::_direction/_is_special_net` / `_pin_name_sd/_net_name_sd/_io_term_sd` |
 | 3. term use 非空时输出 `USE`，见 `def_write.cpp:536-540` | term shadow 保存 `_type_sd`，见 `shadow_idb_term.h:28` | `+ USE` / `IdbTerm::_type` / `_io_term_sd._type_sd` |
 | 4. `term->is_port_exist()` 或 `pin->is_special_net_pin()` 为真时进入 explicit PORT 分支，按 port vector 输出 `+ PORT`，见 `def_write.cpp:542-545` | term/port shadows 保存 `_has_port_sd` 和有序 `_port_list_sd`，见 `shadow_idb_term.h:31,35-41` | `+ PORT` / `IdbTerm::_has_port/_port_list` / `_io_term_sd._has_port_sd/_port_list_sd` |
@@ -143,7 +143,7 @@ Primary-key audit:
 
 | 原始 `DefRead` 执行顺序 | EDADB read / `fromShadow` 对应 | DEF 域 / iDB 变量 / EDADB 域 |
 | --- | --- | --- |
-| 1. pin-count callback 初始化 list，`parse_pin()` trim name、append pin，恢复 net name/orient/IO flag，见 `def_read.cpp:1543-1549,1573-1601` | `readIdbPin()` reset list，按 `_order_sd` 读取，`pin.fromShadow()` 恢复 name/net/orient/io/location，见 `def_read_edadb.cpp:797-837`, `shadow_idb_pin.h:50-69` | pin root/header / `IdbPin::_pin_name/_net_name/_orient/_is_io_pin` / root pin shadow fields |
+| 1. pin-count callback 初始化 list，`parse_pin()` trim name、append pin，恢复 net name/orient/IO flag，见 `def_read.cpp:1543-1549,1573-1601` | `readIdbPin()` reset list 后 read-all，`pin.fromShadow()` 恢复 name/net/orient/io/location；不指定 root order | pin root/header / `IdbPin::_pin_name/_net_name/_orient/_is_io_pin` / root pin shadow fields |
 | 2. parser 创建 term，设 term name，条件恢复 DIRECTION/USE/SPECIAL，见 `def_read.cpp:1603-1615` | term shadow `fromShadow()` 恢复 name/direction/type/special/has-port/status，见 `shadow_idb_term.h:44-57` | `DIRECTION/USE/SPECIAL` / `IdbTerm` fields / `_io_term_sd` scalar fields |
 | 3. `numPorts()>0` 时设 has-port，按 port 顺序创建 port、恢复 orient，见 `def_read.cpp:1617-1623` | builder 按 `_port_list_sd` 顺序创建 port，port shadow 恢复 orient/status/coordinate，见 `def_read_edadb.cpp:848-850`, `shadow_idb_port.h:79-90` | explicit `PORT` / `IdbTerm::_port_list`, `IdbPort` scalars / `_port_list_sd` |
 | 4. 每个 port 按 layer order lookup LEF layer、创建 rect，见 `def_read.cpp:1624-1632` | builder 按 layer-shape child order调 `fromShadow()`，按 layer name lookup 并恢复 rect，见 `def_read_edadb.cpp:852-857`, `shadow_idb_layer_shape.h:71-88` | `LAYER/RECT` / `IdbLayerShape`, `IdbRect` / layer-shape/rect shadow fields |
@@ -176,7 +176,7 @@ Primary-key audit:
 
 - 从 `design->get_io_pin_list()` 获取 IO pin vector。
 - 空列表返回成功，兼容 EDADB framework。
-- 按 vector 顺序构造 `Shadow<IdbPin>`，第 `idx` 个写 `_order_sd = idx`。
+- 遍历 vector 构造 `Shadow<IdbPin>`，但不保存 root vector index。
 - 保存 pin name、net name、term shadow、location、average coordinate、orient、IO/special flags 和 layer count。
 
 ## EDADB Read Path
@@ -187,7 +187,7 @@ Primary-key audit:
 - Enabled by EDADB read flow: `src/database/manager/builder/def_builder/def_read_edadb.cpp:217`
 
 - reset 当前 IO pin list，避免 DEF callback 重复创建。
-- 使用 `ORDER BY "_order_sd"` 读取 `iPinSD`，恢复 IO pin root list 原始顺序。
+- 使用 read-all 读取 `iPinSD`，不指定或恢复 IO pin root order。
 - `fromShadow()` 恢复 pin name、net name、term、location、average coordinate、orient、IO flag。
 - 逐个重建 term ports、layer shapes 和 rects。
 - 如果 term has port，调用 `pin->set_port_layer_shape()` 重建 pin-level absolute shapes。
@@ -206,13 +206,13 @@ Primary-key audit:
 
 ## Order / Index
 
-`IdbPins` root order 需要保持：
+`IdbPins` 在基准分析中属于 Level B：
 
 - 原始 parser 按 DEF `PINS` 出现顺序 append。
 - 原始 writer 按 `pin_list->get_pin_list()` 当前顺序输出。
 - net/special-net 后续按 pin name 查找，但 DEF diff 和流程稳定性仍依赖 root vector 顺序。
 
-当前已实现：`_pin_name_sd` 作为 identity，`_order_sd` 作为 root list order，read path 显式 `ORDER BY "_order_sd"`。
+本实验分支仅保留 `_pin_name_sd` identity；schema 无 `_order_sd`，read path 无 root `ORDER BY`。term/port/layer/rect nested order 仍保留。
 
 ## Tests
 
@@ -220,7 +220,7 @@ Primary-key audit:
 
 - `iPinSD` count。
 - sample pin 的 name、net name、direction、use、has-port、location、layer count。
-- IO pin root order prefix。
+- `iPinSD` 明确不存在 root `_order_sd` column。
 - port/layer/rect child row count。
 - aux optional fixture 将 `clk` 改成 explicit `+ PORT` 和 `+ SPECIAL`，并验证 `iPinSD._io_term_sd__has_port_sd`、`iPinSD._io_term_sd__is_special_net_sd`、port placement、layer name、rect geometry。
 - `writeIdbPin` / `readIdbPin` 日志。

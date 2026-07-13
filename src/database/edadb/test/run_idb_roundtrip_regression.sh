@@ -86,7 +86,7 @@ assert_def_equivalent() {
     python3 "$NORMALIZE_DEF_FOR_DIFF" "$actual" >"$actual_norm"
 
     if diff -u "$expected_norm" "$actual_norm" >"$norm_diff"; then
-        echo "PASS: DEF semantic match with D-level root order differences: $actual"
+        echo "PASS: DEF semantic match with A/B/C/D root order differences: $actual"
         echo "raw diff saved to: $diff_file"
         return
     fi
@@ -107,12 +107,14 @@ check_default_sql() {
         "gcd|5.8|1000|[|]" "$name design fields"
     assert_eq "$(sql_value "$edadb_db" "select (select count(*) from iDesign) || '|' || (select count(*) from iDieSD) || '|' || (select count(*) from iRow) || '|' || (select count(*) from iTrackGridSD) || '|' || (select count(*) from iGCellGrid) || '|' || (select count(*) from iVia) || '|' || (select count(*) from iInstSD) || '|' || (select count(*) from iPinSD) || '|' || (select count(*) from iSpecNetSD) || '|' || (select count(*) from iNetSD);")" \
         "1|1|39|12|0|4|1458|56|2|675" "$name core object counts"
+    assert_eq "$(sql_value "$edadb_db" "WITH roots(name) AS (VALUES('iDesign'),('iDieSD'),('iRow'),('iTrackGridSD'),('iGCellGrid'),('iVia'),('iInstSD'),('iPinSD'),('iBlockageSD'),('iRegion'),('iSlotSD'),('iGroupSD'),('iFillSD'),('iSpecNetSD'),('iNetSD')) SELECT count(*) FROM roots JOIN pragma_table_info(roots.name) p WHERE p.name='_order_sd';")" \
+        "0" "$name all root tables have no order column"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_x_sd || ',' || _y_sd, ';') from (select _x_sd, _y_sd from iDieSD_points_sd_iCoordSD order by _vec_idx);")" \
         "0,0;149960,150128" "$name die points"
     assert_eq "$(sql_value "$edadb_db" "select _name_sd || '|' || _site_name_sd || '|' || _origin_x_sd || ',' || _origin_y_sd || '|' || _row_num_x_sd || '|' || _row_num_y_sd || '|' || _step_x_sd || '|' || _step_y_sd from iRow where _name_sd='ROW_0';")" \
         "ROW_0|unit|9600,9990|271|1|480|0" "$name row fields"
-    assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || ':' || _name_sd, ',') from (select _order_sd, _name_sd from iRow order by _order_sd limit 5);")" \
-        "0:ROW_0,1:ROW_1,2:ROW_2,3:ROW_3,4:ROW_4" "$name row order prefix"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from pragma_table_info('iRow') where name='_order_sd';")" \
+        "0" "$name row has no root order column"
     assert_eq "$(sql_value "$edadb_db" "select count(*) from pragma_table_info('iTrackGridSD') where name='_order_sd';")" \
         "0" "$name track grid has no root order column"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_track_sd__direction || ':' || _track_sd__start || ':' || _track_num_sd || ':' || _track_sd__pitch || ':' || value, ';') from (select g._track_sd__direction, g._track_sd__start, g._track_num_sd, g._track_sd__pitch, v.value from iTrackGridSD g join iTrackGridSD__layer_name_vec_sd___edadb_primitive_vector v on v.iTrackGridSD_primary_key=g.primary_key and v.__edadb_vec_idx=0 order by g._track_sd__direction, g._track_sd__start, g._track_num_sd, g._track_sd__pitch, v.value);")" \
@@ -129,12 +131,12 @@ check_default_sql() {
         "ENDCAP_0|sky130_fd_sc_hs__fill_1|1|7|9600,9990" "$name instance fields"
     assert_eq "$(sql_value "$edadb_db" "select _weight_sd || '|' || _region_name_sd from iInstSD where _name_sd='ENDCAP_0';")" \
         "-1|" "$name instance default weight region"
-    assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || ':' || _name_sd, ',') from (select _order_sd, _name_sd from iInstSD order by _order_sd limit 5);")" \
-        "0:ctrl/_17_,1:ctrl/_18_,2:ctrl/_19_,3:ctrl/_20_,4:ctrl/_21_" "$name instance order prefix"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from pragma_table_info('iInstSD') where name='_order_sd';")" \
+        "0" "$name instance has no root order column"
     assert_eq "$(sql_value "$edadb_db" "select _pin_name_sd || '|' || _net_name_sd || '|' || _io_term_sd__direction_sd || '|' || _io_term_sd__type_sd || '|' || _io_term_sd__has_port_sd || '|' || _location_sd__x_sd || ',' || _location_sd__y_sd || '|' || _layer_num_sd from iPinSD where _pin_name_sd='req_msg[0]';")" \
         "req_msg[0]|req_msg[0]|1|1|0|1000,18645|1" "$name pin fields"
-    assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || ':' || _pin_name_sd, ',') from (select _order_sd, _pin_name_sd from iPinSD order by _order_sd limit 5);")" \
-        "0:clk,1:req_msg[0],2:req_msg[1],3:req_msg[2],4:req_msg[3]" "$name pin order prefix"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from pragma_table_info('iPinSD') where name='_order_sd';")" \
+        "0" "$name pin has no root order column"
     assert_eq "$(sql_value "$edadb_db" "select (select count(*) from iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD) || '|' || (select count(*) from iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD__layer_shape_list_sd_iLayerShapeSD) || '|' || (select count(*) from iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD__layer_shape_list_sd_iLayerShapeSD__rect_list_sd_IdbRectSD);")" \
         "56|56|56" "$name pin port/layer/rect child counts"
     assert_eq "$(sql_value "$edadb_db" "select _net_name_sd || '|' || _connect_type_sd || '|' || _source_type_sd || '|' || _weight_sd from iSpecNetSD where _net_name_sd='VSS';")" \
@@ -160,8 +162,8 @@ check_default_sql() {
     fi
     assert_eq "$(sql_value "$edadb_db" "select _net_name_sd || '|' || _connect_type_sd || '|' || _source_type_sd || '|' || _weight_sd || '|' || _xtalk_sd || '|' || _fix_bump_sd || '|' || _frequency_sd from iNetSD where _net_name_sd='clk';")" \
         "clk|5|0|0|0|0|-1.0" "$name regular net default fields"
-    assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || ':' || _net_name_sd, ',') from (select _order_sd, _net_name_sd from iNetSD order by _order_sd limit 5);")" \
-        "0:ctrl\$a_mux_sel[0],1:ctrl\$a_mux_sel[1],2:ctrl\$a_reg_en,3:ctrl\$b_mux_sel,4:ctrl\$b_reg_en" "$name regular net order prefix"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from pragma_table_info('iNetSD') where name='_order_sd';")" \
+        "0" "$name regular net has no root order column"
 
     assert_contains "$def2edadb_log" "[EDADB-IDB] writeIdbInstance insert instance_count=1458" "$name write instance log"
     assert_contains "$def2edadb_log" "[EDADB-IDB] writeIdbPin insert pin_count=56" "$name write pin log"
@@ -183,7 +185,9 @@ check_aux_optional_sql() {
     assert_eq "$(sql_value "$edadb_db" "select _name || '|' || _type from iRegion;")" "test_region|1" "$name region fields"
     assert_eq "$(sql_value "$edadb_db" "select _vec_idx || '|' || _lx_sd || '|' || _ly_sd || '|' || _hx_sd || '|' || _hy_sd from iRegion__boudary_list_IdbRectSD;")" \
         "0|1000|1000|10000|10000" "$name region rect"
-    assert_eq "$(sql_value "$edadb_db" "select _order_sd || '|' || _layer_name_sd from iSlotSD;")" "0|met1" "$name slot layer"
+    assert_eq "$(sql_value "$edadb_db" "select _layer_name_sd from iSlotSD;")" "met1" "$name slot layer"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from pragma_table_info('iSlotSD') where name='_order_sd';")" \
+        "0" "$name slot has no root order column"
     assert_eq "$(sql_value "$edadb_db" "select _vec_idx || '|' || _lx_sd || '|' || _ly_sd || '|' || _hx_sd || '|' || _hy_sd from iSlotSD__rect_list_sd_IdbRectSD;")" \
         "0|5000|5000|6000|6000" "$name slot rect"
     assert_eq "$(sql_value "$edadb_db" "select count(*) from pragma_table_info('iGroupSD') where name='_order_sd';")" \
@@ -234,8 +238,8 @@ check_routed_sql() {
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_direction || ':' || _start || ':' || _num || ':' || _space, ';') from (select * from iGCellGrid order by _direction, _start, _num, _space);")" \
         "1:0:2:3600;1:3600:43:3360;1:144720:2:5240;2:0:2:3600;2:3600:43:3360;2:144720:2:5408" "$name gcell grid fields"
     assert_eq "$(sql_value "$edadb_db" "select count(*) from iNetSD;")" "677" "$name net count"
-    assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || ':' || _net_name_sd, ',') from (select _order_sd, _net_name_sd from iNetSD order by _order_sd limit 5);")" \
-        "0:ctrl\$a_mux_sel[0],1:ctrl\$a_mux_sel[1],2:ctrl\$a_reg_en,3:ctrl\$b_mux_sel,4:ctrl\$b_reg_en" "$name routed net order prefix"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from pragma_table_info('iNetSD') where name='_order_sd';")" \
+        "0" "$name routed net has no root order column"
     assert_eq "$(sql_value "$edadb_db" "select count(*) from iNetSD__wire_list_sd_iRegWireSD;")" "677" "$name regular wire count"
     assert_eq "$(sql_value "$edadb_db" "select count(*) from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD;")" "8997" "$name regular wire segment count"
     assert_eq "$(sql_value "$edadb_db" "select count(*) from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__point_list_sd_iCoordSD;")" "14256" "$name regular wire point count"

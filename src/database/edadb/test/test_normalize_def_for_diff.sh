@@ -74,6 +74,88 @@ ROW ROW_1 unit 0 0 N DO 1 BY 1 STEP 10 0 ;
 END DESIGN
 DEF
 
+cat >"$TMP_DIR/components_a.def" <<'DEF'
+VERSION 5.8 ;
+DESIGN demo ;
+COMPONENTS 2 ;
+    - inst_b cell_b + PLACED ( 20 20 ) N ;
+    - inst_a cell_a + PLACED ( 10 10 ) N ;
+END COMPONENTS
+END DESIGN
+DEF
+
+cat >"$TMP_DIR/components_b.def" <<'DEF'
+VERSION 5.8 ;
+DESIGN demo ;
+COMPONENTS 2 ;
+    - inst_a cell_a + PLACED ( 10 10 ) N ;
+    - inst_b cell_b + PLACED ( 20 20 ) N ;
+END COMPONENTS
+END DESIGN
+DEF
+
+cat >"$TMP_DIR/pins_a.def" <<'DEF'
+VERSION 5.8 ;
+DESIGN demo ;
+PINS 2 ;
+    - pin_b + NET net_b + DIRECTION INPUT ;
+    - pin_a + NET net_a + DIRECTION OUTPUT ;
+END PINS
+END DESIGN
+DEF
+
+cat >"$TMP_DIR/pins_b.def" <<'DEF'
+VERSION 5.8 ;
+DESIGN demo ;
+PINS 2 ;
+    - pin_a + NET net_a + DIRECTION OUTPUT ;
+    - pin_b + NET net_b + DIRECTION INPUT ;
+END PINS
+END DESIGN
+DEF
+
+cat >"$TMP_DIR/nets_a.def" <<'DEF'
+VERSION 5.8 ;
+DESIGN demo ;
+NETS 2 ;
+    - net_b ( inst_b A )
+      + ROUTED met1 ( 0 0 ) ( 10 0 )
+    ;
+    - net_a ( inst_a A )
+      + ROUTED met2 ( 20 0 ) ( 30 0 )
+    ;
+END NETS
+END DESIGN
+DEF
+
+cat >"$TMP_DIR/nets_b.def" <<'DEF'
+VERSION 5.8 ;
+DESIGN demo ;
+NETS 2 ;
+    - net_a ( inst_a A )
+      + ROUTED met2 ( 20 0 ) ( 30 0 )
+    ;
+    - net_b ( inst_b A )
+      + ROUTED met1 ( 0 0 ) ( 10 0 )
+    ;
+END NETS
+END DESIGN
+DEF
+
+cat >"$TMP_DIR/net_nested_changed.def" <<'DEF'
+VERSION 5.8 ;
+DESIGN demo ;
+NETS 2 ;
+    - net_b ( inst_b A )
+      + ROUTED met1 ( 10 0 ) ( 0 0 )
+    ;
+    - net_a ( inst_a A )
+      + ROUTED met2 ( 20 0 ) ( 30 0 )
+    ;
+END NETS
+END DESIGN
+DEF
+
 cat >"$TMP_DIR/special_a.def" <<'DEF'
 VERSION 5.8 ;
 DESIGN demo ;
@@ -165,7 +247,11 @@ END DESIGN
 DEF
 
 assert_norm_same "$TMP_DIR/regions_a.def" "$TMP_DIR/regions_b.def" "D REGIONS root order"
-assert_norm_different "$TMP_DIR/rows_a.def" "$TMP_DIR/rows_b.def" "B ROWS root order"
+assert_norm_same "$TMP_DIR/rows_a.def" "$TMP_DIR/rows_b.def" "B ROWS root order"
+assert_norm_same "$TMP_DIR/components_a.def" "$TMP_DIR/components_b.def" "C COMPONENTS root order"
+assert_norm_same "$TMP_DIR/pins_a.def" "$TMP_DIR/pins_b.def" "B PINS root order"
+assert_norm_same "$TMP_DIR/nets_a.def" "$TMP_DIR/nets_b.def" "A NETS root order"
+assert_norm_different "$TMP_DIR/nets_a.def" "$TMP_DIR/net_nested_changed.def" "NETS nested route order"
 assert_norm_same "$TMP_DIR/special_a.def" "$TMP_DIR/special_b.def" "D SPECIALNETS root block order"
 assert_norm_different "$TMP_DIR/special_a.def" "$TMP_DIR/special_nested_changed.def" "SPECIALNETS nested order"
 assert_norm_same "$TMP_DIR/vias_a.def" "$TMP_DIR/vias_b.def" "D VIAS root block order"

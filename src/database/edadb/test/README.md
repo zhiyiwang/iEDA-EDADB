@@ -32,7 +32,7 @@ For each case the script runs:
 1. direct iDB `DEF -> DEF`;
 2. `DEF -> EDADB`;
 3. `EDADB -> DEF`;
-4. byte diff of direct output vs EDADB output.
+4. raw byte diff of direct output vs EDADB output；失败时再执行 A/B/C/D root-record normalized diff。
 
 For `default_ipl`, it also checks:
 
@@ -41,11 +41,13 @@ For `default_ipl`, it also checks:
 - die point rows, row fields, track-grid fields and primitive vector layer names;
 - via generate fields, instance fields, pin fields and pin port/layer/rect child rows;
 - special-net default fields and child rows, regular-net default fields;
+- `iRow/iInstSD/iPinSD/iNetSD` 明确不存在 root `_order_sd` column；
 - write/read logs for instance and pin restoration counts.
 
 For `aux_optional`, it also checks SQLite content for key EDADB tables and fields:
 
 - `iBlockageSD`, `iRegion`, `iSlotSD`, `iGroupSD`, `iFillSD`;
+- `iSlotSD` 明确不存在 root `_order_sd` column；
 - blockage fields, region/slot rectangles, group region and ordered member child rows;
 - fill layer/via typed rows and child rows;
 - special-net `ORIGINAL`, `SOURCE`, and `WEIGHT`;
@@ -66,7 +68,7 @@ For `net_branches`, it repeats all `routed_irt` checks and additionally verifies
 
 - `FIXED`, `COVER`, and `NOSHIELD` enum values in `iRegWireSD`;
 - one `_is_second_point_virtual_sd` segment;
-- raw direct-DEF vs EDADB-DEF equality for all four cases.
+- raw direct-DEF vs EDADB-DEF equality for all four current fixtures；如果 backend 改变 root 返回顺序，则允许 normalized semantic equality。
 
 Regular `+ SHIELD <name>` is not generated: the current native writer has a `kShield` branch, but the native DEF parser rejects that regular-NETS syntax. This remains an original writer/parser limitation rather than a supported adapter roundtrip case.
 
@@ -81,6 +83,8 @@ Each migrated class must be checked against the original `DefWrite`/`DefRead` be
 
 The executable baseline is the current branch's direct iDB `DEF -> DEF` path. It may include small intentional fixes beyond `origin/master`, so master-diff reports must call out that drift separately.
 
+`edadb-idb-dev/no-sort-abcd` 的专用规则：所有 A/B/C/D root list 都不保存 `_order_sd`，但所有 nested pin/wire/segment/point/geometry order 仍必须保留。
+
 Current class coverage:
 
 | Family | Storage | Main edge covered |
@@ -94,7 +98,7 @@ Current class coverage:
 
 Do not implement or run these yet; they are parked here for later test-design review.
 
-- Add a SQLite unordered-read stress mode using `PRAGMA reverse_unordered_selects=ON`; any EDADB read path that needs deterministic vector order must use explicit `ORDER BY`.
+- Add a SQLite unordered-read stress mode using `PRAGMA reverse_unordered_selects=ON`;本分支预期 root list 可变化，nested vector 必须保持不变。
 - Add real DEF perturbation cases for root-order evidence:
   - swap top-level `PINS` and run iFP `auto_place_pins`;
   - swap top-level `ROWS` and run the iPDN follow-pin stripe path;

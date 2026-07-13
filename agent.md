@@ -2,6 +2,15 @@
 
 This file keeps only the branch facts, EDADB layout, validation command, and current C-branch rules.
 
+## Current Experiment Branch
+
+- Branch: `edadb-idb-dev/no-sort-abcd`.
+- Baseline: `b7d5a72c46748b69f6a427aaf37162a643200a4f`.
+- Policy: all A/B/C/D design root lists omit `_order_sd`; EDADB read uses no root `ORDER BY`.
+- Scope boundary: nested pin/wire/segment/point/geometry vectors still preserve local order through child-vector indexes, `_vec_idx`, or nested pin-ref `_order_sd`.
+- DEF comparison: raw diff first; on failure, normalize complete A/B/C/D root records only. Nested content moves with its root and is never sorted internally.
+- Verified 2026-07-10: `cmake --build build -j40 --target iEDA` and all four cases in `run_idb_roundtrip_regression.sh` passed under `/tmp/iedadb_no_sort_abcd`.
+
 ## Validation Rule
 
 Use the iEDA superproject commit as the source of truth:
