@@ -57,9 +57,9 @@ TABLE4CLASS(edadb::Shadow<idb::IdbRow>, "iRow", (_name_sd, _site_name_sd, _site_
 
 Schema / init 代码位置：
 
-- Dormant `IdbSite` table macro: `src/database/edadb/idb/edadb_idb_schema.h:45`
-- `TABLE4SHADOW(idb::IdbRow)`: `src/database/edadb/idb/edadb_idb_schema.h:50`
-- `iRow` table macro: `src/database/edadb/idb/edadb_idb_schema.h:51`
+- `IdbSite` is not registered; Row stores the LEF site name/orient and rebuilds a row-local clone.
+- `TABLE4SHADOW(idb::IdbRow)`: `src/database/edadb/idb/edadb_idb_schema.h:42`
+- `iRow` table macro: `src/database/edadb/idb/edadb_idb_schema.h:43`
 - Primary-key setup: `src/database/edadb/idb/edadb_idb_init.cpp:21`
 - Table registration: `src/database/edadb/idb/edadb_idb_init.cpp:82`
 
@@ -96,9 +96,9 @@ Primary-key audit:
 | --- | --- | --- |
 | 1. `parse_row()` 在 row list 中 append 新 row，见 `def_read.cpp:807-816` | `readIdbRow()` reset list 后使用 read-all 逐条 append，不指定 root order | row record / `IdbRows::_row_list` / `iRow` rows |
 | 2. 设置 name 和 origin，见 `def_read.cpp:818-819` | `fromShadow()` 恢复 `_name_sd` 和 origin scalars，见 `shadow_idb_row.h:38-47` | `ROW <name> x y` / `IdbRow::_name/_original_coordinate` / `_name_sd`, `_origin_x_sd`, `_origin_y_sd` |
-| 3. 按 site name 取 LEF site，clone row-local site，设置 site/row orient，见 `def_read.cpp:821-826` | builder 按 `_site_name_sd` 获取 LEF site、clone，并用 `_site_orient_sd` 设置两处 orient，见 `def_read_edadb.cpp:353-367` | site/orient / `IdbRow::_site`, `_orient` / `_site_name_sd`, `_site_orient_sd` |
+| 3. 按 site name 取 LEF site，clone row-local site，设置 site/row orient，见 `def_read.cpp:821-826` | builder 按 `_site_name_sd` 获取 LEF site、clone，并用 `_site_orient_sd` 设置两处 orient，见 `def_read_edadb.cpp:358-369` | site/orient / `IdbRow::_site`, `_orient` / `_site_name_sd`, `_site_orient_sd` |
 | 4. `hasDo()` 时恢复 DO/BY，`hasDoStep()` 时恢复 STEP，见 `def_read.cpp:828-835` | `fromShadow()` 直接恢复四个 scalar，见 `shadow_idb_row.h:47-50` | `DO/BY/STEP` / `_row_num_x/_row_num_y/_step_x/_step_y` / `_row_num_x_sd/_row_num_y_sd/_step_x_sd/_step_y_sd` |
-| 5. 最后计算 bbox，见 `def_read.cpp:837` | site 和 scalar 恢复后调同一 `set_bounding_box()`，再 append row，见 `def_read_edadb.cpp:368-370` | computed bbox / `IdbRow::_bounding_box` / 不存储，读时计算 |
+| 5. 最后计算 bbox，见 `def_read.cpp:837` | site 和 scalar 恢复后调同一 `set_bounding_box()`，再 append row，见 `def_read_edadb.cpp:370-372` | computed bbox / `IdbRow::_bounding_box` / 不存储，读时计算 |
 
 ## Child Storage View
 
@@ -122,10 +122,10 @@ schema 文件中保留但休眠 `TABLE4CLASS(idb::IdbSite, ...)`；当前 row ad
 
 当前 `writeIdbRow()`：
 
-- Code: `src/database/manager/builder/def_builder/def_write_edadb.cpp:210`
-- Row vector access: `src/database/manager/builder/def_builder/def_write_edadb.cpp:218`
-- Shadow conversion: `src/database/manager/builder/def_builder/def_write_edadb.cpp:221`
-- EDADB insert: `src/database/manager/builder/def_builder/def_write_edadb.cpp:229`
+- Code: `src/database/manager/builder/def_builder/def_write_edadb.cpp:198`
+- Row vector access: `src/database/manager/builder/def_builder/def_write_edadb.cpp:206`
+- Shadow conversion: `src/database/manager/builder/def_builder/def_write_edadb.cpp:209`
+- EDADB insert: `src/database/manager/builder/def_builder/def_write_edadb.cpp:217`
 - `Shadow<IdbRow>::toShadow()`: `src/database/edadb/idb/shadow/shadow_idb_row.h:17`
 
 - 从 `layout->get_rows()` 取得 row list。
@@ -138,13 +138,13 @@ schema 文件中保留但休眠 `TABLE4CLASS(idb::IdbSite, ...)`；当前 row ad
 
 当前 `readIdbRow()`：
 
-- Code: `src/database/manager/builder/def_builder/def_read_edadb.cpp:319`
-- Reset active rows: `src/database/manager/builder/def_builder/def_read_edadb.cpp:328`
+- Code: `src/database/manager/builder/def_builder/def_read_edadb.cpp:330`
+- Reset active rows: `src/database/manager/builder/def_builder/def_read_edadb.cpp:339`
 - Read-all query: `src/database/manager/builder/def_builder/def_read_edadb.cpp`
-- EDADB read loop: `src/database/manager/builder/def_builder/def_read_edadb.cpp:337`
-- Shadow restore: `src/database/manager/builder/def_builder/def_read_edadb.cpp:349`
-- LEF site clone: `src/database/manager/builder/def_builder/def_read_edadb.cpp:351`
-- Rebuild bounding box: `src/database/manager/builder/def_builder/def_read_edadb.cpp:363`
+- EDADB read loop: `src/database/manager/builder/def_builder/def_read_edadb.cpp:344`
+- Shadow restore: `src/database/manager/builder/def_builder/def_read_edadb.cpp:356`
+- LEF site clone: `src/database/manager/builder/def_builder/def_read_edadb.cpp:358`
+- Rebuild bounding box: `src/database/manager/builder/def_builder/def_read_edadb.cpp:370`
 - `Shadow<IdbRow>::fromShadow()`: `src/database/edadb/idb/shadow/shadow_idb_row.h:38`
 
 - `rows->reset()` 清空旧 row。

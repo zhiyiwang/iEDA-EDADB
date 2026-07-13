@@ -38,14 +38,6 @@ TABLE4SHADOW_WVEC(idb::IdbDie);
 TABLE4CLASS_WVEC (edadb::Shadow<idb::IdbDie>, "iDieSD", (primary_key), (points_sd));
 
 
-// EDADB_TODO: Row adapter stores only site name/orient and rebuilds row-local
-// IdbSite from LEF layout sites. Re-enable this only when a real EDADB iSite
-// reader/writer is added.
-#if 0
-#include "database/data/design/db_layout/IdbSite.h"
-TABLE4CLASS(idb::IdbSite, "iSite", (_name, _width, _heigtht, _b_overlap, _site_class, _symmetry, _orient, _type));
-#endif
-
 #include "shadow/shadow_idb_row.h"
 TABLE4SHADOW(idb::IdbRow);
 TABLE4CLASS(edadb::Shadow<idb::IdbRow>, "iRow", (_name_sd, _site_name_sd, _site_orient_sd, _origin_x_sd, _origin_y_sd, _row_num_x_sd, _row_num_y_sd, _step_x_sd, _step_y_sd));
@@ -90,15 +82,6 @@ TABLE4CLASS(edadb::Shadow<idb::IdbRouteHalo>, "iRouteHaloSD", (_route_distance_s
 #include "shadow/shadow_idb_instance.h"
 TABLE4CLASS(edadb::Shadow<idb::IdbInstance>, "iInstSD", (_name_sd, _type_sd, _status_sd, _orient_sd, _weight_sd, _cell_master_name_sd, _coordinate_sd, _halo_sd, _route_halo_sd, _region_name_sd));
 
-#include "shadow/shadow_idb_port.h"
-TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbPort>, "iPortSD", (primary_key, _class_sd, _orient_sd, _placement_status_sd, _coordinate_sd), (_layer_shape_list_sd));
-
-#include "shadow/shadow_idb_term.h"
-TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbTerm>, "iTermSD", (_name_sd, _direction_sd, _type_sd, _shape_sd, _placement_status_sd, _has_port_sd, _is_special_net_sd, _is_instance_sd), (_port_list_sd));
-
-#include "shadow/shadow_idb_pin.h"
-TABLE4CLASS(edadb::Shadow<idb::IdbPin>, "iPinSD", (_pin_name_sd, _net_name_sd, _io_term_sd, _average_coordinate_sd, _location_sd, _orient_sd, _is_io_pin_sd, _is_special_net_sd, _layer_num_sd));
-
 #include "shadow/shadow_idb_blockage.h"
 TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbBlockage>, "iBlockageSD", (primary_key, _instance_name_sd, _is_pushdown_sd, _type_sd, _layer_name_sd, _is_except_pgnet_sd), (_rect_list_sd));
 
@@ -110,28 +93,3 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbSlot>, "iSlotSD", (primary_key, _layer_na
 
 #include "shadow/shadow_idb_group.h"
 TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbGroup>, "iGroupSD", (_group_name_sd, _region_name_sd), (_instance_name_vec_sd));
-
-#include "shadow/shadow_idb_fill.h"
-TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbFill>, "iFillSD", (primary_key, _type_sd, _layer_name_sd, _via_name_sd), (_rect_list_sd, _coordinate_list_sd));
-
-#include "shadow/shadow_idb_special_net.h"
-TABLE4CLASS(idb::edadb_adapter::SpecialNetPinRef, "iSpecPinRef", (_order_sd, instance_name, pin_name));
-TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbSpecialWireSegment>, "iSpecWireSegSD",
-                 (primary_key, _layer_name_sd, _via_name_sd, _route_width_sd, _style_sd, _shape_type_sd, _is_via_sd, _is_rect_sd, _delta_rect_sd),
-                 (_point_list_sd));
-TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbSpecialWire>, "iSpecWireSD",
-                 (primary_key, _wire_state_sd, _shield_name_sd), (_segment_list_sd));
-TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbSpecialNet>, "iSpecNetSD",
-                 (_net_name_sd, _original_net_name_sd, _connect_type_sd, _source_type_sd, _weight_sd),
-                 (_pin_string_list_sd, _io_pin_name_list_sd, _instance_pin_list_sd, _wire_list_sd));
-
-#include "shadow/shadow_idb_net.h"
-TABLE4CLASS(idb::edadb_adapter::NetPinRef, "iNetPinRef", (_order_sd, instance_name, pin_name));
-TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbRegularWireSegment>, "iRegWireSegSD",
-                 (primary_key, _layer_name_sd, _via_name_sd, _is_via_sd, _is_rect_sd, _is_second_point_virtual_sd, _delta_rect_sd),
-                 (_point_list_sd));
-TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbRegularWire>, "iRegWireSD",
-                 (primary_key, _wire_state_sd, _shield_name_sd), (_segment_list_sd));
-TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbNet>, "iNetSD",
-                 (_net_name_sd, _original_net_name_sd, _connect_type_sd, _source_type_sd, _weight_sd, _xtalk_sd, _fix_bump_sd, _frequency_sd),
-                 (_io_pin_name_list_sd, _instance_pin_list_sd, _wire_list_sd));

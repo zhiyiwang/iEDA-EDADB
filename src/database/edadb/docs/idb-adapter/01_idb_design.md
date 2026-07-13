@@ -88,11 +88,11 @@ Primary-key audit:
 
 | 原始 `DefWrite` 执行顺序 | EDADB write 对应 | DEF 域 / iDB 变量 / EDADB 域 |
 | --- | --- | --- |
-| 1. `writeChip()` 先调 `write_version()`；`_version` 为空时文本 fallback 为 `5.8`，见 `def_write.cpp:205-210,270-279` | `writeIdbDesign()` 直接存储 active `_version`，见 `def_write_edadb.cpp:145-180`；空值不在 DB 中 canonicalize，后续 DEF writer 仍会输出 `5.8` | `VERSION` / `IdbDesign::_version` / `iDesign._version` |
+| 1. `writeChip()` 先调 `write_version()`；`_version` 为空时文本 fallback 为 `5.8`，见 `def_write.cpp:205-210,270-279` | `writeIdbDesign()` 直接存储 active `_version`，见 `def_write_edadb.cpp:133-168`；空值不在 DB 中 canonicalize，后续 DEF writer 仍会输出 `5.8` | `VERSION` / `IdbDesign::_version` / `iDesign._version` |
 | 2. `write_divider_char()` 固定输出 `/`，见 `def_write.cpp:208,281-285` | 不存储；该值不是 `IdbDesign` 成员 | `DIVIDERCHAR` / 无 iDB 成员 / 无 EDADB 字段 |
-| 3. `write_busbit_char()` 检查 pointer 并输出左右 delimiter，见 `def_write.cpp:209,288-301` | `writeIdbDesign()` 检查 `_bus_bit_chars`，由 direct nested mapping 写入，见 `def_write_edadb.cpp:170-180` | `BUSBITCHARS` / `IdbDesign::_bus_bit_chars`, `IdbBusBitChars::_left_delimiter/_right_delimiter` / `iDesign._bus_bit_chars` → `iBusBitChars` |
+| 3. `write_busbit_char()` 检查 pointer 并输出左右 delimiter，见 `def_write.cpp:209,288-301` | `writeIdbDesign()` 检查 `_bus_bit_chars`，由 direct nested mapping 写入，见 `def_write_edadb.cpp:158-168` | `BUSBITCHARS` / `IdbDesign::_bus_bit_chars`, `IdbBusBitChars::_left_delimiter/_right_delimiter` / `iDesign._bus_bit_chars` → `iBusBitChars` |
 | 4. `write_design()` 输出 design name，见 `def_write.cpp:210,308-316` | direct mapping 写入 `_design_name` | `DESIGN` / `IdbDesign::_design_name` / `iDesign._design_name` |
-| 5. `write_units()` 优先 DEF DBU，非正值时 fallback 到 LEF DBU，见 `def_write.cpp:211,318-338` | `writeIdbDesign()` 使用同一 fallback，并将选中值写回 active DEF units 后插入，见 `def_write_edadb.cpp:152-180` | `UNITS DISTANCE MICRONS` / `IdbUnits::_micron_dbu`, `IdbLayout::_units` fallback / `iUnits._micron_dbu` |
+| 5. `write_units()` 优先 DEF DBU，非正值时 fallback 到 LEF DBU，见 `def_write.cpp:211,318-338` | `writeIdbDesign()` 使用同一 fallback，并将选中值写回 active DEF units 后插入，见 `def_write_edadb.cpp:140-168` | `UNITS DISTANCE MICRONS` / `IdbUnits::_micron_dbu`, `IdbLayout::_units` fallback / `iUnits._micron_dbu` |
 
 ### Original DEF Read Flow
 
@@ -100,10 +100,10 @@ DEF callback 的实际触发顺序由输入 DEF tag 顺序决定；下表按 iED
 
 | 原始 `DefRead` 执行顺序 | EDADB read 对应 | DEF 域 / iDB 变量 / EDADB 域 |
 | --- | --- | --- |
-| 1. `versionCallback()` 调 `parse_version()`，直接设置 active design version，见 `def_read.cpp:619-638` | `readIdbDesign()` 从 temporary `got` 拷贝 version，见 `def_read_edadb.cpp:241-258` | `VERSION` / `IdbDesign::_version` / `iDesign._version` |
-| 2. `busBitCharsCallBack()` 校验长度为 2，`parse_bus_bit_chars()` 新建 value object、删除旧 pointer 并挂接，见 `def_read.cpp:2398-2434` | `readIdbDesign()` 检查 `got` child，删除 active child 后转移 pointer ownership，见 `def_read_edadb.cpp:276-283` | `BUSBITCHARS` / `IdbDesign::_bus_bit_chars` / `iDesign._bus_bit_chars` ← `iBusBitChars` |
-| 3. `designCallback()` 调 `parse_design()` 设置 name，见 `def_read.cpp:640-659` | 从 `got` 拷贝 `_design_name`，见 `def_read_edadb.cpp:251-258` | `DESIGN` / `IdbDesign::_design_name` / `iDesign._design_name` |
-| 4. `unitsCallback()` 调 `parse_units()`，与 LEF DBU 比较后复用 active `IdbUnits` 设置 DBU，见 `def_read.cpp:661-689` | 执行同样 LEF DBU warning 检查，将 `got` DBU 写入 active units，再释放 temporary child，见 `def_read_edadb.cpp:260-274` | `UNITS DISTANCE MICRONS` / `IdbUnits::_micron_dbu` / `iUnits._micron_dbu` |
+| 1. `versionCallback()` 调 `parse_version()`，直接设置 active design version，见 `def_read.cpp:619-638` | `readIdbDesign()` 从 temporary `got` 拷贝 version，见 `def_read_edadb.cpp:247-264` | `VERSION` / `IdbDesign::_version` / `iDesign._version` |
+| 2. `busBitCharsCallBack()` 校验长度为 2，`parse_bus_bit_chars()` 新建 value object、删除旧 pointer 并挂接，见 `def_read.cpp:2398-2434` | `readIdbDesign()` 检查 `got` child，删除 active child 后转移 pointer ownership，见 `def_read_edadb.cpp:282-289` | `BUSBITCHARS` / `IdbDesign::_bus_bit_chars` / `iDesign._bus_bit_chars` ← `iBusBitChars` |
+| 3. `designCallback()` 调 `parse_design()` 设置 name，见 `def_read.cpp:640-659` | 从 `got` 拷贝 `_design_name`，见 `def_read_edadb.cpp:257-264` | `DESIGN` / `IdbDesign::_design_name` / `iDesign._design_name` |
+| 4. `unitsCallback()` 调 `parse_units()`，与 LEF DBU 比较后复用 active `IdbUnits` 设置 DBU，见 `def_read.cpp:661-689` | 执行同样 LEF DBU warning 检查，将 `got` DBU 写入 active units，再释放 temporary child，见 `def_read_edadb.cpp:266-280` | `UNITS DISTANCE MICRONS` / `IdbUnits::_micron_dbu` / `iUnits._micron_dbu` |
 
 ## Child Storage View
 
@@ -118,8 +118,8 @@ DEF callback 的实际触发顺序由输入 DEF tag 顺序决定；下表按 iED
 
 当前 `writeIdbDesign()` 已贴近原始 writer：
 
-- Code: `src/database/manager/builder/def_builder/def_write_edadb.cpp:145`
-- EDADB insert: `src/database/manager/builder/def_builder/def_write_edadb.cpp:180`
+- Code: `src/database/manager/builder/def_builder/def_write_edadb.cpp:133`
+- EDADB insert: `src/database/manager/builder/def_builder/def_write_edadb.cpp:168`
 
 - 检查 active `design`。
 - 按 `write_units()` 语义计算 `micron_dbu`：优先 DEF units，否则 LEF units。
@@ -133,9 +133,9 @@ DEF callback 的实际触发顺序由输入 DEF tag 顺序决定；下表按 iED
 
 当前 `readIdbDesign()`：
 
-- Code: `src/database/manager/builder/def_builder/def_read_edadb.cpp:236`
-- EDADB read op: `src/database/manager/builder/def_builder/def_read_edadb.cpp:237`
-- Active design restore: `src/database/manager/builder/def_builder/def_read_edadb.cpp:252`
+- Code: `src/database/manager/builder/def_builder/def_read_edadb.cpp:247`
+- EDADB read op: `src/database/manager/builder/def_builder/def_read_edadb.cpp:248`
+- Active design restore: `src/database/manager/builder/def_builder/def_read_edadb.cpp:257`
 
 - 从 EDADB 读取一个 `IdbDesign got` 作为安全缓冲。
 - 设置 active `design->_design_name` 和 `_version`。

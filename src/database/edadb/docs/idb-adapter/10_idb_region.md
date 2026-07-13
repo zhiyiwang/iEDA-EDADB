@@ -45,9 +45,9 @@ TABLE4CLASS_WVEC(idb::IdbRegion, "iRegion", (_name, _type), (_boudary_list));
 
 Schema / init 代码位置：
 
-- `iRegion` direct table macro: `src/database/edadb/idb/edadb_idb_schema.h:106`
+- `iRegion` direct table macro: `src/database/edadb/idb/edadb_idb_schema.h:89`
 - Primary-key setup: `src/database/edadb/idb/edadb_idb_init.cpp:21`
-- Table registration: `src/database/edadb/idb/edadb_idb_init.cpp:90`
+- Table registration: `src/database/edadb/idb/edadb_idb_init.cpp:88`
 
 保存字段覆盖原始 DEF writer/read 需要的 name、type 和 boundary rectangle vector。
 
@@ -70,7 +70,7 @@ Primary-key audit:
 
 | 原始 `DefWrite` 执行顺序 | EDADB write 对应 | DEF 域 / iDB 变量 / EDADB 域 |
 | --- | --- | --- |
-| 1. `write_region()` 检查 list；空 list 返回失败；输出 section count，见 `def_write.cpp:1042-1053` | `writeIdbRegion()` 检查 list 后直接 `insertVector<IdbRegion>()`；空 vector 返回成功，见 `def_write_edadb.cpp:446-470` | `REGIONS <N>` / `IdbRegionList::_region_list` / `iRegion` row count |
+| 1. `write_region()` 检查 list；空 list 返回失败；输出 section count，见 `def_write.cpp:1042-1053` | `writeIdbRegion()` 检查 list 后直接 `insertVector<IdbRegion>()`；空 vector 返回成功，见 `def_write_edadb.cpp:391-412` | `REGIONS <N>` / `IdbRegionList::_region_list` / `iRegion` row count |
 | 2. 按 root vector 遍历并输出 region name，见 `def_write.cpp:1055-1056` | direct mapping 保存 `IdbRegion::_name`；不保存 root order | `- <region_name>` / `IdbRegion::_name` / `iRegion._name` |
 | 3. 按 boundary vector 顺序输出所有 rectangle，见 `def_write.cpp:1058-1060` | `TABLE4CLASS_WVEC` 保存 `_boudary_list`；nested `IdbRect` 顺序由 child vector index 保留 | region rectangles / `IdbRegion::_boudary_list` / `iRegion._boudary_list` child rows |
 | 4. 将 region enum 转为名称并无条件输出 `TYPE`，见 `def_write.cpp:1062-1063` | direct mapping 保存 `_type` enum | `+ TYPE` / `IdbRegion::_type` / `iRegion._type` |
@@ -80,7 +80,7 @@ Primary-key audit:
 
 | 原始 `DefRead` 执行顺序 | EDADB read 对应 | DEF 域 / iDB 变量 / EDADB 域 |
 | --- | --- | --- |
-| 1. `regionCallback()` 校验参数后调用 `parse_region()`，后者按 name `add_region()`，见 `def_read.cpp:2075-2101` | `readIdbRegion()` 创建 `IdbRegion`，由 EDADB direct mapping 恢复 `_name` 后 append 到 list，见 `def_read_edadb.cpp:504-535` | region root/name / `IdbRegionList::_region_list`, `IdbRegion::_name` / `iRegion._name` |
+| 1. `regionCallback()` 校验参数后调用 `parse_region()`，后者按 name `add_region()`，见 `def_read.cpp:2075-2101` | `readIdbRegion()` 创建 `IdbRegion`，由 EDADB direct mapping 恢复 `_name` 后 append 到 list，见 `def_read_edadb.cpp:506-535` | region root/name / `IdbRegionList::_region_list`, `IdbRegion::_name` / `iRegion._name` |
 | 2. DEF record 有 `TYPE` 时恢复 type，见 `def_read.cpp:2103-2105` | direct mapping 从 `iRegion._type` 恢复 enum | `+ TYPE` / `IdbRegion::_type` / `iRegion._type` |
 | 3. 按 DEF rectangle 顺序调用 `add_boundary()`，见 `def_read.cpp:2107-2109` | EDADB 按 child vector index 恢复 `_boudary_list` | region rectangles / `IdbRegion::_boudary_list` / `iRegion._boudary_list` child rows |
 | 4. property 分支仍为 TODO，见 `def_read.cpp:2111-2112` | schema 不保存 region property，与原始 parser 最终 iDB 状态一致 | property / 无已实现 iDB 成员 / 无 EDADB 字段 |
@@ -111,10 +111,10 @@ Primary-key audit:
 
 当前 `writeIdbRegion()`：
 
-- Code: `src/database/manager/builder/def_builder/def_write_edadb.cpp:448`
-- Region vector access: `src/database/manager/builder/def_builder/def_write_edadb.cpp:459`
-- Empty-list return: `src/database/manager/builder/def_builder/def_write_edadb.cpp:463`
-- EDADB direct insert: `src/database/manager/builder/def_builder/def_write_edadb.cpp:467`
+- Code: `src/database/manager/builder/def_builder/def_write_edadb.cpp:391`
+- Region vector access: `src/database/manager/builder/def_builder/def_write_edadb.cpp:404`
+- Empty-list return: `src/database/manager/builder/def_builder/def_write_edadb.cpp:408`
+- EDADB direct insert: `src/database/manager/builder/def_builder/def_write_edadb.cpp:412`
 
 - 从 `design->get_region_list()` 取得 region vector。
 - 空列表返回 `kDbSuccess`，避免 EDADB dispatcher 中断整个写流程。
@@ -127,10 +127,10 @@ Primary-key audit:
 
 当前 `readIdbRegion()`：
 
-- Code: `src/database/manager/builder/def_builder/def_read_edadb.cpp:511`
-- EDADB read op: `src/database/manager/builder/def_builder/def_read_edadb.cpp:524`
-- EDADB read loop: `src/database/manager/builder/def_builder/def_read_edadb.cpp:527`
-- Add to active list: `src/database/manager/builder/def_builder/def_read_edadb.cpp:540`
+- Code: `src/database/manager/builder/def_builder/def_read_edadb.cpp:506`
+- EDADB read op: `src/database/manager/builder/def_builder/def_read_edadb.cpp:519`
+- EDADB read loop: `src/database/manager/builder/def_builder/def_read_edadb.cpp:522`
+- Add to active list: `src/database/manager/builder/def_builder/def_read_edadb.cpp:535`
 
 - 使用 `makeReadAllOp<IdbRegion>()` 循环读取 direct rows。
 - 读出的 `IdbRegion` 已包含 name/type/boundary rectangles。

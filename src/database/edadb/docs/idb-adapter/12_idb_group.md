@@ -48,9 +48,9 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbGroup>, "iGroupSD", (_group_name_sd, _reg
 
 Schema / init 代码位置：
 
-- `iGroupSD` table macro: `src/database/edadb/idb/edadb_idb_schema.h:112`
+- `iGroupSD` table macro: `src/database/edadb/idb/edadb_idb_schema.h:95`
 - Primary-key setup: `src/database/edadb/idb/edadb_idb_init.cpp:21`
-- Table registration: `src/database/edadb/idb/edadb_idb_init.cpp:92`
+- Table registration: `src/database/edadb/idb/edadb_idb_init.cpp:90`
 - Shadow definition: `src/database/edadb/idb/shadow/shadow_idb_group.h:15`
 
 保存字段覆盖原始 DEF writer/read 需要的 group name、region name 和 member instance names。
@@ -74,7 +74,7 @@ Primary-key audit:
 
 | 原始 `DefWrite` 执行顺序 | EDADB write / `toShadow` 对应 | DEF 域 / iDB 变量 / EDADB 域 |
 | --- | --- | --- |
-| 1. `write_group()` 检查 list；空 list 返回失败；输出 section count，见 `def_write.cpp:1108-1120` | `writeIdbGroup()` 检查 list；空 vector 返回成功；构造 group shadows 后 batch insert，见 `def_write_edadb.cpp:518-555` | `GROUPS <N>` / `IdbGroupList::_group_list` / `iGroupSD` row count |
+| 1. `write_group()` 检查 list；空 list 返回失败；输出 section count，见 `def_write.cpp:1108-1120` | `writeIdbGroup()` 检查 list；空 vector 返回成功；构造 group shadows 后 batch insert，见 `def_write_edadb.cpp:463-492` | `GROUPS <N>` / `IdbGroupList::_group_list` / `iGroupSD` row count |
 | 2. 按 group vector 遍历并输出 group name，见 `def_write.cpp:1122-1123` | `toShadow()` 保存 `_group_name_sd`，见 `shadow_idb_group.h:20-24` | `- <group_name>` / `IdbGroup::_group_name` / `_group_name_sd` |
 | 3. 按当前 expanded instance vector 顺序输出 member names，见 `def_write.cpp:1125-1127` | `toShadow()` 保存有序 `_instance_name_vec_sd`，见 `shadow_idb_group.h:28-31` | group members / `IdbGroup::_instance_list` 中的 `IdbInstance::_name` / `_instance_name_vec_sd` |
 | 4. 无条件解引用 region 并输出 region name，见 `def_write.cpp:1129` | region 非空时才保存 `_region_name_sd`，见 `shadow_idb_group.h:25-27`；因此 EDADB 可存“无 region group”，但原始 writer 后续输出该状态会空指针解引用 | `+ REGION` / `IdbGroup::_region` / `_region_name_sd` |
@@ -84,10 +84,10 @@ Primary-key audit:
 
 | 原始 `DefRead` 执行顺序 | EDADB read / `fromShadow` 对应 | DEF 域 / iDB 变量 / EDADB 域 |
 | --- | --- | --- |
-| 1. `groupNameCallback()` 调 `parse_group_name()`，按 name 创建 `_cur_group`，见 `def_read.cpp:2176-2192,2238-2250` | `readIdbGroup()` 从 `_group_name_sd` 创建 group；`fromShadow()` 同步 name，见 `def_read_edadb.cpp:586-620`, `shadow_idb_group.h:34-40` | group name / `IdbGroup::_group_name` / `_group_name_sd` |
-| 2. 每个 `groupMemberCallback()` 调 `parse_group_member()`：先 exact-name lookup，再把 pattern 当 regex 遍历全部 instances，且去重，见 `def_read.cpp:2194-2209,2253-2285` | EDADB 不保存原始 pattern；保存 parser 展开后的最终 instance-name vector，read 时按 name lookup 并 append，见 `def_read_edadb.cpp:626-631` | member pattern → expanded members / `IdbGroup::_instance_list` / `_instance_name_vec_sd` |
+| 1. `groupNameCallback()` 调 `parse_group_name()`，按 name 创建 `_cur_group`，见 `def_read.cpp:2176-2192,2238-2250` | `readIdbGroup()` 从 `_group_name_sd` 创建 group；`fromShadow()` 同步 name，见 `def_read_edadb.cpp:584-616`, `shadow_idb_group.h:34-40` | group name / `IdbGroup::_group_name` / `_group_name_sd` |
+| 2. 每个 `groupMemberCallback()` 调 `parse_group_member()`：先 exact-name lookup，再把 pattern 当 regex 遍历全部 instances，且去重，见 `def_read.cpp:2194-2209,2253-2285` | EDADB 不保存原始 pattern；保存 parser 展开后的最终 instance-name vector，read 时按 name lookup 并 append，见 `def_read_edadb.cpp:621-626` | member pattern → expanded members / `IdbGroup::_instance_list` / `_instance_name_vec_sd` |
 | 3. 最终 `groupCallback()` 调 `parse_group()`，复用 `_cur_group` 或按 name 新建 group，见 `def_read.cpp:2158-2173,2288-2300` | EDADB 每个 shadow 对应一个已展开的 final group；不需要 callback 临时状态 | finalized group root / `IdbGroupList::_group_list` / one `iGroupSD` row |
-| 4. 有 region name 时按 name lookup 并设置 region pointer，随后清空 `_cur_group`，见 `def_read.cpp:2301-2304` | `_region_name_sd` 非空时执行同样 lookup；空 name 保持 null，见 `def_read_edadb.cpp:621-624` | `+ REGION` / `IdbGroup::_region` / `_region_name_sd` |
+| 4. 有 region name 时按 name lookup 并设置 region pointer，随后清空 `_cur_group`，见 `def_read.cpp:2301-2304` | `_region_name_sd` 非空时执行同样 lookup；空 name 保持 null，见 `def_read_edadb.cpp:617-619` | `+ REGION` / `IdbGroup::_region` / `_region_name_sd` |
 | 5. component-name pattern/property 分支仍为 TODO，见 `def_read.cpp:2306-2308` | schema 不保存 property；pattern 已被 canonicalize 为 expanded instance names | property/original pattern / 无已实现 property 成员；最终 member vector / 无 property 字段；`_instance_name_vec_sd` |
 
 ## Child Storage View
@@ -111,11 +111,11 @@ Primary-key audit:
 
 当前 `writeIdbGroup()`：
 
-- Code: `src/database/manager/builder/def_builder/def_write_edadb.cpp:518`
-- Group vector access: `src/database/manager/builder/def_builder/def_write_edadb.cpp:531`
-- Empty-list return: `src/database/manager/builder/def_builder/def_write_edadb.cpp:535`
-- Shadow construction: `src/database/manager/builder/def_builder/def_write_edadb.cpp:541`
-- EDADB insert: `src/database/manager/builder/def_builder/def_write_edadb.cpp:547`
+- Code: `src/database/manager/builder/def_builder/def_write_edadb.cpp:463`
+- Group vector access: `src/database/manager/builder/def_builder/def_write_edadb.cpp:476`
+- Empty-list return: `src/database/manager/builder/def_builder/def_write_edadb.cpp:480`
+- Shadow construction: `src/database/manager/builder/def_builder/def_write_edadb.cpp:484`
+- EDADB insert: `src/database/manager/builder/def_builder/def_write_edadb.cpp:492`
 
 - 从 `design->get_group_list()` 取得 group vector。
 - 空列表返回 `kDbSuccess`，避免 EDADB dispatcher 中断整个写流程。
@@ -129,12 +129,12 @@ Primary-key audit:
 
 当前 `readIdbGroup()`：
 
-- Code: `src/database/manager/builder/def_builder/def_read_edadb.cpp:589`
-- EDADB read op: `src/database/manager/builder/def_builder/def_read_edadb.cpp:604`
-- EDADB read loop: `src/database/manager/builder/def_builder/def_read_edadb.cpp:608`
-- Add to active list: `src/database/manager/builder/def_builder/def_read_edadb.cpp:620`
-- Region lookup: `src/database/manager/builder/def_builder/def_read_edadb.cpp:623`
-- Instance lookup: `src/database/manager/builder/def_builder/def_read_edadb.cpp:627`
+- Code: `src/database/manager/builder/def_builder/def_read_edadb.cpp:584`
+- EDADB read op: `src/database/manager/builder/def_builder/def_read_edadb.cpp:599`
+- EDADB read loop: `src/database/manager/builder/def_builder/def_read_edadb.cpp:602`
+- Add to active list: `src/database/manager/builder/def_builder/def_read_edadb.cpp:615`
+- Region lookup: `src/database/manager/builder/def_builder/def_read_edadb.cpp:617`
+- Instance lookup: `src/database/manager/builder/def_builder/def_read_edadb.cpp:621`
 
 - 使用 EDADB read-all 读取 root records，不指定 root order。
 - `group_list->add_group(group_name)` 创建 group。

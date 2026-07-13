@@ -2,14 +2,20 @@
 
 This file keeps only the branch facts, EDADB layout, validation command, and current C-branch rules.
 
-## Current Experiment Branch
+## Current Demo Branch
 
-- Branch: `edadb-idb-dev/no-sort-abcd`.
-- Baseline: `b7d5a72c46748b69f6a427aaf37162a643200a4f`.
-- Policy: all A/B/C/D design root lists omit `_order_sd`; EDADB read uses no root `ORDER BY`.
-- Scope boundary: nested pin/wire/segment/point/geometry vectors still preserve local order through child-vector indexes, `_vec_idx`, or nested pin-ref `_order_sd`.
-- DEF comparison: raw diff first; on failure, normalize complete A/B/C/D root records only. Nested content moves with its root and is never sorted internally.
-- Verified 2026-07-10: `cmake --build build -j40 --target iEDA` and all four cases in `run_idb_roundtrip_regression.sh` passed under `/tmp/iedadb_no_sort_abcd`.
+- Branch: `demo/20260713`.
+- Baseline: `edadb-idb-dev/no-sort-abcd @ 1eaf54a4a`.
+- EDADB enabled: Design, Die, Row, TrackGrid, GCellGrid, Via, Instance, Blockage, Region, Slot, Group.
+- DEF fallback: Pin, Fill, SpecialNet, Net; no adapter implementation, schema, shadow, init table or class document is retained for these families.
+- Ordering: enabled roots inherit the no-sort policy; nested vectors still preserve local order.
+- DEF comparison: raw diff first; normalized diff may reorder enabled EDADB roots only. Fallback sections are never normalized.
+- Verified 2026-07-13:
+  - `cmake --build build -j40 --target db_edadb def_builder iEDA` passed.
+  - canonical `scripts/edadb/demo/demo.sh` passed with `Input def and output def are the same.`
+  - normalizer unit tests passed; fallback Pin/Fill/SpecialNet/Net order remains strict.
+  - `OUT_DIR=/tmp/iedadb_demo_20260713 bash src/database/edadb/test/run_idb_roundtrip_regression.sh` passed `default_ipl`, `aux_optional`, and `routed_irt`.
+  - all three cases confirmed disabled EDADB tables and disabled adapter logs are absent.
 
 ## Validation Rule
 
@@ -55,13 +61,12 @@ Current cases:
 - `routed_irt`: sky130_gcd `iRT_result.def`; covers non-empty regular NETS routed wires
   and segments.
 
-The `aux_optional` case also checks SQLite table content for blockage/region/slot/group/fill
-counts, group region/member rows, fill child rows, special-net optional fields, explicit IO/instance
-pin refs, special-net rect segments, and regular-net optional fields.
-The `routed_irt` case checks SQLite counts for `iNetSD`, regular wire child rows, regular
-wire segment child rows, and regular wire point child rows.
+The `aux_optional` case checks EDADB content for Blockage/Region/Slot/Group and Instance
+weight/region. Fill, Pin, SpecialNet and Net are exercised only through DEF fallback.
+The `routed_irt` case checks non-empty GCellGrid; routed Net data remains on DEF fallback.
+All cases assert that disabled EDADB tables and disabled adapter logs are absent.
 
-Latest run on 2026-07-09:
+Historical full-adapter run on 2026-07-09 (baseline evidence, not current demo evidence):
 
 - Command: `OUT_DIR=/tmp/iedadb_specialnet_verify_now bash src/database/edadb/test/run_idb_roundtrip_regression.sh`
 - Output directory: `/tmp/iedadb_specialnet_verify_now`
@@ -191,9 +196,8 @@ Current uncovered or weakly covered areas:
 - For root lists that affect iEDA semantics or an explicitly documented raw-roundtrip
   requirement, read back with `ORDER BY "_order_sd"`. Level D root lists default to
   no `_order_sd` and rely on normalized diff for root-order-only differences.
-- Current reviewed-class exception: `IdbSlotList` is Level D but keeps `primary_key +
-  _order_sd` because DEF `SLOTS` records are anonymous and raw roundtrip needs stable
-  anonymous record output.
+- Current demo keeps `IdbSlotList::primary_key` only for anonymous root identity; it
+  does not store root `_order_sd`.
 - Update schema/init, builder read/write, DEF callbacks, regression SQL, and docs together.
 - Planned order-stress tests are documented but not implemented yet: SQLite
   `PRAGMA reverse_unordered_selects=ON`, real DEF perturbations for `PINS`/iFP,
@@ -364,9 +368,12 @@ EDADB core code:
   `src/database/edadb/core/include/edadb/*`, `src/database/edadb/core/src/*`,
   `src/database/edadb/core/demo/*`, and `src/database/edadb/core/test/*`.
 
-## Current C Milestone
+## Historical Full-Adapter C Milestone
 
-Current committed state:
+This section records the earlier full-adapter development state. It is not the active
+scope of `demo/20260713`; the current scope is defined at the top of this file.
+
+Historical committed state:
 
 - iEDA: `HEAD` (`fix: adapt idb adapter to latest edadb vector api`)
 - EDADB submodule: `3077132 fix: enable sqlite debug trace tests`
@@ -376,7 +383,7 @@ Initial C milestone:
 - iEDA: `99afe9c71 edadb: initialize idb adapter code base`
 - EDADB submodule: `8a4e3bf build: support embedding edadb as submodule`
 
-Active persistence groups:
+Historical persistence groups:
 
 - `writeIdbDesign()` / `readIdbDesign()` are enabled.
 - `writeIdbDie()` / `readIdbDie()` are enabled through `edadb::Shadow<idb::IdbDie>`.
@@ -491,7 +498,7 @@ Validation:
 - SQLite net check: `iNetSD=675`, nested IO pin refs `54`, nested instance pin refs `1726`, nested regular wire rows `0`.
 - Final demo message: `Input def and output def are the same.`
 
-Current behavior:
+Historical behavior:
 
 - `edadb_write` writes the Design, Die, Row, TrackGrid, GCell, Via, Instance, Pin, Blockage, Region, Slot, Group, Fill, SpecialNet, and Net families to EDADB.
 - `edadb_read` reads the Design, Die, Row, TrackGrid, GCell, Via, Region, Instance, Pin, Blockage, Slot, Group, Fill, SpecialNet, and Net families from EDADB.

@@ -6,8 +6,8 @@
 
 - Write: `DefWrite::write_component()` at `src/database/manager/builder/def_builder/def_write.cpp:460`
 - Read: `DefRead::parse_component_number()` / `DefRead::parse_component()` at `src/database/manager/builder/def_builder/def_read.cpp:857` and `src/database/manager/builder/def_builder/def_read.cpp:884`
-- EDADB Write: `DefWriteEdadb::writeIdbInstance()` at `src/database/manager/builder/def_builder/def_write_edadb.cpp:317`
-- EDADB Read: `DefReadEdadb::readIdbInstance()` at `src/database/manager/builder/def_builder/def_read_edadb.cpp:723`
+- EDADB Write: `DefWriteEdadb::writeIdbInstance()` at `src/database/manager/builder/def_builder/def_write_edadb.cpp:305`
+- EDADB Read: `DefReadEdadb::readIdbInstance()` at `src/database/manager/builder/def_builder/def_read_edadb.cpp:637`
 
 本文件按 `src/database/edadb/docs/def-ieda-mapping-and-order.md` 的约束检查：
 
@@ -94,13 +94,13 @@ TABLE4CLASS(edadb::Shadow<idb::IdbRouteHalo>, "iRouteHaloSD",
 
 Schema / init 代码位置：
 
-- `iHalo` table macro: `src/database/edadb/idb/edadb_idb_schema.h:85`
-- `iRouteHaloSD` table macro: `src/database/edadb/idb/edadb_idb_schema.h:88`
-- `iInstSD` root table macro: `src/database/edadb/idb/edadb_idb_schema.h:91`
+- `iHalo` table macro: `src/database/edadb/idb/edadb_idb_schema.h:77`
+- `iRouteHaloSD` table macro: `src/database/edadb/idb/edadb_idb_schema.h:80`
+- `iInstSD` root table macro: `src/database/edadb/idb/edadb_idb_schema.h:83`
 - `IdbHalo` PK disabled: `src/database/edadb/idb/edadb_idb_init.cpp:32`
 - `Shadow<IdbRouteHalo>` PK disabled: `src/database/edadb/idb/edadb_idb_init.cpp:33`
 - `Shadow<IdbInstance>` PK uses EDADB default `true`; `_name_sd` is the first table column and root identity.
-- Table registration: `src/database/edadb/idb/edadb_idb_init.cpp:87`
+- Table registration: `src/database/edadb/idb/edadb_idb_init.cpp:86`
 - Instance shadow definition: `src/database/edadb/idb/shadow/shadow_idb_instance.h:19`
 - Route-halo shadow definition: `src/database/edadb/idb/shadow/shadow_idb_halo.h:12`
 
@@ -135,12 +135,12 @@ Primary-key audit:
 | 原始 `DefRead` 执行顺序 | EDADB read / `fromShadow` 对应 | DEF 域 / iDB 变量 / EDADB 域 |
 | --- | --- | --- |
 | 1. component-count callback 调 `parse_component_number()` 初始化 list capacity，见 `def_read.cpp:843-863` | EDADB 不存 section count；`readIdbInstance()` reset list 后 read-all，不指定 root order | `COMPONENTS <N>` / `IdbInstanceList` capacity / `iInstSD` row count |
-| 2. `parse_component()` 按 master name lookup LEF master，trim instance name，append instance 并 `set_cell_master()`，见 `def_read.cpp:884-918` | builder 按 `_cell_master_name_sd` lookup master，先 `set_cell_master()` 再恢复 shadow，见 `def_read_edadb.cpp:749-761` | instance/master / `_name/_cell_master` / `_name_sd/_cell_master_name_sd` |
+| 2. `parse_component()` 按 master name lookup LEF master，trim instance name，append instance 并 `set_cell_master()`，见 `def_read.cpp:884-918` | builder 按 `_cell_master_name_sd` lookup master，先 `set_cell_master()` 再恢复 shadow，见 `def_read_edadb.cpp:670-682` | instance/master / `_name/_cell_master` / `_name_sd/_cell_master_name_sd` |
 | 3. 恢复 status/orient 和 optional SOURCE，见 `def_read.cpp:919-924` | `fromShadow()` 恢复 `_status_sd/_orient_sd/_type_sd`，见 `shadow_idb_instance.h:63-72` | placement/SOURCE / `_status/_orient/_type` / corresponding `_sd` fields |
 | 4. 条件恢复 `WEIGHT`，见 `def_read.cpp:926-928` | `fromShadow()` 恢复 `_weight_sd`，见 `shadow_idb_instance.h:72` | `+ WEIGHT` / `_weight` / `_weight_sd` |
-| 5. 条件按 name lookup region，设 instance ref 并补 region backlink，见 `def_read.cpp:930-936` | builder 按 `_region_name_sd` 执行同样 lookup 和双向关系重建，见 `def_read_edadb.cpp:763-769` | `+ REGION` / `_region`, `IdbRegion::_instance_list` / `_region_name_sd` |
+| 5. 条件按 name lookup region，设 instance ref 并补 region backlink，见 `def_read.cpp:930-936` | builder 按 `_region_name_sd` 执行同样 lookup 和双向关系重建，见 `def_read_edadb.cpp:684-690` | `+ REGION` / `_region`, `IdbRegion::_instance_list` / `_region_name_sd` |
 | 6. 条件创建 halo，恢复 soft 和四个 extension，见 `def_read.cpp:938-948` | `fromShadow()` 将 `_halo_sd` ownership 转移给 instance，见 `shadow_idb_instance.h:78-81` | `+ HALO` / `_halo` / `_halo_sd` |
-| 7. 条件创建 route halo，按 name lookup bottom/top layer，见 `def_read.cpp:950-955` | builder 创建 route halo，shadow 恢复 distance，再按名字 lookup layers，见 `def_read_edadb.cpp:771-776` | `+ ROUTEHALO` / `_route_halo` / `_route_halo_sd` |
+| 7. 条件创建 route halo，按 name lookup bottom/top layer，见 `def_read.cpp:950-955` | builder 创建 route halo，shadow 恢复 distance，再按名字 lookup layers，见 `def_read_edadb.cpp:692-697` | `+ ROUTEHALO` / `_route_halo` / `_route_halo_sd` |
 | 8. 最后设置 placement coordinate，见 `def_read.cpp:957` | `fromShadow()` 用 `_coordinate_sd` 调 `set_coodinate()`，见 `shadow_idb_instance.h:74-76`，builder 后 append instance | placement x/y / `_coordinate` 及由 setter 重建的 geometry / `_coordinate_sd` |
 
 ## Child Storage View
@@ -160,7 +160,7 @@ Primary-key audit:
 
 当前 `writeIdbInstance()`：
 
-- Code: `src/database/manager/builder/def_builder/def_write_edadb.cpp:317`
+- Code: `src/database/manager/builder/def_builder/def_write_edadb.cpp:305`
 - Enabled by chip writer: `src/database/manager/builder/def_builder/def_write_edadb.cpp:94`
 
 - 从 `design->get_instance_list()` 获取 instance vector。
@@ -208,8 +208,8 @@ edadb::commitTransaction();
 
 当前 `readIdbInstance()`：
 
-- Code: `src/database/manager/builder/def_builder/def_read_edadb.cpp:723`
-- Enabled by EDADB read flow: `src/database/manager/builder/def_builder/def_read_edadb.cpp:216`
+- Code: `src/database/manager/builder/def_builder/def_read_edadb.cpp:637`
+- Enabled by EDADB read flow: `src/database/manager/builder/def_builder/def_read_edadb.cpp:231`
 
 - reset 当前 instance list，避免 DEF 文本 callback 与 EDADB 读回重复。
 - 用 read-all 读取 `iInstSD`，不指定或恢复 `IdbInstanceList` root order。

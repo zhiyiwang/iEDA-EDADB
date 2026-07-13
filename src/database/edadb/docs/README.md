@@ -10,7 +10,12 @@ This directory is the canonical documentation home for the iEDA + EDADB integrat
 
 ## Per-Class Adapter Notes
 
-Read `idb-adapter/01_idb_design.md` through `idb-adapter/15_idb_net.md` in DEF write order. Each file records:
+The `demo/20260713` branch keeps these EDADB-enabled class notes:
+
+- `01` Design, `02` Die, `03` Row, `04` TrackGrid, `05` GCellGrid, `06` Via
+- `07` Instance, `09` Blockage, `10` Region, `11` Slot, `12` Group
+
+Pin, Fill, SpecialNet, and Net use the original DEF parser/writer and have no adapter class document on this demo branch. Each retained file records:
 
 - original `DefWrite` / `DefRead` semantics;
 - EDADB schema and primary-key choices;

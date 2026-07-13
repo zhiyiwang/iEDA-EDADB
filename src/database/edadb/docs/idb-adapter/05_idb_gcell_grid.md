@@ -46,7 +46,7 @@ TABLE4CLASS(idb::IdbGCellGrid, "iGCellGrid", (_direction, _start, _num, _space))
 
 Schema / init 代码位置：
 
-- `iGCellGrid` direct table macro: `src/database/edadb/idb/edadb_idb_schema.h:62`
+- `iGCellGrid` direct table macro: `src/database/edadb/idb/edadb_idb_schema.h:54`
 - Primary-key setup: `src/database/edadb/idb/edadb_idb_init.cpp:21`
 - Table registration: `src/database/edadb/idb/edadb_idb_init.cpp:84`
 
@@ -70,15 +70,15 @@ Primary-key audit:
 
 | 原始 `DefWrite` 执行顺序 | EDADB write 对应 | DEF 域 / iDB 变量 / EDADB 域 |
 | --- | --- | --- |
-| 1. `write_gcell_grid()` 检查 list；null 或 empty 都返回 `kDbFail`，见 `def_write.cpp:1013-1025` | `writeIdbGCellGrid()` 对 null 失败，但 empty vector 返回成功，见 `def_write_edadb.cpp:264-277` | `GCELLGRID` root/count / `IdbGCellGridList::_gcell_grid_list` / root rows，无 count/order 字段 |
-| 2. 按 root vector 遍历，输出 direction、start、DO count、STEP space，见 `def_write.cpp:1029-1034` | direct `insertVector<IdbGCellGrid>()` 写入四个 scalar，见 `def_write_edadb.cpp:272-280` | `GCELLGRID <dir> <start> DO <num> STEP <space>` / `_direction/_start/_num/_space` / `iGCellGrid._direction/_start/_num/_space` |
+| 1. `write_gcell_grid()` 检查 list；null 或 empty 都返回 `kDbFail`，见 `def_write.cpp:1013-1025` | `writeIdbGCellGrid()` 对 null 失败，但 empty vector 返回成功，见 `def_write_edadb.cpp:252-268` | `GCELLGRID` root/count / `IdbGCellGridList::_gcell_grid_list` / root rows，无 count/order 字段 |
+| 2. 按 root vector 遍历，输出 direction、start、DO count、STEP space，见 `def_write.cpp:1029-1034` | direct `insertVector<IdbGCellGrid>()` 写入四个 scalar，见 `def_write_edadb.cpp:268-273` | `GCELLGRID <dir> <start> DO <num> STEP <space>` / `_direction/_start/_num/_space` / `iGCellGrid._direction/_start/_num/_space` |
 
 ### Original DEF Read Flow
 
 | 原始 `DefRead` 执行顺序 | EDADB read 对应 | DEF 域 / iDB 变量 / EDADB 域 |
 | --- | --- | --- |
-| 1. `gcellGridCallback()` 校验 input 后调 `parse_gcell_grid()`，见 `def_read.cpp:2034-2050` | `readIdbGCellGrid()` 清空 active list，然后逐行 direct read，见 `def_read_edadb.cpp:432-447` | `GCELLGRID` root / `IdbGCellGridList` / `iGCellGrid` |
-| 2. parser append grid，按 macro 恢复 direction，再设 num/start/space，见 `def_read.cpp:2059-2070` | EDADB 已将四个 scalar 直接读入新 `IdbGCellGrid`，builder 只 append，见 `def_read_edadb.cpp:446-459` | direction/start/DO/STEP / `_direction/_start/_num/_space` / `iGCellGrid._direction/_start/_num/_space` |
+| 1. `gcellGridCallback()` 校验 input 后调 `parse_gcell_grid()`，见 `def_read.cpp:2034-2050` | `readIdbGCellGrid()` 清空 active list，然后逐行 direct read，见 `def_read_edadb.cpp:434-449` | `GCELLGRID` root / `IdbGCellGridList` / `iGCellGrid` |
+| 2. parser append grid，按 macro 恢复 direction，再设 num/start/space，见 `def_read.cpp:2059-2070` | EDADB 已将四个 scalar 直接读入新 `IdbGCellGrid`，builder 只 append，见 `def_read_edadb.cpp:448-460` | direction/start/DO/STEP / `_direction/_start/_num/_space` / `iGCellGrid._direction/_start/_num/_space` |
 
 ## Child Storage View
 
@@ -104,10 +104,10 @@ Primary-key audit:
 
 当前 `writeIdbGCellGrid()`：
 
-- Code: `src/database/manager/builder/def_builder/def_write_edadb.cpp:264`
-- GCell-grid vector access: `src/database/manager/builder/def_builder/def_write_edadb.cpp:272`
-- Empty-list return: `src/database/manager/builder/def_builder/def_write_edadb.cpp:276`
-- EDADB direct insert: `src/database/manager/builder/def_builder/def_write_edadb.cpp:280`
+- Code: `src/database/manager/builder/def_builder/def_write_edadb.cpp:252`
+- GCell-grid vector access: `src/database/manager/builder/def_builder/def_write_edadb.cpp:260`
+- Empty-list return: `src/database/manager/builder/def_builder/def_write_edadb.cpp:264`
+- EDADB direct insert: `src/database/manager/builder/def_builder/def_write_edadb.cpp:268`
 
 - 从 `layout->get_gcell_grid_list()` 取得 list。
 - 空列表时直接返回 `kDbSuccess`，避免 `writeChip2Edadb()` 因原始 writer 的局部 `kDbFail` 语义中断整个 EDADB 写流程。
@@ -120,11 +120,11 @@ Primary-key audit:
 
 当前 `readIdbGCellGrid()`：
 
-- Code: `src/database/manager/builder/def_builder/def_read_edadb.cpp:431`
-- Clear active gcell grids: `src/database/manager/builder/def_builder/def_read_edadb.cpp:439`
-- EDADB read op: `src/database/manager/builder/def_builder/def_read_edadb.cpp:441`
-- EDADB read loop: `src/database/manager/builder/def_builder/def_read_edadb.cpp:444`
-- Add to active list: `src/database/manager/builder/def_builder/def_read_edadb.cpp:457`
+- Code: `src/database/manager/builder/def_builder/def_read_edadb.cpp:434`
+- Clear active gcell grids: `src/database/manager/builder/def_builder/def_read_edadb.cpp:442`
+- EDADB read op: `src/database/manager/builder/def_builder/def_read_edadb.cpp:444`
+- EDADB read loop: `src/database/manager/builder/def_builder/def_read_edadb.cpp:447`
+- Add to active list: `src/database/manager/builder/def_builder/def_read_edadb.cpp:460`
 
 - `gcell_grid_list->clear()` 清空旧数据。
 - 使用 `makeReadAllOp<IdbGCellGrid>()` 循环读取 direct rows。

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Normalize DEF files for EDADB regression semantic diff.
+"""Normalize DEF files for the demo EDADB subset semantic diff.
 
-All A/B/C/D root records may be reordered for the no-sort experiment branch.
-Nested record contents are kept exactly in their original order.
+Only EDADB-restored root records may be reordered. DEF-fallback sections and
+nested record contents are kept exactly in their original order.
 """
 
 from __future__ import annotations
@@ -16,15 +16,11 @@ from typing import Callable, Iterable, List, Sequence, Tuple
 
 ROOT_BLOCK_SECTIONS = {
     "COMPONENTS",
-    "PINS",
-    "NETS",
     "VIAS",
     "REGIONS",
     "BLOCKAGES",
     "SLOTS",
-    "FILLS",
     "GROUPS",
-    "SPECIALNETS",
 }
 
 def compact_text(lines: Sequence[str]) -> str:
@@ -76,29 +72,13 @@ def key_slot(record: Sequence[str]) -> Tuple[str, ...]:
     return (value_after_keyword(text, "LAYER"), text)
 
 
-def key_fill(record: Sequence[str]) -> Tuple[str, ...]:
-    text = compact_text(record)
-    fill_type = ""
-    fill_name = ""
-    first_line = record[0] if record else ""
-    if re.search(r"^\s*-\s+LAYER\b", first_line):
-        fill_type = "LAYER"
-        fill_name = value_after_keyword(text, "LAYER")
-    elif re.search(r"^\s*-\s+VIA\b", first_line):
-        fill_type = "VIA"
-        fill_name = value_after_keyword(text, "VIA")
-    return (fill_type, fill_name, text)
-
-
 def block_key(section: str) -> Callable[[Sequence[str]], Tuple[str, ...]]:
-    if section in {"COMPONENTS", "PINS", "NETS", "VIAS", "REGIONS", "GROUPS", "SPECIALNETS"}:
+    if section in {"COMPONENTS", "VIAS", "REGIONS", "GROUPS"}:
         return key_named
     if section == "BLOCKAGES":
         return key_blockage
     if section == "SLOTS":
         return key_slot
-    if section == "FILLS":
-        return key_fill
     return lambda record: (compact_text(record),)
 
 
@@ -230,7 +210,7 @@ def normalize_file(path: Path) -> str:
 
 
 def main(argv: Iterable[str]) -> int:
-    parser = argparse.ArgumentParser(description="Normalize DEF for no-sort ABCD root-order diff")
+    parser = argparse.ArgumentParser(description="Normalize DEF for demo EDADB-subset root-order diff")
     parser.add_argument("def_file", type=Path)
     args = parser.parse_args(list(argv))
     sys.stdout.write(normalize_file(args.def_file))

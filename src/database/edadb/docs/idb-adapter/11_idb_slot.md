@@ -46,9 +46,9 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbSlot>, "iSlotSD", (primary_key, _layer_na
 
 Schema / init 代码位置：
 
-- `iSlotSD` table macro: `src/database/edadb/idb/edadb_idb_schema.h:109`
+- `iSlotSD` table macro: `src/database/edadb/idb/edadb_idb_schema.h:92`
 - Primary-key setup: `src/database/edadb/idb/edadb_idb_init.cpp:21`
-- Table registration: `src/database/edadb/idb/edadb_idb_init.cpp:91`
+- Table registration: `src/database/edadb/idb/edadb_idb_init.cpp:89`
 - Shadow definition: `src/database/edadb/idb/shadow/shadow_idb_slot.h:15`
 
 保存字段覆盖原始 DEF writer/read 需要的 layer name 和 rectangle vector。
@@ -107,11 +107,11 @@ Primary-key audit:
 
 当前 `writeIdbSlot()`：
 
-- Code: `src/database/manager/builder/def_builder/def_write_edadb.cpp:475`
-- Slot vector access: `src/database/manager/builder/def_builder/def_write_edadb.cpp:488`
-- Empty-list return: `src/database/manager/builder/def_builder/def_write_edadb.cpp:492`
-- Shadow construction: `src/database/manager/builder/def_builder/def_write_edadb.cpp:498`
-- EDADB insert: `src/database/manager/builder/def_builder/def_write_edadb.cpp:504`
+- Code: `src/database/manager/builder/def_builder/def_write_edadb.cpp:420`
+- Slot vector access: `src/database/manager/builder/def_builder/def_write_edadb.cpp:433`
+- Empty-list return: `src/database/manager/builder/def_builder/def_write_edadb.cpp:437`
+- Shadow construction: `src/database/manager/builder/def_builder/def_write_edadb.cpp:441`
+- EDADB insert: `src/database/manager/builder/def_builder/def_write_edadb.cpp:449`
 
 - 从 `design->get_slot_list()` 取得 slot vector。
 - 空列表返回 `kDbSuccess`，避免 EDADB dispatcher 中断整个写流程。
@@ -125,10 +125,10 @@ Primary-key audit:
 
 当前 `readIdbSlot()`：
 
-- Code: `src/database/manager/builder/def_builder/def_read_edadb.cpp:545`
-- EDADB read op: `src/database/manager/builder/def_builder/def_read_edadb.cpp:558`
-- EDADB read loop: `src/database/manager/builder/def_builder/def_read_edadb.cpp:567`
-- Add to active list: `src/database/manager/builder/def_builder/def_read_edadb.cpp:578`
+- Code: `src/database/manager/builder/def_builder/def_read_edadb.cpp:544`
+- EDADB read op: `src/database/manager/builder/def_builder/def_read_edadb.cpp:557`
+- EDADB read loop: `src/database/manager/builder/def_builder/def_read_edadb.cpp:560`
+- Add to active list: `src/database/manager/builder/def_builder/def_read_edadb.cpp:573`
 
 - 使用 `makeReadAllOp<Shadow<IdbSlot>>()` 循环读取 root records，不指定 root order。
 - `slot_list->add_slot()` 创建 slot。

@@ -246,14 +246,35 @@ END VIAS
 END DESIGN
 DEF
 
+cat >"$TMP_DIR/fills_a.def" <<'DEF'
+VERSION 5.8 ;
+DESIGN demo ;
+FILLS 2 ;
+    - LAYER met2 RECT ( 20 20 ) ( 30 30 ) ;
+    - LAYER met1 RECT ( 0 0 ) ( 10 10 ) ;
+END FILLS
+END DESIGN
+DEF
+
+cat >"$TMP_DIR/fills_b.def" <<'DEF'
+VERSION 5.8 ;
+DESIGN demo ;
+FILLS 2 ;
+    - LAYER met1 RECT ( 0 0 ) ( 10 10 ) ;
+    - LAYER met2 RECT ( 20 20 ) ( 30 30 ) ;
+END FILLS
+END DESIGN
+DEF
+
 assert_norm_same "$TMP_DIR/regions_a.def" "$TMP_DIR/regions_b.def" "D REGIONS root order"
 assert_norm_same "$TMP_DIR/rows_a.def" "$TMP_DIR/rows_b.def" "B ROWS root order"
 assert_norm_same "$TMP_DIR/components_a.def" "$TMP_DIR/components_b.def" "C COMPONENTS root order"
-assert_norm_same "$TMP_DIR/pins_a.def" "$TMP_DIR/pins_b.def" "B PINS root order"
-assert_norm_same "$TMP_DIR/nets_a.def" "$TMP_DIR/nets_b.def" "A NETS root order"
+assert_norm_different "$TMP_DIR/pins_a.def" "$TMP_DIR/pins_b.def" "DEF-fallback PINS root order"
+assert_norm_different "$TMP_DIR/nets_a.def" "$TMP_DIR/nets_b.def" "DEF-fallback NETS root order"
 assert_norm_different "$TMP_DIR/nets_a.def" "$TMP_DIR/net_nested_changed.def" "NETS nested route order"
-assert_norm_same "$TMP_DIR/special_a.def" "$TMP_DIR/special_b.def" "D SPECIALNETS root block order"
+assert_norm_different "$TMP_DIR/special_a.def" "$TMP_DIR/special_b.def" "DEF-fallback SPECIALNETS root order"
 assert_norm_different "$TMP_DIR/special_a.def" "$TMP_DIR/special_nested_changed.def" "SPECIALNETS nested order"
+assert_norm_different "$TMP_DIR/fills_a.def" "$TMP_DIR/fills_b.def" "DEF-fallback FILLS root order"
 assert_norm_same "$TMP_DIR/vias_a.def" "$TMP_DIR/vias_b.def" "D VIAS root block order"
 assert_norm_different "$TMP_DIR/vias_a.def" "$TMP_DIR/via_nested_changed.def" "VIAS nested geometry order"
 

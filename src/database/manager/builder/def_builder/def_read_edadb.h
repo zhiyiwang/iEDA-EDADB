@@ -51,14 +51,10 @@ protected:
     bool readIdbGCellGrid(void);
     bool readIdbVia(void);
     bool readIdbInstance(void);
-    bool readIdbPin(void);
     bool readIdbBlockage(void);
     bool readIdbRegion(void);
     bool readIdbSlot(void);
     bool readIdbGroup(void);
-    bool readIdbFill(void);
-    bool readIdbSpecialNet(void);
-    bool readIdbNet(void);
 
 }; // class DefReadEdadb
 

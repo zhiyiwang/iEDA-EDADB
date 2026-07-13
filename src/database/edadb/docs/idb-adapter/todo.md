@@ -1,18 +1,14 @@
-# EDADB iDB Adapter TODO
+# Demo Adapter TODO
 
-## No-Sort ABCD Experiment
+`demo/20260713` 固定为汇报快照，不在此分支继续实现 fallback families。
 
-`edadb-idb-dev/no-sort-abcd` 以 `b7d5a72c4` 为 baseline，刻意让 A/B/C/D 四级 design root list 全部不保存顺序：
+未启用 EDADB adapter：
 
-- root schema 不定义 `_order_sd`；read path 不使用 root `ORDER BY`。
-- name 或 synthetic `primary_key` 仍负责 object identity 和 child ownership。
-- nested vector 不参与本实验，继续使用 EDADB child-vector index、`_vec_idx` 或局部 pin-ref `_order_sd` 保序。
-- DEF raw diff 失败时，normalizer 可重排 A/B/C/D 完整 root record；record 内部内容不排序。
+- Pin
+- Fill
+- SpecialNet
+- Net
 
-当前已确认无 root `_order_sd`：`IdbRowList`、`IdbTrackGridList`、`IdbGCellGridList`、`IdbViaList`、`IdbInstanceList`、`IdbPins`、`IdbBlockageList`、`IdbRegionList`、`IdbSlotList`、`IdbGroupList`、`IdbFillList`、`IdbSpecialNetList`、`IdbNetList`。
+这些对象由原始 DEF callbacks 读取，并由原始 `DefWrite` 输出。后续开发应回到 `edadb-idb-dev/no-sort-abcd` 或新的开发分支。
 
-后续实验：
-
-- 使用 `PRAGMA reverse_unordered_selects=ON` 强制扰动无序查询。
-- 分别运行依赖 Row/Pin/Instance/Net 的点工具，比较错误、物理实现和中间状态差异。
-- 与 `edadb-idb-dev/sort-abc-no-sort-d` 在同一 fixture、seed 和工具版本下对比。
+保留的实验计划：使用 `PRAGMA reverse_unordered_selects=ON` 扰动无序查询，验证 root order 策略；该测试不在本 demo 中实现。

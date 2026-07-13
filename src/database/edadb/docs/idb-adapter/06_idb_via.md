@@ -61,15 +61,15 @@ TABLE4CLASS(edadb::Shadow<idb::IdbRect>, "IdbRectSD", ...);
 
 Schema / init 代码位置：
 
-- `iViaMasterGenerateSD` table macro: `src/database/edadb/idb/edadb_idb_schema.h:66`
-- `IdbRectSD` table macro: `src/database/edadb/idb/edadb_idb_schema.h:69`
-- `iLayerShapeSD` table macro: `src/database/edadb/idb/edadb_idb_schema.h:73`
-- `iViaMasterSD` table macro: `src/database/edadb/idb/edadb_idb_schema.h:77`
-- `iVia` root table macro: `src/database/edadb/idb/edadb_idb_schema.h:81`
+- `iViaMasterGenerateSD` table macro: `src/database/edadb/idb/edadb_idb_schema.h:58`
+- `IdbRectSD` table macro: `src/database/edadb/idb/edadb_idb_schema.h:62`
+- `iLayerShapeSD` table macro: `src/database/edadb/idb/edadb_idb_schema.h:66`
+- `iViaMasterSD` table macro: `src/database/edadb/idb/edadb_idb_schema.h:70`
+- `iVia` root table macro: `src/database/edadb/idb/edadb_idb_schema.h:73`
 - Primary-key setup: `src/database/edadb/idb/edadb_idb_init.cpp:21`
 - `Shadow<IdbViaMasterGenerate>` PK disabled: `src/database/edadb/idb/edadb_idb_init.cpp:31`
 - `Shadow<IdbViaMaster>` PK uses EDADB default `true`; no explicit `initPrimKeys()` override.
-- Table registration: `src/database/edadb/idb/edadb_idb_init.cpp:86`
+- Table registration: `src/database/edadb/idb/edadb_idb_init.cpp:85`
 - Via master shadow definition: `src/database/edadb/idb/shadow/shadow_idb_via_master.h:22`
 - Layer shape shadow definition: `src/database/edadb/idb/shadow/shadow_idb_layer_shape.h:18`
 - Rect shadow definition: `src/database/edadb/idb/shadow/shadow_idb_geometry.h:45`
@@ -98,7 +98,7 @@ Primary-key audit:
 
 | 原始 `DefWrite` 执行顺序 | EDADB write / `toShadow` 对应 | DEF 域 / iDB 变量 / EDADB 域 |
 | --- | --- | --- |
-| 1. `write_via()` 对 null/empty list 失败，然后用全部 via 数输出 section count，见 `def_write.cpp:390-404` | `writeIdbVia()` 对 null 失败、empty 成功，且 direct 插入全部 via，见 `def_write_edadb.cpp:288-309` | `VIAS <N>` / `IdbVias::_via_list` / `iVia` rows，无独立 count 字段 |
+| 1. `write_via()` 对 null/empty list 失败，然后用全部 via 数输出 section count，见 `def_write.cpp:390-404` | `writeIdbVia()` 对 null 失败、empty 成功，且 direct 插入全部 via，见 `def_write_edadb.cpp:276-297` | `VIAS <N>` / `IdbVias::_via_list` / `iVia` rows，无独立 count 字段 |
 | 2. 遍历 via，但只对 `via_master->is_generate()` 输出 record，fixed via 被跳过，见 `def_write.cpp:406-428` | direct `IdbVia` root 会同时存储 generated/fixed master；`Shadow<IdbViaMaster>` 用 `_type_sd` 分支，见 `shadow_idb_via_master.h:165-175` | `- <via_name>` / `IdbVia::_name/_master_instance` / `iVia._name/_master_instance` → `iViaMasterSD._type_sd` |
 | 3. generated branch 输出 `VIARULE/CUTSIZE/LAYERS/CUTSPACING/ENCLOSURE/ROWCOL`，见 `def_write.cpp:409-420` | generated shadow 保存对应 scalars 和 rule/layer names，见 `shadow_idb_via_master.h:28-49` | generated via fields / `IdbViaMasterGenerate` rule、cut、layer、spacing、enclosure、row/col members / `_rule_name_sd`, cut/layer/spacing/enclosure/row-col shadow fields |
 | 4. pattern 非空时输出 `PATTERN`，见 `def_write.cpp:422-424` | 保存 pattern string，见 `shadow_idb_via_master.h:50` | `+ PATTERN` / `IdbViaMasterGenerate::_pattern` / `_pattern_name_sd` |
@@ -109,7 +109,7 @@ Primary-key audit:
 | 原始 `DefRead` 执行顺序 | EDADB read / `fromShadow` 对应 | DEF 域 / iDB 变量 / EDADB 域 |
 | --- | --- | --- |
 | 1. `viaBeginCallback()` 调 `parse_via_num()` 预分配 via list，见 `def_read.cpp:1759-1779` | EDADB 不存 section count；`readIdbVia()` 按 table rows 读取 | `VIAS <N>` / `IdbVias` capacity / 无 EDADB count 字段 |
-| 2. `parse_via()` 按 name 创建 via/master，见 `def_read.cpp:1800-1813` | direct read 构造 `IdbVia`，EDADB 对 `_master_instance` 自动使用 via-master shadow，然后 builder append，见 `def_read_edadb.cpp:467-496` | via name/root / `IdbVia::_name/_master_instance` / `iVia`, `iViaMasterSD` |
+| 2. `parse_via()` 按 name 创建 via/master，见 `def_read.cpp:1800-1813` | direct read 构造 `IdbVia`，EDADB 对 `_master_instance` 自动使用 via-master shadow，然后 builder append，见 `def_read_edadb.cpp:469-497` | via name/root / `IdbVia::_name/_master_instance` / `iVia`, `iViaMasterSD` |
 | 3. `hasViaRule()` 分支恢复 rule name/pointer、cut size、三层 layer pointer、spacing、enclosure，见 `def_read.cpp:1815-1841` | generated `fromShadow()` 按 name lookup via rule 和 layers，再恢复 scalars，见 `shadow_idb_via_master.h:59-98` | `VIARULE/CUTSIZE/LAYERS/CUTSPACING/ENCLOSURE` / generated master fields/runtime refs / generated shadow scalar/name fields |
 | 4. parser 条件恢复 `ORIGIN/OFFSET`，`ROWCOL` 缺省为 1x1，条件恢复 `PATTERN`，见 `def_read.cpp:1843-1873` | generated shadow 直接恢复 stored origin/offset/row-col/pattern，见 `shadow_idb_via_master.h:68-75,100-101` | `ORIGIN/OFFSET/ROWCOL/PATTERN` / generated master fields / corresponding `_sd` fields |
 | 5. parser 用 cut size/spacing/origin/row-col/pattern 重建 cut rect、cut bbox 和 via shape，见 `def_read.cpp:1875-1900` | generated `fromShadow()` 执行同类循环与计算，via-master `fromShadow()` 再 `set_via_shape()`，见 `shadow_idb_via_master.h:104-125,183-188` | computed generated geometry / cut rect/bbox/via shape / 不存储，读时重建 |
@@ -143,10 +143,10 @@ Nested member 说明：
 
 当前 `writeIdbVia()`：
 
-- Code: `src/database/manager/builder/def_builder/def_write_edadb.cpp:288`
-- Via vector access: `src/database/manager/builder/def_builder/def_write_edadb.cpp:301`
-- Empty-list return: `src/database/manager/builder/def_builder/def_write_edadb.cpp:305`
-- EDADB direct insert: `src/database/manager/builder/def_builder/def_write_edadb.cpp:309`
+- Code: `src/database/manager/builder/def_builder/def_write_edadb.cpp:276`
+- Via vector access: `src/database/manager/builder/def_builder/def_write_edadb.cpp:289`
+- Empty-list return: `src/database/manager/builder/def_builder/def_write_edadb.cpp:293`
+- EDADB direct insert: `src/database/manager/builder/def_builder/def_write_edadb.cpp:297`
 
 - 从 `design->get_via_list()` 取 root via vector。
 - 空列表返回成功，兼容 top-level EDADB framework。
@@ -159,11 +159,10 @@ Nested member 说明：
 
 当前 `readIdbVia()`：
 
-- Code: `src/database/manager/builder/def_builder/def_read_edadb.cpp:466`
-- Helper setup: `src/database/manager/builder/def_builder/def_read_edadb.cpp:467`
-- EDADB read op: `src/database/manager/builder/def_builder/def_read_edadb.cpp:487`
-- EDADB read loop: `src/database/manager/builder/def_builder/def_read_edadb.cpp:489`
-- Add to active list: `src/database/manager/builder/def_builder/def_read_edadb.cpp:502`
+- Code: `src/database/manager/builder/def_builder/def_read_edadb.cpp:469`
+- EDADB read op: `src/database/manager/builder/def_builder/def_read_edadb.cpp:482`
+- EDADB read loop: `src/database/manager/builder/def_builder/def_read_edadb.cpp:484`
+- Add to active list: `src/database/manager/builder/def_builder/def_read_edadb.cpp:497`
 
 - 先设置 `EdadbIdbHelper` 的 active `IdbDefService`，供 shadow fromShadow 查找 LEF layer 和 via rule。
 - `makeReadAllOp<idb::IdbVia>()` 读取 root vias。
