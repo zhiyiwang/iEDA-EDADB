@@ -23,15 +23,11 @@ void initPrimKeys(void) {
     edadb::Cpp2SqlTypeTrait<idb::IdbBusBitChars>::hasPrimKey = false;
     edadb::Cpp2SqlTypeTrait<idb::IdbTrack>::hasPrimKey = false;
     edadb::Cpp2SqlTypeTrait<idb::IdbGCellGrid>::hasPrimKey = false;
-
     edadb::Cpp2SqlTypeTrait<edadb::Shadow<idb::IdbCoordinate<int32_t>>>::hasPrimKey = false;
-
-    edadb::Cpp2SqlTypeTrait<idb::IdbRect>::hasPrimKey = false;
     edadb::Cpp2SqlTypeTrait<edadb::Shadow<idb::IdbRect>>::hasPrimKey = false;
     edadb::Cpp2SqlTypeTrait<edadb::Shadow<idb::IdbViaMasterGenerate>>::hasPrimKey = false;
     edadb::Cpp2SqlTypeTrait<idb::IdbHalo>::hasPrimKey = false;
     edadb::Cpp2SqlTypeTrait<edadb::Shadow<idb::IdbRouteHalo>>::hasPrimKey = false;
-
 } // initPrimKeys
 
 

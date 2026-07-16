@@ -120,11 +120,11 @@ Primary-key audit:
 
 当前 `readIdbGCellGrid()`：
 
-- Code: `src/database/manager/builder/def_builder/def_read_edadb.cpp:431`
-- Clear active gcell grids: `src/database/manager/builder/def_builder/def_read_edadb.cpp:439`
-- EDADB read op: `src/database/manager/builder/def_builder/def_read_edadb.cpp:441`
-- EDADB read loop: `src/database/manager/builder/def_builder/def_read_edadb.cpp:444`
-- Add to active list: `src/database/manager/builder/def_builder/def_read_edadb.cpp:457`
+- Code: `src/database/manager/builder/def_builder/def_read_edadb.cpp:432`
+- Clear active gcell grids: `src/database/manager/builder/def_builder/def_read_edadb.cpp:440`
+- EDADB read op: `src/database/manager/builder/def_builder/def_read_edadb.cpp:442`
+- EDADB read loop: `src/database/manager/builder/def_builder/def_read_edadb.cpp:445-447`
+- Add to active list: `src/database/manager/builder/def_builder/def_read_edadb.cpp:458`
 
 - `gcell_grid_list->clear()` 清空旧数据。
 - 使用 `makeReadAllOp<IdbGCellGrid>()` 循环读取 direct rows。

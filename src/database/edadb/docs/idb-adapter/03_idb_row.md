@@ -57,7 +57,7 @@ TABLE4CLASS(edadb::Shadow<idb::IdbRow>, "iRow", (_name_sd, _order_sd, _site_name
 
 Schema / init 代码位置：
 
-- Dormant `IdbSite` table macro: `src/database/edadb/idb/edadb_idb_schema.h:45`
+- Dormant `IdbSite` table macro: `src/database/edadb/idb/edadb_idb_schema.h:46`
 - `TABLE4SHADOW(idb::IdbRow)`: `src/database/edadb/idb/edadb_idb_schema.h:50`
 - `iRow` table macro: `src/database/edadb/idb/edadb_idb_schema.h:51`
 - Primary-key setup: `src/database/edadb/idb/edadb_idb_init.cpp:21`
@@ -85,10 +85,10 @@ Primary-key audit:
 
 | 原始 `DefWrite` 执行顺序 | EDADB write / `toShadow` 对应 | DEF 域 / iDB 变量 / EDADB 域 |
 | --- | --- | --- |
-| 1. `write_row()` 按 `IdbRows::_row_list` 顺序遍历，输出 row name，见 `def_write.cpp:437-449` | `writeIdbRow()` 按 vector index 构造 shadow，`toShadow()` 保存 `_name_sd/_order_sd`，见 `def_write_edadb.cpp:210-229`, `shadow_idb_row.h:17-25` | `ROW <name>` / `IdbRow::_name`, `IdbRows::_row_list` order / `_name_sd`, `_order_sd` |
-| 2. 输出 site name 和 site orientation，见 `def_write.cpp:447-451` | 不存储完整 `IdbSite`；flatten 为 `_site_name_sd/_site_orient_sd`，见 `shadow_idb_row.h:26-27` | site/orient / `IdbRow::_site->_name/_orient` / `_site_name_sd`, `_site_orient_sd` |
-| 3. 输出 origin x/y，见 `def_write.cpp:449-451` | flatten original coordinate，见 `shadow_idb_row.h:28-29` | origin / `IdbRow::_original_coordinate` / `_origin_x_sd`, `_origin_y_sd` |
-| 4. 输出 `DO/BY/STEP`，见 `def_write.cpp:449-451` | 保存 row count 和 step scalars，见 `shadow_idb_row.h:30-33` | `DO/BY/STEP` / `_row_num_x/_row_num_y/_step_x/_step_y` / `_row_num_x_sd/_row_num_y_sd/_step_x_sd/_step_y_sd` |
+| 1. `write_row()` 按 `IdbRows::_row_list` 顺序遍历并输出 row record，见 `def_write.cpp:437-457`；实际字段输出见 `def_write.cpp:446-451` | `writeIdbRow()` 按 vector index 构造 shadow 并写入，见 `def_write_edadb.cpp:210-235`；`toShadow()` 保存 `_name_sd/_order_sd`，见 `shadow_idb_row.h:17-33` | `ROW <name>` / `IdbRow::_name`, `IdbRows::_row_list` order / `_name_sd`, `_order_sd` |
+| 2. 输出 site name 和 site orientation，见 `def_write.cpp:446-451` | 不存储完整 `IdbSite`；flatten 为 `_site_name_sd/_site_orient_sd`，见 `shadow_idb_row.h:26-27` | site/orient / `IdbRow::_site->_name/_orient` / `_site_name_sd`, `_site_orient_sd` |
+| 3. 输出 origin x/y，见 `def_write.cpp:446-451` | flatten original coordinate，见 `shadow_idb_row.h:28-29` | origin / `IdbRow::_original_coordinate` / `_origin_x_sd`, `_origin_y_sd` |
+| 4. 输出 `DO/BY/STEP`，见 `def_write.cpp:446-451` | 保存 row count 和 step scalars，见 `shadow_idb_row.h:30-33` | `DO/BY/STEP` / `_row_num_x/_row_num_y/_step_x/_step_y` / `_row_num_x_sd/_row_num_y_sd/_step_x_sd/_step_y_sd` |
 
 ### Original DEF Read Flow
 
@@ -96,7 +96,7 @@ Primary-key audit:
 | --- | --- | --- |
 | 1. `parse_row()` 在 row list 中 append 新 row，见 `def_read.cpp:807-816` | `readIdbRow()` 先 reset list，再使用 `ORDER BY _order_sd` 读取，见 `def_read_edadb.cpp:324-344` | row record/order / `IdbRows::_row_list` / `_order_sd` |
 | 2. 设置 name 和 origin，见 `def_read.cpp:818-819` | `fromShadow()` 恢复 `_name_sd` 和 origin scalars，见 `shadow_idb_row.h:38-47` | `ROW <name> x y` / `IdbRow::_name/_original_coordinate` / `_name_sd`, `_origin_x_sd`, `_origin_y_sd` |
-| 3. 按 site name 取 LEF site，clone row-local site，设置 site/row orient，见 `def_read.cpp:821-826` | builder 按 `_site_name_sd` 获取 LEF site、clone，并用 `_site_orient_sd` 设置两处 orient，见 `def_read_edadb.cpp:353-367` | site/orient / `IdbRow::_site`, `_orient` / `_site_name_sd`, `_site_orient_sd` |
+| 3. 按 site name 取 LEF site，clone row-local site，设置 site/row orient，见 `def_read.cpp:821-826` | builder 按 `_site_name_sd` 获取 LEF site、clone，并用 `_site_orient_sd` 设置两处 orient，见 `def_read_edadb.cpp:356-368` | site/orient / `IdbRow::_site`, `_orient` / `_site_name_sd`, `_site_orient_sd` |
 | 4. `hasDo()` 时恢复 DO/BY，`hasDoStep()` 时恢复 STEP，见 `def_read.cpp:828-835` | `fromShadow()` 直接恢复四个 scalar，见 `shadow_idb_row.h:47-50` | `DO/BY/STEP` / `_row_num_x/_row_num_y/_step_x/_step_y` / `_row_num_x_sd/_row_num_y_sd/_step_x_sd/_step_y_sd` |
 | 5. 最后计算 bbox，见 `def_read.cpp:837` | site 和 scalar 恢复后调同一 `set_bounding_box()`，再 append row，见 `def_read_edadb.cpp:368-370` | computed bbox / `IdbRow::_bounding_box` / 不存储，读时计算 |
 
@@ -126,7 +126,7 @@ schema 文件中保留但休眠 `TABLE4CLASS(idb::IdbSite, ...)`；当前 row ad
 
 - Code: `src/database/manager/builder/def_builder/def_write_edadb.cpp:210`
 - Row vector access: `src/database/manager/builder/def_builder/def_write_edadb.cpp:218`
-- Shadow conversion: `src/database/manager/builder/def_builder/def_write_edadb.cpp:221`
+- Shadow conversion: `src/database/manager/builder/def_builder/def_write_edadb.cpp:223`
 - EDADB insert: `src/database/manager/builder/def_builder/def_write_edadb.cpp:229`
 - `Shadow<IdbRow>::toShadow()`: `src/database/edadb/idb/shadow/shadow_idb_row.h:17`
 
@@ -141,13 +141,13 @@ schema 文件中保留但休眠 `TABLE4CLASS(idb::IdbSite, ...)`；当前 row ad
 
 当前 `readIdbRow()`：
 
-- Code: `src/database/manager/builder/def_builder/def_read_edadb.cpp:319`
-- Reset active rows: `src/database/manager/builder/def_builder/def_read_edadb.cpp:328`
-- Ordered query: `src/database/manager/builder/def_builder/def_read_edadb.cpp:330`
-- EDADB read loop: `src/database/manager/builder/def_builder/def_read_edadb.cpp:337`
-- Shadow restore: `src/database/manager/builder/def_builder/def_read_edadb.cpp:349`
-- LEF site clone: `src/database/manager/builder/def_builder/def_read_edadb.cpp:351`
-- Rebuild bounding box: `src/database/manager/builder/def_builder/def_read_edadb.cpp:363`
+- Code: `src/database/manager/builder/def_builder/def_read_edadb.cpp:324`
+- Reset active rows: `src/database/manager/builder/def_builder/def_read_edadb.cpp:333`
+- Ordered query: `src/database/manager/builder/def_builder/def_read_edadb.cpp:335-336`
+- EDADB read loop: `src/database/manager/builder/def_builder/def_read_edadb.cpp:342-344`
+- Shadow restore: `src/database/manager/builder/def_builder/def_read_edadb.cpp:353-354`
+- LEF site lookup/clone/orient rebuild: `src/database/manager/builder/def_builder/def_read_edadb.cpp:356-368`
+- Rebuild bounding box: `src/database/manager/builder/def_builder/def_read_edadb.cpp:368`
 - `Shadow<IdbRow>::fromShadow()`: `src/database/edadb/idb/shadow/shadow_idb_row.h:38`
 
 - `rows->reset()` 清空旧 row。

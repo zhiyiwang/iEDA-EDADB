@@ -83,7 +83,7 @@ Primary-key audit:
 
 | 原始 `DefWrite` 执行顺序 | EDADB write / `toShadow` 对应 | DEF 域 / iDB 变量 / EDADB 域 |
 | --- | --- | --- |
-| 1. `write_track_grid()` 按 root vector 遍历 anonymous `TRACKS` records，见 `def_write.cpp:362-371` | `writeIdbTrackGrid()` 按当前 vector 构造 shadow，但不存 root order；`primary_key` 只是 DB identity，见 `def_write_edadb.cpp:237-256`, `shadow_idb_track_grid.h:18-20` | `TRACKS` root / `IdbTrackGridList::_track_grid_list` / `iTrackGridSD.primary_key` |
+| 1. `write_track_grid()` 按 root vector 遍历 anonymous `TRACKS` records，见 `def_write.cpp:362-388`；实际遍历见 `def_write.cpp:371-384` | `writeIdbTrackGrid()` 按当前 vector 构造 shadow，但不存 root order；`primary_key` 只是 DB identity，见 `def_write_edadb.cpp:237-262`, `shadow_idb_track_grid.h:18`, `shadow_idb_track_grid.h:45-51` | `TRACKS` root / `IdbTrackGridList::_track_grid_list` / `iTrackGridSD.primary_key` |
 | 2. 输出 direction、start、DO count、STEP pitch，见 `def_write.cpp:372-375` | `toShadow()` 保存 `_track_num_sd` 和 inline `_track_sd`，见 `shadow_idb_track_grid.h:20-25` | `TRACKS <dir> <start> DO <num> STEP <pitch>` / `IdbTrack::_direction/_start/_pitch`, `IdbTrackGrid::_track_num` / `_track_sd`, `_track_num_sd` |
 | 3. 按 layer vector 顺序输出 layer names，见 `def_write.cpp:377-383` | 将 non-owning `IdbLayer*` 转为有序 `_layer_name_vec_sd`，见 `shadow_idb_track_grid.h:26-29` | `LAYER <names>` / `IdbTrackGrid::_layer_list` / `_layer_name_vec_sd` |
 
@@ -122,7 +122,7 @@ Primary-key audit:
 
 - Code: `src/database/manager/builder/def_builder/def_write_edadb.cpp:237`
 - Track-grid vector access: `src/database/manager/builder/def_builder/def_write_edadb.cpp:246`
-- Shadow conversion: `src/database/manager/builder/def_builder/def_write_edadb.cpp:248`
+- Shadow conversion: `src/database/manager/builder/def_builder/def_write_edadb.cpp:250`
 - EDADB insert: `src/database/manager/builder/def_builder/def_write_edadb.cpp:256`
 - `Shadow<IdbTrackGrid>::toShadow()`: `src/database/edadb/idb/shadow/shadow_idb_track_grid.h:20`
 
@@ -137,12 +137,12 @@ Primary-key audit:
 
 当前 `readIdbTrackGrid()`：
 
-- Code: `src/database/manager/builder/def_builder/def_read_edadb.cpp:374`
-- Reset active track grids: `src/database/manager/builder/def_builder/def_read_edadb.cpp:383`
-- EDADB read op: `src/database/manager/builder/def_builder/def_read_edadb.cpp:385`
-- EDADB read loop: `src/database/manager/builder/def_builder/def_read_edadb.cpp:391`
-- Shadow restore: `src/database/manager/builder/def_builder/def_read_edadb.cpp:401`
-- Layer lookup / back link rebuild: `src/database/manager/builder/def_builder/def_read_edadb.cpp:403`
+- Code: `src/database/manager/builder/def_builder/def_read_edadb.cpp:379`
+- Reset active track grids: `src/database/manager/builder/def_builder/def_read_edadb.cpp:388`
+- EDADB read op: `src/database/manager/builder/def_builder/def_read_edadb.cpp:390`
+- EDADB read loop: `src/database/manager/builder/def_builder/def_read_edadb.cpp:394-396`
+- Shadow restore: `src/database/manager/builder/def_builder/def_read_edadb.cpp:405-406`
+- Layer lookup / back link rebuild: `src/database/manager/builder/def_builder/def_read_edadb.cpp:408-420`
 - `Shadow<IdbTrackGrid>::fromShadow()`: `src/database/edadb/idb/shadow/shadow_idb_track_grid.h:33`
 
 - `track_grid_list->reset()` 清空旧 track grid。
