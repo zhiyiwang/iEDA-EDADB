@@ -280,6 +280,20 @@ check_design_sql() {
         "0" "$name excludes non-DEF IdbUnits fields"
 }
 
+check_die_polygon_sql() {
+    local name="$1"
+    local edadb_db="$2"
+
+    assert_eq "$(sql_value "$edadb_db" "select primary_key from iDieSD;")" \
+        "1" "$name singleton die owner key"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_vec_idx) from iDieSD_points_sd_iCoordSD;")" \
+        "5,4,3,2,1,0" "$name perturbed unordered die-point fetch order"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_vec_idx || ':' || _x_sd || ',' || _y_sd, ';') from (select _vec_idx, _x_sd, _y_sd from iDieSD_points_sd_iCoordSD order by _vec_idx);")" \
+        "0:0,0;1:149960,0;2:149960,75064;3:75000,75064;4:75000,150128;5:0,150128" "$name ordered polygon die points"
+    assert_eq "$(sql_value "$edadb_db" "select pk from pragma_table_info('iDieSD_points_sd_iCoordSD') where name='_vec_idx';")" \
+        "0" "$name die-point vector index is not primary key"
+}
+
 generate_design_fields_fixture() {
     local input="$1"
     local output="$2"
@@ -297,6 +311,18 @@ generate_design_fallback_fixture() {
     local output="$2"
     awk '
         !/^VERSION / && !/^BUSBITCHARS / && !/^UNITS DISTANCE MICRONS / { print }
+    ' "$input" >"$output"
+}
+
+generate_die_polygon_fixture() {
+    local input="$1"
+    local output="$2"
+    awk '
+        /^DIEAREA / {
+            print "DIEAREA ( 0 0 ) ( 149960 0 ) ( 149960 75064 ) ( 75000 75064 ) ( 75000 150128 ) ( 0 150128 ) ;"
+            next
+        }
+        { print }
     ' "$input" >"$output"
 }
 
@@ -503,6 +529,17 @@ WHERE iPinSD__pin_name_sd = 'clk';
 SQL
 }
 
+perturb_die_point_query_order() {
+    local edadb_db="$1"
+
+    sqlite3 "$edadb_db" <<'SQL'
+CREATE TEMP TABLE die_points_reversed AS
+SELECT * FROM iDieSD_points_sd_iCoordSD ORDER BY _vec_idx DESC;
+DELETE FROM iDieSD_points_sd_iCoordSD;
+INSERT INTO iDieSD_points_sd_iCoordSD SELECT * FROM die_points_reversed;
+SQL
+}
+
 run_case() {
     local name="$1"
     local input_def="$2"
@@ -526,6 +563,9 @@ run_case() {
 
     if [[ "$check_mode" == "pin_branches" ]]; then
         perturb_pin_child_query_order "$edadb_db"
+    fi
+    if [[ "$check_mode" == "die_polygon" ]]; then
+        perturb_die_point_query_order "$edadb_db"
     fi
 
     export OUTPUT_DEF="$edadb_def"
@@ -589,6 +629,9 @@ run_case() {
         design_fallback)
             check_design_sql "$name" "$edadb_db" "gcd|5.8|1000|[|]"
             ;;
+        die_polygon)
+            check_die_polygon_sql "$name" "$edadb_db"
+            ;;
         none)
             ;;
         *)
@@ -620,6 +663,7 @@ main() {
     local pin_branches_def="$OUT_DIR/fixtures/pin_branches.def"
     local design_fields_def="$OUT_DIR/fixtures/design_fields.def"
     local design_fallback_def="$OUT_DIR/fixtures/design_fallback.def"
+    local die_polygon_def="$OUT_DIR/fixtures/die_polygon.def"
     generate_aux_optional_fixture "$BASE_DEF" "$aux_def"
     generate_net_branch_fixture "$ROUTED_DEF" "$net_branch_def"
     generate_pin_derived_fixture "$BASE_DEF" "$pin_derived_def"
@@ -627,6 +671,7 @@ main() {
     generate_pin_branches_fixture "$aux_def" "$pin_branches_def"
     generate_design_fields_fixture "$BASE_DEF" "$design_fields_def"
     generate_design_fallback_fixture "$BASE_DEF" "$design_fallback_def"
+    generate_die_polygon_fixture "$BASE_DEF" "$die_polygon_def"
 
     echo "EDADB regression output dir: $OUT_DIR"
     echo "iEDA binary: $IEDA_BIN"
@@ -638,10 +683,12 @@ main() {
     echo "generated fixture: $pin_branches_def"
     echo "generated fixture: $design_fields_def"
     echo "generated fixture: $design_fallback_def"
+    echo "generated fixture: $die_polygon_def"
 
     run_case "default_ipl" "$BASE_DEF" "default"
     run_case "design_fields" "$design_fields_def" "design_fields"
     run_case "design_fallback" "$design_fallback_def" "design_fallback"
+    run_case "die_polygon" "$die_polygon_def" "die_polygon"
     run_case "aux_optional" "$aux_def" "aux"
     run_case "pin_derived" "$pin_derived_def" "pin_derived"
     run_case "pin_writer" "$pin_writer_def" "pin_writer"

@@ -198,7 +198,10 @@ int32_t DefWriteEdadb::writeIdbDie(void) {
     }
 
     edadb::Shadow<idb::IdbDie> die_sd;
-    die_sd.toShadow(die);
+    if (!die_sd.toShadow(die)) {
+        std::cerr << "DefWriteEdadb::writeIdbDie failed to convert shadow" << std::endl;
+        return kDbFail;
+    }
 
     EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] writeIdbDie insert point_count="
               << die->get_points().size() << std::endl;

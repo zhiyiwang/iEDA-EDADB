@@ -298,8 +298,6 @@ bool DefReadEdadb::readIdbDie(void) {
         return false;
     }
 
-    die->reset();
-
     auto die_reader = edadb::makeReadAllOp<edadb::Shadow<idb::IdbDie>>();
     edadb::Shadow<idb::IdbDie> die_sd;
     const int read_count = edadb::readNext<edadb::Shadow<idb::IdbDie>>(die_reader, &die_sd);
@@ -308,6 +306,7 @@ bool DefReadEdadb::readIdbDie(void) {
         return false;
     }
 
+    die->reset();
     if (!die_sd.fromShadow(die)) {
         std::cerr << "DefReadEdadb::readIdbDie failed to restore shadow" << std::endl;
         return false;
