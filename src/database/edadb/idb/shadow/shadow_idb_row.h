@@ -8,6 +8,7 @@
 
 #include "edadb.h"
 #include "database/data/design/db_layout/IdbRow.h"
+#include "../edadb_idb_helper.h"
 
 namespace edadb {
 
@@ -16,10 +17,10 @@ class Shadow<idb::IdbRow> {
  public:
   bool toShadow(idb::IdbRow* obj, const uint32_t* idx_ptr = nullptr)
   {
-    assert(obj != nullptr);
-    assert(idx_ptr != nullptr);
-    assert(obj->get_site() != nullptr);
-    assert(obj->get_original_coordinate() != nullptr);
+    if (obj == nullptr || idx_ptr == nullptr || obj->get_site() == nullptr
+        || obj->get_original_coordinate() == nullptr) {
+      return false;
+    }
 
     _order_sd = *idx_ptr;
     _name_sd = obj->get_name();
@@ -37,20 +38,37 @@ class Shadow<idb::IdbRow> {
 
   bool fromShadow(idb::IdbRow* obj, uint32_t* idx_ptr = nullptr)
   {
-    assert(obj != nullptr);
+    if (obj == nullptr) {
+      return false;
+    }
+
+    idb::IdbLayout* layout = idb::edadb_adapter::EdadbIdbHelper::getIdbLayout();
+    idb::IdbSites* sites = layout == nullptr ? nullptr : layout->get_sites();
+    idb::IdbSite* lef_site = sites == nullptr ? nullptr : sites->add_site_list(_site_name_sd);
+    if (lef_site == nullptr) {
+      return false;
+    }
+
+    idb::IdbSite* row_site = lef_site->clone();
+    if (row_site == nullptr) {
+      return false;
+    }
+
     if (idx_ptr != nullptr) {
       *idx_ptr = static_cast<uint32_t>(_order_sd);
     }
 
     obj->set_name(_name_sd);
     obj->set_original_coordinate(_origin_x_sd, _origin_y_sd);
+    row_site->set_orient(_site_orient_sd);
+    obj->set_site(row_site);
+    obj->set_orient(row_site->get_orient());
     obj->set_row_num_x(_row_num_x_sd);
     obj->set_row_num_y(_row_num_y_sd);
     obj->set_step_x(_step_x_sd);
     obj->set_step_y(_step_y_sd);
-    obj->set_orient(_site_orient_sd);
 
-    return true;
+    return obj->set_bounding_box();
   }
 
  public:

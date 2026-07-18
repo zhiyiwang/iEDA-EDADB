@@ -227,7 +227,10 @@ int32_t DefWriteEdadb::writeIdbRow(void) {
     row_sd_vec.reserve(row_vec.size());
     for (uint32_t row_idx = 0; row_idx < row_vec.size(); ++row_idx) {
         row_sd_vec.emplace_back();
-        row_sd_vec.back().toShadow(row_vec[row_idx], &row_idx);
+        if (!row_sd_vec.back().toShadow(row_vec[row_idx], &row_idx)) {
+            std::cerr << "DefWriteEdadb::writeIdbRow failed to convert row shadow" << std::endl;
+            return kDbFail;
+        }
     }
 
     EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] writeIdbRow insert row_count="

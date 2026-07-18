@@ -113,6 +113,14 @@ check_default_sql() {
         "ROW_0|unit|9600,9990|271|1|480|0" "$name row fields"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || ':' || _name_sd, ',') from (select _order_sd, _name_sd from iRow order by _order_sd limit 5);")" \
         "0:ROW_0,1:ROW_1,2:ROW_2,3:ROW_3,4:ROW_4" "$name row order prefix"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd, ',') from (select _order_sd from iRow order by rowid limit 5);")" \
+        "38,37,36,35,34" "$name row table physical order was perturbed"
+    assert_eq "$(sql_value "$edadb_db" "select pk from pragma_table_info('iRow') where name='_name_sd';")" \
+        "1" "$name row name is primary key"
+    assert_eq "$(sql_value "$edadb_db" "select pk from pragma_table_info('iRow') where name='_order_sd';")" \
+        "0" "$name row order is not primary key"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from sqlite_master where type='table' and name='iSite';")" \
+        "0" "$name row does not persist an iSite table"
     assert_eq "$(sql_value "$edadb_db" "select count(*) from pragma_table_info('iTrackGridSD') where name='_order_sd';")" \
         "0" "$name track grid has no root order column"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_track_sd__direction || ':' || _track_sd__start || ':' || _track_num_sd || ':' || _track_sd__pitch || ':' || value, ';') from (select g._track_sd__direction, g._track_sd__start, g._track_num_sd, g._track_sd__pitch, v.value from iTrackGridSD g join iTrackGridSD__layer_name_vec_sd___edadb_primitive_vector v on v.iTrackGridSD_primary_key=g.primary_key and v.__edadb_vec_idx=0 order by g._track_sd__direction, g._track_sd__start, g._track_num_sd, g._track_sd__pitch, v.value);")" \
@@ -540,6 +548,17 @@ INSERT INTO iDieSD_points_sd_iCoordSD SELECT * FROM die_points_reversed;
 SQL
 }
 
+perturb_row_query_order() {
+    local edadb_db="$1"
+
+    sqlite3 "$edadb_db" <<'SQL'
+CREATE TEMP TABLE rows_reversed AS
+SELECT * FROM iRow ORDER BY _order_sd DESC;
+DELETE FROM iRow;
+INSERT INTO iRow SELECT * FROM rows_reversed;
+SQL
+}
+
 run_case() {
     local name="$1"
     local input_def="$2"
@@ -566,6 +585,9 @@ run_case() {
     fi
     if [[ "$check_mode" == "die_polygon" ]]; then
         perturb_die_point_query_order "$edadb_db"
+    fi
+    if [[ "$check_mode" == "default" || "$check_mode" == "aux" || "$check_mode" == "pin_derived" ]]; then
+        perturb_row_query_order "$edadb_db"
     fi
 
     export OUTPUT_DEF="$edadb_def"

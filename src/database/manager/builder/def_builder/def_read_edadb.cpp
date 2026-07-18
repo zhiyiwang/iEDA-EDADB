@@ -320,10 +320,9 @@ bool DefReadEdadb::readIdbDie(void) {
 
 bool DefReadEdadb::readIdbRow(void) {
     IdbLayout* layout = _def_service->get_layout();
-    IdbSites* sites = layout->get_sites();
     IdbRows* rows = layout->get_rows();
-    if (sites == nullptr || rows == nullptr) {
-        std::cerr << "DefReadEdadb::readIdbRow failed, sites or rows is nullptr!" << std::endl;
+    if (rows == nullptr) {
+        std::cerr << "DefReadEdadb::readIdbRow failed, rows is nullptr!" << std::endl;
         return false;
     }
 
@@ -348,21 +347,12 @@ bool DefReadEdadb::readIdbRow(void) {
         }
 
         IdbRow* row = new IdbRow();
-        row_sd.fromShadow(row);
-
-        IdbSite* lef_site = sites->add_site_list(row_sd._site_name_sd);
-        if (lef_site == nullptr) {
+        if (!row_sd.fromShadow(row)) {
             delete row;
-            std::cerr << "DefReadEdadb::readIdbRow failed, lef site is nullptr: "
-                      << row_sd._site_name_sd << std::endl;
+            std::cerr << "DefReadEdadb::readIdbRow failed to restore row shadow: "
+                      << row_sd._name_sd << std::endl;
             return false;
         }
-
-        IdbSite* site = lef_site->clone();
-        site->set_orient(row_sd._site_orient_sd);
-        row->set_site(site);
-        row->set_orient(row_sd._site_orient_sd);
-        row->set_bounding_box();
 
         rows->add_row_list(row);
         ++row_count;
