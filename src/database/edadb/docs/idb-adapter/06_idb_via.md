@@ -15,7 +15,7 @@
 - iEDA root container：`IdbVias::_via_list`。
 - root-vector order 等级：Level D，当前点工具主要按 via name 查找 `IdbVias::_via_list`，没有发现依赖 root index/order。
 - root identity 约束：via name 是 DEF-visible identity，当前 direct `IdbVia::_name` 是 EDADB root PK；禁止用 vector order index 作为 PK。
-- nested vector 约束：fixed via 的 rect vector 是 DEF `RECT` 输入几何，必须通过 `_vec_idx` 恢复顺序。fixed layer-shape vector 当前不存 index，bottom/cut/top 语义通过 layer type/order 重建；两者都只随 root via 整体移动，不参与 D-level root sort。
+- nested vector 约束：fixed via 的 layer-shape 与 rect vectors 都是 DEF 输入几何，分别通过 `Shadow<IdbLayerShape>::_vec_idx` 和 `Shadow<IdbRect>::_vec_idx` 恢复顺序；它们只随 root via 整体移动，不参与 D-level root sort。
 
 ## Original Write Semantics
 
@@ -106,13 +106,13 @@ Schema 与 order/index 约束的关系：
 - 依据 `src/database/edadb/docs/def-ieda-mapping-and-order.md`，`VIAS` 映射到 `IdbVias::_via_list`，等级为 Level D。
 - 当前 adapter 不保存 root `_order_sd`；如果 DB 读回顺序不同，测试应通过 Level-D normalized diff 判断语义一致性。
 - `IdbVia::_name` 是 direct table 第一列和 root identity；它不表达 vector order。
-- fixed via 的 `fixed_layer_shape_list_sd` 是 nested vector，由 `TABLE4CLASS_WVEC` child table 保存。当前 `Shadow<IdbLayerShape>` 没有保存该 layer-shape vector 的 index；恢复后的 bottom/cut/top 语义由 layer type/order lookup 确定。layer shape 内部的 rect vector 则使用 `Shadow<IdbRect>::_vec_idx` 显式恢复 nested order。
+- fixed via 的 `fixed_layer_shape_list_sd` 是 nested vector，由 `TABLE4CLASS_WVEC` child table 保存。`Shadow<IdbLayerShape>` 使用独立 `primary_key` 关联 Rect children，并用 `_vec_idx` 恢复 layer record 顺序；内部 Rect vector 使用 `Shadow<IdbRect>::_vec_idx`。
 
 Primary-key audit:
 
 - `initPrimKeys()` 没有关闭 `IdbVia` 的 primary-key 行为；`iVia` 使用 `_name` 作为 root PK。
 - `initPrimKeys()` 关闭 `Shadow<IdbRect>` 的 primary-key 行为，rect 作为 vector child 依赖 parent FK + `_vec_idx` 表达 child order。
-- `Shadow<IdbViaMaster>` 保留 EDADB 默认 PK 行为，因为它 owns `fixed_layer_shape_list_sd`；fixed via 的 layer-shape child rows 需要稳定 parent row。
+- `Shadow<IdbViaMaster>` 保留 EDADB 默认 PK 行为，因为它 owns `fixed_layer_shape_list_sd`；fixed via 的 layer-shape child rows 需要稳定 parent row。Fixed Via grammar 允许多个 `+ RECT <same-layer>` records，因此 layer name 只是 lookup reference，不能替代每个 `Shadow<IdbLayerShape>` 的 synthetic owner key。
 - `Shadow<IdbLayerShape>` 保留默认 PK 行为，因为它 owns `_rect_list_sd`；rect child rows 需要稳定 parent row。
 - `Shadow<IdbViaMasterGenerate>` 当前是 `Shadow<IdbViaMaster>::_master_generate_sd` 的 nested scalar value view，不作为 root/vector table 单独使用；因此 `initPrimKeys()` 显式关闭其 primary key，避免把 `_rule_name_sd` 误当成独立 via-generate identity。
 - `initReadDb()` / `initWriteDb()` 都先调用 `initPrimKeys()`，再调用 `initAllTables()`，因此 read/write 的 table metadata 一致。
@@ -162,7 +162,7 @@ Nested member 说明：
 - `_pattern_name_sd` 保存 DEF `+ PATTERN` 字符串；read 阶段通过 `set_patttern()` 重建 pattern object。
 - cut rect list、cut bounding box、bottom/cut/top layer shape 不直接保存为 generate shadow 字段，而是由 `fromShadow()` 按原始 `parse_via()` 的 row/col、spacing、origin、pattern 逻辑重算。
 - `Shadow<IdbViaMaster>` 是 `_master_instance` 的 storage view：generate via 走 `_master_generate_sd`，fixed via 走 `fixed_layer_shape_list_sd`。
-- fixed via 的 `fixed_layer_shape_list_sd` 是 vector child，但当前 `Shadow<IdbLayerShape>` 不记录 vector index；恢复 bottom/cut/top 时依赖 layer type/order，而不依赖 layer-shape vector index。layer-shape 内部 rect 顺序由 `IdbRectSD::_vec_idx` 保证，不由 generate shadow 处理。
+- fixed via 的 `fixed_layer_shape_list_sd` 通过 `Shadow<IdbLayerShape>::_vec_idx` 保持 DEF layer record 顺序；bottom/cut/top 语义仍由 layer type/order lookup 确定。layer-shape 内部 rect 顺序由 `IdbRectSD::_vec_idx` 保证。
 - `Shadow<IdbLayerShape>` 保存 layer name 而不是 raw `IdbLayer*`；read 阶段通过 `EdadbIdbHelper::findIdbLayerByName()` 恢复 pointer。
 
 ## EDADB Write Path
@@ -253,7 +253,7 @@ Nested member 说明：
 - `iVia` 中 `fixed_rect_probe._master_instance__type_sd=2`，即 `kFixed`；四个 generated via 没有写 fixed layer/rect child rows。
 - fixed layer child rows 为 `met1`、`met2`、`via`；rect child rows 分别为 `met1[0]=(-120,-130,120,130)`、`met2[0]=(-140,-150,140,150)`、`via[0]=(-80,-80,-10,-10)`、`via[1]=(10,10,80,80)`。
 - GDB 在 `readIdbVia()` append 前检查恢复对象：`_master_fixed_list` 为 `met1(1 rect)`、`met2(1 rect)`、`via(2 rect)`；公共 shape 为 bottom=`met1(1 rect)`、cut=`via(2 rect)`、top=`met2(1 rect)`，坐标与输入完全一致。
-- 输入 fixed layer record 顺序是 `met1, via, met2`，DB 读回后的 `_master_fixed_list` 顺序是 `met1, met2, via`。这是 child table 无 vector index 导致的顺序变化；`get_master_fixed()` 按 routing layer order 和 cut layer type 选择 bottom/cut/top，因此公共 shape 语义不受影响。cut layer 内两个 rect 通过 `_vec_idx=0,1` 保持原顺序。
+- 原测试曾观察到 fixed layer record 因 child table fetch order 从 `met1, via, met2` 变为 `met1, met2, via`。现 `Shadow<IdbLayerShape>::_vec_idx` 已修复该问题；`get_master_fixed()` 仍按 routing layer order/cut layer type 选择 bottom/cut/top，Rect 则继续按各自 `_vec_idx` 恢复。
 
 该测试确认 EDADB 的 fixed rect 写入、读取、owner-layer 恢复和公共 via-shape 重建正确；但不能用最终 DEF 文本验证 fixed record，因为当前原始 `DefWrite::write_via()` 不输出 fixed `LAYER/RECT`。
 
@@ -261,7 +261,7 @@ Nested member 说明：
 
 - 原始 writer 的 section count 使用全部 via 数量，但只输出 generated via；存在 declared count 大于实际 record 数的问题。EDADB 会存储并恢复 fixed/generated 两类 root via，但最终 DEF 仍受原始 writer 限制。
 - generated via 的 `_cut_rect_list` 是 read-time 派生数据，fixed via 的 `IdbLayerShape::_rect_list` 是 DEF 输入数据；两者不能使用同一套持久化策略。
-- fixed `fixed_layer_shape_list_sd` 当前未显式保存 layer-shape vector index；内部 rect vector 已由 `IdbRectSD::_vec_idx` 保序。如果未来原始 writer 增加 fixed `LAYER/RECT` 输出，需再确认 layer record 顺序是否需要显式保存。
+- fixed `fixed_layer_shape_list_sd` 与内部 Rect vector 现均显式保存 index；后续若原始 writer 增加 fixed `LAYER/RECT` 输出，可直接按恢复后的 nested 顺序输出。
 - 原始 writer 不输出 `ORIGIN` / `OFFSET`，但 parser 和 EDADB shadow 会保存并参与 geometry 重建；这有利于内部几何一致性，但 DEF 文本输出仍跟随原始 writer。
 - 原始 writer 对空 via list 返回失败，EDADB writer 对空 vector 返回成功。
 - 若需要强保证 root via list order，不能用 order index 做 PK；应另行设计 identity + order 的存储方案。

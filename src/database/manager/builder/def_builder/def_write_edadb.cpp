@@ -382,7 +382,14 @@ int32_t DefWriteEdadb::writeIdbPin(void) {
     pin_sd_vec.reserve(pin_vec.size());
     for (uint32_t pin_idx = 0; pin_idx < pin_vec.size(); ++pin_idx) {
         auto* pin_sd = new edadb::Shadow<idb::IdbPin>();
-        pin_sd->toShadow(pin_vec[pin_idx], &pin_idx);
+        if (!pin_sd->toShadow(pin_vec[pin_idx], &pin_idx)) {
+            delete pin_sd;
+            for (auto* stored_pin_sd : pin_sd_vec) {
+                delete stored_pin_sd;
+            }
+            std::cerr << "DefWriteEdadb::writeIdbPin failed to convert pin shadow" << std::endl;
+            return kDbFail;
+        }
         pin_sd_vec.emplace_back(pin_sd);
     }
 

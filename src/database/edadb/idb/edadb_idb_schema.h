@@ -71,7 +71,7 @@ TABLE4CLASS(edadb::Shadow<idb::IdbRect>, "IdbRectSD", (_vec_idx, _lx_sd, _ly_sd,
 
 #include "shadow/shadow_idb_layer_shape.h"
 TABLE4SHADOW_WVEC(idb::IdbLayerShape);
-TABLE4CLASS_WVEC (edadb::Shadow<idb::IdbLayerShape>, "iLayerShapeSD", (_layer_name_sd, _type_sd), (_rect_list_sd));
+TABLE4CLASS_WVEC (edadb::Shadow<idb::IdbLayerShape>, "iLayerShapeSD", (primary_key, _vec_idx, _layer_name_sd, _type_sd), (_rect_list_sd));
 
 #include "shadow/shadow_idb_via_master.h"
 TABLE4SHADOW_WVEC(idb::IdbViaMaster);
@@ -91,13 +91,13 @@ TABLE4CLASS(edadb::Shadow<idb::IdbRouteHalo>, "iRouteHaloSD", (_route_distance_s
 TABLE4CLASS(edadb::Shadow<idb::IdbInstance>, "iInstSD", (_name_sd, _order_sd, _type_sd, _status_sd, _orient_sd, _weight_sd, _cell_master_name_sd, _coordinate_sd, _halo_sd, _route_halo_sd, _region_name_sd));
 
 #include "shadow/shadow_idb_port.h"
-TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbPort>, "iPortSD", (primary_key, _class_sd, _orient_sd, _placement_status_sd, _coordinate_sd), (_layer_shape_list_sd));
+TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbPort>, "iPortSD", (primary_key, _vec_idx, _orient_sd, _placement_status_sd, _coordinate_sd), (_layer_shape_list_sd));
 
 #include "shadow/shadow_idb_term.h"
-TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbTerm>, "iTermSD", (_name_sd, _direction_sd, _type_sd, _shape_sd, _placement_status_sd, _has_port_sd, _is_special_net_sd, _is_instance_sd), (_port_list_sd));
+TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbTerm>, "iTermSD", (_direction_sd, _type_sd, _has_port_sd, _is_special_net_sd), (_port_list_sd));
 
 #include "shadow/shadow_idb_pin.h"
-TABLE4CLASS(edadb::Shadow<idb::IdbPin>, "iPinSD", (_pin_name_sd, _order_sd, _net_name_sd, _io_term_sd, _average_coordinate_sd, _location_sd, _orient_sd, _is_io_pin_sd, _is_special_net_sd, _layer_num_sd));
+TABLE4CLASS(edadb::Shadow<idb::IdbPin>, "iPinSD", (_pin_name_sd, _order_sd, _net_name_sd, _io_term_sd, _no_port_location_sd, _no_port_orient_sd, _no_port_placement_status_sd));
 
 #include "shadow/shadow_idb_blockage.h"
 TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbBlockage>, "iBlockageSD", (primary_key, _instance_name_sd, _is_pushdown_sd, _type_sd, _layer_name_sd, _is_except_pgnet_sd), (_rect_list_sd));

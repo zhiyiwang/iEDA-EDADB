@@ -8,8 +8,6 @@
 #include "edadb.h"
 #include "edadb_idb_schema.h"
 
-#include <algorithm>
-
 namespace idb {
 
 #if EDADB_OUTPUT_DEBUG
@@ -827,62 +825,13 @@ bool DefReadEdadb::readIdbPin(void) {
             return false;
         }
 
-        edadb::Shadow<idb::IdbTerm>* term_sd = pin_sd._io_term_sd;
-        if (term_sd == nullptr) {
-            std::cerr << "DefReadEdadb::readIdbPin failed, term shadow is nullptr!" << std::endl;
+        IdbPin* pin = new IdbPin();
+        if (!pin_sd.fromShadow(pin)) {
+            delete pin;
+            std::cerr << "DefReadEdadb::readIdbPin failed to restore pin" << std::endl;
             return false;
         }
-
-        IdbPin* pin = pin_list->add_pin_list(nullptr);
-        pin_sd.fromShadow(pin);
-        IdbTerm* term = pin->get_term();
-
-        int32_t bounding_box_ll_x = INT_MAX;
-        int32_t bounding_box_ll_y = INT_MAX;
-        int32_t bounding_box_ur_x = INT_MIN;
-        int32_t bounding_box_ur_y = INT_MIN;
-        int32_t coordinate_x = 0;
-        int32_t coordinate_y = 0;
-        int32_t layer_num = 0;
-
-        for (edadb::Shadow<idb::IdbPort>* port_sd : term_sd->_port_list_sd) {
-            IdbPort* port = term->add_port(nullptr);
-            port_sd->fromShadow(port);
-
-            for (auto& layer_shape_sd : port_sd->_layer_shape_list_sd) {
-                IdbLayerShape* layer_shape = port->add_layer_shape();
-                if (!layer_shape_sd->fromShadow(layer_shape)) {
-                    std::cerr << "DefReadEdadb::readIdbPin failed to restore layer shape" << std::endl;
-                    return false;
-                }
-
-                if (!term_sd->_has_port_sd) {
-                    for (IdbRect* rect : layer_shape->get_rect_list()) {
-                        bounding_box_ll_x = std::min(bounding_box_ll_x, rect->get_low_x());
-                        bounding_box_ll_y = std::min(bounding_box_ll_y, rect->get_low_y());
-                        bounding_box_ur_x = std::max(bounding_box_ur_x, rect->get_high_x());
-                        bounding_box_ur_y = std::max(bounding_box_ur_y, rect->get_high_y());
-                        coordinate_x += rect->get_low_x() + rect->get_high_x();
-                        coordinate_y += rect->get_low_y() + rect->get_high_y();
-                        ++layer_num;
-                    }
-                }
-            }
-
-            if (!port->get_layer_shape().empty()) {
-                port->set_io_bounding_box();
-            }
-        }
-
-        if (term_sd->_has_port_sd) {
-            pin->set_port_layer_shape();
-        } else if (layer_num > 0) {
-            term->set_average_position(coordinate_x / (layer_num * 2),
-                                       coordinate_y / (layer_num * 2));
-            term->set_bounding_box(bounding_box_ll_x, bounding_box_ll_y,
-                                   bounding_box_ur_x, bounding_box_ur_y);
-            pin->set_bounding_box();
-        }
+        pin_list->add_pin_list(pin);
 
         ++pin_count;
     }

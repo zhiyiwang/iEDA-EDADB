@@ -152,12 +152,32 @@ Current uncovered or weakly covered areas:
   supporting evidence, not the primary goal.
 - Match original DEF semantics first: compare `DefWrite::write_xxx()` and
   `DefRead::parse_xxx()` before changing `writeIdbXXX/readIdbXXX`.
-- Adapter class documents use the two-table format established by
-  `src/database/edadb/docs/idb-adapter/14_idb_special_net.md`: one table follows
-  original `DefWrite` execution order, one follows original `DefRead` execution
-  order, and the third column records the DEF field, iDB member, and EDADB field.
-  Do not organize this mapping by shadow class or database-column order.
-- Persist the DEF storage view, not the whole C++ object graph.
+- Semantic sources of truth are the current branch's `DefWrite`, `DefRead`, relevant
+  iDB class/setter implementations, and LEF/DEF grammar. Old adapter code/docs are
+  hints only; never infer a field or branch from naming or assumed symmetry.
+- Review writer and parser independently, brace by brace. Writer predicates describe
+  output selection; parser state describes source fields, allocation, lookup, cross-level
+  synchronization, and derived calculations. Persist the writer's canonical DEF form,
+  then rebuild it with parser-equivalent control flow.
+- Adapter class documents use separate `Original DEF Write Mapping` and
+  `Original DEF Read Mapping` tables. Rows follow the original source `{}` / branch /
+  loop order, not shadow-class order, database-column order, or broad artificial stages.
+- Write rows record original brace, DEF output, `write/toShadow` correspondence, and
+  stored source. Read rows record original brace, `read/fromShadow` correspondence,
+  and whether the value is a DEF source, cross-level copy/synchronization, lookup, or
+  recomputation.
+- Persist the DEF storage view, not the whole C++ object graph. Store only parser-read
+  source fields plus required identity/order/references; rebuild computed/cache fields
+  in `fromShadow()` following the original parser sequence.
+- Classify every field as DEF source, branch/reference, cross-level synchronization, or
+  derived/cache. Persist the first two only when required; rebuild the latter two through
+  the same setters and in the same order as the original parser.
+- Persist the canonical DEF branch selected by the original writer. A stored branch
+  discriminator must rebuild the same state that the original parser would create after
+  reading that writer output. Hidden parser/iDB state omitted by the writer is normalized
+  unless a documented point-tool semantic requirement proves it must be retained.
+- Cross-level parser behavior must be explicit: document and implement which parent/child
+  supplies a value, where it is copied, and which brace triggers derived geometry/state.
 - Prefer direct mapping; use `Shadow<T>` only when direct mapping cannot express
   polymorphism, anonymous root identity, non-owning pointer/name-reference rebuild,
   nested vector owner/order, or a reduced DEF storage view.
@@ -171,6 +191,24 @@ Current uncovered or weakly covered areas:
   shadow store fields; read fills the shadow store fields, calls
   `fromShadow(cpp_ptr)`, then writes the rebuilt pointer/value back to the original
   member.
+- Every `Shadow<T>` specialization must keep the EDADB template signatures exactly:
+  `bool toShadow(T*, const uint32_t* idx_ptr = nullptr)` and
+  `bool fromShadow(T*, uint32_t* idx_ptr = nullptr)`. Do not add context parameters,
+  overloads, or alternate conversion entry points.
+- Pass extra conversion context only through ordinary getters/setters, adapter helpers,
+  or initialized lookup context. Such transient state is not mapped into the schema;
+  conversion failures must propagate through the bool return value.
+- For a shadow-owned `vector<Shadow<T>*>`, the owner shadow must pass each index
+  into the child `toShadow()`, persist `_vec_idx`, and restore/sort by that field
+  before rebuilding the logical vector. EDADB cannot infer order from SQLite fetch order.
+- Keep nested owner identity and order separate: synthetic `primary_key` links child
+  tables, while `_vec_idx` restores vector position. Never use `_vec_idx` as PK.
+- Do not add a synthetic PK when a natural name/ID is unique and stable in the actual
+  table/parent scope and can safely own child rows. Conversely, never assume a name is
+  unique: DEF allows repeated layer records under one Port/fixed Via, so layer name is a
+  reference, not `IdbLayerShape` identity; its synthetic PK remains necessary.
+- Keep builder methods thin: root query/insert, allocation/append, and error handling stay
+  in `readIdbT/writeIdbT`; nested conversion belongs in `toShadow/fromShadow`.
 - Never use vector order index as PK. Keep identity and order separate:
   `primary_key` or name for identity, `_order_sd` for root list order.
 - Primary-key rule: enable PK only for root identity or nested vector-owner storage
@@ -186,6 +224,21 @@ Current uncovered or weakly covered areas:
   _order_sd` because DEF `SLOTS` records are anonymous and raw roundtrip needs stable
   anonymous record output.
 - Update schema/init, builder read/write, DEF callbacks, regression SQL, and docs together.
+- Re-read current source and recheck every documented line number after code changes.
+  Line ranges must identify a real function or brace body, not a vague phase.
+- In Markdown tables, encode source `|` / `||` as `&#124;` / `&#124;&#124;`; otherwise
+  GitHub splits the code expression into table columns. Check table column counts and
+  run `git diff --check` before handoff.
+- Keep each class document concise and non-duplicative: constraints, schema and field
+  classification, write mapping, read mapping, PK/order, tests/risks.
+- Correctness evidence needs both direct-iDB-vs-EDADB DEF comparison and SQLite field/
+  child-row assertions; add targeted fixtures for branches and recomputed fields.
+- Targeted fixtures must be legal under the current LEF/DEF grammar and cover each
+  reachable branch. Reparse EDADB-generated DEF through the original reader/writer,
+  assert derived columns are absent, and perturb unordered DB child fetches when order
+  restoration is part of the contract.
+- Null child, lookup, and conversion failures must propagate; never append or insert a
+  partially rebuilt object after `toShadow/fromShadow` returns false.
 - Planned order-stress tests are documented but not implemented yet: SQLite
   `PRAGMA reverse_unordered_selects=ON`, real DEF perturbations for `PINS`/iFP,
   `ROWS`/iPDN, `COMPONENTS`/iPL, and a targeted `NETS` ID/list consistency harness.

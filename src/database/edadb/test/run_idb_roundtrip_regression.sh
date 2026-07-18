@@ -131,8 +131,10 @@ check_default_sql() {
         "-1|" "$name instance default weight region"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || ':' || _name_sd, ',') from (select _order_sd, _name_sd from iInstSD order by _order_sd limit 5);")" \
         "0:ctrl/_17_,1:ctrl/_18_,2:ctrl/_19_,3:ctrl/_20_,4:ctrl/_21_" "$name instance order prefix"
-    assert_eq "$(sql_value "$edadb_db" "select _pin_name_sd || '|' || _net_name_sd || '|' || _io_term_sd__direction_sd || '|' || _io_term_sd__type_sd || '|' || _io_term_sd__has_port_sd || '|' || _location_sd__x_sd || ',' || _location_sd__y_sd || '|' || _layer_num_sd from iPinSD where _pin_name_sd='req_msg[0]';")" \
-        "req_msg[0]|req_msg[0]|1|1|0|1000,18645|1" "$name pin fields"
+    assert_eq "$(sql_value "$edadb_db" "select _pin_name_sd || '|' || _net_name_sd || '|' || _io_term_sd__direction_sd || '|' || _io_term_sd__type_sd || '|' || _io_term_sd__has_port_sd || '|' || _no_port_placement_status_sd || '|' || _no_port_location_sd__x_sd || ',' || _no_port_location_sd__y_sd from iPinSD where _pin_name_sd='req_msg[0]';")" \
+        "req_msg[0]|req_msg[0]|1|1|0|3|1000,18645" "$name pin DEF source fields"
+    assert_eq "$(sql_value "$edadb_db" "select (select count(*) from pragma_table_info('iPinSD') where name in ('_average_coordinate_sd__x_sd','_average_coordinate_sd__y_sd','_is_io_pin_sd','_is_special_net_sd','_layer_num_sd','_io_term_sd__name_sd','_io_term_sd__shape_sd','_io_term_sd__placement_status_sd','_io_term_sd__is_instance_sd')) || '|' || (select count(*) from pragma_table_info('iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD') where name='_class_sd');")" \
+        "0|0" "$name excludes derived pin term port columns"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || ':' || _pin_name_sd, ',') from (select _order_sd, _pin_name_sd from iPinSD order by _order_sd limit 5);")" \
         "0:clk,1:req_msg[0],2:req_msg[1],3:req_msg[2],4:req_msg[3]" "$name pin order prefix"
     assert_eq "$(sql_value "$edadb_db" "select (select count(*) from iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD) || '|' || (select count(*) from iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD__layer_shape_list_sd_iLayerShapeSD) || '|' || (select count(*) from iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD__layer_shape_list_sd_iLayerShapeSD__rect_list_sd_IdbRectSD);")" \
@@ -191,8 +193,8 @@ check_aux_optional_sql() {
     assert_eq "$(sql_value "$edadb_db" "select _group_name_sd || '|' || _region_name_sd from iGroupSD;")" "test_group|test_region" "$name group region"
     assert_eq "$(sql_value "$edadb_db" "select _weight_sd || '|' || _region_name_sd from iInstSD where _name_sd='ctrl/_34_';")" \
         "13|test_region" "$name instance weight region"
-    assert_eq "$(sql_value "$edadb_db" "select _io_term_sd__has_port_sd || '|' || _io_term_sd__is_special_net_sd || '|' || _io_term_sd__placement_status_sd from iPinSD where _pin_name_sd='clk';")" \
-        "1|1|3" "$name explicit special port term fields"
+    assert_eq "$(sql_value "$edadb_db" "select _io_term_sd__has_port_sd || '|' || _io_term_sd__is_special_net_sd from iPinSD where _pin_name_sd='clk';")" \
+        "1|1" "$name explicit special port term DEF fields"
     assert_eq "$(sql_value "$edadb_db" "select _placement_status_sd || '|' || _coordinate_sd__x_sd || ',' || _coordinate_sd__y_sd || '|' || _orient_sd from iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD where iPinSD__pin_name_sd='clk';")" \
         "3|1000,9990|1" "$name explicit port placement"
     assert_eq "$(sql_value "$edadb_db" "select _layer_name_sd || '|' || _type_sd from iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD__layer_shape_list_sd_iLayerShapeSD where iPinSD__pin_name_sd='clk';")" \
@@ -381,6 +383,95 @@ generate_net_branch_fixture() {
     ' "$input" >"$output"
 }
 
+generate_pin_derived_fixture() {
+    local input="$1"
+    local output="$2"
+    awk '
+        /^ - req_msg\[0\] / {
+            in_target_pin = 1
+            print
+            next
+        }
+        in_target_pin && /^ \+ LAYER met5 / {
+            print " + LAYER met5 ( 0 0 ) ( 1000 2000 ) + PLACED ( 1000 18645 ) W"
+            in_target_pin = 0
+            next
+        }
+        { print }
+    ' "$input" >"$output"
+}
+
+generate_pin_writer_fixture() {
+    local input="$1"
+    local output="$2"
+    awk '
+        /^- VSS \( PIN clk \) \( ctrl\/_34_ A \)/ {
+            print "- VSS ( PIN clk ) ( PIN req_msg[0] ) ( ctrl/_34_ A ) "
+            next
+        }
+        { print }
+    ' "$input" >"$output"
+}
+
+generate_pin_branches_fixture() {
+    local input="$1"
+    local output="$2"
+    awk '
+        /^ - clk / {
+            print " - clk + NET clk + SPECIAL + DIRECTION INPUT  + USE SIGNAL"
+            print "  + PORT"
+            print "   + LAYER met5 ( -1000 -1000 ) ( 1000 1000 )"
+            print "   + LAYER met5 ( -500 -500 ) ( 500 500 )"
+            print "  + PORT"
+            print "   + LAYER met3 ( -300 -300 ) ( 300 300 ) + PLACED ( 1000 9990 ) N"
+            print "  + PORT"
+            print "   + LAYER met2 ( -200 -200 ) ( 200 200 ) + FIXED ( 2000 9990 ) S"
+            print ";"
+            skip_pin = 1
+            next
+        }
+        skip_pin {
+            if ($0 ~ /^;$/) {
+                skip_pin = 0
+            }
+            next
+        }
+        /^ - req_msg\[1\] / { pin_status = "FIXED" }
+        /^ - req_msg\[2\] / { pin_status = "COVER" }
+        /^ - req_msg\[3\] / { pin_status = "NONE" }
+        pin_status != "" && /^ \+ LAYER / {
+            if (pin_status == "NONE") {
+                sub(/ \+ PLACED \( [^)]* \) [A-Z]+/, "")
+            } else {
+                sub(/\+ PLACED/, "+ " pin_status)
+            }
+            pin_status = ""
+        }
+        { print }
+    ' "$input" >"$output"
+}
+
+perturb_pin_child_query_order() {
+    local edadb_db="$1"
+    local port_table="iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD"
+    local layer_table="${port_table}__layer_shape_list_sd_iLayerShapeSD"
+    local rect_table="${layer_table}__rect_list_sd_IdbRectSD"
+    local port_parent="iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD_primary_key"
+    local layer_parent="${layer_table}_primary_key"
+
+    sqlite3 "$edadb_db" <<SQL
+UPDATE "$rect_table"
+SET "$port_parent" = -"$port_parent", "$layer_parent" = -"$layer_parent"
+WHERE iPinSD__pin_name_sd = 'clk';
+UPDATE "$layer_table"
+SET "$port_parent" = -"$port_parent", primary_key = -primary_key
+WHERE iPinSD__pin_name_sd = 'clk';
+UPDATE "$port_table"
+SET primary_key = -primary_key
+WHERE iPinSD__pin_name_sd = 'clk';
+SQL
+}
+
 run_case() {
     local name="$1"
     local input_def="$2"
@@ -402,6 +493,10 @@ run_case() {
     export EDADB_DB_PATH="$edadb_db"
     run_ieda "$SCRIPT_DIR/tcl/def2edadb_generic.tcl" "$case_dir/def2edadb.log"
 
+    if [[ "$check_mode" == "pin_branches" ]]; then
+        perturb_pin_child_query_order "$edadb_db"
+    fi
+
     export OUTPUT_DEF="$edadb_def"
     run_ieda "$SCRIPT_DIR/tcl/edadb2def_generic.tcl" "$case_dir/edadb2def.log"
 
@@ -419,6 +514,43 @@ run_case() {
             ;;
         net_branches)
             check_net_branch_sql "$name" "$edadb_db" "$case_dir/def2edadb.log" "$case_dir/edadb2def.log"
+            ;;
+        pin_derived)
+            check_default_sql "$name" "$edadb_db" "$case_dir/def2edadb.log" "$case_dir/edadb2def.log"
+            assert_eq "$(sql_value "$edadb_db" "select _no_port_orient_sd || '|' || _no_port_placement_status_sd || '|' || _no_port_location_sd__x_sd || ',' || _no_port_location_sd__y_sd from iPinSD where _pin_name_sd='req_msg[0]';")" \
+                "2|3|1000,18645" "$name non-R0 no-PORT source fields"
+            assert_eq "$(sql_value "$edadb_db" "select _vec_idx || '|' || _lx_sd || '|' || _ly_sd || '|' || _hx_sd || '|' || _hy_sd from iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD__layer_shape_list_sd_iLayerShapeSD__rect_list_sd_IdbRectSD where iPinSD__pin_name_sd='req_msg[0]';")" \
+                "0|0|0|1000|2000" "$name asymmetric no-PORT rect"
+            ;;
+        pin_writer)
+            assert_eq "$(sql_value "$edadb_db" "select _io_term_sd__has_port_sd || '|' || _no_port_orient_sd || '|' || _no_port_placement_status_sd from iPinSD where _pin_name_sd='req_msg[0]';")" \
+                "1|1|0" "$name stores canonical writer PORT branch"
+            assert_eq "$(sql_value "$edadb_db" "select _placement_status_sd || '|' || _coordinate_sd__x_sd || ',' || _coordinate_sd__y_sd || '|' || _orient_sd from iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD where iPinSD__pin_name_sd='req_msg[0]';")" \
+                "0|0,0|1" "$name writer PORT fields come from implicit port"
+            assert_contains "$direct_def" " - req_msg[0] + NET req_msg[0] + SPECIAL" "$name direct writer special pin"
+            assert_eq "$(awk '/^ - req_msg\[0\] / { in_pin = 1; next } in_pin && /^  \+ PORT$/ { print "yes"; exit } in_pin && /^;$/ { exit }' "$direct_def")" \
+                "yes" "$name direct writer emits PORT for req_msg[0]"
+            ;;
+        pin_branches)
+            assert_eq "$(sql_value "$edadb_db" "select group_concat(_vec_idx) from iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD where iPinSD__pin_name_sd='clk';")" \
+                "2,1,0" "$name perturbed unordered port fetch order"
+            assert_eq "$(sql_value "$edadb_db" "select group_concat(_vec_idx || '|' || _placement_status_sd || '|' || _coordinate_sd__x_sd || ',' || _coordinate_sd__y_sd || '|' || _orient_sd, ';') from (select _vec_idx, _placement_status_sd, _coordinate_sd__x_sd, _coordinate_sd__y_sd, _orient_sd from iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD where iPinSD__pin_name_sd='clk' order by _vec_idx);")" \
+                "0|0|0,0|1;1|3|1000,9990|1;2|1|2000,9990|3" "$name explicit port order and placement branches"
+            assert_eq "$(sql_value "$edadb_db" "select group_concat(port_idx || ':' || layer_idx || ':' || layer_name, ',') from (select p._vec_idx port_idx, l._vec_idx layer_idx, l._layer_name_sd layer_name from iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD p join iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD__layer_shape_list_sd_iLayerShapeSD l on l.iPinSD__pin_name_sd=p.iPinSD__pin_name_sd and l.iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD_primary_key=p.primary_key where p.iPinSD__pin_name_sd='clk' order by p._vec_idx,l._vec_idx);")" \
+                "0:0:met5,0:1:met5,1:0:met3,2:0:met2" "$name explicit layer-shape order with duplicate layer names"
+            assert_eq "$(sql_value "$edadb_db" "select count(*) || '|' || count(distinct l.primary_key) from iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD p join iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD__layer_shape_list_sd_iLayerShapeSD l on l.iPinSD__pin_name_sd=p.iPinSD__pin_name_sd and l.iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD_primary_key=p.primary_key where p.iPinSD__pin_name_sd='clk' and p._vec_idx=0 and l._layer_name_sd='met5';")" \
+                "2|2" "$name duplicate layer names retain distinct layer-shape identities"
+            assert_eq "$(sql_value "$edadb_db" "select group_concat(_no_port_placement_status_sd || ':' || _pin_name_sd, ',') from (select _pin_name_sd, _no_port_placement_status_sd from iPinSD where _pin_name_sd in ('req_msg[1]','req_msg[2]','req_msg[3]') order by _order_sd);")" \
+                "1:req_msg[1],2:req_msg[2],0:req_msg[3]" "$name no-PORT fixed cover and no-placement branches"
+            assert_eq "$(sql_value "$edadb_db" "select count(*) from pragma_table_info('iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD') where name='_vec_idx';")" \
+                "1" "$name port vector index column"
+            assert_eq "$(sql_value "$edadb_db" "select count(*) from pragma_table_info('iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD__layer_shape_list_sd_iLayerShapeSD') where name in ('primary_key','_vec_idx');")" \
+                "2" "$name layer-shape identity and vector index columns"
+            local reparsed_def="$case_dir/reparsed.def"
+            export INPUT_DEF="$edadb_def"
+            export OUTPUT_DEF="$reparsed_def"
+            run_ieda "$SCRIPT_DIR/tcl/direct_def_roundtrip.tcl" "$case_dir/reparse.log"
+            assert_def_equivalent "$edadb_def" "$reparsed_def" "$case_dir/reparse.diff"
             ;;
         none)
             ;;
@@ -446,17 +578,29 @@ main() {
 
     local aux_def="$OUT_DIR/fixtures/aux_optional.def"
     local net_branch_def="$OUT_DIR/fixtures/net_branches.def"
+    local pin_derived_def="$OUT_DIR/fixtures/pin_derived.def"
+    local pin_writer_def="$OUT_DIR/fixtures/pin_writer.def"
+    local pin_branches_def="$OUT_DIR/fixtures/pin_branches.def"
     generate_aux_optional_fixture "$BASE_DEF" "$aux_def"
     generate_net_branch_fixture "$ROUTED_DEF" "$net_branch_def"
+    generate_pin_derived_fixture "$BASE_DEF" "$pin_derived_def"
+    generate_pin_writer_fixture "$aux_def" "$pin_writer_def"
+    generate_pin_branches_fixture "$aux_def" "$pin_branches_def"
 
     echo "EDADB regression output dir: $OUT_DIR"
     echo "iEDA binary: $IEDA_BIN"
     echo "base fixture: $BASE_DEF"
     echo "generated fixture: $aux_def"
     echo "generated fixture: $net_branch_def"
+    echo "generated fixture: $pin_derived_def"
+    echo "generated fixture: $pin_writer_def"
+    echo "generated fixture: $pin_branches_def"
 
     run_case "default_ipl" "$BASE_DEF" "default"
     run_case "aux_optional" "$aux_def" "aux"
+    run_case "pin_derived" "$pin_derived_def" "pin_derived"
+    run_case "pin_writer" "$pin_writer_def" "pin_writer"
+    run_case "pin_branches" "$pin_branches_def" "pin_branches"
     run_case "routed_irt" "$ROUTED_DEF" "routed"
     run_case "net_branches" "$net_branch_def" "net_branches"
 

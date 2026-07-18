@@ -15,39 +15,74 @@ EDADB adapter 文档的核心目标是：每个 root class 都必须按 `src/dat
 
 ## Adapter Rules
 
-- 先读原始 `DefWrite::write_xxx()` / `DefRead::parse_xxx()`，再改 EDADB adapter。
+- 当前分支的 `DefWrite::write_xxx()`、`DefRead::parse_xxx()`、相关 iDB class/setter 和 LEF/DEF parser grammar 是实现依据；旧 adapter、旧文档和字段名只能作为线索，不能作为语义依据。禁止根据“看起来应该如此”补字段或分支。
+- Writer 和 parser 必须分别逐 brace 检查，不能假设二者天然对称：writer 决定当前 iDB 状态如何输出，parser 决定哪些值来自 DEF、哪些值被跨层复制、哪些值在读后计算。
 - EDADB 表达的是 DEF 语义视图，不一定等于完整 C++ object dump。
 - 优先 direct mapping；只有 direct mapping 无法表达 polymorphism、anonymous root identity、non-owning pointer/name-reference rebuild、nested vector owner/order，或 reduced DEF storage view 时才引入 `Shadow<T>`。
 - 如果某个成员类型 `T` 已注册 `TABLE4SHADOW(T)` 或 `TABLE4SHADOW_WVEC(T)`，则包含它的 root class 可以继续 direct mapping；EDADB 遍历成员时会自动把 `T` / `T*` 的 store type 改写为 `edadb::Shadow<T>`。
 - Shadow 自动转换流程：write 阶段对原始成员指针/对象调用 `toShadow()` 后写 shadow fields；read 阶段先读 shadow fields，再调用 `fromShadow()` 重建原始成员，最后写回 root object。
+- 每个 `Shadow<T>` specialization 必须保持 EDADB 模板接口：`bool toShadow(T*, const uint32_t* idx_ptr = nullptr)` 和 `bool fromShadow(T*, uint32_t* idx_ptr = nullptr)`。禁止增加 context 参数、额外 overload 或自定义替代接口。
+- Shadow 转换所需的额外上下文用普通 getter/setter、adapter helper 或已初始化的全局 lookup context 提供；transient 控制变量不得进入 schema。`toShadow/fromShadow` 返回 false 时必须向上传播失败。
+- 对 `vector<Shadow<T>*>` 这类 shadow-owned child vector，EDADB 不会再次替用户调用 logical `T` 的转换接口；owner shadow 必须把 index 传给 child `toShadow()`，将 `_vec_idx` 映射入表，并在 `fromShadow()` 前按 `_vec_idx` 恢复顺序。
+- Nested child 的 synthetic `primary_key` 只负责 owner identity/关联下一层 child；`_vec_idx` 只负责顺序。两者不能合并，尤其不能用 vector index 充当 PK。
 - 对 root list，identity 和 order 必须分开：不要用 vector order index 当 PK。
-- 没有天然 identity 的 root record 用 `primary_key`；有天然 name 的对象用 name 做 PK。
+- 如无必要不增加 synthetic `primary_key`：只有在候选 natural key 在当前 table/parent scope 内唯一、稳定且能安全关联 child rows 时，才可直接使用 name/ID。没有天然 identity，或 name 允许重复的 root/nested owner，才增加 synthetic PK。
+- 不能仅因为对象含有 `name` 就把它作为 PK。例如一个 Port 或 fixed Via 可以包含多个同名 layer records，而每个 `IdbLayerShape` 又独立 owns Rect children；`_layer_name_sd` 是引用字段，不是 identity，因此 `Shadow<IdbLayerShape>::primary_key` 必须保留。
 - Primary key 只用于 root identity 或 nested vector-owner storage view；纯 inline/nested scalar value view 必须关闭 PK。例如 `Shadow<IdbViaMasterGenerate>` 只是 `Shadow<IdbViaMaster>::_master_generate_sd`，不是独立 root/vector owner，因此在 `initPrimKeys()` 中关闭 PK；`Shadow<IdbViaMaster>` owns `fixed_layer_shape_list_sd`，保留 EDADB 默认 PK。
 - 只有 iEDA 语义需要保序或明确要求 raw roundtrip 保序的 root list 才增加 `_order_sd`；Level D root list 默认不保存 root order，优先依赖 normalized diff。
 - `SLOTS` 是当前已 review 类中的明确例外：它是 Level D，但 root record 没有 name，且 raw roundtrip 需要稳定 anonymous record 输出，因此保留 `primary_key + _order_sd`。
-- computed fields 不入库；read path 按原始 parser 语义重新计算或重建。
-- Roundtrip mapping 必须拆成 `Original DEF Write Flow` 和 `Original DEF Read Flow` 两张表，分别以原始 `DefWrite` / `DefRead` 实际执行顺序为主线，不按 shadow class 或 DB 列顺序组织。
-- 两张 roundtrip 表固定为三列：原始执行顺序、EDADB `write/toShadow` 或 `read/fromShadow` 对应、`DEF 域 / iDB 变量 / EDADB 域`。分支、fallback、name lookup、computed field 和 parser-only/writer-only 差异必须在对应执行步骤中写明。
+- DB 保存原始 writer 实际输出、原始 parser 能重新读取的 canonical DEF view，以及必要 identity/order/reference；computed/cache fields 不入库，read path 按原始 parser 语义重新计算。
+- 字段必须归入四类之一：DEF source、branch discriminator/reference、cross-level copy/synchronization、derived/cache。前两类按需持久化；后两类默认不持久化，必须在 `fromShadow()` 中按 parser 原顺序恢复。
+- 原始 parser 中跨 Pin/Term/Port/Layer 等层次的复制、同步和计算必须在 `fromShadow()` 中按相同顺序重做；文档要标明源对象、目标对象和触发分支。
+- Storage branch discriminator 必须对应原始 writer 实际输出的 DEF 分支，使 `fromShadow()` 重建结果等价于“原始 writer 输出后再由原始 parser 读入”。原始 iDB 中未被 writer 输出的 hidden parser state 默认规范化掉；只有点工具语义明确需要时才额外持久化，并必须单独说明。
+- `toShadow()` 按原始 writer 的条件选择存储视图；`fromShadow()` 按原始 parser 的分支顺序执行 allocation、name lookup、字段设置、跨层同步和派生计算。不得为了减少代码改变 setter 调用顺序或把计算结果改成数据库列。
+- `writeIdbT()` / `readIdbT()` 尽量只负责 root lookup、query/insert、allocation、append 和错误处理；nested object 的字段转换与重建放在对应 `toShadow()` / `fromShadow()`。
 - 每个 root 文档必须说明 child storage view：哪些子节点 direct mapping，哪些子节点 shadow，哪些运行时 pointer/cache 不入库以及如何重建。
 - 每启用一个 `readIdbXXX/writeIdbXXX`，必须同步 schema/init、DEF callback、测试 SQL 和文档。
 - 未被任何 enabled adapter 读写、注册或验证的 schema macro 必须休眠并标 `EDADB_TODO`，不能因为原始类存在就默认建表。
+
+## Test Convergence Rules
+
+- Fixture 必须符合当前 LEF/DEF grammar；不可用 parser 无法接受的输入假装覆盖分支。源码中存在但 grammar 不可达的分支要记录为不可达，不得伪造测试结论。
+- 每个原始 `if/else`、optional field 和 nested loop 至少要有一个合法输入覆盖；测试数据要能区分分支，不能只依赖默认 sky130 样例。
+- 同时验证三层结果：direct `DefRead/DefWrite` baseline、EDADB 表中的 source/identity/order 字段、EDADB 重建后的 DEF。Derived/cache 列应通过 schema absence assertion 证明未被误存。
+- EDADB 生成的 DEF 要再经过原始 `DefRead/DefWrite` 解析和输出；这用于证明 adapter 输出仍符合原始 parser/writer 语义，而不只是两个文本偶然相同。
+- 对需要保序的 root/nested vector，要主动扰乱无 `ORDER BY` 的数据库读取顺序，再验证 `_order_sd` / `_vec_idx` 恢复结果；禁止把 SQLite 当前返回顺序当成保证。
+- Null child、lookup 失败和 `toShadow/fromShadow` 失败必须向上传播；测试或代码 review 至少覆盖失败路径，禁止留下部分构造对象继续 append/insert。
+
+## Documentation Convergence Rules
+
+- 每次更新类文档都要重新阅读当前源码，不依据旧文档或记忆复制字段和行号。
+- `Original DEF Write Mapping` 与 `Original DEF Read Mapping` 必须分开，并以原始 `DefWrite` / `DefRead` 的实际 `{}`、`if/else`、loop 顺序组织；一行对应一个明确 brace/branch，不使用笼统的“阶段”范围。
+- Write 表推荐四列：original writer brace、DEF output、EDADB `write/toShadow` correspondence、stored source。Read 表推荐三列：original parser brace、EDADB `read/fromShadow` correspondence、source/synchronization/calculation。
+- 每个 mapping row 同时回答：DEF tag/field 是什么、来自哪个 iDB member、写入哪个 EDADB field，或 read 时如何 lookup/copy/recompute。
+- 必须显式记录 writer-only、parser-only、fallback、cross-adapter relation 和 branch discriminator。例如 Pin 的 special pointer 由 SpecialNet adapter 恢复，不在 Pin root 中重复保存。
+- shared shadow 若包含当前 root 不需要的列，必须说明当前 root 是否写入、是否忽略、read 时如何 canonicalize；不能默认把 shared schema 的所有列都当成该 DEF section 的源字段。
+- 源码定位必须使用当前分支的文件名和行号；代码修改后重新核对。行范围应对应完整函数或 brace body，而不是人为划分的宽泛阶段。
+- Markdown 表格中的源码若含 `|` 或 `||`，必须使用 `&#124;` / `&#124;&#124;`，避免被解析成列分隔符；提交前检查每行列数和 `git diff --check`。
+- 文档保持精简：Schema、Persisted/Not Persisted、Write Mapping、Read Mapping、PK/Order、Tests/Risks 各自只表达一次，删除重复的语义概述。
+- 测试记录至少包含 direct iDB DEF baseline 与 EDADB DEF、关键 SQLite 字段/child rows，以及新增分支或 derived-field fixture；只做文本 diff 不能证明 DB 字段和重建逻辑正确。
 
 ## Per-Class Checklist
 
 对每个 iEDA class `T`，按以下顺序检查：
 
 1. 找到 `def_write.cpp` 中对应的 `write_xxx()`，一个 `T` 可能对应多个 writer。
-2. 列出 writer 实际输出到 DEF 的字段，包括嵌套 class 和 vector。
+2. 按 writer 的 brace/branch/loop 顺序列出实际输出字段、字段来源和分支条件，包括嵌套 class/vector。
 3. 找到 `def_read.cpp` 中对应的 callback / `parse_xxx()`，一个 `T` 可能对应多个 parser。
-4. 列出 parser 从 DEF 文本读取并设置的字段。
-5. 区分 DB 读取字段和读后计算字段；计算字段必须说明依赖和计算方式。
+4. 按 parser 的 brace/branch/loop 顺序列出 allocation、DEF source、lookup、setter、跨层同步和派生计算。
+5. 将每个字段归类为 DEF source、branch/reference、cross-level synchronization 或 derived/cache；只让前两类按需进入 schema。
 6. 检查 `def-ieda-mapping-and-order.md` 中对应 DEF section 的 root order 等级，并在类文档中记录该约束。
 7. 检查 `edadb_idb_schema.h` 中 `TABLE4CLASS` / `TABLE4SHADOW` 是否覆盖上述字段，并记录宏定义代码位置。
 8. 判断是否需要 shadow：优先直接映射；只有 direct mapping 无法表达 PK、vector ownership、引用查找、重建视图时才定义 shadow。
-9. 检查 `edadb_idb_init.cpp` 中 primary-key 设置和表初始化是否和 schema、write/read 启用范围一致，并记录代码位置。
-10. 任何 helper/child class table macro 如果没有 enabled adapter 使用，必须休眠；文档要说明为什么不需要建表。
-11. 检查 `DefReadEdadb::createDbByDef()` 是否只禁用了已由 EDADB 完整恢复的 DEF callbacks。
-12. 用 demo roundtrip、DB 表内容和关键对象数量验证。
+9. 检查每个 specialization 是否严格使用 EDADB 标准 `toShadow/fromShadow` 签名；额外状态只能通过 getter/setter/helper 传入。
+10. 审计 natural key 在实际 table/parent scope 内是否唯一；能用稳定 name/ID 时不加 synthetic PK，name 可重复或需要独立挂接 child rows 时才加。再检查 `edadb_idb_init.cpp` 的 PK 设置和表初始化是否一致。
+11. 任何 helper/child class table macro 如果没有 enabled adapter 使用，必须休眠；文档要说明为什么不需要建表。
+12. 检查 `DefReadEdadb::createDbByDef()` 是否只禁用了已由 EDADB 完整恢复的 DEF callbacks。
+13. 逐 brace 核对 write/toShadow 与 read/fromShadow，确认 stored branch discriminator 对应 writer 输出，并能驱动 parser 等价的 setter/计算顺序。
+14. 用合法 targeted fixtures 覆盖分支；验证 direct baseline、DB source/absence/order、EDADB roundtrip，并将输出 DEF 再交给原始 reader/writer。
+15. 对有序 vector 扰乱数据库无序读取，验证显式 order 恢复；对 conversion/lookup 失败确认错误向上传播。
+16. 重新核对文档行号、Markdown table 列数和 `git diff --check`。
 
 ## Order / Index Policy
 
@@ -103,17 +138,15 @@ EDADB adapter 文档的核心目标是：每个 root class 都必须按 `src/dat
 每个类的 review 文档保持这个结构：
 
 - Scope: 当前类覆盖哪些 DEF section / callback / writer。
-- Original Write Semantics: 原始 writer 输出哪些字段。
-- Original Read Semantics: 原始 parser 如何重建对象。
-- EDADB Schema: 当前 DB 中保存哪些 class/member。
+- Constraint Check: root class/list、A/B/C/D order、identity 和 nested-order 结论。
+- EDADB Schema: 当前 DB 保存哪些 class/member，并区分 persisted DEF source 与 not-persisted derived/cache fields。
 - Schema / Init: 记录 `TABLE4CLASS` / `TABLE4SHADOW` 宏、`initPrimKeys()`、`EDADB_INIT_TABLE()` 的代码位置；同时说明 PK 是否启用。
-- Original DEF Write/Read Roundtrip Mapping: 使用两张三列表；write 表按原始 `DefWrite` 执行顺序，read 表按原始 `DefRead` 执行顺序，逐步标明 EDADB 实现、DEF tag、iDB 成员和 EDADB 字段。
+- Original DEF Write Mapping: 按原始 writer 的 brace 顺序，写清 DEF output、`toShadow()` 和 stored source。
+- Original DEF Read Mapping: 按原始 parser 的 brace 顺序，写清 `fromShadow()`、name lookup、跨层同步和 computed-field rebuild。
 - Child Storage View: root 下有哪些子节点、direct/shadow 选择、为什么不用原始类。
-- EDADB Write Path: `writeIdbT()` 是否贴近原始 writer。
-- EDADB Read Path: `readIdbT()` 是否贴近原始 parser。
-- Computed Fields: 哪些字段不入库，如何计算。
-- Risks / TODO: 与原始语义不一致或 ownership 风险。
+- EDADB Read/Write Paths: builder 与 shadow 的责任边界。
 - Order / Index: root list 是否需要保持顺序、依据是什么、当前是否已显式实现。
+- Tests / Risks: 已覆盖分支、SQLite assertions、derived-field checks 和剩余风险。
 
 ## Class Review Index
 
