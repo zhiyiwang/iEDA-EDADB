@@ -149,6 +149,10 @@ int32_t DefWriteEdadb::writeIdbDesign() {
         return kDbFail;
     }
 
+    if (design->get_version().empty()) {
+        design->set_version("5.8");
+    }
+
     IdbUnits* def_units = design->get_units();
     IdbUnits* lef_units = design->get_layout() == nullptr ? nullptr : design->get_layout()->get_units();
     if (def_units == nullptr && lef_units == nullptr) {

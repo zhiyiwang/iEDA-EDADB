@@ -269,6 +269,37 @@ check_net_branch_sql() {
         "4" "$name no-shield wire state"
 }
 
+check_design_sql() {
+    local name="$1"
+    local edadb_db="$2"
+    local expected_fields="$3"
+
+    assert_eq "$(sql_value "$edadb_db" "select _design_name || '|' || _version || '|' || _units__micron_dbu || '|' || char(_bus_bit_chars__left_delimiter) || '|' || char(_bus_bit_chars__right_delimiter) from iDesign;")" \
+        "$expected_fields" "$name canonical design fields"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from pragma_table_info('iDesign') where name in ('_units__nanoseconds','_units__picofarads','_units__ohms','_units__milliwatts','_units__milliamps','_units__volts','_units__megahertz');")" \
+        "0" "$name excludes non-DEF IdbUnits fields"
+}
+
+generate_design_fields_fixture() {
+    local input="$1"
+    local output="$2"
+    awk '
+        /^VERSION / { print "VERSION 5.7 ;"; next }
+        /^BUSBITCHARS / { print "BUSBITCHARS \"{}\" ;"; next }
+        /^DESIGN / { print "DESIGN gcd_design ;"; next }
+        /^UNITS DISTANCE MICRONS / { print "UNITS DISTANCE MICRONS 2000 ;"; next }
+        { print }
+    ' "$input" >"$output"
+}
+
+generate_design_fallback_fixture() {
+    local input="$1"
+    local output="$2"
+    awk '
+        !/^VERSION / && !/^BUSBITCHARS / && !/^UNITS DISTANCE MICRONS / { print }
+    ' "$input" >"$output"
+}
+
 generate_aux_optional_fixture() {
     local input="$1"
     local output="$2"
@@ -552,6 +583,12 @@ run_case() {
             run_ieda "$SCRIPT_DIR/tcl/direct_def_roundtrip.tcl" "$case_dir/reparse.log"
             assert_def_equivalent "$edadb_def" "$reparsed_def" "$case_dir/reparse.diff"
             ;;
+        design_fields)
+            check_design_sql "$name" "$edadb_db" "gcd_design|5.7|2000|{|}"
+            ;;
+        design_fallback)
+            check_design_sql "$name" "$edadb_db" "gcd|5.8|1000|[|]"
+            ;;
         none)
             ;;
         *)
@@ -581,11 +618,15 @@ main() {
     local pin_derived_def="$OUT_DIR/fixtures/pin_derived.def"
     local pin_writer_def="$OUT_DIR/fixtures/pin_writer.def"
     local pin_branches_def="$OUT_DIR/fixtures/pin_branches.def"
+    local design_fields_def="$OUT_DIR/fixtures/design_fields.def"
+    local design_fallback_def="$OUT_DIR/fixtures/design_fallback.def"
     generate_aux_optional_fixture "$BASE_DEF" "$aux_def"
     generate_net_branch_fixture "$ROUTED_DEF" "$net_branch_def"
     generate_pin_derived_fixture "$BASE_DEF" "$pin_derived_def"
     generate_pin_writer_fixture "$aux_def" "$pin_writer_def"
     generate_pin_branches_fixture "$aux_def" "$pin_branches_def"
+    generate_design_fields_fixture "$BASE_DEF" "$design_fields_def"
+    generate_design_fallback_fixture "$BASE_DEF" "$design_fallback_def"
 
     echo "EDADB regression output dir: $OUT_DIR"
     echo "iEDA binary: $IEDA_BIN"
@@ -595,8 +636,12 @@ main() {
     echo "generated fixture: $pin_derived_def"
     echo "generated fixture: $pin_writer_def"
     echo "generated fixture: $pin_branches_def"
+    echo "generated fixture: $design_fields_def"
+    echo "generated fixture: $design_fallback_def"
 
     run_case "default_ipl" "$BASE_DEF" "default"
+    run_case "design_fields" "$design_fields_def" "design_fields"
+    run_case "design_fallback" "$design_fallback_def" "design_fallback"
     run_case "aux_optional" "$aux_def" "aux"
     run_case "pin_derived" "$pin_derived_def" "pin_derived"
     run_case "pin_writer" "$pin_writer_def" "pin_writer"

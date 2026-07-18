@@ -20,7 +20,7 @@ namespace __probe2 {
 // schema group synchronized with the matching readIdbXXX/writeIdbXXX path and
 // the disabled DEF parser callback in DefReadEdadb::createDbByDef().
 #include "database/data/design/db_layout/IdbUnits.h"
-TABLE4CLASS(idb::IdbUnits, "iUnits", (_nanoseconds, _picofarads, _ohms, _milliwatts, _milliamps, _volts, _micron_dbu, _megahertz));
+TABLE4CLASS(idb::IdbUnits, "iUnits", (_micron_dbu));
 
 #include "database/data/design/db_design/IdbBusBitChars.h"
 TABLE4CLASS(idb::IdbBusBitChars, "iBusBitChars", (_left_delimiter, _right_delimiter));
