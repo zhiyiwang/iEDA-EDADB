@@ -26,6 +26,10 @@ public:
      * @param obj: the ieda instance
     */
     bool toShadow(idb::IdbViaMasterGenerate* obj, const uint32_t* idx_ptr = nullptr) {
+        if (obj == nullptr) {
+            return false;
+        }
+
         _rule_name_sd = obj->get_rule_name();
         _cut_size_x_sd = obj->get_cut_size_x();
         _cut_size_y_sd = obj->get_cut_size_y();
@@ -102,8 +106,6 @@ public:
 
 
         // build core cut shape for via master generate if pattern exist, since cut array must follow the pattern rule
-        vector<idb::IdbRect*> cut_rect_list = obj->get_cut_rect_list();
-
         int32_t cut_width_total = _num_cut_cols_sd * _cut_size_x_sd + (_num_cut_cols_sd - 1) * _cut_spacing_x_sd;
         int32_t cut_height_total = _num_cut_rows_sd * _cut_size_y_sd + (_num_cut_rows_sd - 1) * _cut_spacing_y_sd;
 
@@ -163,13 +165,22 @@ public:
 
 public:
     bool toShadow(idb::IdbViaMaster* obj, const uint32_t* idx_ptr = nullptr) {
+        if (obj == nullptr) {
+            return false;
+        }
+
         _name_sd = obj->get_name();
         _type_sd = obj->get_type();
 
         if (obj->is_generate()) {
-            _master_generate_sd.toShadow(obj->get_master_generate());
+            if (!_master_generate_sd.toShadow(obj->get_master_generate())) {
+                return false;
+            }
         } else if (obj->is_fix()) {
             for (idb::IdbViaMasterFixed* &fixed : obj->get_master_fixed_list()) {
+                if (fixed == nullptr || fixed->get_layer_shape() == nullptr) {
+                    return false;
+                }
                 fixed_layer_shape_list_sd.emplace_back(fixed->get_layer_shape());
             }
         }
@@ -177,6 +188,10 @@ public:
     } // toShadow
 
     bool fromShadow(idb::IdbViaMaster* obj, uint32_t* idx_ptr = nullptr) {
+        if (obj == nullptr) {
+            return false;
+        }
+
         obj->set_name(_name_sd);
         obj->set_type(_type_sd);
 
@@ -188,8 +203,10 @@ public:
             return true;
         }
 
-        auto&  fixed_list = obj->get_master_fixed_list();
-        assert(fixed_list.empty());
+        auto& fixed_list = obj->get_master_fixed_list();
+        if (!fixed_list.empty()) {
+            return false;
+        }
 
         // Fixed via
         int32_t min_x = INT_MAX;

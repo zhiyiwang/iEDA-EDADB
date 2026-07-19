@@ -8,22 +8,35 @@
 
 #include "edadb.h"
 #include "database/data/design/db_design/IdbHalo.h"
+#include "../edadb_idb_helper.h"
 
 namespace edadb {
 template<>
 class Shadow<idb::IdbRouteHalo> {
 public:
-    void toShadow(idb::IdbRouteHalo* obj) {
+    bool toShadow(idb::IdbRouteHalo* obj, const uint32_t* idx_ptr = nullptr) {
+        if (obj == nullptr) {
+            return false;
+        }
+
         _route_distance_sd = obj->get_route_distance();
 
         _layer_bottom_name_sd = obj->get_layer_bottom() ?
                 obj->get_layer_bottom()->get_name() : "";
         _layer_top_name_sd = obj->get_layer_top() ?
                 obj->get_layer_top()->get_name() : "";
+        return true;
     }
-    void fromShadow(idb::IdbRouteHalo* obj) {
+
+    bool fromShadow(idb::IdbRouteHalo* obj, uint32_t* idx_ptr = nullptr) {
+        if (obj == nullptr) {
+            return false;
+        }
+
         obj->set_route_distance( _route_distance_sd );
-        // use layer name to lookup layer during def read
+        obj->set_layer_bottom(idb::edadb_adapter::EdadbIdbHelper::findIdbLayerByName(_layer_bottom_name_sd));
+        obj->set_layer_top(idb::edadb_adapter::EdadbIdbHelper::findIdbLayerByName(_layer_top_name_sd));
+        return true;
     }
 
 public:
@@ -32,4 +45,3 @@ public:
     std::string _layer_top_name_sd = "";
 }; // shadow IdbRouteHalo
 } // namespace edadb
-

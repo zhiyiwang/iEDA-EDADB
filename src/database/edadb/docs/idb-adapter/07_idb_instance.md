@@ -1,261 +1,112 @@
 # IdbInstance EDADB Adapter Review
 
-## Scope
+## Scope And Constraints
 
-`IdbInstance` 对应 DEF 的 `COMPONENTS` section。
+`IdbInstance` 对应 DEF `COMPONENTS`，root container 是 `IdbInstanceList::_instance_list`。
 
-- Write: `DefWrite::write_component()` at `src/database/manager/builder/def_builder/def_write.cpp:460`
-- Read: `DefRead::parse_component_number()` / `DefRead::parse_component()` at `src/database/manager/builder/def_builder/def_read.cpp:857` and `src/database/manager/builder/def_builder/def_read.cpp:884`
-- EDADB Write: `DefWriteEdadb::writeIdbInstance()` at `src/database/manager/builder/def_builder/def_write_edadb.cpp:317`
-- EDADB Read: `DefReadEdadb::readIdbInstance()` at `src/database/manager/builder/def_builder/def_read_edadb.cpp:723`
+- 原始 write：`src/database/manager/builder/def_builder/def_write.cpp:460`
+- 原始 read：`src/database/manager/builder/def_builder/def_read.cpp:857`、`src/database/manager/builder/def_builder/def_read.cpp:884`
+- EDADB write/read：`src/database/manager/builder/def_builder/def_write_edadb.cpp:330`、`src/database/manager/builder/def_builder/def_read_edadb.cpp:710`
+- Order level：按 `src/database/edadb/docs/def-ieda-mapping-and-order.md` 为 Level C。iPL 按 vector append order 分配 instance IDs，固定随机种子下重排会改变 placement 状态。
+- Root identity：instance name；`_name_sd` 是 PK，`_order_sd` 只保存 list order。
 
-本文件按 `src/database/edadb/docs/def-ieda-mapping-and-order.md` 的约束检查：
+## Original DEF Write/Read Roundtrip Mapping
 
-- DEF section 映射：`COMPONENTS` section。
-- iEDA root container：`IdbInstanceList::_instance_list`。
-- root-vector order 等级：Level C，`IdbInstanceList::_instance_list` 需要显式保留 append order，以保持 placer IDs / fixed-seed behavior 可复现。
-- root identity 约束：component instance name 是 DEF-visible identity，当前 `_name_sd` 是 EDADB root PK；禁止用 vector order index 作为 PK。
-- nested vector 约束：`IdbInstance` 本身不直接持久化 pin list / obs box list；这些由 cell master、placement 和后续 pin/net adapter 重建。
+### Original DEF Write Flow
 
-## Original Write Semantics
+| 原始 `DefWrite` 顺序 | EDADB write / `toShadow()` 对应 | DEF 域 / iDB 成员 |
+| --- | --- | --- |
+| 校验 list/count，输出 `COMPONENTS <N>` 并遍历 vector，见 `def_write.cpp:462-476` | `writeIdbInstance()` 取同一 vector，按 index 构造 shadow batch，见 `def_write_edadb.cpp:331-366` | section count / `IdbInstanceList::_instance_list` / `_order_sd` |
+| escape name，输出 master 与可选 `SOURCE`，见 `def_write.cpp:477-484` | 保存 `_name_sd/_cell_master_name_sd/_type_sd`，见 `shadow_idb_instance.h:38-51` | component name/master/source |
+| `has_placed()` 时输出 status、coordinate、orient，见 `def_write.cpp:486-491` | 保存 `_status_sd/_coordinate_sd/_orient_sd` | placement statement |
+| 可选输出 `HALO [SOFT] left bottom right top`，见 `def_write.cpp:493-499` | `_halo_sd` 保存 `IdbHalo` scalar child | halo source fields |
+| 可选输出 `ROUTEHALO distance bottom top`，见 `def_write.cpp:501-506` | `Shadow<IdbRouteHalo>` 保存 distance 与 layer names，见 `shadow_idb_halo.h:17-28` | route-halo source fields |
+| 当前 writer 不输出 `WEIGHT/REGION` | EDADB 仍保存 `_weight_sd/_region_name_sd`，因为它们是 parser-supported active iDB state | parser-only source fields |
 
-原始 `DefWrite::write_component()` 输出：
+### Original DEF Read Flow
 
-- component count: `instance_list->get_num()`
-- instance name: `IdbInstance::_name`，写 DEF 前用 `ieda::Str::addBackslash()`
-- cell master name: `instance->get_cell_master()->get_name()`
-- optional source: `+ SOURCE ...`，当 `_type != kNone`
-- placement status / coordinate / orient：当 `instance->has_placed()`
-- optional halo: `+ HALO [SOFT] left bottom right top`
-- optional route halo: `+ ROUTEHALO distance bottom_layer top_layer`
+| 原始 `DefRead` 顺序 | EDADB read / `fromShadow()` 对应 | DEF 域 / iDB 成员 |
+| --- | --- | --- |
+| `parse_component_number()` reserve vector，见 `def_read.cpp:857-863` | 不保存 count；reset 后按 `_order_sd` query，见 `def_read_edadb.cpp:723-734` | `COMPONENTS <N>` / capacity/order |
+| lookup LEF master，trim name，append instance，调用 `set_cell_master()` 重建 pins，见 `def_read.cpp:891-918` | helper 按 `_cell_master_name_sd` lookup；`fromShadow()` 设置 name/master，见 `shadow_idb_instance.h:75-89` | name/master reference |
+| 设置 status、orient 和 optional source，见 `def_read.cpp:919-924` | 设置 status；`set_orient(..., false)` 避免提前计算；设置 type，见 `shadow_idb_instance.h:89-92` | placement/source |
+| 条件设置 weight，见 `def_read.cpp:926-928` | 恢复 `_weight_sd` | `WEIGHT` |
+| 条件 lookup region，设置 instance ref 和 region backlink，见 `def_read.cpp:930-936` | helper lookup name，恢复同一双向关系，见 `shadow_idb_instance.h:94-101` | `REGION` |
+| 条件创建并设置 halo，见 `def_read.cpp:938-948` | 将 EDADB 读出的 optional halo child 转交 instance ownership，见 `shadow_idb_instance.h:103-106` | `HALO` |
+| 条件创建 route halo，并按 name lookup layers，见 `def_read.cpp:950-955` | route-halo shadow 恢复 distance/layers，见 `shadow_idb_instance.h:108-113`、`shadow_idb_halo.h:31-39` | `ROUTEHALO` |
+| 最后设置 coordinate，触发 bbox、pin coordinate、halo coordinate、obs boxes，见 `def_read.cpp:957` | 最后调用 `set_coodinate()`，见 `shadow_idb_instance.h:115-117` | placement x/y + derived state |
 
-原始 writer 不输出 weight 和 region，虽然原始 parser 会读取它们。
-
-对 EDADB adapter 来说，这个差异不能只按 writer 输出裁剪字段：`readIdbInstance()` 会替代原始 `parse_component()`，因此 DB 字段选择必须以 DEF read 解析后需要重建的 iDB 状态为准。结论是：
-
-- writer 输出字段必须保存：name、master、source type、placement、halo、route halo。
-- parser 会写入 iDB、且不能从其它上下文可靠重建的字段也要保存：weight、region name。
-- writer 不输出但 parser 支持的字段，需要在文档中标明 “read-semantics field”，避免误以为它们来自 `write_component()` 文本输出。
-
-## Original Read Semantics
-
-原始 `DefRead::parse_component()`：
-
-- `parse_component_number()` reserve instance vector。
-- 按 DEF 出现顺序 `instance_list->add_instance(trimEscape(def_component->id()))`。
-- 通过 component master name 从 LEF `IdbCellMasterList` 查找 master，并调用 `set_cell_master()` 初始化 instance pins。
-- 设置 placement status、orient、source type、weight。
-- 如果有 region name，则按 name 查找 region，设置 instance region，并将 instance 加入 region。
-- 如果有 halo / route halo，则创建对应对象并设置字段。
-- 设置 coordinate，并触发 bounding box、pin coordinate、halo coordinate、obs box 等计算。
-
-## EDADB Schema
-
-当前 root schema：
+## Schema And Shadow Audit
 
 ```cpp
 TABLE4CLASS(edadb::Shadow<idb::IdbInstance>, "iInstSD",
             (_name_sd, _order_sd, _type_sd, _status_sd, _orient_sd,
              _weight_sd, _cell_master_name_sd, _coordinate_sd,
              _halo_sd, _route_halo_sd, _region_name_sd));
+TABLE4CLASS(idb::IdbHalo, "iHalo", (...));
+TABLE4CLASS(edadb::Shadow<idb::IdbRouteHalo>, "iRouteHaloSD", (...));
 ```
 
-相关 nested / inline storage schema：
+- Schema：`src/database/edadb/idb/edadb_idb_schema.h:84-91`
+- PK setup：`src/database/edadb/idb/edadb_idb_init.cpp:21-30`
+- Root registration：`src/database/edadb/idb/edadb_idb_init.cpp:82`
+- Instance shadow：`src/database/edadb/idb/shadow/shadow_idb_instance.h:20-141`
+- Route-halo shadow：`src/database/edadb/idb/shadow/shadow_idb_halo.h:15-46`
 
-```cpp
-TABLE4SHADOW(idb::IdbCoordinate<int32_t>);
-TABLE4CLASS(edadb::Shadow<idb::IdbCoordinate<int32_t>>,
-            "iCoordSD", (_vec_idx, _x_sd, _y_sd));
+Shadow 必要性：
 
-TABLE4CLASS(idb::IdbHalo, "iHalo",
-            (_extend_left, _extend_right, _extend_top,
-             _extend_bottom, _is_soft));
+- `_cell_master`、`_region`、route-halo layers 是 non-owning references；DB 保存 names，read 时从 active LEF/design lookup。
+- `_pin_list`、bbox、pin coordinates、halo coordinates、obs boxes 是 setter 构建或派生状态，不入库。
+- `_coordinate_sd` 保存 DEF placement value；`_halo_sd` 是纯 scalar optional child；route halo 因 layer pointers 使用 shadow。
 
-TABLE4CLASS(edadb::Shadow<idb::IdbRouteHalo>, "iRouteHaloSD",
-            (_route_distance_sd, _layer_bottom_name_sd,
-             _layer_top_name_sd));
-```
+Primary-key audit：
 
-`iInstSD` 不是完整 C++ object dump，而是 `COMPONENTS` 的 DEF storage view。它还依赖以下 EDADB store types：
+- `_name_sd` 是 root PK；`_order_sd` 不是 PK。
+- `IdbHalo` 和 `Shadow<IdbRouteHalo>` 都是 optional inline child，没有独立 identity，`hasPrimKey=false`。
+- coordinate child 是 placement value，不承担 root identity。
 
-- `Shadow<IdbCoordinate<int32_t>>` / `iCoordSD`：`_coordinate_sd` 的 storage view，保存 placement x/y；instance 的 scalar coordinate 不使用 `_vec_idx` 表达 root order。
-- `IdbHalo` / `iHalo`：`_halo_sd` 的 inline child，保存 `HALO [SOFT] left bottom right top`；没有独立 root/list identity。
-- `Shadow<IdbRouteHalo>` / `iRouteHaloSD`：`_route_halo_sd` 的 inline child storage view，保存 route distance、bottom layer name、top layer name；layer pointer 不直接入库。
-- `IdbCellMaster`：不作为 child table 存储；只保存 `_cell_master_name_sd`，read 时从 LEF `IdbCellMasterList` lookup。
-- `IdbRegion`：不作为 child table 存储；只保存 `_region_name_sd`，read 时从 `IdbRegionList` lookup，并补回 region-instance 关系。
-- `IdbLayer`：不作为 child table 存储；route halo bottom/top layer 只保存 layer name，read 时从 LEF layer list lookup。
-- instance pin list / obs box list / bbox：不存储；由 `set_cell_master()`、placement/orient/coordinate 设置和 iDB 计算流程重建。
+## EDADB Paths
 
-字段选择依据是 “DEF read 解析后 iDB 应恢复什么”，而不是只保存 “当前 writer 会输出什么”：
+Write：
 
-- `_name_sd` / `_cell_master_name_sd` / `_type_sd` / `_status_sd` / `_orient_sd` / `_coordinate_sd` / `_halo_sd` / `_route_halo_sd`：同时对应原始 writer 输出和 parser 读取。
-- `_weight_sd` / `_region_name_sd`：当前原始 writer 不输出，但原始 parser 会读取并写入 `IdbInstance`；EDADB read 替代 parser 后必须能恢复这些状态。
-- `_order_sd`：不属于 DEF component 字段本身，用于恢复 `IdbInstanceList` append 顺序。
+- `writeIdbInstance()` 检查每次 `toShadow()`，再使用一次 batch insert，见 `def_write_edadb.cpp:330-377`。
+- 当前实现先构造完整 shadow vector，DB 侧仍是 single transaction/prepared operation；百万级 instance 若临时内存成为问题，再改 streaming batch，不能退回逐个 transaction。
 
-Schema / init 代码位置：
+Read：
 
-- `iHalo` table macro: `src/database/edadb/idb/edadb_idb_schema.h:85`
-- `iRouteHaloSD` table macro: `src/database/edadb/idb/edadb_idb_schema.h:88`
-- `iInstSD` root table macro: `src/database/edadb/idb/edadb_idb_schema.h:91`
-- `IdbHalo` PK disabled: `src/database/edadb/idb/edadb_idb_init.cpp:32`
-- `Shadow<IdbRouteHalo>` PK disabled: `src/database/edadb/idb/edadb_idb_init.cpp:33`
-- `Shadow<IdbInstance>` PK uses EDADB default `true`; `_name_sd` is the first table column and root identity.
-- Table registration: `src/database/edadb/idb/edadb_idb_init.cpp:87`
-- Instance shadow definition: `src/database/edadb/idb/shadow/shadow_idb_instance.h:19`
-- Route-halo shadow definition: `src/database/edadb/idb/shadow/shadow_idb_halo.h:12`
+- `readIdbInstance()` 只负责 reset、ordered cursor、错误处理和 append，见 `def_read_edadb.cpp:710-767`。
+- master/region/layer lookup、backlink 和派生状态重建都在标准 `fromShadow(IdbInstance*, uint32_t*)` 内；没有自定义 shadow 接口。
+- `EdadbIdbHelper` 提供 active design/layout lookup，见 `src/database/edadb/idb/edadb_idb_helper.h:42-169`。
 
-使用 `Shadow<IdbInstance>` 而不是 direct `IdbInstance`：
+## Stored And Computed State
 
-- root identity 是 `_name_sd`。
-- `_order_sd` 保存 `IdbInstanceList` append 顺序。
-- `_cell_master` / `_region` / route halo layers 通过 name lookup 重建，避免直接持久化运行时指针。
+Stored DEF/parser state：
 
-Primary-key audit:
+- name、master name、source type、status、orient、placement coordinate
+- weight、region name
+- halo soft/extensions
+- route-halo distance 与 bottom/top layer names
+- root `_order_sd`
 
-- `Shadow<IdbInstance>` 保留默认 primary-key 行为，因为 `COMPONENTS` root record 有天然 DEF identity：instance name。
-- `_order_sd` 只表达 `IdbInstanceList` append order，不作为 identity，也不能替代 `_name_sd`。
-- `IdbHalo` 是 instance 的 optional nested scalar child，没有独立 root/list identity，因此在 `initPrimKeys()` 中关闭 PK。
-- `Shadow<IdbRouteHalo>` 是 route halo 的 nested scalar storage view，没有独立 root/list identity，因此在 `initPrimKeys()` 中关闭 PK。
-- `_coordinate_sd` 使用已有 coordinate shadow/storage view；它是 placement value child，不是 instance root identity。
+Read-time computed/rebuilt state：
 
-## Original DEF Write/Read Roundtrip Mapping
-
-### Original DEF Write Flow
-
-| 原始 `DefWrite` 执行顺序 | EDADB write / `toShadow` 对应 | DEF 域 / iDB 变量 / EDADB 域 |
-| --- | --- | --- |
-| 1. `write_component()` 对 null/empty list 失败，输出 section count 并按 instance vector 顺序遍历，见 `def_write.cpp:460-476` | `writeIdbInstance()` 对 null 失败、empty 成功；按 index 保存 `_order_sd`，见 `def_write_edadb.cpp:317-346` | `COMPONENTS <N>` / `IdbInstanceList::_instance_list` / `iInstSD._order_sd` |
-| 2. 输出 escaped instance name、cell master name 和 optional `SOURCE`，见 `def_write.cpp:477-482` | `toShadow()` 保存 `_name_sd/_cell_master_name_sd/_type_sd`，见 `shadow_idb_instance.h:37-45` | `- <inst> <master> + SOURCE` / `IdbInstance::_name/_cell_master/_type` / `_name_sd/_cell_master_name_sd/_type_sd` |
-| 3. `has_placed()` 时输出 status、coordinate、orient，否则只输出 header，见 `def_write.cpp:483-491` | 保存 `_status_sd/_orient_sd/_coordinate_sd`，见 `shadow_idb_instance.h:45-51` | placement statement / `_status/_orient/_coordinate` / `_status_sd/_orient_sd/_coordinate_sd` |
-| 4. halo 存在时输出 optional `SOFT` 和四个 extension，见 `def_write.cpp:493-499` | `_halo_sd` 直接存储 `IdbHalo` scalar child，见 `shadow_idb_instance.h:53-55` | `+ HALO [SOFT] left bottom right top` / `IdbInstance::_halo` / `_halo_sd` → `iHalo` |
-| 5. route halo 存在时输出 distance 和 bottom/top layer names，见 `def_write.cpp:501-506` | `Shadow<IdbRouteHalo>` 保存 distance 和 layer-name refs，见 `shadow_idb_instance.h:56-59`, `shadow_idb_halo.h:16-23` | `+ ROUTEHALO` / `IdbInstance::_route_halo` / `_route_halo_sd` |
-| 6. 原始 writer 没有 `WEIGHT` 和 `REGION` 输出步骤 | EDADB 仍保存 parser-supported `_weight_sd/_region_name_sd`，见 `shadow_idb_instance.h:47,60` | parser-only `WEIGHT/REGION` / `IdbInstance::_weight/_region` / `_weight_sd/_region_name_sd` |
-
-### Original DEF Read Flow
-
-| 原始 `DefRead` 执行顺序 | EDADB read / `fromShadow` 对应 | DEF 域 / iDB 变量 / EDADB 域 |
-| --- | --- | --- |
-| 1. component-count callback 调 `parse_component_number()` 初始化 list capacity，见 `def_read.cpp:843-863` | EDADB 不存 section count；`readIdbInstance()` reset list 并按 `_order_sd` 读取，见 `def_read_edadb.cpp:712-740` | `COMPONENTS <N>` / `IdbInstanceList` capacity/order / `_order_sd` |
-| 2. `parse_component()` 按 master name lookup LEF master，trim instance name，append instance 并 `set_cell_master()`，见 `def_read.cpp:884-918` | builder 按 `_cell_master_name_sd` lookup master，先 `set_cell_master()` 再恢复 shadow，见 `def_read_edadb.cpp:749-761` | instance/master / `_name/_cell_master` / `_name_sd/_cell_master_name_sd` |
-| 3. 恢复 status/orient 和 optional SOURCE，见 `def_read.cpp:919-924` | `fromShadow()` 恢复 `_status_sd/_orient_sd/_type_sd`，见 `shadow_idb_instance.h:63-72` | placement/SOURCE / `_status/_orient/_type` / corresponding `_sd` fields |
-| 4. 条件恢复 `WEIGHT`，见 `def_read.cpp:926-928` | `fromShadow()` 恢复 `_weight_sd`，见 `shadow_idb_instance.h:72` | `+ WEIGHT` / `_weight` / `_weight_sd` |
-| 5. 条件按 name lookup region，设 instance ref 并补 region backlink，见 `def_read.cpp:930-936` | builder 按 `_region_name_sd` 执行同样 lookup 和双向关系重建，见 `def_read_edadb.cpp:763-769` | `+ REGION` / `_region`, `IdbRegion::_instance_list` / `_region_name_sd` |
-| 6. 条件创建 halo，恢复 soft 和四个 extension，见 `def_read.cpp:938-948` | `fromShadow()` 将 `_halo_sd` ownership 转移给 instance，见 `shadow_idb_instance.h:78-81` | `+ HALO` / `_halo` / `_halo_sd` |
-| 7. 条件创建 route halo，按 name lookup bottom/top layer，见 `def_read.cpp:950-955` | builder 创建 route halo，shadow 恢复 distance，再按名字 lookup layers，见 `def_read_edadb.cpp:771-776` | `+ ROUTEHALO` / `_route_halo` / `_route_halo_sd` |
-| 8. 最后设置 placement coordinate，见 `def_read.cpp:957` | `fromShadow()` 用 `_coordinate_sd` 调 `set_coodinate()`，见 `shadow_idb_instance.h:74-76`，builder 后 append instance | placement x/y / `_coordinate` 及由 setter 重建的 geometry / `_coordinate_sd` |
-
-## Child Storage View
-
-`IdbInstance` 是 `COMPONENTS` root，当前子节点/引用处理如下：
-
-- `_coordinate_sd`：coordinate value child，保存 placement x/y。
-- `_halo_sd`：direct `IdbHalo` child；halo 只包含 left/right/top/bottom/soft 纯 DEF 字段，不需要 shadow。
-- `_route_halo_sd`：`Shadow<IdbRouteHalo>` child；route halo 的 bottom/top layer 是 LEF layer pointer，DB 中保存 layer name。
-- `_cell_master`：不作为 child 存库；保存 `_cell_master_name_sd`，read 时从 LEF `IdbCellMasterList` 查找并调用 `set_cell_master()` 重建 pin list。
-- `_region`：不作为 child 存库；保存 `_region_name_sd`，read 时查找 region 并补回 region-instance 关系。
-- `_pin_list` / obs boxes / bbox：不入库，由 `set_cell_master()`、coordinate/orient 设置和 iDB 计算流程重建。
-
-因此 `Shadow<IdbInstance>` 是必要的：它把 DEF component 语义从 iEDA 运行时对象图中拆出来，避免把 cell master、region、layer 等 non-owning pointers 当成 DB ownership。
-
-## EDADB Write Path
-
-当前 `writeIdbInstance()`：
-
-- Code: `src/database/manager/builder/def_builder/def_write_edadb.cpp:317`
-- Enabled by chip writer: `src/database/manager/builder/def_builder/def_write_edadb.cpp:94`
-
-- 从 `design->get_instance_list()` 获取 instance vector。
-- 空列表返回成功，兼容 EDADB framework。
-- 按 vector 顺序构造 `Shadow<IdbInstance>`，第 `idx` 个写 `_order_sd = idx`。
-- 写入 `_name_sd`、cell master name、type/status/orient/weight、coordinate、halo、route halo、region name。
-
-这覆盖了原始 writer 输出字段，并保存 parser 语义字段 weight/region。原因是 EDADB read 会替代 `parse_component()`：如果 DB 不保存 weight/region，EDADB read 后的 active iDB 就无法完整等价于原始 DEF read 解析结果。
-
-## Write Performance Notes
-
-EDADB 当前公开写入路径有三类：
-
-- `insertObject<T>(obj)`：one-shot API；默认每次自带 transaction，并为每个 object 创建新的 `InsertOp`。
-- `insertVector<T>(vec)`：batch API；一次 transaction，创建一个 `InsertOp`，循环写入整个 vector，并复用 prepared statement。
-- `makeInsertOp<T>() + beginTransaction()`：streaming batch；一次 transaction，一个可复用 `InsertOp`，caller 逐个构造/写入 object。
-
-当前 `writeIdbInstance()` 先构造 `vector<Shadow<IdbInstance>*>`，再调用 `insertVector<Shadow<IdbInstance>>()`。因此 DB 写入阶段已经是 batch：一次 transaction、一个 reusable insert op、prepared statement 复用。主要额外成本不在 SQLite transaction，而在 adapter 先为所有 instance 创建 shadow 对象：
-
-- 时间：每个 instance 做一次 `toShadow()`，复制 name/master/region string，转换 route halo。
-- 内存：额外保存 `O(instance_count)` 个 shadow 指针和 shadow object；coordinate/halo 多数是借用 iDB 指针，route halo 会生成小 shadow object。
-- 对当前 sky130 demo 的 1k 级 instance 不构成问题；10w 级通常仍可接受；100w 级开始需要关注临时内存和 string allocation；500w+ 级不建议继续保留全量 shadow vector。
-
-如果后续需要优化，应优先改成 streaming batch，而不是退回逐个 `insertObject()`：
-
-```cpp
-auto op = edadb::makeInsertOp<edadb::Shadow<idb::IdbInstance>>();
-edadb::beginTransaction();
-for (...) {
-    edadb::Shadow<idb::IdbInstance> inst_sd;
-    inst_sd.toShadow(inst, &idx);
-    op.insert(&inst_sd);
-}
-edadb::commitTransaction();
-```
-
-这个方案与 `insertVector()` 的 DB 侧性能模型接近，仍保留 single transaction 和 prepared statement 复用，但 adapter 临时内存从 `O(instance_count)` 降到 `O(1)`。边界条件：
-
-- `Shadow<IdbInstance>` 在 `op.insert()` 返回前必须保持有效，返回后可销毁。
-- 需要显式 rollback：任一 insert 失败时调用 `rollbackTransaction()` 并返回失败。
-- 不能让 borrowed `_coordinate_sd` / `_halo_sd` 在 insert 期间失效；当前 iDB active design 生命周期满足这一点。
-- 如果 EDADB 后续支持 `insertVector` 的 lazy/generator 版本，可以把该模式沉到 EDADB core，避免每个 adapter 重复写 transaction/error handling。
-
-## EDADB Read Path
-
-当前 `readIdbInstance()`：
-
-- Code: `src/database/manager/builder/def_builder/def_read_edadb.cpp:723`
-- Enabled by EDADB read flow: `src/database/manager/builder/def_builder/def_read_edadb.cpp:216`
-
-- reset 当前 instance list，避免 DEF 文本 callback 与 EDADB 读回重复。
-- 用 `ORDER BY "_order_sd"` 读取 `iInstSD`，恢复 `IdbInstanceList` 原始 append 顺序。
-- 通过 `_cell_master_name_sd` 查找 LEF master，调用 `set_cell_master()` 重建 pin list。
-- `fromShadow()` 恢复 name、type、status、orient、weight、coordinate、halo。
-- route halo layer 和 region 通过 name lookup 恢复。
-- 最后 `instance_list->add_instance(inst)`，保持 map 和 vector 同步。
-
-`createDbByDef()` 使用 `defrUnsetComponentCbk()` / `defrUnsetComponentStartCbk()` / `defrUnsetComponentEndCbk()` 清掉 DEF component callbacks，因此 `COMPONENTS` 只来自 EDADB。
-
-## Computed Fields
-
-不直接按 DEF 字段入库、但读回时由 iDB 计算：
-
-- instance bounding box
-- instance pin coordinates / pin bounding boxes
-- halo coordinate
-- obs box list
-- net/group/blockage 到 instance 的引用，由后续 adapter 通过 instance name 查找恢复
-
-## Order / Index
-
-`IdbInstanceList` 顺序需要保持：
-
-- 原始 parser 按 DEF `COMPONENTS` 出现顺序 append。
-- 原始 writer 按 `get_instance_list()` 当前顺序输出。
-- 多个工具会遍历 instance vector；顺序变化虽然通常不改变逻辑 identity，但会影响文本 diff 和部分流程稳定性。
-
-当前已实现：`_name_sd` 作为 identity，`_order_sd` 作为 root list order，read path 显式 `ORDER BY "_order_sd"`。
+- cell-master pin list
+- region-instance backlink
+- instance bbox、pin coordinates/bboxes、halo coordinate、obs boxes
+- later net/group/blockage references by instance name
 
 ## Tests
 
-当前回归覆盖：
+`src/database/edadb/test/run_idb_roundtrip_regression.sh` 覆盖：
 
-- `iInstSD` count。
-- sample instance 的 name、cell master、status、orient、coordinate。
-- default fixture 中 sample instance 的 `_weight_sd=-1`、`_region_name_sd=''`，保持 iEDA 未设置 `WEIGHT` 时的默认状态。
-- aux optional fixture 给 `ctrl/_34_` 注入 DEF `+ WEIGHT 13` / `+ REGION test_region`，并用 SQL 验证 `iInstSD._weight_sd` / `iInstSD._region_name_sd` 已写入 DB。
-- `IdbInstanceList` 前缀顺序。
-- `writeIdbInstance` / `readIdbInstance` 日志。
-- demo DEF roundtrip diff clean。
+- 1458 instances 的 count、sample name/master/status/orient/coordinate。
+- `WEIGHT/REGION` optional fields 与 region backlink 路径。
+- `instance_branches` fixture 覆盖 soft HALO、四边 extension、ROUTEHALO distance/layer refs。
+- 将 `iInstSD` 物理行逆序后，`ORDER BY _order_sd` 恢复原 append order，最终 DEF 与 direct path 一致。
+- write/read logs 与 default/aux/routed regressions。
 
-## Risks / TODO
+## Known Native Writer Differences
 
-- 当前 sky130 demo 主要覆盖 placed instance。
-- halo / route halo 仍需要专门 optional fixture 继续扩展覆盖。
-- 原始 writer 对空 instance list 返回失败，EDADB writer 对空 vector 返回成功。
-- `WEIGHT/REGION` 是 parser-supported state：EDADB 保存并恢复，但原始 writer 当前不输出，不能仅用最终 DEF diff 验证这两个字段。
+- 原始 writer 不输出 parser 支持的 `WEIGHT/REGION`；必须用 DB SQL/read-state 测试，不能只看最终 DEF。
+- 原始 writer 对 soft halo 输出字面量 `[SOFT]`，见 `def_write.cpp:496`；该输出无法被当前 DEF parser 二次解析。专项测试验证 direct 与 EDADB 输出一致，但不把这项原生问题误判为 adapter 问题。
+- 原始 writer 对空 component list 返回失败，EDADB 空 batch 返回成功。

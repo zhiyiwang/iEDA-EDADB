@@ -365,10 +365,9 @@ bool DefReadEdadb::readIdbRow(void) {
 
 bool DefReadEdadb::readIdbTrackGrid(void) {
     IdbLayout* layout = _def_service->get_layout();
-    IdbLayers* layers = layout->get_layers();
     IdbTrackGridList* track_grid_list = layout->get_track_grid_list();
-    if (layers == nullptr || track_grid_list == nullptr) {
-        std::cerr << "DefReadEdadb::readIdbTrackGrid failed, layers or track_grid_list is nullptr!" << std::endl;
+    if (track_grid_list == nullptr) {
+        std::cerr << "DefReadEdadb::readIdbTrackGrid failed, track_grid_list is nullptr!" << std::endl;
         return false;
     }
 
@@ -377,7 +376,6 @@ bool DefReadEdadb::readIdbTrackGrid(void) {
     auto track_grid_reader = edadb::makeReadAllOp<edadb::Shadow<idb::IdbTrackGrid>>();
 
     int32_t track_grid_count = 0;
-    int32_t layer_ref_count = 0;
     while (true) {
         edadb::Shadow<idb::IdbTrackGrid> track_grid_sd;
         const int read_count = edadb::readNext<edadb::Shadow<idb::IdbTrackGrid>>(track_grid_reader, &track_grid_sd);
@@ -389,30 +387,19 @@ bool DefReadEdadb::readIdbTrackGrid(void) {
             return false;
         }
 
-        IdbTrackGrid* track_grid = track_grid_list->add_track_grid(nullptr);
-        track_grid_sd.fromShadow(track_grid);
-
-        for (auto& layer_name_sd : track_grid_sd._layer_name_vec_sd) {
-            IdbLayer* layer = layers->find_layer(layer_name_sd);
-            if (layer == nullptr) {
-                std::cout << "Track Grid Error : no layer exist..." << std::endl;
-                continue;
-            }
-
-            track_grid->add_layer_list(layer);
-            if (layer->is_routing()) {
-                IdbLayerRouting* routing_layer = dynamic_cast<IdbLayerRouting*>(layer);
-                routing_layer->add_track_grid(track_grid);
-            }
-            ++layer_ref_count;
+        IdbTrackGrid* track_grid = new IdbTrackGrid();
+        if (!track_grid_sd.fromShadow(track_grid)) {
+            delete track_grid;
+            std::cerr << "DefReadEdadb::readIdbTrackGrid failed to restore track grid shadow" << std::endl;
+            return false;
         }
 
+        track_grid_list->add_track_grid(track_grid);
         ++track_grid_count;
     }
 
     EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] readIdbTrackGrid restored track_grid_count="
-              << track_grid_count
-              << " layer_ref_count=" << layer_ref_count << std::endl;
+              << track_grid_count << std::endl;
     return true;
 }
 
@@ -478,6 +465,30 @@ bool DefReadEdadb::readIdbVia(void) {
             std::cout << "DefReadEdadb::readIdbVia failed to read!" << std::endl;
             return false;
         }
+
+#if EDADB_OUTPUT_DEBUG
+        IdbViaMaster* via_master = via_inst->get_instance();
+        if (via_master->is_fix()) {
+            std::string fixed_geometry = via_inst->get_name();
+            uint32_t fixed_idx = 0;
+            for (IdbViaMasterFixed* fixed : via_master->get_master_fixed_list()) {
+                fixed_geometry += "|" + std::to_string(fixed_idx++) + ":" + fixed->get_layer()->get_name() + ":";
+                uint32_t rect_idx = 0;
+                for (IdbRect* rect : fixed->get_rect_list()) {
+                    if (rect_idx > 0) {
+                        fixed_geometry += ";";
+                    }
+                    fixed_geometry += std::to_string(rect_idx++) + "="
+                                      + std::to_string(rect->get_low_x()) + ","
+                                      + std::to_string(rect->get_low_y()) + ","
+                                      + std::to_string(rect->get_high_x()) + ","
+                                      + std::to_string(rect->get_high_y());
+                }
+            }
+            EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] readIdbVia fixed_geometry="
+                                   << fixed_geometry << std::endl;
+        }
+#endif
 
         via_list->add_via(via_inst);
         ++via_count;
@@ -698,18 +709,14 @@ bool DefReadEdadb::readIdbFill(void) {
 
 bool DefReadEdadb::readIdbInstance(void) {
     IdbDesign* design = _def_service->get_design();  // Def
-    IdbLayout* layout = _def_service->get_layout();  // Lef
-    if (design == nullptr || layout == nullptr) {
-        std::cerr << "DefReadEdadb::readIdbInstance failed, design or layout is nullptr!" << std::endl;
+    if (design == nullptr) {
+        std::cerr << "DefReadEdadb::readIdbInstance failed, design is nullptr!" << std::endl;
         return false;
     }
 
-    IdbLayers* layer_list = layout->get_layers();
-    IdbRegionList* region_list = design->get_region_list();
     IdbInstanceList* instance_list = design->get_instance_list();
-    IdbCellMasterList* master_list = layout->get_cell_master_list();
-    if (layer_list == nullptr || region_list == nullptr || instance_list == nullptr || master_list == nullptr) {
-        std::cerr << "DefReadEdadb::readIdbInstance failed, required list is nullptr!" << std::endl;
+    if (instance_list == nullptr) {
+        std::cerr << "DefReadEdadb::readIdbInstance failed, instance_list is nullptr!" << std::endl;
         return false;
     }
 
@@ -734,32 +741,10 @@ bool DefReadEdadb::readIdbInstance(void) {
         }
 
         IdbInstance* inst = new IdbInstance();
-        if (nullptr == _cur_cell_master || _cur_cell_master->get_name() != inst_sd._cell_master_name_sd) {
-            _cur_cell_master = master_list->find_cell_master(inst_sd._cell_master_name_sd);
-        }
-        if (_cur_cell_master == nullptr) {
+        if (!inst_sd.fromShadow(inst)) {
             delete inst;
-            std::cerr << "DefReadEdadb::readIdbInstance failed to find cell master: "
-                      << inst_sd._cell_master_name_sd << std::endl;
+            std::cerr << "DefReadEdadb::readIdbInstance failed to restore instance shadow" << std::endl;
             return false;
-        }
-        inst->set_cell_master(_cur_cell_master);
-
-        inst_sd.fromShadow(inst);
-
-        if (!inst_sd._region_name_sd.empty()) {
-            IdbRegion* region = region_list->find_region(inst_sd._region_name_sd);
-            if (region != nullptr) {
-                inst->set_region(region);
-                region->add_instance(inst);
-            }
-        }
-
-        if (inst_sd._route_halo_sd != nullptr) {
-            IdbRouteHalo* route_halo = inst->set_route_halo(nullptr);
-            inst_sd._route_halo_sd->fromShadow(route_halo);
-            route_halo->set_layer_bottom(layer_list->find_layer(inst_sd._route_halo_sd->_layer_bottom_name_sd));
-            route_halo->set_layer_top(layer_list->find_layer(inst_sd._route_halo_sd->_layer_top_name_sd));
         }
 
         instance_list->add_instance(inst);

@@ -170,8 +170,19 @@ def flush_statement_run(output: List[str], run_kind: str | None, run_lines: List
         output.extend(run_lines)
         run_lines.clear()
         return
-    sorted_lines = sorted(([line] for line in run_lines), key=statement_key(run_kind))
-    for record in sorted_lines:
+    records: List[List[str]] = []
+    current: List[str] | None = None
+    for line in run_lines:
+        if top_statement_name(line) == run_kind:
+            if current is not None:
+                records.append(current)
+            current = [line]
+        elif current is not None:
+            current.append(line)
+    if current is not None:
+        records.append(current)
+
+    for record in sorted(records, key=statement_key(run_kind)):
         output.extend(record)
     run_lines.clear()
 
@@ -189,6 +200,11 @@ def normalize_lines(lines: Sequence[str]) -> List[str]:
             if statement_run_kind not in (None, statement_kind):
                 flush_statement_run(output, statement_run_kind, statement_run_lines)
             statement_run_kind = statement_kind
+            statement_run_lines.append(line)
+            index += 1
+            continue
+
+        if statement_run_kind is not None and not line.strip():
             statement_run_lines.append(line)
             index += 1
             continue

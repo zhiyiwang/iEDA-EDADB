@@ -257,7 +257,10 @@ int32_t DefWriteEdadb::writeIdbTrackGrid(void) {
     track_grid_sd_vec.reserve(track_grid_vec.size());
     for (auto* track_grid : track_grid_vec) {
         track_grid_sd_vec.emplace_back();
-        track_grid_sd_vec.back().toShadow(track_grid);
+        if (!track_grid_sd_vec.back().toShadow(track_grid)) {
+            std::cerr << "DefWriteEdadb::writeIdbTrackGrid failed to convert track grid shadow" << std::endl;
+            return kDbFail;
+        }
     }
 
     EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] writeIdbTrackGrid insert track_grid_count="
@@ -349,7 +352,14 @@ int32_t DefWriteEdadb::writeIdbInstance(void) {
     inst_sd_vec.reserve(inst_vec.size());
     for (uint32_t inst_idx = 0; inst_idx < inst_vec.size(); ++inst_idx) {
         auto* inst_sd = new edadb::Shadow<idb::IdbInstance>();
-        inst_sd->toShadow(inst_vec[inst_idx], &inst_idx);
+        if (!inst_sd->toShadow(inst_vec[inst_idx], &inst_idx)) {
+            delete inst_sd;
+            for (auto* converted_inst_sd : inst_sd_vec) {
+                delete converted_inst_sd;
+            }
+            std::cerr << "DefWriteEdadb::writeIdbInstance failed to convert instance shadow" << std::endl;
+            return kDbFail;
+        }
         inst_sd_vec.emplace_back(inst_sd);
     }
 

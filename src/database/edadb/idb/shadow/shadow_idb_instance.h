@@ -13,6 +13,7 @@
 #include "shadow/shadow_idb_halo.h"
 #include "database/data/design/db_design/IdbHalo.h"
 #include "database/data/design/db_design/IdbInstance.h"
+#include "../edadb_idb_helper.h"
 
 namespace edadb {
 template<>
@@ -34,8 +35,11 @@ public:
 
 
 public:
-    void toShadow(idb::IdbInstance* obj, const uint32_t* idx_ptr = nullptr) {
-        assert(idx_ptr != nullptr);
+    bool toShadow(idb::IdbInstance* obj, const uint32_t* idx_ptr = nullptr) {
+        if (obj == nullptr || idx_ptr == nullptr || obj->get_cell_master() == nullptr
+            || obj->get_coordinate() == nullptr) {
+            return false;
+        }
 
         _name_sd = obj->get_name();
         _order_sd = *idx_ptr;
@@ -55,35 +59,62 @@ public:
         }
         if ( obj->has_route_halo() ) {
             _route_halo_sd = new Shadow<idb::IdbRouteHalo>();
-            _route_halo_sd->toShadow( obj->get_route_halo() );
+            if (!_route_halo_sd->toShadow(obj->get_route_halo())) {
+                return false;
+            }
         }
         _region_name_sd = obj->get_region() ? obj->get_region()->get_name() : "";
+        return true;
     }
 
-    void fromShadow(idb::IdbInstance* obj, uint32_t* idx_ptr = nullptr) {
+    bool fromShadow(idb::IdbInstance* obj, uint32_t* idx_ptr = nullptr) {
+        if (obj == nullptr || _coordinate_sd == nullptr) {
+            return false;
+        }
+
+        idb::IdbCellMaster* cell_master =
+            idb::edadb_adapter::EdadbIdbHelper::findIdbCellMasterByName(_cell_master_name_sd);
+        if (cell_master == nullptr) {
+            std::cerr << "edadb::Shadow<idb::IdbInstance>::fromShadow error: cannot find cell master: "
+                      << _cell_master_name_sd << std::endl;
+            return false;
+        }
+
         if (idx_ptr != nullptr) {
             *idx_ptr = static_cast<uint32_t>(_order_sd);
         }
 
-        obj->set_name( _name_sd );
-        obj->set_type( _type_sd );
-        obj->set_status( _status_sd );
-        obj->set_orient( _orient_sd );
-        obj->set_weight( _weight_sd );
+        obj->set_name(_name_sd);
+        obj->set_cell_master(cell_master);
+        obj->set_status(_status_sd);
+        obj->set_orient(_orient_sd, false);
+        obj->set_type(_type_sd);
+        obj->set_weight(_weight_sd);
 
-        // use cell master name to lookup during def read
-        obj->set_coodinate( *_coordinate_sd );
-        _coordinate_sd_owner = true;
-        
-        if (_halo_sd != nullptr) {
-            obj->set_halo( _halo_sd );
-            _halo_sd = nullptr; // move ownership, avoid double free
+        if (!_region_name_sd.empty()) {
+            idb::IdbRegion* region =
+                idb::edadb_adapter::EdadbIdbHelper::findIdbRegionByName(_region_name_sd);
+            if (region != nullptr) {
+                obj->set_region(region);
+                region->add_instance(obj);
+            }
         }
 
-        // DefReadEdadb::readIdbInstance 
-        //   will create new IdbRouteHalo object if _route_halo_sd is not nullptr
+        if (_halo_sd != nullptr) {
+            obj->set_halo(_halo_sd);
+            _halo_sd = nullptr;
+        }
 
-        // use region name to lookup during def read
+        if (_route_halo_sd != nullptr) {
+            idb::IdbRouteHalo* route_halo = obj->set_route_halo();
+            if (!_route_halo_sd->fromShadow(route_halo)) {
+                return false;
+            }
+        }
+
+        obj->set_coodinate(*_coordinate_sd);
+        _coordinate_sd_owner = true;
+        return true;
     }
 
 public:

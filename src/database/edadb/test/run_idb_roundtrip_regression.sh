@@ -139,6 +139,8 @@ check_default_sql() {
         "-1|" "$name instance default weight region"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || ':' || _name_sd, ',') from (select _order_sd, _name_sd from iInstSD order by _order_sd limit 5);")" \
         "0:ctrl/_17_,1:ctrl/_18_,2:ctrl/_19_,3:ctrl/_20_,4:ctrl/_21_" "$name instance order prefix"
+    assert_eq "$(sql_value "$edadb_db" "select _order_sd from iInstSD order by rowid limit 1;")" \
+        "1457" "$name instance table physical order was perturbed"
     assert_eq "$(sql_value "$edadb_db" "select _pin_name_sd || '|' || _net_name_sd || '|' || _io_term_sd__direction_sd || '|' || _io_term_sd__type_sd || '|' || _io_term_sd__has_port_sd || '|' || _no_port_placement_status_sd || '|' || _no_port_location_sd__x_sd || ',' || _no_port_location_sd__y_sd from iPinSD where _pin_name_sd='req_msg[0]';")" \
         "req_msg[0]|req_msg[0]|1|1|0|3|1000,18645" "$name pin DEF source fields"
     assert_eq "$(sql_value "$edadb_db" "select (select count(*) from pragma_table_info('iPinSD') where name in ('_average_coordinate_sd__x_sd','_average_coordinate_sd__y_sd','_is_io_pin_sd','_is_special_net_sd','_layer_num_sd','_io_term_sd__name_sd','_io_term_sd__shape_sd','_io_term_sd__placement_status_sd','_io_term_sd__is_instance_sd')) || '|' || (select count(*) from pragma_table_info('iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD') where name='_class_sd');")" \
@@ -262,6 +264,80 @@ check_routed_sql() {
     assert_contains "$edadb2def_log" "[EDADB-IDB] readIdbNet restored net_count=677" "$name read routed net log"
 }
 
+check_grid_branch_sql() {
+    local name="$1"
+    local edadb_db="$2"
+    local def2edadb_log="$3"
+    local edadb2def_log="$4"
+
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from iTrackGridSD;")" \
+        "12" "$name track grid count"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from pragma_table_info('iTrackGridSD') where name='_order_sd';")" \
+        "0" "$name track grid has no root order column"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(primary_key, ',') from (select primary_key from iTrackGridSD order by rowid);")" \
+        "12,11,10,9,8,7,6,5,4,3,2,1" "$name perturbed track root fetch order"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(__edadb_vec_idx || ':' || value, ',') from (select __edadb_vec_idx, value from iTrackGridSD__layer_name_vec_sd___edadb_primitive_vector where iTrackGridSD_primary_key=1 order by rowid);")" \
+        "1:met4,0:met5" "$name perturbed track layer fetch order"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(__edadb_vec_idx || ':' || value, ',') from (select __edadb_vec_idx, value from iTrackGridSD__layer_name_vec_sd___edadb_primitive_vector where iTrackGridSD_primary_key=1 order by __edadb_vec_idx);")" \
+        "0:met5,1:met4" "$name ordered track layer names"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_direction || ':' || _start || ':' || _num || ':' || _space, ';') from (select _direction, _start, _num, _space from iGCellGrid order by rowid);")" \
+        "2:144720:2:5408;2:3600:43:3360;2:0:2:3600;1:144720:2:5240;1:3600:43:3360;1:0:2:3600" "$name perturbed gcell root fetch order"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_direction || ':' || _start || ':' || _num || ':' || _space, ';') from (select * from iGCellGrid order by _direction, _start, _num, _space);")" \
+        "1:0:2:3600;1:3600:43:3360;1:144720:2:5240;2:0:2:3600;2:3600:43:3360;2:144720:2:5408" "$name gcell grid fields"
+    assert_eq "$(sql_value "$edadb_db" "select sum(pk) from pragma_table_info('iGCellGrid');")" \
+        "0" "$name gcell grid has no primary key"
+    assert_contains "$def2edadb_log" "[EDADB-IDB] writeIdbTrackGrid insert track_grid_count=12" "$name write track grid log"
+    assert_contains "$edadb2def_log" "[EDADB-IDB] readIdbTrackGrid restored track_grid_count=12" "$name read track grid log"
+    assert_contains "$def2edadb_log" "[EDADB-IDB] writeIdbGCellGrid insert gcell_grid_count=6" "$name write gcell grid log"
+    assert_contains "$edadb2def_log" "[EDADB-IDB] readIdbGCellGrid restored gcell_grid_count=6" "$name read gcell grid log"
+}
+
+check_via_branch_sql() {
+    local name="$1"
+    local edadb_db="$2"
+    local def2edadb_log="$3"
+    local edadb2def_log="$4"
+    local shape_table="iVia__master_instance_iViaMasterSD_fixed_layer_shape_list_sd_iLayerShapeSD"
+    local rect_table="${shape_table}__rect_list_sd_IdbRectSD"
+    local rect_owner="${shape_table}_primary_key"
+
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from iVia;")" \
+        "5" "$name generated and fixed via count"
+    assert_eq "$(sql_value "$edadb_db" "select _master_instance__master_generate_sd__original_offset_x_sd || ',' || _master_instance__master_generate_sd__original_offset_y_sd || '|' || _master_instance__master_generate_sd__offset_bottom_x_sd || ',' || _master_instance__master_generate_sd__offset_bottom_y_sd || ',' || _master_instance__master_generate_sd__offset_top_x_sd || ',' || _master_instance__master_generate_sd__offset_top_y_sd from iVia where _name='via_1600x480';")" \
+        "10,20|1,2,3,4" "$name generated via origin and offset"
+    assert_eq "$(sql_value "$edadb_db" "select _master_instance__type_sd from iVia where _name='fixed_test';")" \
+        "2" "$name fixed via branch"
+    assert_eq "$(sql_value "$edadb_db" "select _name from iVia order by rowid limit 1;")" \
+        "fixed_test" "$name via table physical order was perturbed"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_vec_idx || ':' || _layer_name_sd, ',') from (select _vec_idx, _layer_name_sd from \"$shape_table\" where iVia__name='fixed_test' order by rowid);")" \
+        "2:met2,1:via,0:met1" "$name fixed layer-shape physical order was perturbed"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_vec_idx || ':' || _lx_sd || ',' || _ly_sd || ',' || _hx_sd || ',' || _hy_sd, ';') from (select _vec_idx, _lx_sd, _ly_sd, _hx_sd, _hy_sd from \"$rect_table\" where \"$rect_owner\"=(select primary_key from \"$shape_table\" where iVia__name='fixed_test' and _layer_name_sd='met1') order by rowid);")" \
+        "1:-80,-160,80,160;0:-100,-200,100,200" "$name fixed rect physical order was perturbed"
+    assert_contains "$edadb2def_log" \
+        "[EDADB-IDB] readIdbVia fixed_geometry=fixed_test|0:met1:0=-100,-200,100,200;1=-80,-160,80,160|1:via:0=-50,-50,50,50|2:met2:0=-120,-220,120,220" \
+        "$name rebuilt fixed layer and rect order"
+    assert_contains "$def2edadb_log" "[EDADB-IDB] writeIdbVia insert via_count=5" "$name write via log"
+    assert_contains "$edadb2def_log" "[EDADB-IDB] readIdbVia restored via_count=5" "$name read via log"
+}
+
+check_instance_branch_sql() {
+    local name="$1"
+    local edadb_db="$2"
+    local def2edadb_log="$3"
+    local edadb2def_log="$4"
+
+    assert_eq "$(sql_value "$edadb_db" "select _weight_sd || '|' || _region_name_sd from iInstSD where _name_sd='ctrl/_34_';")" \
+        "13|test_region" "$name instance weight region"
+    assert_eq "$(sql_value "$edadb_db" "select _halo_sd__is_soft || '|' || _halo_sd__extend_left || ',' || _halo_sd__extend_bottom || ',' || _halo_sd__extend_right || ',' || _halo_sd__extend_top from iInstSD where _name_sd='ctrl/_34_';")" \
+        "1|10,20,30,40" "$name instance halo"
+    assert_eq "$(sql_value "$edadb_db" "select _route_halo_sd__route_distance_sd || '|' || _route_halo_sd__layer_bottom_name_sd || '|' || _route_halo_sd__layer_top_name_sd from iInstSD where _name_sd='ctrl/_34_';")" \
+        "100|met1|met3" "$name instance route halo"
+    assert_eq "$(sql_value "$edadb_db" "select _order_sd from iInstSD order by rowid limit 1;")" \
+        "1457" "$name instance table physical order was perturbed"
+    assert_contains "$def2edadb_log" "[EDADB-IDB] writeIdbInstance insert instance_count=1458" "$name write instance log"
+    assert_contains "$edadb2def_log" "[EDADB-IDB] readIdbInstance restored instance_count=1458" "$name read instance log"
+}
+
 check_net_branch_sql() {
     local name="$1"
     local edadb_db="$2"
@@ -331,6 +407,61 @@ generate_die_polygon_fixture() {
             next
         }
         { print }
+    ' "$input" >"$output"
+}
+
+generate_grid_branch_fixture() {
+    local input="$1"
+    local output="$2"
+    awk '
+        !replaced && /^TRACKS / {
+            sub(/LAYER [^;]*;/, "LAYER met5 met4 ;")
+            replaced = 1
+        }
+        { print }
+        END {
+            if (!replaced) {
+                exit 1
+            }
+        }
+    ' "$input" >"$output"
+}
+
+generate_via_branch_fixture() {
+    local input="$1"
+    local output="$2"
+    awk '
+        /^VIAS 4 ;$/ {
+            print "VIAS 5 ;"
+            next
+        }
+        /^- via_1600x480 / {
+            print $0 " + ORIGIN 10 20 + OFFSET 1 2 3 4"
+            next
+        }
+        /^END VIAS$/ {
+            print "- fixed_test"
+            print "  + RECT met1 ( -100 -200 ) ( 100 200 )"
+            print "  + RECT met1 ( -80 -160 ) ( 80 160 )"
+            print "  + RECT via ( -50 -50 ) ( 50 50 )"
+            print "  + RECT met2 ( -120 -220 ) ( 120 220 )"
+            print " ;"
+            print
+            next
+        }
+        { print }
+    ' "$input" >"$output"
+}
+
+generate_instance_branch_fixture() {
+    local input="$1"
+    local output="$2"
+    awk '
+        { print }
+        /^      \+ REGION test_region$/ {
+            print "      + HALO SOFT 10 20 30 40"
+            print "      + ROUTEHALO 100 met1 met3"
+        }
     ' "$input" >"$output"
 }
 
@@ -559,6 +690,65 @@ INSERT INTO iRow SELECT * FROM rows_reversed;
 SQL
 }
 
+perturb_grid_query_order() {
+    local edadb_db="$1"
+
+    sqlite3 "$edadb_db" <<'SQL'
+PRAGMA foreign_keys = OFF;
+CREATE TEMP TABLE track_grids_reversed AS
+SELECT * FROM iTrackGridSD ORDER BY rowid DESC;
+DELETE FROM iTrackGridSD;
+INSERT INTO iTrackGridSD SELECT * FROM track_grids_reversed;
+
+CREATE TEMP TABLE track_layers_reversed AS
+SELECT * FROM iTrackGridSD__layer_name_vec_sd___edadb_primitive_vector
+ORDER BY iTrackGridSD_primary_key, __edadb_vec_idx DESC;
+DELETE FROM iTrackGridSD__layer_name_vec_sd___edadb_primitive_vector;
+INSERT INTO iTrackGridSD__layer_name_vec_sd___edadb_primitive_vector
+SELECT * FROM track_layers_reversed;
+
+CREATE TEMP TABLE gcell_grids_reversed AS
+SELECT * FROM iGCellGrid ORDER BY rowid DESC;
+DELETE FROM iGCellGrid;
+INSERT INTO iGCellGrid SELECT * FROM gcell_grids_reversed;
+SQL
+}
+
+perturb_instance_query_order() {
+    local edadb_db="$1"
+
+    sqlite3 "$edadb_db" <<'SQL'
+CREATE TEMP TABLE instances_reversed AS
+SELECT * FROM iInstSD ORDER BY _order_sd DESC;
+DELETE FROM iInstSD;
+INSERT INTO iInstSD SELECT * FROM instances_reversed;
+SQL
+}
+
+perturb_via_query_order() {
+    local edadb_db="$1"
+
+    sqlite3 "$edadb_db" <<'SQL'
+PRAGMA foreign_keys = OFF;
+CREATE TEMP TABLE via_rects_reversed AS
+SELECT * FROM iVia__master_instance_iViaMasterSD_fixed_layer_shape_list_sd_iLayerShapeSD__rect_list_sd_IdbRectSD
+ORDER BY iVia__name, iVia__master_instance_iViaMasterSD_fixed_layer_shape_list_sd_iLayerShapeSD_primary_key, _vec_idx DESC;
+CREATE TEMP TABLE via_shapes_reversed AS
+SELECT * FROM iVia__master_instance_iViaMasterSD_fixed_layer_shape_list_sd_iLayerShapeSD
+ORDER BY iVia__name, _vec_idx DESC;
+CREATE TEMP TABLE vias_reversed AS
+SELECT * FROM iVia ORDER BY rowid DESC;
+DELETE FROM iVia__master_instance_iViaMasterSD_fixed_layer_shape_list_sd_iLayerShapeSD__rect_list_sd_IdbRectSD;
+DELETE FROM iVia__master_instance_iViaMasterSD_fixed_layer_shape_list_sd_iLayerShapeSD;
+DELETE FROM iVia;
+INSERT INTO iVia SELECT * FROM vias_reversed;
+INSERT INTO iVia__master_instance_iViaMasterSD_fixed_layer_shape_list_sd_iLayerShapeSD
+SELECT * FROM via_shapes_reversed;
+INSERT INTO iVia__master_instance_iViaMasterSD_fixed_layer_shape_list_sd_iLayerShapeSD__rect_list_sd_IdbRectSD
+SELECT * FROM via_rects_reversed;
+SQL
+}
+
 run_case() {
     local name="$1"
     local input_def="$2"
@@ -586,8 +776,15 @@ run_case() {
     if [[ "$check_mode" == "die_polygon" ]]; then
         perturb_die_point_query_order "$edadb_db"
     fi
-    if [[ "$check_mode" == "default" || "$check_mode" == "aux" || "$check_mode" == "pin_derived" ]]; then
+    if [[ "$check_mode" == "default" || "$check_mode" == "aux" || "$check_mode" == "pin_derived" || "$check_mode" == "instance_branches" ]]; then
         perturb_row_query_order "$edadb_db"
+        perturb_instance_query_order "$edadb_db"
+    fi
+    if [[ "$check_mode" == "grid_branches" ]]; then
+        perturb_grid_query_order "$edadb_db"
+    fi
+    if [[ "$check_mode" == "via_branches" ]]; then
+        perturb_via_query_order "$edadb_db"
     fi
 
     export OUTPUT_DEF="$edadb_def"
@@ -604,6 +801,25 @@ run_case() {
             ;;
         routed)
             check_routed_sql "$name" "$edadb_db" "$case_dir/def2edadb.log" "$case_dir/edadb2def.log"
+            ;;
+        grid_branches)
+            if [[ ! -s "$case_dir/direct_vs_edadb.diff" ]]; then
+                echo "FAIL: $name expected Level-D root order raw diff" >&2
+                exit 1
+            fi
+            echo "PASS: $name raw DEF differs only in normalized Level-D root order"
+            check_grid_branch_sql "$name" "$edadb_db" "$case_dir/def2edadb.log" "$case_dir/edadb2def.log"
+            ;;
+        via_branches)
+            if [[ ! -s "$case_dir/direct_vs_edadb.diff" ]]; then
+                echo "FAIL: $name expected Level-D via root order raw diff" >&2
+                exit 1
+            fi
+            echo "PASS: $name raw DEF differs only in normalized Level-D via root order"
+            check_via_branch_sql "$name" "$edadb_db" "$case_dir/def2edadb.log" "$case_dir/edadb2def.log"
+            ;;
+        instance_branches)
+            check_instance_branch_sql "$name" "$edadb_db" "$case_dir/def2edadb.log" "$case_dir/edadb2def.log"
             ;;
         net_branches)
             check_net_branch_sql "$name" "$edadb_db" "$case_dir/def2edadb.log" "$case_dir/edadb2def.log"
@@ -686,6 +902,9 @@ main() {
     local design_fields_def="$OUT_DIR/fixtures/design_fields.def"
     local design_fallback_def="$OUT_DIR/fixtures/design_fallback.def"
     local die_polygon_def="$OUT_DIR/fixtures/die_polygon.def"
+    local grid_branch_def="$OUT_DIR/fixtures/grid_branches.def"
+    local via_branch_def="$OUT_DIR/fixtures/via_branches.def"
+    local instance_branch_def="$OUT_DIR/fixtures/instance_branches.def"
     generate_aux_optional_fixture "$BASE_DEF" "$aux_def"
     generate_net_branch_fixture "$ROUTED_DEF" "$net_branch_def"
     generate_pin_derived_fixture "$BASE_DEF" "$pin_derived_def"
@@ -694,6 +913,9 @@ main() {
     generate_design_fields_fixture "$BASE_DEF" "$design_fields_def"
     generate_design_fallback_fixture "$BASE_DEF" "$design_fallback_def"
     generate_die_polygon_fixture "$BASE_DEF" "$die_polygon_def"
+    generate_grid_branch_fixture "$ROUTED_DEF" "$grid_branch_def"
+    generate_via_branch_fixture "$BASE_DEF" "$via_branch_def"
+    generate_instance_branch_fixture "$aux_def" "$instance_branch_def"
 
     echo "EDADB regression output dir: $OUT_DIR"
     echo "iEDA binary: $IEDA_BIN"
@@ -706,6 +928,9 @@ main() {
     echo "generated fixture: $design_fields_def"
     echo "generated fixture: $design_fallback_def"
     echo "generated fixture: $die_polygon_def"
+    echo "generated fixture: $grid_branch_def"
+    echo "generated fixture: $via_branch_def"
+    echo "generated fixture: $instance_branch_def"
 
     run_case "default_ipl" "$BASE_DEF" "default"
     run_case "design_fields" "$design_fields_def" "design_fields"
@@ -715,6 +940,9 @@ main() {
     run_case "pin_derived" "$pin_derived_def" "pin_derived"
     run_case "pin_writer" "$pin_writer_def" "pin_writer"
     run_case "pin_branches" "$pin_branches_def" "pin_branches"
+    run_case "grid_branches" "$grid_branch_def" "grid_branches"
+    run_case "via_branches" "$via_branch_def" "via_branches"
+    run_case "instance_branches" "$instance_branch_def" "instance_branches"
     run_case "routed_irt" "$ROUTED_DEF" "routed"
     run_case "net_branches" "$net_branch_def" "net_branches"
 

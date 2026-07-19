@@ -74,6 +74,42 @@ ROW ROW_1 unit 0 0 N DO 1 BY 1 STEP 10 0 ;
 END DESIGN
 DEF
 
+cat >"$TMP_DIR/grids_a.def" <<'DEF'
+VERSION 5.8 ;
+DESIGN demo ;
+TRACKS X 0 DO 10 STEP 20 LAYER met1 met2 ;
+
+TRACKS Y 5 DO 8 STEP 40 LAYER met3 ;
+
+GCELLGRID X 0 DO 4 STEP 100 ;
+GCELLGRID Y 10 DO 3 STEP 200 ;
+END DESIGN
+DEF
+
+cat >"$TMP_DIR/grids_b.def" <<'DEF'
+VERSION 5.8 ;
+DESIGN demo ;
+TRACKS Y 5 DO 8 STEP 40 LAYER met3 ;
+
+TRACKS X 0 DO 10 STEP 20 LAYER met1 met2 ;
+
+GCELLGRID Y 10 DO 3 STEP 200 ;
+GCELLGRID X 0 DO 4 STEP 100 ;
+END DESIGN
+DEF
+
+cat >"$TMP_DIR/grids_nested_changed.def" <<'DEF'
+VERSION 5.8 ;
+DESIGN demo ;
+TRACKS X 0 DO 10 STEP 20 LAYER met2 met1 ;
+
+TRACKS Y 5 DO 8 STEP 40 LAYER met3 ;
+
+GCELLGRID X 0 DO 4 STEP 100 ;
+GCELLGRID Y 10 DO 3 STEP 200 ;
+END DESIGN
+DEF
+
 cat >"$TMP_DIR/special_a.def" <<'DEF'
 VERSION 5.8 ;
 DESIGN demo ;
@@ -166,6 +202,8 @@ DEF
 
 assert_norm_same "$TMP_DIR/regions_a.def" "$TMP_DIR/regions_b.def" "D REGIONS root order"
 assert_norm_different "$TMP_DIR/rows_a.def" "$TMP_DIR/rows_b.def" "B ROWS root order"
+assert_norm_same "$TMP_DIR/grids_a.def" "$TMP_DIR/grids_b.def" "D TRACKS and GCELLGRID root order"
+assert_norm_different "$TMP_DIR/grids_a.def" "$TMP_DIR/grids_nested_changed.def" "TRACKS nested layer order"
 assert_norm_same "$TMP_DIR/special_a.def" "$TMP_DIR/special_b.def" "D SPECIALNETS root block order"
 assert_norm_different "$TMP_DIR/special_a.def" "$TMP_DIR/special_nested_changed.def" "SPECIALNETS nested order"
 assert_norm_same "$TMP_DIR/vias_a.def" "$TMP_DIR/vias_b.def" "D VIAS root block order"

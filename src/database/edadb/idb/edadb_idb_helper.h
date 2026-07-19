@@ -79,6 +79,38 @@ public:
         return design->get_instance_list();
     }
 
+    static idb::IdbRegionList* getIdbRegionList() {
+        idb::IdbDesign* design = getIdbDesign();
+        if (design == nullptr) {
+            return nullptr;
+        }
+        return design->get_region_list();
+    }
+
+    static idb::IdbRegion* findIdbRegionByName(const std::string& region_name) {
+        idb::IdbRegionList* region_list = getIdbRegionList();
+        if (region_list == nullptr) {
+            return nullptr;
+        }
+        return region_list->find_region(region_name);
+    }
+
+    static idb::IdbCellMasterList* getIdbCellMasterList() {
+        idb::IdbLayout* layout = getIdbLayout();
+        if (layout == nullptr) {
+            return nullptr;
+        }
+        return layout->get_cell_master_list();
+    }
+
+    static idb::IdbCellMaster* findIdbCellMasterByName(const std::string& master_name) {
+        idb::IdbCellMasterList* master_list = getIdbCellMasterList();
+        if (master_list == nullptr) {
+            return nullptr;
+        }
+        return master_list->find_cell_master(master_name);
+    }
+
     static idb::IdbVias* getIdbDefVias() {
         idb::IdbDesign* design = getIdbDesign();
         if (design == nullptr) {
