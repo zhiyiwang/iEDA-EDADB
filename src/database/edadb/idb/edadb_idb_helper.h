@@ -63,22 +63,6 @@ public:
         return s_def_service->get_layout();
     }
 
-    static idb::IdbPins* getIdbIoPins() {
-        idb::IdbDesign* design = getIdbDesign();
-        if (design == nullptr) {
-            return nullptr;
-        }
-        return design->get_io_pin_list();
-    }
-
-    static idb::IdbInstanceList* getIdbInstanceList() {
-        idb::IdbDesign* design = getIdbDesign();
-        if (design == nullptr) {
-            return nullptr;
-        }
-        return design->get_instance_list();
-    }
-
     static idb::IdbRegionList* getIdbRegionList() {
         idb::IdbDesign* design = getIdbDesign();
         if (design == nullptr) {
@@ -110,23 +94,6 @@ public:
         }
         return master_list->find_cell_master(master_name);
     }
-
-    static idb::IdbVias* getIdbDefVias() {
-        idb::IdbDesign* design = getIdbDesign();
-        if (design == nullptr) {
-            return nullptr;
-        }
-        return design->get_via_list();
-    }
-
-    static idb::IdbVias* getIdbLefVias() {
-        idb::IdbLayout* layout = getIdbLayout();
-        if (layout == nullptr) {
-            return nullptr;
-        }
-        return layout->get_via_list();
-    }
-
 
     static idb::IdbViaRuleList* getIdbViaRuleList() {
         if (s_def_service == nullptr) {

@@ -70,7 +70,7 @@ int initAllTables(bool crt_tab) {
 #if EDADB_OUTPUT_DEBUG
     EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] initAllTables create=" << (crt_tab ? "true" : "false") << std::endl;
 #endif
-    EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] initAllTables register Design/Die/Row/TrackGrid/GCell/Via/Region/Instance/Pin/Blockage/Slot/Group/Fill/SpecialNet/Net groups"
+    EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] initAllTables register Design/Die/Row/TrackGrid/GCell/Via/Region/Instance/Pin/Blockage/Slot/Group groups"
               << std::endl;
 
     EDADB_INIT_TABLE(idb::IdbDesign, crt_tab);
@@ -85,9 +85,6 @@ int initAllTables(bool crt_tab) {
     EDADB_INIT_TABLE(idb::IdbRegion, crt_tab);
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbSlot>, crt_tab);
     EDADB_INIT_TABLE(edadb::Shadow<idb::IdbGroup>, crt_tab);
-    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbFill>, crt_tab);
-    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbSpecialNet>, crt_tab);
-    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbNet>, crt_tab);
 
     return 0;
 } // createAllTables

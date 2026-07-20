@@ -10,7 +10,7 @@ This directory is the canonical documentation home for the iEDA + EDADB integrat
 
 ## Per-Class Adapter Notes
 
-Read `idb-adapter/01_idb_design.md` through `idb-adapter/15_idb_net.md` in DEF write order. Each file records:
+Read `idb-adapter/01_idb_design.md` through `idb-adapter/12_idb_group.md` in DEF write order. In `demo/20260720`, `FILLS`, `SPECIALNETS`, and `NETS` remain on the original DEF parser path.
 
 - original `DefWrite` / `DefRead` semantics;
 - EDADB schema and primary-key choices;

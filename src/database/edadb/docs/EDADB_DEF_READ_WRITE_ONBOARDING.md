@@ -106,7 +106,7 @@ Call order:
 1. `DefWriteEdadb::writeDb2Edadb()`
 2. `idb::edadb_adapter::initWriteDb()`
 3. `DefWriteEdadb::writeChip2Edadb()`
-4. `writeIdbDesign()`, `writeIdbDie()`, `writeIdbRow()`, `writeIdbTrackGrid()`, `writeIdbGCellGrid()`, `writeIdbVia()`, `writeIdbInstance()`, `writeIdbPin()`, `writeIdbBlockage()`, `writeIdbRegion()`, `writeIdbSlot()`, `writeIdbGroup()`, `writeIdbFill()`, `writeSpecialNet()`, `writeIdbNet()`
+4. `writeIdbDesign()`, `writeIdbDie()`, `writeIdbRow()`, `writeIdbTrackGrid()`, `writeIdbGCellGrid()`, `writeIdbVia()`, `writeIdbInstance()`, `writeIdbPin()`, `writeIdbBlockage()`, `writeIdbRegion()`, `writeIdbSlot()`, `writeIdbGroup()`
 
 For each class, compare with `src/database/manager/builder/def_builder/def_write.cpp`:
 
@@ -122,9 +122,7 @@ For each class, compare with `src/database/manager/builder/def_builder/def_write
 - `writeIdbRegion()` <-> `write_region()`
 - `writeIdbSlot()` <-> `write_slot()`
 - `writeIdbGroup()` <-> `write_group()`
-- `writeIdbFill()` <-> `write_fill()`
-- `writeSpecialNet()` <-> `write_special_net()`
-- `writeIdbNet()` <-> `write_net()`
+In `demo/20260720`, `FILLS`, `SPECIALNETS`, and `NETS` are not written to EDADB; the final DEF is produced from the objects restored by the original DEF callback path.
 
 ### 6. Read The EDADB Read Path
 
@@ -135,8 +133,8 @@ Call order:
 1. `DefReadEdadb::createDbFromEdadb()`
 2. `idb::edadb_adapter::initReadDb()`
 3. `DefReadEdadb::createDbByEdadb()`
-4. `readIdbDesign()`, `readIdbDie()`, `readIdbRow()`, `readIdbTrackGrid()`, `readIdbGCellGrid()`, `readIdbVia()`, `readIdbRegion()`, `readIdbInstance()`, `readIdbPin()`, `readIdbBlockage()`, `readIdbSlot()`, `readIdbGroup()`, `readIdbFill()`, `readSpecialNet()`, `readIdbNet()`
-5. `DefReadEdadb::createDbByDef()` still parses DEF text, but disables callbacks for objects restored from EDADB.
+4. `readIdbDesign()`, `readIdbDie()`, `readIdbRow()`, `readIdbTrackGrid()`, `readIdbGCellGrid()`, `readIdbVia()`, `readIdbRegion()`, `readIdbInstance()`, `readIdbPin()`, `readIdbBlockage()`, `readIdbSlot()`, `readIdbGroup()`
+5. `DefReadEdadb::createDbByDef()` disables callbacks for EDADB-restored objects and enables the original `FILLS` / `SPECIALNETS` / `NETS` callbacks.
 
 For each class, compare with `src/database/manager/builder/def_builder/def_read.cpp` and its callbacks. The EDADB read path must rebuild the same iDB state that the original DEF callback would have built.
 
@@ -198,9 +196,8 @@ Recommended review order:
 5. `IdbVia`, `IdbViaMaster`, layer shapes
 6. `IdbInstance`
 7. `IdbPin`, term/port/layer shape
-8. `IdbBlockage`, `IdbRegion`, `IdbSlot`, `IdbGroup`, `IdbFill`
-9. `IdbSpecialNet`
-10. `IdbNet`
+8. `IdbBlockage`, `IdbRegion`, `IdbSlot`, `IdbGroup`
+9. Confirm `IdbFill`, `IdbSpecialNet`, and `IdbNet` are restored by DEF fallback and have no EDADB tables.
 
 ## Useful Search Commands
 
@@ -208,7 +205,7 @@ Recommended review order:
 rg -n "CmdEdadb|edadb_read|edadb_write|def_init|def_save" src/interface/tcl/tcl_idb
 rg -n "readDefFromEdadb|saveDefToEdadb|buildDefFromEdadb|saveDefToEdadb" src/platform src/database
 rg -n "createDbFromEdadb|createDbByDef|createDbByEdadb|readIdb" src/database/manager/builder/def_builder/def_read_edadb.cpp
-rg -n "writeDb2Edadb|writeChip2Edadb|writeIdb|writeSpecialNet" src/database/manager/builder/def_builder/def_write_edadb.cpp
+rg -n "writeDb2Edadb|writeChip2Edadb|writeIdb" src/database/manager/builder/def_builder/def_write_edadb.cpp
 rg -n "TABLE4|EDADB_INIT_TABLE|initReadDb|initWriteDb|Shadow<" src/database/edadb/idb
 ```
 

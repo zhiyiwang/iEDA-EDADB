@@ -204,7 +204,7 @@ assert_norm_same "$TMP_DIR/regions_a.def" "$TMP_DIR/regions_b.def" "D REGIONS ro
 assert_norm_different "$TMP_DIR/rows_a.def" "$TMP_DIR/rows_b.def" "B ROWS root order"
 assert_norm_same "$TMP_DIR/grids_a.def" "$TMP_DIR/grids_b.def" "D TRACKS and GCELLGRID root order"
 assert_norm_different "$TMP_DIR/grids_a.def" "$TMP_DIR/grids_nested_changed.def" "TRACKS nested layer order"
-assert_norm_same "$TMP_DIR/special_a.def" "$TMP_DIR/special_b.def" "D SPECIALNETS root block order"
+assert_norm_different "$TMP_DIR/special_a.def" "$TMP_DIR/special_b.def" "fallback SPECIALNETS root block order"
 assert_norm_different "$TMP_DIR/special_a.def" "$TMP_DIR/special_nested_changed.def" "SPECIALNETS nested order"
 assert_norm_same "$TMP_DIR/vias_a.def" "$TMP_DIR/vias_b.def" "D VIAS root block order"
 assert_norm_different "$TMP_DIR/vias_a.def" "$TMP_DIR/via_nested_changed.def" "VIAS nested geometry order"

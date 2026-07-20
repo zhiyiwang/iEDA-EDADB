@@ -6,7 +6,7 @@
 
 - 原始 write：`src/database/manager/builder/def_builder/def_write.cpp:460`
 - 原始 read：`src/database/manager/builder/def_builder/def_read.cpp:857`、`src/database/manager/builder/def_builder/def_read.cpp:884`
-- EDADB write/read：`src/database/manager/builder/def_builder/def_write_edadb.cpp:330`、`src/database/manager/builder/def_builder/def_read_edadb.cpp:710`
+- EDADB write/read：`src/database/manager/builder/def_builder/def_write_edadb.cpp:326`、`src/database/manager/builder/def_builder/def_read_edadb.cpp:637`
 - Order level：按 `src/database/edadb/docs/def-ieda-mapping-and-order.md` 为 Level C。iPL 按 vector append order 分配 instance IDs，固定随机种子下重排会改变 placement 状态。
 - Root identity：instance name；`_name_sd` 是 PK，`_order_sd` 只保存 list order。
 
@@ -16,7 +16,7 @@
 
 | 原始 `DefWrite` 顺序 | EDADB write / `toShadow()` 对应 | DEF 域 / iDB 成员 |
 | --- | --- | --- |
-| 校验 list/count，输出 `COMPONENTS <N>` 并遍历 vector，见 `def_write.cpp:462-476` | `writeIdbInstance()` 取同一 vector，按 index 构造 shadow batch，见 `def_write_edadb.cpp:331-366` | section count / `IdbInstanceList::_instance_list` / `_order_sd` |
+| 校验 list/count，输出 `COMPONENTS <N>` 并遍历 vector，见 `def_write.cpp:462-476` | `writeIdbInstance()` 取同一 vector，按 index 构造 shadow batch，见 `def_write_edadb.cpp:326-362` | section count / `IdbInstanceList::_instance_list` / `_order_sd` |
 | escape name，输出 master 与可选 `SOURCE`，见 `def_write.cpp:477-484` | 保存 `_name_sd/_cell_master_name_sd/_type_sd`，见 `shadow_idb_instance.h:38-51` | component name/master/source |
 | `has_placed()` 时输出 status、coordinate、orient，见 `def_write.cpp:486-491` | 保存 `_status_sd/_coordinate_sd/_orient_sd` | placement statement |
 | 可选输出 `HALO [SOFT] left bottom right top`，见 `def_write.cpp:493-499` | `_halo_sd` 保存 `IdbHalo` scalar child | halo source fields |
@@ -27,7 +27,7 @@
 
 | 原始 `DefRead` 顺序 | EDADB read / `fromShadow()` 对应 | DEF 域 / iDB 成员 |
 | --- | --- | --- |
-| `parse_component_number()` reserve vector，见 `def_read.cpp:857-863` | 不保存 count；reset 后按 `_order_sd` query，见 `def_read_edadb.cpp:723-734` | `COMPONENTS <N>` / capacity/order |
+| `parse_component_number()` reserve vector，见 `def_read.cpp:857-863` | 不保存 count；reset 后按 `_order_sd` query，见 `def_read_edadb.cpp:650-656` | `COMPONENTS <N>` / capacity/order |
 | lookup LEF master，trim name，append instance，调用 `set_cell_master()` 重建 pins，见 `def_read.cpp:891-918` | helper 按 `_cell_master_name_sd` lookup；`fromShadow()` 设置 name/master，见 `shadow_idb_instance.h:75-89` | name/master reference |
 | 设置 status、orient 和 optional source，见 `def_read.cpp:919-924` | 设置 status；`set_orient(..., false)` 避免提前计算；设置 type，见 `shadow_idb_instance.h:89-92` | placement/source |
 | 条件设置 weight，见 `def_read.cpp:926-928` | 恢复 `_weight_sd` | `WEIGHT` |
@@ -69,12 +69,12 @@ Primary-key audit：
 
 Write：
 
-- `writeIdbInstance()` 检查每次 `toShadow()`，再使用一次 batch insert，见 `def_write_edadb.cpp:330-377`。
+- `writeIdbInstance()` 检查每次 `toShadow()`，再使用一次 batch insert，见 `def_write_edadb.cpp:326-374`。
 - 当前实现先构造完整 shadow vector，DB 侧仍是 single transaction/prepared operation；百万级 instance 若临时内存成为问题，再改 streaming batch，不能退回逐个 transaction。
 
 Read：
 
-- `readIdbInstance()` 只负责 reset、ordered cursor、错误处理和 append，见 `def_read_edadb.cpp:710-767`。
+- `readIdbInstance()` 只负责 reset、ordered cursor、错误处理和 append，见 `def_read_edadb.cpp:637-694`。
 - master/region/layer lookup、backlink 和派生状态重建都在标准 `fromShadow(IdbInstance*, uint32_t*)` 内；没有自定义 shadow 接口。
 - `EdadbIdbHelper` 提供 active design/layout lookup，见 `src/database/edadb/idb/edadb_idb_helper.h:42-169`。
 

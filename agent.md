@@ -2,6 +2,15 @@
 
 This file keeps only the branch facts, EDADB layout, validation command, and current C-branch rules.
 
+## Current Demo Branch
+
+- Branch: `demo/20260720`.
+- Baseline: `edadb-idb-dev/sort-abc-no-sort-d @ 062cf617f`.
+- EDADB-backed DEF families: Design/Units/BusBit, Die, Row, TrackGrid, GCellGrid, Via, Instance, Pin, Blockage, Region, Slot, Group.
+- DEF fallback families: Fill, SpecialNet, and Net. Their EDADB read/write methods, schema, init entries, shadows, and per-class adapter documents are removed.
+- `createDbByDef()` registers only the original `FILLS` / `SPECIALNETS` / `NETS` callbacks after EDADB restores the enabled families.
+- Regression must prove `iFillSD` / `iSpecNetSD` / `iNetSD` are absent and that direct-vs-EDADB DEF output remains equivalent.
+
 ## Validation Rule
 
 Use the iEDA superproject commit as the source of truth:
@@ -41,18 +50,23 @@ Current cases:
 
 - `default_ipl`: sky130_gcd `iPL_result.def`, direct iDB DEF output compared with EDADB output.
 - `aux_optional`: generated from `iPL_result.def`; adds non-empty `BLOCKAGES`, `REGIONS`,
-  `SLOTS`, `GROUPS`, `FILLS`, plus special-net explicit pin refs, special-net `RECT`,
-  and regular/special-net optional fields.
-- `routed_irt`: sky130_gcd `iRT_result.def`; covers non-empty regular NETS routed wires
-  and segments.
+  `SLOTS`, `GROUPS`, plus fallback Fill/SpecialNet/Net fields.
+- `routed_irt`: sky130_gcd `iRT_result.def`; verifies routed NETS through the original
+  DEF fallback while GCellGrid remains EDADB-backed.
 
-The `aux_optional` case also checks SQLite table content for blockage/region/slot/group/fill
-counts, group region/member rows, fill child rows, special-net optional fields, explicit IO/instance
-pin refs, special-net rect segments, and regular-net optional fields.
-The `routed_irt` case checks SQLite counts for `iNetSD`, regular wire child rows, regular
-wire segment child rows, and regular wire point child rows.
+The `aux_optional` case checks SQLite table content for blockage/region/slot/group counts
+and group region/member rows. Fill/SpecialNet/Net correctness is checked through
+direct-vs-EDADB DEF equivalence and absence of their EDADB tables.
 
-Latest run on 2026-07-09:
+Demo validation on 2026-07-20:
+
+- Build: `cmake --build build -j40 --target iEDA` passed.
+- Canonical `scripts/edadb/demo/demo.sh` passed with raw DEF equality.
+- Full regression: `OUT_DIR=/tmp/iedadb_demo_20260720 bash src/database/edadb/test/run_idb_roundtrip_regression.sh` passed all cases.
+- Pin adapter coverage passed `pin_derived`, `pin_writer`, and `pin_branches`.
+- Fill/SpecialNet/Net fallback coverage passed, and `iFillSD` / `iSpecNetSD` / `iNetSD` were absent.
+
+Full-adapter historical run on 2026-07-09:
 
 - Command: `OUT_DIR=/tmp/iedadb_specialnet_verify_now bash src/database/edadb/test/run_idb_roundtrip_regression.sh`
 - Output directory: `/tmp/iedadb_specialnet_verify_now`
@@ -694,7 +708,9 @@ Tcl stability:
 
 - `ScriptEngine.*` changes Tcl command/option names from manually managed `const char*` buffers to `std::string`.
 
-## Current State And Next Step
+## Full Adapter Baseline Reference
+
+The section below records the full development-line state before the `demo/20260720` pruning. It is not the active demo coverage.
 
 Current EDADB adapter coverage:
 

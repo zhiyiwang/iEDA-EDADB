@@ -20,6 +20,7 @@
 - `IdbRegionList`: Level D，当前 direct no-shadow/no-order；root order-only diff 由 normalized diff 处理。
 - `IdbSlotList`: root identity 使用 `Shadow<IdbSlot>::primary_key`，root order 已由 `_order_sd` 和 ordered read 保证；rect vector order 已由 `Shadow<IdbRect>::_vec_idx` 保证。
 - `IdbGroupList`: Level D，root identity 使用 `Shadow<IdbGroup>::_group_name_sd`；当前不保存 `_order_sd`，root order-only diff 由 normalized diff 处理；member vector order 已由 primitive vector `__edadb_vec_idx` 保证。
-- `IdbFillList`: Level D，root identity 使用 `primary_key`；当前不保存 `_order_sd`，root order-only diff 由 normalized diff 处理；rect vector order 已由 `Shadow<IdbRect>::_vec_idx` 保证，coordinate vector order 已由 `Shadow<IdbCoordinate<int32_t>>::_vec_idx` 保证。
-- `IdbSpecialNetList`: Level D，root identity 使用 `Shadow<IdbSpecialNet>::_net_name_sd`；当前不保存 root `_order_sd`，root order-only diff 由 normalized diff 处理；pin/wire/segment/point vector order 已由 child vector 或 explicit pin ref order 保证。
-- `IdbNetList`: root identity 使用 `Shadow<IdbNet>::_net_name_sd`，root order 已由 `_order_sd` 和 ordered read 保证；pin/wire/segment/point vector order 已由 child vector 或 explicit pin ref order 保证。
+
+## DEF Fallback
+
+- `IdbFillList`, `IdbSpecialNetList`, and `IdbNetList` are intentionally not persisted in `demo/20260720`; the original DEF callbacks restore them after EDADB readback.

@@ -71,7 +71,7 @@ bool DefWriteEdadb::writeDb2Edadb(const char* edadb_path) {
 
 
 bool DefWriteEdadb::writeChip2Edadb() {
-    EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] writeChip2Edadb Design/Die/Row/TrackGrid/GCell/Via/Instance/Pin/Blockage/Region/Slot/Group/Fill/SpecialNet/Net enabled"
+    EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] writeChip2Edadb Design/Die/Row/TrackGrid/GCell/Via/Instance/Pin/Blockage/Region/Slot/Group enabled; Fill/SpecialNet/Net use DEF fallback"
               << std::endl;
     if (writeIdbDesign() != kDbSuccess) {
         return false;
@@ -109,15 +109,11 @@ bool DefWriteEdadb::writeChip2Edadb() {
     if (writeIdbGroup() != kDbSuccess) {
         return false;
     }
-    if (writeIdbFill() != kDbSuccess) {
-        return false;
-    }
-    if (writeIdbSpecialNet() != kDbSuccess) {
-        return false;
-    }
-    if (writeIdbNet() != kDbSuccess) {
-        return false;
-    }
+    // Fill, SpecialNet and Net remain on the original DEF output path in this demo.
+
+
+
+
 
     return true;
 } // writeChip2Edadb
@@ -584,140 +580,6 @@ int32_t DefWriteEdadb::writeIdbGroup(void) {
 
     return kDbSuccess;
 }
-
-int32_t DefWriteEdadb::writeIdbFill(void) {
-    IdbDesign* design = _def_service->get_design();  // def
-    if (design == nullptr) {
-        std::cerr << "writeIdbFill failed: design is nullptr" << std::endl;
-        return kDbFail;
-    }
-
-    IdbFillList* fill_list = design->get_fill_list();
-    if (fill_list == nullptr) {
-      std::cout << "Write FILLS error..." << std::endl;
-      return kDbFail;
-    }
-
-    vector<IdbFill*>& fill_vec = fill_list->get_fill_list();
-    EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] writeIdbFill insert fill_count="
-              << fill_vec.size() << std::endl;
-
-    if (fill_vec.empty()) {
-      return kDbSuccess;
-    }
-
-    vector<edadb::Shadow<idb::IdbFill>*> fill_sd_vec;
-    fill_sd_vec.reserve(fill_vec.size());
-    for (auto& fill : fill_vec) {
-        auto* fill_sd = new edadb::Shadow<idb::IdbFill>();
-        fill_sd->toShadow(fill);
-        fill_sd_vec.emplace_back(fill_sd);
-    }
-
-    bool ok = edadb::insertVector<edadb::Shadow<idb::IdbFill>>(fill_sd_vec);
-    for (auto& fill_sd : fill_sd_vec) {
-        delete fill_sd;
-        fill_sd = nullptr;
-    }
-
-    if (!ok) {
-        std::cerr << "DefWriteEdadb::writeIdbFill failed to insertVector" << std::endl;
-        return kDbFail;
-    }
-
-    return kDbSuccess;
-}
-
-int32_t DefWriteEdadb::writeIdbSpecialNet(void) {
-    IdbDesign* design = _def_service->get_design();  // def
-    if (design == nullptr) {
-        std::cerr << "writeIdbSpecialNet failed: design is nullptr" << std::endl;
-        return kDbFail;
-    }
-
-    IdbSpecialNetList* special_net_list = design->get_special_net_list();
-    if (special_net_list == nullptr) {
-      std::cout << "Write SPECIALNETS error..." << std::endl;
-      return kDbFail;
-    }
-
-    vector<idb::IdbSpecialNet*>& special_net_vec = special_net_list->get_net_list();
-    EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] writeIdbSpecialNet insert special_net_count="
-              << special_net_vec.size() << " segment_count="
-              << special_net_list->get_segment_num() << std::endl;
-
-    if (special_net_vec.empty()) {
-      return kDbSuccess;
-    }
-
-    vector<edadb::Shadow<idb::IdbSpecialNet>*> special_net_sd_vec;
-    special_net_sd_vec.reserve(special_net_vec.size());
-    for (auto& special_net : special_net_vec) {
-        auto* special_net_sd = new edadb::Shadow<idb::IdbSpecialNet>();
-        special_net_sd->toShadow(special_net);
-        special_net_sd_vec.emplace_back(special_net_sd);
-    }
-
-    bool ok = edadb::insertVector<edadb::Shadow<idb::IdbSpecialNet>>(special_net_sd_vec);
-    for (auto& special_net_sd : special_net_sd_vec) {
-        delete special_net_sd;
-        special_net_sd = nullptr;
-    }
-
-    if (!ok) {
-        std::cerr << "DefWriteEdadb::writeIdbSpecialNet failed to insertVector" << std::endl;
-        return kDbFail;
-    }
-
-    return kDbSuccess;
-}
-
-int32_t DefWriteEdadb::writeIdbNet(void) {
-    IdbDesign* design = _def_service->get_design();  // def
-    if (design == nullptr) {
-        std::cerr << "writeIdbNet failed: design is nullptr" << std::endl;
-        return kDbFail;
-    }
-
-    IdbNetList* net_list = design->get_net_list();
-    if (net_list == nullptr) {
-      std::cout << "Write NETS error..." << std::endl;
-      return kDbFail;
-    }
-
-    vector<idb::IdbNet*>& net_vec = net_list->get_net_list();
-    EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] writeIdbNet insert net_count="
-              << net_vec.size() << " segment_count="
-              << net_list->get_segment_num() << std::endl;
-
-    if (net_vec.empty()) {
-      return kDbSuccess;
-    }
-
-    vector<edadb::Shadow<idb::IdbNet>*> net_sd_vec;
-    net_sd_vec.reserve(net_vec.size());
-    uint64_t net_order = 0;
-    for (auto& net : net_vec) {
-        auto* net_sd = new edadb::Shadow<idb::IdbNet>();
-        net_sd->toShadow(net);
-        net_sd->_order_sd = net_order++;
-        net_sd_vec.emplace_back(net_sd);
-    }
-
-    bool ok = edadb::insertVector<edadb::Shadow<idb::IdbNet>>(net_sd_vec);
-    for (auto& net_sd : net_sd_vec) {
-        delete net_sd;
-        net_sd = nullptr;
-    }
-
-    if (!ok) {
-        std::cerr << "DefWriteEdadb::writeIdbNet failed to insertVector" << std::endl;
-        return kDbFail;
-    }
-
-    return kDbSuccess;
-}
-
 
 #undef EDADB_IDB_DEBUG_STREAM
 

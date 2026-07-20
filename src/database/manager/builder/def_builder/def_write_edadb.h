@@ -39,9 +39,6 @@ protected:
     int32_t writeIdbRegion(void);
     int32_t writeIdbSlot(void);
     int32_t writeIdbGroup(void);
-    int32_t writeIdbFill(void);
-    int32_t writeIdbSpecialNet(void);
-    int32_t writeIdbNet(void);
 }; // DefWriteEdadb
 
 

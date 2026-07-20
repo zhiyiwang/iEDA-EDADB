@@ -6,8 +6,8 @@
 
 - Original write: `DefWrite::write_pin()`，`src/database/manager/builder/def_builder/def_write.cpp:517`
 - Original read: `DefRead::parse_pin()`，`src/database/manager/builder/def_builder/def_read.cpp:1573`
-- EDADB write: `DefWriteEdadb::writeIdbPin()`，`src/database/manager/builder/def_builder/def_write_edadb.cpp:360`
-- EDADB read: `DefReadEdadb::readIdbPin()`，`src/database/manager/builder/def_builder/def_read_edadb.cpp:795`
+- EDADB write: `DefWriteEdadb::writeIdbPin()`，`src/database/manager/builder/def_builder/def_write_edadb.cpp:376`
+- EDADB read: `DefReadEdadb::readIdbPin()`，`src/database/manager/builder/def_builder/def_read_edadb.cpp:696`
 
 本文件按 `src/database/edadb/docs/def-ieda-mapping-and-order.md` 检查：
 
@@ -61,21 +61,21 @@ TABLE4CLASS(edadb::Shadow<idb::IdbPin>, "iPinSD",
 - `IdbTerm::_placement_status`: copied from the first explicit port, or restored from the no-PORT root placement field。
 - `IdbTerm::_shape`, `IdbTerm::_is_instance`, `IdbPort::_class`: not read from DEF `PINS` by `parse_pin()`。
 - `IdbPin::_average_coordinate`, pin/term/port bounding boxes and `IdbPin::_layer_shape_list`: calculated caches。
-- `IdbPin::_net` and `_special_net` pointers: linked later by Net/SpecialNet adapters。
+- `IdbPin::_net` and `_special_net` pointers: linked later by the original `NETS` / `SPECIALNETS` callbacks in `demo/20260720`.
 - Root pin special flag and layer count: redundant with Term special and nested geometry。
 
 `Shadow<IdbLayerShape>` is shared with Via and still contains `_type_sd`; Pin restore does not trust it as a DEF source field and explicitly calls `set_type_rect()` because each PINS `LAYER` record is parsed as rect geometry.
 
 ## Original DEF Write Mapping
 
-The table follows the brace order of `DefWrite::write_pin()`; `writeIdbPin()` only performs root traversal and batch insertion at `def_write_edadb.cpp:360-400`, while the field mapping is implemented by `toShadow()`.
+The table follows the brace order of `DefWrite::write_pin()`; `writeIdbPin()` only performs root traversal and batch insertion at `def_write_edadb.cpp:376-423`, while the field mapping is implemented by `toShadow()`.
 
 | Original `DefWrite::write_pin()` brace | DEF output | EDADB `toShadow()` correspondence | Stored source |
 | --- | --- | --- | --- |
-| function body `{}` at `def_write.cpp:518-586` | obtain `IdbDesign::get_io_pin_list()` and reject null | `writeIdbPin()` performs the same lookup/null check at `def_write_edadb.cpp:361-371` | no column |
+| function body `{}` at `def_write.cpp:518-586` | obtain `IdbDesign::get_io_pin_list()` and reject null | `writeIdbPin()` performs the same lookup/null check at `def_write_edadb.cpp:377-387` | no column |
 | section header at `def_write.cpp:526` | `PINS <count> ;` | root table row count is produced by inserting the complete `IdbPins::_pin_list` | no duplicated count column |
-| `for (IdbPin* pin...) {}` at `def_write.cpp:528-579` | one PINS record per root object, in vector order | `writeIdbPin()` passes `pin_idx` to `Shadow<IdbPin>::toShadow()` at `def_write_edadb.cpp:383-394`; Pin shadow stores name/order/net at `shadow_idb_pin.h:32-37` | pin name, net name, root order |
-| root record setup at `def_write.cpp:529-534` | `SPECIAL`, `DIRECTION` and `NET` | Term shadow stores direction and Term-side special at `shadow_idb_term.h:29-34`; the Pin-side special relation is restored by the SpecialNet adapter before later DEF output | net, direction, Term special; Pin special pointer remains a cross-table relation |
+| `for (IdbPin* pin...) {}` at `def_write.cpp:528-579` | one PINS record per root object, in vector order | `writeIdbPin()` passes `pin_idx` to `Shadow<IdbPin>::toShadow()` at `def_write_edadb.cpp:399-409`; Pin shadow stores name/order/net at `shadow_idb_pin.h:32-37` | pin name, net name, root order |
+| root record setup at `def_write.cpp:529-534` | `SPECIAL`, `DIRECTION` and `NET` | Term shadow stores direction and Term-side special at `shadow_idb_term.h:29-34`; the Pin-side special relation is restored by the later original `SPECIALNETS` callback | net, direction, Term special; Pin special pointer remains a cross-section relation |
 | `if (use.empty()) {} else {}` at `def_write.cpp:536-540` | optional `+ USE` | Term shadow stores `_type_sd`; `kNone` naturally reproduces the empty branch | use/type enum |
 | <code>if (term-&gt;is_port_exist() &#124;&#124; pin-&gt;is_special_net_pin()) {}</code> at `def_write.cpp:542-559` | choose PORT-form output | Pin `toShadow()` computes the identical predicate at `shadow_idb_pin.h:43-48`; Term stores the result as `_has_port_sd` at `shadow_idb_term.h:27-34` and passes it to Port children | canonical writer branch discriminator |
 | `for (IdbPort* port...) {}` at `def_write.cpp:543-559` | one `+ PORT` block for each port | Term shadow passes `port_idx` into standard `Port::toShadow()` at `shadow_idb_term.h:37-49` | Port `_vec_idx` and ordered Port children |
@@ -110,7 +110,7 @@ Examples covered by regression:
 
 - `aux_optional/clk`: explicit Port is `PLACED (1000,9990) N`; that Port row is stored, then Term status is rebuilt from the first Port.
 - `default_ipl/req_msg[0]`: no explicit PORT; Pin root stores placed status/location while the implicit Port stores the `met5` rect. Term average/bbox and Pin absolute geometry are recomputed.
-- `pin_writer/req_msg[0]`: input parser state starts as no-PORT, but the SpecialNet relation makes the original writer emit PORT form. EDADB stores `_has_port_sd == true`, leaves no-PORT placement columns inactive, and reconstructs the same state that parsing the writer output would produce.
+- `pin_writer/req_msg[0]`: input parser state starts as no-PORT, but the later `SPECIALNETS` fallback relation makes the original writer emit PORT form. EDADB stores `_has_port_sd == true`, leaves no-PORT placement columns inactive, and reconstructs the same state that parsing the writer output would produce.
 
 ## Original DEF Read Mapping
 
@@ -118,7 +118,7 @@ The rows follow the brace structure of `DefRead::parse_pin()`; computed values a
 
 | Original read brace | EDADB read mapping | Source, synchronization, or calculation |
 | --- | --- | --- |
-| `parse_pin(...) {` at `def_read.cpp:1574` | `readIdbPin()` resets the list, reads ordered roots, calls one `pin_sd.fromShadow(pin)`, then appends on success at `def_read_edadb.cpp:795-836` | Root orchestration |
+| `parse_pin(...) {` at `def_read.cpp:1574` | `readIdbPin()` resets the list, reads ordered roots, calls one `pin_sd.fromShadow(pin)`, then appends on success at `def_read_edadb.cpp:696-738` | Root orchestration |
 | root setup brace at `def_read.cpp:1580-1604` | Pin shadow restores name/net/orient and IO flag before creating Term, then copies pin name to Term at `shadow_idb_pin.h:66-79` | `IdbTerm::_name` and IO flag are recomputed/cross-level copied |
 | `if (def_pin->hasDirection()) {`, `if (hasUse()) {`, `if (hasSpecial()) {` at `def_read.cpp:1605`, `1609`, `1613` | Term shadow restores only direction/type/special source fields at `shadow_idb_term.h:55-60` | Direct DEF fields |
 | `if (def_pin->numPorts() > 0) {` at `def_read.cpp:1617` | canonical writer `_has_port_sd == true`; Term shadow validates and sorts Port shadows by `_vec_idx`, then creates ports at `shadow_idb_term.h:62-77` | Explicit `PORT` branch; independent of SQLite fetch order |
@@ -143,8 +143,8 @@ Therefore EDADB stores only no-PORT placement status/location and relative rect 
 
 ## Read/Write Paths
 
-- `writeIdbPin()` only obtains the root vector, creates pin shadows, propagates conversion failure, and batch inserts them: `def_write_edadb.cpp:360-408`.
-- `readIdbPin()` only owns root query/allocation/append/error handling: `def_read_edadb.cpp:795-841`.
+- `writeIdbPin()` only obtains the root vector, creates pin shadows, propagates conversion failure, and batch inserts them: `def_write_edadb.cpp:376-424`.
+- `readIdbPin()` only owns root query/allocation/append/error handling: `def_read_edadb.cpp:696-743`.
 - Nested reconstruction remains in the matching shadow: Pin → Term → Port → LayerShape.
 - `createDbByDef()` disables PINS callbacks while this adapter is enabled, so pins are not duplicated by text parsing.
 
@@ -154,7 +154,7 @@ Therefore EDADB stores only no-PORT placement status/location and relative rect 
 - `iPortSD.primary_key`: nested owner identity required to attach layer-shape children; `_vec_idx` separately restores `IdbTerm::_port_list` order。
 - `iLayerShapeSD.primary_key`: nested owner identity required to attach Rect children. DEF permits one Port to contain repeated `LAYER <same-name>` records, so `_layer_name_sd` is a lookup reference rather than unique identity; `_vec_idx` separately restores `IdbPort::_layer_shape_list` order。
 - `IdbRectSD`: PK disabled in `edadb_idb_init.cpp:27`; `_vec_idx` preserves nested rect order。
-- Vector index is never used as PK. Pin roots use `ORDER BY "_order_sd"` at `def_read_edadb.cpp:810-813`; Port/LayerShape shadows sort by `_vec_idx`; Rect order is restored by EDADB's shadow-vector index protocol。
+- Vector index is never used as PK. Pin roots use `ORDER BY "_order_sd"` at `def_read_edadb.cpp:711-714`; Port/LayerShape shadows sort by `_vec_idx`; Rect order is restored by EDADB's shadow-vector index protocol。
 
 ## Tests
 

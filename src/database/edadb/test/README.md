@@ -23,9 +23,9 @@ IEDA_BIN=/path/to/iEDA OUT_DIR=/tmp/my_edadb_run bash src/database/edadb/test/ru
 The script currently runs four cases with detailed DEF-diff, SQLite, and selected log assertions:
 
 - `default_ipl`: normal sky130_gcd `iPL_result.def`, using direct iDB `DEF -> DEF` as the baseline.
-- `aux_optional`: generated from `iPL_result.def`, adding non-empty `BLOCKAGES`, `REGIONS`, `SLOTS`, a two-member `GROUPS` entry, `FILLS`, special-net optional fields, and regular-net optional fields.
-- `routed_irt`: sky130_gcd `iRT_result.def`, covering non-empty regular NETS routed wires, segments, point rows, and ordered pin refs.
-- `net_branches`: generated from `iRT_result.def`, covering legal regular-wire states `FIXED`, `COVER`, and `NOSHIELD`, plus a `VIRTUAL` second point while retaining the full routed-net fixture.
+- `aux_optional`: generated from `iPL_result.def`, adding non-empty `BLOCKAGES`, `REGIONS`, `SLOTS`, a two-member `GROUPS` entry, and fallback `FILLS` / `SPECIALNETS` / `NETS` fields.
+- `routed_irt`: sky130_gcd `iRT_result.def`, verifying routed `NETS` survive the original DEF fallback path while GCellGrid remains EDADB-backed.
+- `net_branches`: generated from `iRT_result.def`, verifying legal regular-wire states survive the original DEF fallback path.
 
 For each case the script runs:
 
@@ -37,36 +37,21 @@ For each case the script runs:
 For `default_ipl`, it also checks:
 
 - design/version/units/bus-bit fields;
-- object-family counts for Design, Die, Row, TrackGrid, GCellGrid, Via, Instance, Pin, SpecialNet, and Net;
+- object-family counts for Design, Die, Row, TrackGrid, GCellGrid, Via, Instance, and Pin;
 - die point rows, row fields, track-grid fields and primitive vector layer names;
 - via generate fields, instance fields, pin fields and pin port/layer/rect child rows;
-- special-net default fields and child rows, regular-net default fields;
 - write/read logs for instance and pin restoration counts.
+- absence of `iFillSD` / `iSpecNetSD` / `iNetSD` tables and adapter logs.
 
 For `aux_optional`, it also checks SQLite content for key EDADB tables and fields:
 
-- `iBlockageSD`, `iRegion`, `iSlotSD`, `iGroupSD`, `iFillSD`;
+- `iBlockageSD`, `iRegion`, `iSlotSD`, `iGroupSD`;
 - blockage fields, region/slot rectangles, group region and ordered member child rows;
-- fill layer/via typed rows and child rows;
-- special-net `ORIGINAL`, `SOURCE`, and `WEIGHT`;
-- regular-net `ORIGINAL`, `SOURCE`, `WEIGHT`, `XTALK`, `FIXEDBUMP`, and `FREQUENCY`.
+- fallback `FILLS` / `SPECIALNETS` / `NETS` fields through direct-vs-EDADB DEF equivalence.
 
-For `routed_irt`, it also checks SQLite content for routed regular-net tables:
+For `routed_irt`, it checks GCellGrid EDADB content, confirms Net/SpecialNet tables are absent, and uses DEF equivalence to validate routed-net fallback.
 
-- `iNetSD = 677`;
-- `iNetSD__wire_list_sd_iRegWireSD = 677`;
-- `iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD = 8997`;
-- `iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__point_list_sd_iCoordSD = 14256`.
-- routed segment type counters cover via segments, rect segments, virtual second points, and via-name rows;
-- `clk_0` ordered instance-pin refs preserve `_order_sd = 0..18`;
-- largest routed segment nets remain `clk_0`, `clk_1`, and `dpath/a_mux/_066_`;
-- write/read logs report `net_count=677`.
-
-For `net_branches`, it repeats all `routed_irt` checks and additionally verifies:
-
-- `FIXED`, `COVER`, and `NOSHIELD` enum values in `iRegWireSD`;
-- one `_is_second_point_virtual_sd` segment;
-- raw direct-DEF vs EDADB-DEF equality for all four cases.
+For `net_branches`, direct-vs-EDADB DEF equivalence validates `FIXED`, `COVER`, `NOSHIELD`, and `VIRTUAL` syntax through the fallback parser/writer.
 
 Regular `+ SHIELD <name>` is not generated: the current native writer has a `kShield` branch, but the native DEF parser rejects that regular-NETS syntax. This remains an original writer/parser limitation rather than a supported adapter roundtrip case.
 
@@ -87,8 +72,8 @@ Current class coverage:
 | --- | --- | --- |
 | Design / Die / Row / TrackGrid / GCellGrid / Via | direct or minimal shadow | scalar fields, point/vector rows, empty and non-empty GCell |
 | Instance / Pin | shadow | master/placement/halo fields, port/layer/rect child rows |
-| Blockage / Region / Slot / Group / Fill | direct or shadow | routing vs placement, region type, ordered group members, layer-fill vs via-fill |
-| SpecialNet / Net | shadow | ordered pin refs, optional fields, routed wire/segment/point rows |
+| Blockage / Region / Slot / Group | direct or shadow | routing vs placement, region type, ordered group members |
+| Fill / SpecialNet / Net | DEF fallback | no EDADB tables; original callbacks restore all three sections |
 
 ## Planned Order-Stress Tests
 
