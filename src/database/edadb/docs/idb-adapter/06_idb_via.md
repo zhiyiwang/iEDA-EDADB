@@ -76,6 +76,24 @@ Primary-key audit：
 - Fixed via 的 source of truth 是 `IdbViaMaster::_master_fixed_list -> IdbLayerShape::_rect_list`；这些 rect 不是 generated cut rect。
 - 两条分支只在 `set_via_shape()` 后形成统一的 bottom/cut/top layer-shape 消费接口。
 
+## Fixed RECT Grouping And Shape Rebuild
+
+### DEF RECT 与 EDADB layer/rect vector 的等价关系
+
+- 原始 `parse_via()` 的循环按每一条 DEF `RECT` record 执行，不是按唯一 layer 执行，见 `def_read.cpp:1908-1919`。
+- `add_fixed(layer_name)` 第一次遇到 layer 时创建 `IdbViaMasterFixed`，再次遇到同名 layer 时返回已有对象；随后每条 DEF `RECT` 都通过 `add_rect()` 追加到该 layer 的 rect vector，见 `IdbViaMaster.cpp:382-395`。
+- 因此原始 parser 已把 DEF records 聚合为 `vector<IdbViaMasterFixed*> -> vector<IdbRect*>`。例如两个 `met1` RECT 会形成一个 `met1` fixed master 和两个 rect，而不是两个 fixed master。
+- EDADB 保存的是这个已聚合的 iDB storage view：外层 `fixed_layer_shape_list_sd` 表示唯一 layer，内层 `_rect_list_sd` 表示该 layer 的全部 RECT。`fromShadow()` 外层按 layer 重建 fixed master，内层逐个 `add_rect()`，见 `shadow_idb_via_master.h:217-242`。
+- 两条路径严格保持 layer 首次出现顺序、同 layer 内 rect 顺序、rect 坐标和 cut-layer bbox 计算；跨 layer 的原始 RECT 交错顺序不会保留，因为原始 iDB parser 本身已经按 layer 聚合。
+
+### `set_type_fixed()` 与 `set_via_shape()` 的职责
+
+- `set_type_fixed()` 只设置 `IdbViaMaster::_type = kFixed`，用于选择 fixed 分支，见 `def_read.cpp:1902`、`IdbViaMaster.h:359`。
+- parser 收集所有 layer/rect 并计算 cut bbox 后，再调用 `set_via_shape()` 建立派生的 bottom/cut/top layer-shape 缓存，见 `def_read.cpp:1930-1931`、`IdbViaMaster.h:367-372`。
+- 两者不冲突也不冗余，调用顺序必须是 `set_type_fixed() -> add_fixed/add_rect -> set_cut_rect() -> set_via_shape()`。缺少 type 设置无法进入 fixed rebuild；缺少 shape rebuild 则 `_master_fixed_list` 已恢复但公共 layer-shape 消费接口仍为空。
+- `Shadow<IdbViaMaster>::fromShadow()` 使用相同顺序：先恢复 `_type_sd`，再恢复 fixed layer/rect，随后计算 cut bbox 并调用 `set_via_shape()`，见 `shadow_idb_via_master.h:195-247`。
+- `via_branches` fixture 使用同一 layer 的多个 RECT，并检查数据库物理顺序被打乱后，读回的 layer/rect vector、cut bbox 和 fixed geometry 签名仍与原始 parser 对象一致。
+
 ## EDADB Paths
 
 - Write：`writeIdbVia()` 直接 batch 写 root vector；nested direct-to-shadow 转换由 EDADB schema 递归完成，见 `def_write_edadb.cpp:301-328`。
