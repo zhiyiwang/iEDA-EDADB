@@ -17,6 +17,7 @@ EDADB adapter 文档的核心目标是：每个 root class 都必须按 `src/dat
 
 - 当前分支的 `DefWrite::write_xxx()`、`DefRead::parse_xxx()`、相关 iDB class/setter 和 LEF/DEF parser grammar 是实现依据；旧 adapter、旧文档和字段名只能作为线索，不能作为语义依据。禁止根据“看起来应该如此”补字段或分支。
 - Writer 和 parser 必须分别逐 brace 检查，不能假设二者天然对称：writer 决定当前 iDB 状态如何输出，parser 决定哪些值来自 DEF、哪些值被跨层复制、哪些值在读后计算。
+- EDADB read 替代原始 parser 时，当前 writer 未输出但 parser 会读取、且会影响 active iDB/点工具语义的 source field 仍需保存；必须标记为 `parser-only`，说明保留理由，并用 DB SQL 和 read-state fixture 验证，不能只靠最终 DEF diff。`IdbInstance` 的 `WEIGHT/REGION` 是当前例子。
 - EDADB 表达的是 DEF 语义视图，不一定等于完整 C++ object dump。
 - 优先 direct mapping；只有 direct mapping 无法表达 polymorphism、anonymous root identity、non-owning pointer/name-reference rebuild、nested vector owner/order，或 reduced DEF storage view 时才引入 `Shadow<T>`。
 - 如果某个成员类型 `T` 已注册 `TABLE4SHADOW(T)` 或 `TABLE4SHADOW_WVEC(T)`，则包含它的 root class 可以继续 direct mapping；EDADB 遍历成员时会自动把 `T` / `T*` 的 store type 改写为 `edadb::Shadow<T>`。
@@ -36,7 +37,11 @@ EDADB adapter 文档的核心目标是：每个 root class 都必须按 `src/dat
 - 原始 parser 中跨 Pin/Term/Port/Layer 等层次的复制、同步和计算必须在 `fromShadow()` 中按相同顺序重做；文档要标明源对象、目标对象和触发分支。
 - Storage branch discriminator 必须对应原始 writer 实际输出的 DEF 分支，使 `fromShadow()` 重建结果等价于“原始 writer 输出后再由原始 parser 读入”。原始 iDB 中未被 writer 输出的 hidden parser state 默认规范化掉；只有点工具语义明确需要时才额外持久化，并必须单独说明。
 - `toShadow()` 按原始 writer 的条件选择存储视图；`fromShadow()` 按原始 parser 的分支顺序执行 allocation、name lookup、字段设置、跨层同步和派生计算。不得为了减少代码改变 setter 调用顺序或把计算结果改成数据库列。
+- 对会触发派生状态更新的 setter，`fromShadow()` 必须保持 parser 的依赖顺序：先恢复 identity/master/reference 和基础状态，最后调用 coordinate/geometry 等触发 bbox、pin、halo、obs 重算的 setter；禁止提前调用后再用数据库列覆盖派生结果。
+- Non-owning pointer 不直接持久化：保存稳定 name/ID，read 时从 active LEF/design lookup，并恢复必要 backlink。`IdbInstance` 的 cell master、region 和 route-halo layers 是当前例子。
+- Optional inline scalar child 没有独立 identity 时关闭 PK；只有 owns nested rows 的 child storage view 才保留 owner PK。`IdbHalo`、`Shadow<IdbRouteHalo>` 属于前者。
 - `writeIdbT()` / `readIdbT()` 尽量只负责 root lookup、query/insert、allocation、append 和错误处理；nested object 的字段转换与重建放在对应 `toShadow()` / `fromShadow()`。
+- Root vector 默认使用一次 batch transaction/prepared operation；只有测量证明全量 shadow 临时内存成为瓶颈时才改 streaming batch，不能退化为逐对象 transaction。
 - 每个 root 文档必须说明 child storage view：哪些子节点 direct mapping，哪些子节点 shadow，哪些运行时 pointer/cache 不入库以及如何重建。
 - 每启用一个 `readIdbXXX/writeIdbXXX`，必须同步 schema/init、DEF callback、测试 SQL 和文档。
 - 未被任何 enabled adapter 读写、注册或验证的 schema macro 必须休眠并标 `EDADB_TODO`，不能因为原始类存在就默认建表。
@@ -49,6 +54,7 @@ EDADB adapter 文档的核心目标是：每个 root class 都必须按 `src/dat
 - EDADB 生成的 DEF 要再经过原始 `DefRead/DefWrite` 解析和输出；这用于证明 adapter 输出仍符合原始 parser/writer 语义，而不只是两个文本偶然相同。
 - 对需要保序的 root/nested vector，要主动扰乱无 `ORDER BY` 的数据库读取顺序，再验证 `_order_sd` / `_vec_idx` 恢复结果；禁止把 SQLite 当前返回顺序当成保证。
 - Null child、lookup 失败和 `toShadow/fromShadow` 失败必须向上传播；测试或代码 review 至少覆盖失败路径，禁止留下部分构造对象继续 append/insert。
+- 对 parser-only source field 和原始 writer 缺失分支，增加合法 optional fixture，并检查 SQLite/read-state；原始 writer 无法输出的字段不能宣称已由最终 DEF diff 覆盖。
 
 ## Documentation Convergence Rules
 
@@ -57,6 +63,7 @@ EDADB adapter 文档的核心目标是：每个 root class 都必须按 `src/dat
 - Write 表推荐四列：original writer brace、DEF output、EDADB `write/toShadow` correspondence、stored source。Read 表推荐三列：original parser brace、EDADB `read/fromShadow` correspondence、source/synchronization/calculation。
 - 每个 mapping row 同时回答：DEF tag/field 是什么、来自哪个 iDB member、写入哪个 EDADB field，或 read 时如何 lookup/copy/recompute。
 - 必须显式记录 writer-only、parser-only、fallback、cross-adapter relation 和 branch discriminator。例如 Pin 的 special pointer 由 SpecialNet adapter 恢复，不在 Pin root 中重复保存。
+- 原始 writer/parser 不对称或存在原生输出限制时，单列 `Known Native Writer Differences`；明确哪些状态只能由 SQL/read-state 验证，避免把 iEDA 原生差异误判为 adapter 问题。
 - shared shadow 若包含当前 root 不需要的列，必须说明当前 root 是否写入、是否忽略、read 时如何 canonicalize；不能默认把 shared schema 的所有列都当成该 DEF section 的源字段。
 - 源码定位必须使用当前分支的文件名和行号；代码修改后重新核对。行范围应对应完整函数或 brace body，而不是人为划分的宽泛阶段。
 - Markdown 表格中的源码若含 `|` 或 `||`，必须使用 `&#124;` / `&#124;&#124;`，避免被解析成列分隔符；提交前检查每行列数和 `git diff --check`。

@@ -159,6 +159,11 @@ Current uncovered or weakly covered areas:
   output selection; parser state describes source fields, allocation, lookup, cross-level
   synchronization, and derived calculations. Persist the writer's canonical DEF form,
   then rebuild it with parser-equivalent control flow.
+- When EDADB read replaces the parser, preserve a writer-omitted field only if the parser
+  reads it into active iDB state and that state affects tool semantics. Mark it
+  `parser-only`, explain the requirement, and verify it through SQLite/read-state tests;
+  final DEF diff cannot cover a field the native writer omits. Instance `WEIGHT/REGION`
+  are the current example.
 - Adapter class documents use separate `Original DEF Write Mapping` and
   `Original DEF Read Mapping` tables. Rows follow the original source `{}` / branch /
   loop order, not shadow-class order, database-column order, or broad artificial stages.
@@ -178,6 +183,12 @@ Current uncovered or weakly covered areas:
   unless a documented point-tool semantic requirement proves it must be retained.
 - Cross-level parser behavior must be explicit: document and implement which parent/child
   supplies a value, where it is copied, and which brace triggers derived geometry/state.
+- Keep parser setter dependencies in `fromShadow()`: restore identity/master/reference
+  and basic state first, then call coordinate/geometry setters that rebuild bbox, pins,
+  halo, or obstruction state. Do not persist those derived results as replacement columns.
+- Store non-owning references as stable names/IDs, look them up in the active LEF/design,
+  and restore required backlinks. Disable PK for optional inline scalar children; retain
+  owner PK only when a child storage view owns nested rows.
 - Prefer direct mapping; use `Shadow<T>` only when direct mapping cannot express
   polymorphism, anonymous root identity, non-owning pointer/name-reference rebuild,
   nested vector owner/order, or a reduced DEF storage view.
@@ -209,6 +220,9 @@ Current uncovered or weakly covered areas:
   reference, not `IdbLayerShape` identity; its synthetic PK remains necessary.
 - Keep builder methods thin: root query/insert, allocation/append, and error handling stay
   in `readIdbT/writeIdbT`; nested conversion belongs in `toShadow/fromShadow`.
+- Use one batch transaction/prepared operation for root vectors. Move to streaming batch
+  only after measured shadow-vector memory pressure; never regress to one transaction per
+  object.
 - Never use vector order index as PK. Keep identity and order separate:
   `primary_key` or name for identity, `_order_sd` for root list order.
 - Primary-key rule: enable PK only for root identity or nested vector-owner storage
@@ -231,6 +245,9 @@ Current uncovered or weakly covered areas:
   run `git diff --check` before handoff.
 - Keep each class document concise and non-duplicative: constraints, schema and field
   classification, write mapping, read mapping, PK/order, tests/risks.
+- Document native writer/parser asymmetry in `Known Native Writer Differences`; use
+  targeted SQL/read-state fixtures for parser-only fields rather than claiming final DEF
+  diff coverage.
 - Correctness evidence needs both direct-iDB-vs-EDADB DEF comparison and SQLite field/
   child-row assertions; add targeted fixtures for branches and recomputed fields.
 - Targeted fixtures must be legal under the current LEF/DEF grammar and cover each
