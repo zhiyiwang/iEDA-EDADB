@@ -183,6 +183,11 @@ Current uncovered or weakly covered areas:
   unless a documented point-tool semantic requirement proves it must be retained.
 - Cross-level parser behavior must be explicit: document and implement which parent/child
   supplies a value, where it is copied, and which brace triggers derived geometry/state.
+- When the original parser groups repeated DEF records by name/type into nested objects or
+  vectors, persist the parser-built iDB storage view. Document the record-to-group-to-child
+  mapping, the order retained, and any text interleaving already discarded by the parser;
+  `fromShadow()` rebuilds the parser-equivalent object structure rather than inventing an
+  order the active iDB never retained.
 - Keep parser setter dependencies in `fromShadow()`: restore identity/master/reference
   and basic state first, then call coordinate/geometry setters that rebuild bbox, pins,
   halo, or obstruction state. Do not persist those derived results as replacement columns.

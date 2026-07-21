@@ -37,6 +37,7 @@ EDADB adapter 文档的核心目标是：每个 root class 都必须按 `src/dat
 - 原始 parser 中跨 Pin/Term/Port/Layer 等层次的复制、同步和计算必须在 `fromShadow()` 中按相同顺序重做；文档要标明源对象、目标对象和触发分支。
 - Storage branch discriminator 必须对应原始 writer 实际输出的 DEF 分支，使 `fromShadow()` 重建结果等价于“原始 writer 输出后再由原始 parser 读入”。原始 iDB 中未被 writer 输出的 hidden parser state 默认规范化掉；只有点工具语义明确需要时才额外持久化，并必须单独说明。
 - `toShadow()` 按原始 writer 的条件选择存储视图；`fromShadow()` 按原始 parser 的分支顺序执行 allocation、name lookup、字段设置、跨层同步和派生计算。不得为了减少代码改变 setter 调用顺序或把计算结果改成数据库列。
+- 当原始 parser 将连续或重复的 DEF records 按 name/type 聚合为 nested object/vector 时，EDADB 保存 parser 构建后的 iDB storage view。文档必须说明 record-to-group-to-child-vector 映射、保留的顺序和 parser 已丢失的顺序；`fromShadow()` 重建 parser-equivalent object structure，不尝试恢复原始 parser 本身未保留的文本交错顺序。
 - 对会触发派生状态更新的 setter，`fromShadow()` 必须保持 parser 的依赖顺序：先恢复 identity/master/reference 和基础状态，最后调用 coordinate/geometry 等触发 bbox、pin、halo、obs 重算的 setter；禁止提前调用后再用数据库列覆盖派生结果。
 - Non-owning pointer 不直接持久化：保存稳定 name/ID，read 时从 active LEF/design lookup，并恢复必要 backlink。`IdbInstance` 的 cell master、region 和 route-halo layers 是当前例子。
 - Optional inline scalar child 没有独立 identity 时关闭 PK；只有 owns nested rows 的 child storage view 才保留 owner PK。`IdbHalo`、`Shadow<IdbRouteHalo>` 属于前者。
