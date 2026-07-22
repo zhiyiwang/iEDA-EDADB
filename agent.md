@@ -28,9 +28,10 @@ cd /home/zhiyiwang/cs/arch/eda/iEDA-EDADB
 bash src/database/edadb/test/run_idb_roundtrip_regression.sh
 ```
 
-Regression cases run in independent processes. This host has 20 physical cores / 40
-logical CPUs and 125 GiB RAM, so the default is `EDADB_TEST_JOBS=8`; override it for
-shared or smaller machines, and use selected case names during iteration.
+Regression cases run in independent processes and should run concurrently by default.
+This host has 20 physical cores / 40 logical CPUs and 125 GiB RAM, so use
+`EDADB_TEST_JOBS=8`; run serially only for one selected case or failure diagnosis, and
+lower concurrency for shared or smaller machines.
 
 The regression definition is stored in `src/database/edadb/test/`.
 By default it writes generated fixtures, logs, EDADB SQLite databases, direct iDB
@@ -163,11 +164,11 @@ Current uncovered or weakly covered areas:
   output selection; parser state describes source fields, allocation, lookup, cross-level
   synchronization, and derived calculations. Persist the writer's canonical DEF form,
   then rebuild it with parser-equivalent control flow.
-- When EDADB read replaces the parser, preserve a writer-omitted field only if the parser
-  reads it into active iDB state and that state affects tool semantics. Mark it
-  `parser-only`, explain the requirement, and verify it through SQLite/read-state tests;
-  final DEF diff cannot cover a field the native writer omits. Instance `WEIGHT/REGION`
-  are the current example.
+- When EDADB read replaces the parser, preserve every DEF source field that the parser
+  actually writes into active iDB state, including writer-omitted `parser-only` fields.
+  Verify them through SQLite/read-state tests because final DEF diff cannot cover fields
+  the native writer omits. If the parser itself drops a DEF token, document the native gap
+  instead of inferring state in the adapter.
 - Adapter class documents use separate `Original DEF Write Mapping` and
   `Original DEF Read Mapping` tables. Rows follow the original source `{}` / branch /
   loop order, not shadow-class order, database-column order, or broad artificial stages.
@@ -181,10 +182,10 @@ Current uncovered or weakly covered areas:
 - Classify every field as DEF source, branch/reference, cross-level synchronization, or
   derived/cache. Persist the first two only when required; rebuild the latter two through
   the same setters and in the same order as the original parser.
-- Persist the canonical DEF branch selected by the original writer. A stored branch
-  discriminator must rebuild the same state that the original parser would create after
-  reading that writer output. Hidden parser/iDB state omitted by the writer is normalized
-  unless a documented point-tool semantic requirement proves it must be retained.
+- Persist both the canonical DEF branch selected by the original writer and the DEF source
+  state actually retained by the parser. A stored branch discriminator must rebuild the
+  same subtype and setter path; writer-omitted parser fields remain explicit `parser-only`
+  columns and require SQLite/read-state verification.
 - Cross-level parser behavior must be explicit: document and implement which parent/child
   supplies a value, where it is copied, and which brace triggers derived geometry/state.
 - When the original parser groups repeated DEF records by name/type into nested objects or
@@ -474,7 +475,7 @@ Active persistence groups:
 - `iVia` stores generated via fields inline through EDADB member StoreType conversion; no `Shadow<IdbVia>` is defined.
 - `iInstSD` stores DEF COMPONENT fields: instance name, cell master name, source/type, placement status, orient, weight, coordinate, HALO, ROUTEHALO, and region name.
 - `iPinSD` stores DEF PINS fields: pin/net names, IO term direction/use/special, port/layer rectangles, placement status, location, orient, and derived average/bbox rebuild inputs.
-- `iBlockageSD` stores only DEF writer-emitted BLOCKAGES fields: type, layer name, pushdown, exceptpgnet, component name, and rects.
+- `iBlockageSD` stores writer fields plus parser-only routing slots/fills/spacing/effective-width and placement soft/max-density. It excludes `_is_partial` because the native parser never sets that member.
 - `iRegion` stores DEF REGIONS fields: name, type, and boundary rects.
 - `iSlotSD` stores DEF SLOTS fields: layer name and rects.
 - `iGroupSD` stores DEF GROUPS fields: group name, region name, and instance names.
@@ -593,7 +594,7 @@ Important rule:
 - `IdbVia` does not use a root shadow. Its `_master_instance` is converted by EDADB through the member type's StoreType; only `IdbViaMaster` / `IdbLayerShape` keep minimal member-level shadow views for layer-name lookup and fixed/generate geometry rebuild.
 - `IdbInstance` uses shadow because DEF COMPONENT persistence stores a reduced view and must convert pointers to names: cell master, region, route-halo layers. Readback resolves those names and uses normal iDB setters.
 - `IdbPin` uses shadow because DEF PINS persistence is a reduced IO-term/port/layer-shape view; readback rebuilds port layer shapes, average position, bbox, placement, and then nets later reconnect pins through DEF net callbacks.
-- `IdbBlockage` uses shadow because it is polymorphic. The storage view is intentionally reduced to what `DefWrite::write_blockage()` emits; parser-only fields such as slots/fills/spacing/effective-width/soft/partial/density are not stored.
+- `IdbBlockage` uses shadow because it is polymorphic. It stores routing slots/fills/spacing/effective-width and placement soft/max-density in addition to writer-visible fields because `DefRead::parse_blockage()` writes those DEF source fields into active iDB. Placement `PARTIAL` does not set `_is_partial`, and placement `PUSHDOWN` is not read by the native parser; both gaps are documented rather than inferred.
 - `IdbRegion` does not use shadow because DEF REGIONS maps directly to name/type/boundary rects, and `_name` is a natural root key.
 - Read `IdbRegion` before `IdbInstance` so instance region-name resolution can use the EDADB-restored region list.
 - `IdbSlot` uses shadow because DEF SLOTS has no natural unique root key: `_layer_name` is not guaranteed unique, while rect child rows still need a stable parent key.

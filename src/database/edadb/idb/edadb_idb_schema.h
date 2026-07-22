@@ -100,7 +100,12 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbTerm>, "iTermSD", (_direction_sd, _type_s
 TABLE4CLASS(edadb::Shadow<idb::IdbPin>, "iPinSD", (_pin_name_sd, _order_sd, _net_name_sd, _io_term_sd, _no_port_location_sd, _no_port_orient_sd, _no_port_placement_status_sd));
 
 #include "shadow/shadow_idb_blockage.h"
-TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbBlockage>, "iBlockageSD", (primary_key, _instance_name_sd, _is_pushdown_sd, _type_sd, _layer_name_sd, _is_except_pgnet_sd), (_rect_list_sd));
+TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbBlockage>, "iBlockageSD",
+                 (primary_key, _instance_name_sd, _is_pushdown_sd, _type_sd,
+                  _layer_name_sd, _min_spacing_sd, _effective_width_sd,
+                  _is_slots_sd, _is_fills_sd, _is_except_pgnet_sd,
+                  _is_soft_sd, _max_density_sd),
+                 (_rect_list_sd));
 
 #include "database/data/design/db_design/IdbRegion.h"
 TABLE4CLASS_WVEC(idb::IdbRegion, "iRegion", (_name, _type), (_boudary_list));

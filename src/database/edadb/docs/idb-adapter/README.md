@@ -17,7 +17,7 @@ EDADB adapter 文档的核心目标是：每个 root class 都必须按 `src/dat
 
 - 当前分支的 `DefWrite::write_xxx()`、`DefRead::parse_xxx()`、相关 iDB class/setter 和 LEF/DEF parser grammar 是实现依据；旧 adapter、旧文档和字段名只能作为线索，不能作为语义依据。禁止根据“看起来应该如此”补字段或分支。
 - Writer 和 parser 必须分别逐 brace 检查，不能假设二者天然对称：writer 决定当前 iDB 状态如何输出，parser 决定哪些值来自 DEF、哪些值被跨层复制、哪些值在读后计算。
-- EDADB read 替代原始 parser 时，当前 writer 未输出但 parser 会读取、且会影响 active iDB/点工具语义的 source field 仍需保存；必须标记为 `parser-only`，说明保留理由，并用 DB SQL 和 read-state fixture 验证，不能只靠最终 DEF diff。`IdbInstance` 的 `WEIGHT/REGION` 是当前例子。
+- EDADB read 替代原始 parser 时，当前 writer 未输出但 parser 实际写入 active iDB 的 source field 仍需保存；必须标记为 `parser-only`，并用 DB SQL 和 read-state fixture 验证，不能只靠最终 DEF diff。Blockage 的 `SLOTS/FILLS/SPACING/DESIGNRULEWIDTH/SOFT/PARTIAL density` 是当前例子。
 - EDADB 表达的是 DEF 语义视图，不一定等于完整 C++ object dump。
 - 优先 direct mapping；只有 direct mapping 无法表达 polymorphism、anonymous root identity、non-owning pointer/name-reference rebuild、nested vector owner/order，或 reduced DEF storage view 时才引入 `Shadow<T>`。
 - 如果某个成员类型 `T` 已注册 `TABLE4SHADOW(T)` 或 `TABLE4SHADOW_WVEC(T)`，则包含它的 root class 可以继续 direct mapping；EDADB 遍历成员时会自动把 `T` / `T*` 的 store type 改写为 `edadb::Shadow<T>`。
@@ -32,11 +32,11 @@ EDADB adapter 文档的核心目标是：每个 root class 都必须按 `src/dat
 - Primary key 只用于 root identity 或 nested vector-owner storage view；纯 inline/nested scalar value view 必须关闭 PK。例如 `Shadow<IdbViaMasterGenerate>` 只是 `Shadow<IdbViaMaster>::_master_generate_sd`，不是独立 root/vector owner，因此在 `initPrimKeys()` 中关闭 PK；`Shadow<IdbViaMaster>` owns `fixed_layer_shape_list_sd`，保留 EDADB 默认 PK。
 - 只有 iEDA 语义需要保序或明确要求 raw roundtrip 保序的 root list 才增加 `_order_sd`；Level D root list 默认不保存 root order，优先依赖 normalized diff。
 - `SLOTS` 是当前已 review 类中的明确例外：它是 Level D，但 root record 没有 name，且 raw roundtrip 需要稳定 anonymous record 输出，因此保留 `primary_key + _order_sd`。
-- DB 保存原始 writer 实际输出、原始 parser 能重新读取的 canonical DEF view，以及必要 identity/order/reference；computed/cache fields 不入库，read path 按原始 parser 语义重新计算。
+- DB 保存原始 parser 实际写入 active iDB 的 DEF source fields、原始 writer 依赖的 active fields，以及必要 identity/order/reference；computed/cache fields 不入库，read path 按原始 parser 语义重新计算。
 - 字段必须归入四类之一：DEF source、branch discriminator/reference、cross-level copy/synchronization、derived/cache。前两类按需持久化；后两类默认不持久化，必须在 `fromShadow()` 中按 parser 原顺序恢复。
 - 原始 parser 中跨 Pin/Term/Port/Layer 等层次的复制、同步和计算必须在 `fromShadow()` 中按相同顺序重做；文档要标明源对象、目标对象和触发分支。
-- Storage branch discriminator 必须对应原始 writer 实际输出的 DEF 分支，使 `fromShadow()` 重建结果等价于“原始 writer 输出后再由原始 parser 读入”。原始 iDB 中未被 writer 输出的 hidden parser state 默认规范化掉；只有点工具语义明确需要时才额外持久化，并必须单独说明。
-- `toShadow()` 按原始 writer 的条件选择存储视图；`fromShadow()` 按原始 parser 的分支顺序执行 allocation、name lookup、字段设置、跨层同步和派生计算。不得为了减少代码改变 setter 调用顺序或把计算结果改成数据库列。
+- Storage branch discriminator 必须覆盖 writer 输出分支和 parser 实际保留的 source state。Writer 未输出但 parser 已写入 iDB 的字段仍需持久化，并用 SQL/read-state 测试；若 parser 自身丢失 DEF token，则不得在 adapter 中猜测恢复，必须记录为原生缺口。
+- `toShadow()` 保存逐 brace 审计后的 writer fields 与 parser source fields；`fromShadow()` 按原始 parser 的分支顺序执行 allocation、name lookup、字段设置、跨层同步和派生计算。不得为了减少代码改变 setter 调用顺序或把计算结果改成数据库列。
 - 当原始 parser 将连续或重复的 DEF records 按 name/type 聚合为 nested object/vector 时，EDADB 保存 parser 构建后的 iDB storage view。文档必须说明 record-to-group-to-child-vector 映射、保留的顺序和 parser 已丢失的顺序；`fromShadow()` 重建 parser-equivalent object structure，不尝试恢复原始 parser 本身未保留的文本交错顺序。
 - 对会触发派生状态更新的 setter，`fromShadow()` 必须保持 parser 的依赖顺序：先恢复 identity/master/reference 和基础状态，最后调用 coordinate/geometry 等触发 bbox、pin、halo、obs 重算的 setter；禁止提前调用后再用数据库列覆盖派生结果。
 - Non-owning pointer 不直接持久化：保存稳定 name/ID，read 时从 active LEF/design lookup，并恢复必要 backlink。`IdbInstance` 的 cell master、region 和 route-halo layers 是当前例子。
@@ -49,9 +49,10 @@ EDADB adapter 文档的核心目标是：每个 root class 都必须按 `src/dat
 
 ## Test Convergence Rules
 
-- Regression cases are process-isolated and run concurrently. Select jobs from physical
-  cores, available RAM, and measured per-case load; this 20-core/125-GiB host defaults to
-  `EDADB_TEST_JOBS=8`, with an environment override for shared/smaller machines.
+- Regression cases are process-isolated and must run concurrently by default. Select jobs
+  from physical cores, available RAM, and measured per-case load; this 20-core/125-GiB host
+  uses `EDADB_TEST_JOBS=8`. Serial execution is only for one selected case or failure
+  diagnosis; lower concurrency for shared/smaller machines.
 - Use selected cases for local iteration, then run the complete suite before handoff.
   Each case must own its output directory, SQLite DB, and logs; concurrency must not
   remove SQL, raw/normalized DEF diff, or order-perturbation checks.

@@ -185,18 +185,29 @@ check_default_sql() {
 check_aux_optional_sql() {
     local name="$1"
     local edadb_db="$2"
+    local edadb2def_log="$3"
 
-    assert_eq "$(sql_value "$edadb_db" "select count(*) from iBlockageSD;")" "2" "$name blockage count"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from iBlockageSD;")" "7" "$name blockage count"
     assert_eq "$(sql_value "$edadb_db" "select count(*) from iRegion;")" "1" "$name region count"
     assert_eq "$(sql_value "$edadb_db" "select count(*) from iSlotSD;")" "1" "$name slot count"
     assert_eq "$(sql_value "$edadb_db" "select count(*) from iGroupSD;")" "1" "$name group count"
     assert_eq "$(sql_value "$edadb_db" "select count(*) from iFillSD;")" "2" "$name fill count"
-    assert_eq "$(sql_value "$edadb_db" "select group_concat(_type_sd || '|' || coalesce(_layer_name_sd,'') || '|' || _is_pushdown_sd || '|' || _is_except_pgnet_sd || '|' || _instance_name_sd, ';') from (select * from iBlockageSD order by _type_sd, coalesce(_layer_name_sd,''), _is_pushdown_sd, _is_except_pgnet_sd, _instance_name_sd);")" \
-        "1|met1|1|1|ctrl/_34_;2||0|0|ctrl/_35_" "$name blockage fields"
-    assert_eq "$(sql_value "$edadb_db" "select group_concat(_type_sd || ':' || _vec_idx || ':' || _lx_sd || ',' || _ly_sd || ',' || _hx_sd || ',' || _hy_sd, ';') from (select b._type_sd, r._vec_idx, r._lx_sd, r._ly_sd, r._hx_sd, r._hy_sd from iBlockageSD b join iBlockageSD__rect_list_sd_IdbRectSD r on r.iBlockageSD_primary_key=b.primary_key order by b._type_sd, r._vec_idx);")" \
-        "1:0:1000,1000,2000,2000;1:1:1200,1200,1800,1800;2:0:3000,3000,4000,4000;2:1:3200,3200,3800,3800" "$name blockage ordered rects"
-    assert_eq "$(sql_value "$edadb_db" "select group_concat(_vec_idx, ',') from iBlockageSD__rect_list_sd_IdbRectSD order by rowid;")" \
-        "1,0,1,0" "$name blockage rect physical order was perturbed"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_layer_name_sd || '|' || _is_slots_sd || '|' || _is_fills_sd || '|' || _is_pushdown_sd || '|' || _is_except_pgnet_sd || '|' || _instance_name_sd || '|' || _min_spacing_sd || '|' || _effective_width_sd, ';') from (select * from iBlockageSD where _type_sd=1 order by _layer_name_sd);")" \
+        "met1|1|0|0|0||111|-1;met2|0|1|0|0||-1|222;met3|0|0|1|1|ctrl/_34_|-1|-1" "$name routing blockage parser fields"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_lx_sd || '|' || _is_soft_sd || '|' || printf('%.3f', _max_density_sd) || '|' || _is_pushdown_sd || '|' || _instance_name_sd, ';') from (select r._lx_sd, b._is_soft_sd, b._max_density_sd, b._is_pushdown_sd, b._instance_name_sd from iBlockageSD b join iBlockageSD__rect_list_sd_IdbRectSD r on r.iBlockageSD_primary_key=b.primary_key and r._vec_idx=0 where b._type_sd=2 order by r._lx_sd);")" \
+        "5000|1|0.000|0|;6000|0|0.500|0|;7000|0|0.000|0|ctrl/_35_;9000|0|0.000|0|" "$name placement blockage parser fields"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from pragma_table_info('iBlockageSD') where name='_is_partial_sd';")" \
+        "0" "$name excludes unset placement partial flag"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from pragma_table_info('iBlockageSD') where name='_mask_sd';")" \
+        "0" "$name excludes unsupported blockage mask"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_vec_idx || ':' || _lx_sd || ',' || _ly_sd || ',' || _hx_sd || ',' || _hy_sd, ';') from (select r._vec_idx, r._lx_sd, r._ly_sd, r._hx_sd, r._hy_sd from iBlockageSD b join iBlockageSD__rect_list_sd_IdbRectSD r on r.iBlockageSD_primary_key=b.primary_key where b._layer_name_sd='met1' order by r._vec_idx);")" \
+        "0:1000,1000,2000,2000;1:1200,1200,1800,1800" "$name blockage ordered rects"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(r._vec_idx, ',') from iBlockageSD b join iBlockageSD__rect_list_sd_IdbRectSD r on r.iBlockageSD_primary_key=b.primary_key where b._layer_name_sd='met1' order by r.rowid;")" \
+        "1,0" "$name blockage rect physical order was perturbed"
+    assert_contains "$edadb2def_log" "[EDADB-IDB] readIdbBlockage routing layer=met1 slots=1 fills=0 pushdown=0 except_pgnet=0 instance= min_spacing=111 effective_width=-1" "$name read routing slots spacing state"
+    assert_contains "$edadb2def_log" "[EDADB-IDB] readIdbBlockage routing layer=met2 slots=0 fills=1 pushdown=0 except_pgnet=0 instance= min_spacing=-1 effective_width=222" "$name read routing fills width state"
+    assert_contains "$edadb2def_log" "[EDADB-IDB] readIdbBlockage placement soft=1 partial=0 max_density=0 pushdown=0 instance=" "$name read placement soft state"
+    assert_contains "$edadb2def_log" "[EDADB-IDB] readIdbBlockage placement soft=0 partial=0 max_density=0.5 pushdown=0 instance=" "$name read placement partial density state"
     assert_eq "$(sql_value "$edadb_db" "select _name || '|' || _type from iRegion;")" "test_region|1" "$name region fields"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_vec_idx || '|' || _lx_sd || '|' || _ly_sd || '|' || _hx_sd || '|' || _hy_sd, ';') from (select * from iRegion__boudary_list_IdbRectSD order by _vec_idx);")" \
         "0|1000|1000|10000|10000;1|12000|12000|14000|15000" "$name region ordered rects"
@@ -564,9 +575,14 @@ generate_aux_optional_fixture() {
             print
             if ($0 ~ /^END PINS$/) {
                 print ""
-                print "BLOCKAGES 2 ;"
-                print "    - LAYER met1 + PUSHDOWN + EXCEPTPGNET + COMPONENT ctrl/_34_ RECT ( 1000 1000 ) ( 2000 2000 ) RECT ( 1200 1200 ) ( 1800 1800 ) ;"
-                print "    - PLACEMENT + COMPONENT ctrl/_35_ RECT ( 3000 3000 ) ( 4000 4000 ) RECT ( 3200 3200 ) ( 3800 3800 ) ;"
+                print "BLOCKAGES 7 ;"
+                print "    - LAYER met1 + SLOTS + SPACING 111 RECT ( 1000 1000 ) ( 2000 2000 ) RECT ( 1200 1200 ) ( 1800 1800 ) ;"
+                print "    - LAYER met2 + FILLS + DESIGNRULEWIDTH 222 RECT ( 3000 3000 ) ( 4000 4000 ) ;"
+                print "    - LAYER met3 + PUSHDOWN + EXCEPTPGNET + COMPONENT ctrl/_34_ RECT ( 4000 4000 ) ( 4500 4500 ) ;"
+                print "    - PLACEMENT + SOFT RECT ( 5000 5000 ) ( 5500 5500 ) ;"
+                print "    - PLACEMENT + PARTIAL 0.5 RECT ( 6000 6000 ) ( 6500 6500 ) ;"
+                print "    - PLACEMENT + COMPONENT ctrl/_35_ RECT ( 7000 7000 ) ( 8000 8000 ) RECT ( 7200 7200 ) ( 7800 7800 ) ;"
+                print "    - PLACEMENT + PUSHDOWN RECT ( 9000 9000 ) ( 9500 9500 ) ;"
                 print "END BLOCKAGES"
                 print "SLOTS 1 ;"
                 print "    - LAYER met1 RECT ( 5000 5000 ) ( 6000 6000 ) RECT ( 5100 5200 ) ( 5800 5900 ) ;"
@@ -913,7 +929,7 @@ run_case() {
             ;;
         aux)
             check_default_sql "$name" "$edadb_db" "$case_dir/def2edadb.log" "$case_dir/edadb2def.log"
-            check_aux_optional_sql "$name" "$edadb_db"
+            check_aux_optional_sql "$name" "$edadb_db" "$case_dir/edadb2def.log"
             ;;
         routed)
             check_routed_sql "$name" "$edadb_db" "$case_dir/def2edadb.log" "$case_dir/edadb2def.log"

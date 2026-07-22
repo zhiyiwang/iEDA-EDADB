@@ -35,14 +35,21 @@ public:
         }
 
         // members from IdbBlockage
-        _instance_name_sd.clear();
-        if (obj->get_instance() != nullptr) {
-            _instance_name_sd = obj->get_instance_name();
-        }
+        _instance_name_sd = obj->get_instance_name();
+        _is_pushdown_sd = obj->is_pushdown();
         _type_sd = obj->get_type();
-        _is_pushdown_sd = false;
+
+        // members from IdbRoutingBlockage
         _layer_name_sd.clear();
+        _min_spacing_sd = -1;
+        _effective_width_sd = -1;
+        _is_slots_sd = false;
+        _is_fills_sd = false;
         _is_except_pgnet_sd = false;
+
+        // members from IdbPlacementBlockage
+        _is_soft_sd = false;
+        _max_density_sd = 0;
 
         _rect_list_sd.clear();
         for (auto rect : obj->get_rect_list()) {
@@ -57,10 +64,20 @@ public:
             if (routing_blockage == nullptr) {
                 return false;
             }
-            _is_pushdown_sd = routing_blockage->is_pushdown();
             _layer_name_sd = routing_blockage->get_layer_name();
+            _min_spacing_sd = routing_blockage->get_min_spacing();
+            _effective_width_sd = routing_blockage->get_effective_width();
+            _is_slots_sd = routing_blockage->is_slots();
+            _is_fills_sd = routing_blockage->is_fills();
             _is_except_pgnet_sd = routing_blockage->is_except_pgnet();
-        } else if (_type_sd != idb::IdbBlockage::IdbBlockageType::kPlacementBlockage) {
+        } else if (_type_sd == idb::IdbBlockage::IdbBlockageType::kPlacementBlockage) {
+            idb::IdbPlacementBlockage* placement_blockage = dynamic_cast<idb::IdbPlacementBlockage*>(obj);
+            if (placement_blockage == nullptr) {
+                return false;
+            }
+            _is_soft_sd = placement_blockage->is_soft();
+            _max_density_sd = placement_blockage->get_max_density();
+        } else {
             return false;
         }
         return true;
@@ -71,35 +88,39 @@ public:
             return false;
         }
 
-        // members from IdbBlockage
-        obj->set_instance_name(_instance_name_sd);
-        // _type_sd is not settable
-
         if (_type_sd == idb::IdbBlockage::IdbBlockageType::kRoutingBlockage) {
             idb::IdbRoutingBlockage* routing_blockage = dynamic_cast<idb::IdbRoutingBlockage*>(obj);
             if (routing_blockage == nullptr) {
                 return false;
             }
 
-            idb::IdbLayer* layer = idb::edadb_adapter::EdadbIdbHelper::findIdbLayerByName(_layer_name_sd);
-            if (layer == nullptr) {
-                return false;
-            }
-
             routing_blockage->set_layer_name(_layer_name_sd);
-            routing_blockage->set_layer(layer);
+            routing_blockage->set_layer(idb::edadb_adapter::EdadbIdbHelper::findIdbLayerByName(_layer_name_sd));
+            routing_blockage->set_slots(_is_slots_sd);
+            routing_blockage->set_fills(_is_fills_sd);
             routing_blockage->set_pushdown(_is_pushdown_sd);
             routing_blockage->set_except_pgnet(_is_except_pgnet_sd);
-        } else if (_type_sd != idb::IdbBlockage::IdbBlockageType::kPlacementBlockage) {
-            return false;
-        }
-
-        if (!_instance_name_sd.empty()) {
-            idb::IdbInstance* instance = idb::edadb_adapter::EdadbIdbHelper::findIdbInstanceByName(_instance_name_sd);
-            if (instance == nullptr) {
+            if (!_instance_name_sd.empty()) {
+                routing_blockage->set_instance_name(_instance_name_sd);
+                routing_blockage->set_instance(idb::edadb_adapter::EdadbIdbHelper::findIdbInstanceByName(_instance_name_sd));
+            }
+            routing_blockage->set_min_spacing(_min_spacing_sd);
+            routing_blockage->set_effective_width(_effective_width_sd);
+        } else if (_type_sd == idb::IdbBlockage::IdbBlockageType::kPlacementBlockage) {
+            idb::IdbPlacementBlockage* placement_blockage = dynamic_cast<idb::IdbPlacementBlockage*>(obj);
+            if (placement_blockage == nullptr) {
                 return false;
             }
-            obj->set_instance(instance);
+
+            placement_blockage->set_pushdown(_is_pushdown_sd);
+            placement_blockage->set_soft(_is_soft_sd);
+            placement_blockage->set_max_density(_max_density_sd);
+            if (!_instance_name_sd.empty()) {
+                placement_blockage->set_instance_name(_instance_name_sd);
+                placement_blockage->set_instance(idb::edadb_adapter::EdadbIdbHelper::findIdbInstanceByName(_instance_name_sd));
+            }
+        } else {
+            return false;
         }
 
         if (!obj->get_rect_list().empty()) {
@@ -123,7 +144,15 @@ public:
 
 // members from IdbRoutingBlockage
     std::string _layer_name_sd;
+    int32_t _min_spacing_sd = -1;
+    int32_t _effective_width_sd = -1;
+    bool _is_slots_sd = false;
+    bool _is_fills_sd = false;
     bool _is_except_pgnet_sd = false;
+
+// members from IdbPlacementBlockage
+    bool _is_soft_sd = false;
+    double _max_density_sd = 0;
 
 private:
     static inline uint64_t next_primary_key = 1;

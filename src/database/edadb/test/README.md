@@ -34,7 +34,7 @@ IEDA_BIN=/path/to/iEDA OUT_DIR=/tmp/my_edadb_run bash src/database/edadb/test/ru
 The script runs independent cases with detailed DEF-diff, SQLite, and selected log assertions. Core cases include:
 
 - `default_ipl`: normal sky130_gcd `iPL_result.def`, using direct iDB `DEF -> DEF` as the baseline.
-- `aux_optional`: generated from `iPL_result.def`, adding non-empty `BLOCKAGES`, `REGIONS`, `SLOTS`, a two-member `GROUPS` entry, `FILLS`, special-net optional fields, and regular-net optional fields.
+- `aux_optional`: generated from `iPL_result.def`, adding seven routing/placement `BLOCKAGES` records, `REGIONS`, `SLOTS`, a two-member `GROUPS` entry, `FILLS`, special-net optional fields, and regular-net optional fields.
 - `routed_irt`: sky130_gcd `iRT_result.def`, covering non-empty regular NETS routed wires, segments, point rows, and ordered pin refs.
 - `net_branches`: generated from `iRT_result.def`, covering legal regular-wire states `FIXED`, `COVER`, and `NOSHIELD`, plus a `VIRTUAL` second point while retaining the full routed-net fixture.
 
@@ -57,7 +57,7 @@ For `default_ipl`, it also checks:
 For `aux_optional`, it also checks SQLite content for key EDADB tables and fields:
 
 - `iBlockageSD`, `iRegion`, `iSlotSD`, `iGroupSD`, `iFillSD`;
-- blockage fields, region/slot rectangles, group region and ordered member child rows;
+- blockage writer fields plus parser-only slots/fills/spacing/width/soft/density, readback state, ordered rectangles, region/slot rectangles, group region and ordered member child rows;
 - fill layer/via typed rows and child rows;
 - special-net `ORIGINAL`, `SOURCE`, and `WEIGHT`;
 - regular-net `ORIGINAL`, `SOURCE`, `WEIGHT`, `XTALK`, `FIXEDBUMP`, and `FREQUENCY`.
@@ -98,7 +98,7 @@ Current class coverage:
 | --- | --- | --- |
 | Design / Die / Row / TrackGrid / GCellGrid / Via | direct or minimal shadow | scalar fields, point/vector rows, empty and non-empty GCell |
 | Instance / Pin | shadow | master/placement/halo fields, port/layer/rect child rows |
-| Blockage / Region / Slot / Group / Fill | direct or shadow | routing vs placement, region type, ordered group members, layer-fill vs via-fill |
+| Blockage / Region / Slot / Group / Fill | direct or shadow | routing/placement source fields, parser-only blockage state, region type, ordered group members, layer-fill vs via-fill |
 | SpecialNet / Net | shadow | ordered pin refs, optional fields, routed wire/segment/point rows |
 
 ## Planned Order-Stress Tests

@@ -833,6 +833,25 @@ bool DefReadEdadb::readIdbBlockage(void) {
             return false;
         }
 
+        if (blockage->get_type() == idb::IdbBlockage::IdbBlockageType::kRoutingBlockage) {
+            auto* routing_blockage = dynamic_cast<idb::IdbRoutingBlockage*>(blockage);
+            EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] readIdbBlockage routing layer=" << routing_blockage->get_layer_name()
+                                   << " slots=" << routing_blockage->is_slots()
+                                   << " fills=" << routing_blockage->is_fills()
+                                   << " pushdown=" << routing_blockage->is_pushdown()
+                                   << " except_pgnet=" << routing_blockage->is_except_pgnet()
+                                   << " instance=" << routing_blockage->get_instance_name()
+                                   << " min_spacing=" << routing_blockage->get_min_spacing()
+                                   << " effective_width=" << routing_blockage->get_effective_width() << std::endl;
+        } else {
+            auto* placement_blockage = dynamic_cast<idb::IdbPlacementBlockage*>(blockage);
+            EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] readIdbBlockage placement soft=" << placement_blockage->is_soft()
+                                   << " partial=" << placement_blockage->is_partial()
+                                   << " max_density=" << placement_blockage->get_max_density()
+                                   << " pushdown=" << placement_blockage->is_pushdown()
+                                   << " instance=" << placement_blockage->get_instance_name() << std::endl;
+        }
+
         ++blockage_count;
     }
 
