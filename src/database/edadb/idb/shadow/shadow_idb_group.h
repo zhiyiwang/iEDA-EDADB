@@ -37,16 +37,9 @@ public:
     }
 
     bool fromShadow(idb::IdbGroup* obj, uint32_t* idx_ptr = nullptr) {
-        if (obj == nullptr) {
+        if (obj == nullptr || obj->get_group_name() != _group_name_sd) {
             return false;
         }
-
-        obj->set_group_name(_group_name_sd);
-        idb::IdbRegion* region = idb::edadb_adapter::EdadbIdbHelper::findIdbRegionByName(_region_name_sd);
-        if (region == nullptr) {
-            return false;
-        }
-        obj->set_region(region);
 
         for (const std::string& instance_name : _instance_name_vec_sd) {
             idb::IdbInstance* instance = idb::edadb_adapter::EdadbIdbHelper::findIdbInstanceByName(instance_name);
@@ -57,6 +50,12 @@ public:
                 obj->add_instance(instance);
             }
         }
+
+        idb::IdbRegion* region = idb::edadb_adapter::EdadbIdbHelper::findIdbRegionByName(_region_name_sd);
+        if (region == nullptr) {
+            return false;
+        }
+        obj->set_region(region);
         return true;
     }
 

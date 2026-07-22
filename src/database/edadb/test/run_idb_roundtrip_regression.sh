@@ -156,7 +156,7 @@ check_default_sql() {
         "0" "$name special net has no root order column"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_net_name_sd, ',') from (select _net_name_sd from iSpecNetSD order by _net_name_sd);")" \
         "VDD,VSS" "$name special net names"
-    if [[ "$name" == "aux_optional" ]]; then
+    if [[ "$name" == "aux_optional" || "$name" == "group_branches" ]]; then
         assert_eq "$(sql_value "$edadb_db" "select (select count(*) from iSpecNetSD__pin_string_list_sd___edadb_primitive_vector) || '|' || (select count(*) from iSpecNetSD__wire_list_sd_iSpecWireSD) || '|' || (select count(*) from iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD) || '|' || (select count(*) from iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD__point_list_sd_iCoordSD);")" \
             "3|3|640|697" "$name special net child counts"
         assert_eq "$(sql_value "$edadb_db" "select (select count(*) from iSpecNetSD__pin_string_list_sd___edadb_primitive_vector) || '|' || (select count(*) from iSpecNetSD__io_pin_name_list_sd___edadb_primitive_vector) || '|' || (select count(*) from iSpecNetSD__instance_pin_list_sd_iSpecPinRef);")" \
@@ -233,6 +233,8 @@ check_aux_optional_sql() {
         "0|-1000|-1000|1000|1000" "$name explicit port rect"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(__edadb_vec_idx || ':' || value, ',') from (select __edadb_vec_idx, value from iGroupSD__instance_name_vec_sd___edadb_primitive_vector order by __edadb_vec_idx);")" \
         "0:ctrl/_34_,1:ctrl/_35_" "$name group member order"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(__edadb_vec_idx || ':' || value, ',') from iGroupSD__instance_name_vec_sd___edadb_primitive_vector order by rowid;")" \
+        "1:ctrl/_35_,0:ctrl/_34_" "$name group member physical order was perturbed"
     assert_eq "$(sql_value "$edadb_db" "select count(*) from pragma_table_info('iFillSD') where name='_order_sd';")" \
         "0" "$name fill has no root order column"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_type_sd || '|' || coalesce(_layer_name_sd,'') || '|' || coalesce(_via_name_sd,''), ';') from (select * from iFillSD order by _type_sd, coalesce(_layer_name_sd,''), coalesce(_via_name_sd,''));")" \
@@ -646,6 +648,18 @@ generate_pin_derived_fixture() {
     ' "$input" >"$output"
 }
 
+generate_group_branches_fixture() {
+    local input="$1"
+    local output="$2"
+    awk '
+        /^    - test_group ctrl\/_34_ ctrl\/_35_ \+ REGION test_region ;$/ {
+            print "    - test_group ctrl/_3[45]_ ctrl/_34_ + REGION test_region ;"
+            next
+        }
+        { print }
+    ' "$input" >"$output"
+}
+
 generate_pin_writer_fixture() {
     local input="$1"
     local output="$2"
@@ -799,6 +813,13 @@ DELETE FROM iSlotSD__rect_list_sd_IdbRectSD;
 INSERT INTO iSlotSD__rect_list_sd_IdbRectSD
 SELECT * FROM slot_rects_reversed;
 
+CREATE TEMP TABLE group_members_reversed AS
+SELECT * FROM iGroupSD__instance_name_vec_sd___edadb_primitive_vector
+ORDER BY iGroupSD__group_name_sd, __edadb_vec_idx DESC;
+DELETE FROM iGroupSD__instance_name_vec_sd___edadb_primitive_vector;
+INSERT INTO iGroupSD__instance_name_vec_sd___edadb_primitive_vector
+SELECT * FROM group_members_reversed;
+
 CREATE TEMP TABLE fill_rects_reversed AS
 SELECT * FROM iFillSD__rect_list_sd_IdbRectSD
 ORDER BY iFillSD_primary_key, _vec_idx DESC;
@@ -902,11 +923,11 @@ run_case() {
     if [[ "$check_mode" == "die_polygon" ]]; then
         perturb_die_point_query_order "$edadb_db"
     fi
-    if [[ "$check_mode" == "default" || "$check_mode" == "aux" || "$check_mode" == "pin_derived" || "$check_mode" == "instance_branches" ]]; then
+    if [[ "$check_mode" == "default" || "$check_mode" == "aux" || "$check_mode" == "pin_derived" || "$check_mode" == "instance_branches" || "$check_mode" == "group_branches" ]]; then
         perturb_row_query_order "$edadb_db"
         perturb_instance_query_order "$edadb_db"
     fi
-    if [[ "$check_mode" == "aux" ]]; then
+    if [[ "$check_mode" == "aux" || "$check_mode" == "group_branches" ]]; then
         perturb_aux_child_query_order "$edadb_db"
     fi
     if [[ "$check_mode" == "grid_branches" ]]; then
@@ -993,6 +1014,17 @@ run_case() {
             run_ieda "$SCRIPT_DIR/tcl/direct_def_roundtrip.tcl" "$case_dir/reparse.log"
             assert_def_equivalent "$edadb_def" "$reparsed_def" "$case_dir/reparse.diff"
             ;;
+        group_branches)
+            check_default_sql "$name" "$edadb_db" "$case_dir/def2edadb.log" "$case_dir/edadb2def.log"
+            check_aux_optional_sql "$name" "$edadb_db" "$case_dir/edadb2def.log"
+            assert_contains "$input_def" "test_group ctrl/_3[45]_ ctrl/_34_" "$name regex and duplicate member input"
+            assert_contains "$direct_def" "test_group ctrl/_34_ ctrl/_35_ + REGION test_region" "$name parser-expanded deduplicated members"
+            local reparsed_def="$case_dir/reparsed.def"
+            export INPUT_DEF="$edadb_def"
+            export OUTPUT_DEF="$reparsed_def"
+            run_ieda "$SCRIPT_DIR/tcl/direct_def_roundtrip.tcl" "$case_dir/reparse.log"
+            assert_def_equivalent "$edadb_def" "$reparsed_def" "$case_dir/reparse.diff"
+            ;;
         design_fields)
             check_design_sql "$name" "$edadb_db" "gcd_design|5.7|2000|{|}"
             ;;
@@ -1067,6 +1099,7 @@ run_cases_parallel() {
         "pin_derived|$OUT_DIR/fixtures/pin_derived.def|pin_derived"
         "pin_writer|$OUT_DIR/fixtures/pin_writer.def|pin_writer"
         "pin_branches|$OUT_DIR/fixtures/pin_branches.def|pin_branches"
+        "group_branches|$OUT_DIR/fixtures/group_branches.def|group_branches"
         "grid_branches|$OUT_DIR/fixtures/grid_branches.def|grid_branches"
         "via_branches|$OUT_DIR/fixtures/via_branches.def|via_branches"
         "instance_branches|$OUT_DIR/fixtures/instance_branches.def|instance_branches"
@@ -1139,6 +1172,7 @@ main() {
     local pin_derived_def="$OUT_DIR/fixtures/pin_derived.def"
     local pin_writer_def="$OUT_DIR/fixtures/pin_writer.def"
     local pin_branches_def="$OUT_DIR/fixtures/pin_branches.def"
+    local group_branches_def="$OUT_DIR/fixtures/group_branches.def"
     local design_fields_def="$OUT_DIR/fixtures/design_fields.def"
     local design_fallback_def="$OUT_DIR/fixtures/design_fallback.def"
     local die_polygon_def="$OUT_DIR/fixtures/die_polygon.def"
@@ -1150,6 +1184,7 @@ main() {
     generate_pin_derived_fixture "$BASE_DEF" "$pin_derived_def"
     generate_pin_writer_fixture "$aux_def" "$pin_writer_def"
     generate_pin_branches_fixture "$aux_def" "$pin_branches_def"
+    generate_group_branches_fixture "$aux_def" "$group_branches_def"
     generate_design_fields_fixture "$BASE_DEF" "$design_fields_def"
     generate_design_fallback_fixture "$BASE_DEF" "$design_fallback_def"
     generate_die_polygon_fixture "$BASE_DEF" "$die_polygon_def"
@@ -1165,6 +1200,7 @@ main() {
     echo "generated fixture: $pin_derived_def"
     echo "generated fixture: $pin_writer_def"
     echo "generated fixture: $pin_branches_def"
+    echo "generated fixture: $group_branches_def"
     echo "generated fixture: $design_fields_def"
     echo "generated fixture: $design_fallback_def"
     echo "generated fixture: $die_polygon_def"
