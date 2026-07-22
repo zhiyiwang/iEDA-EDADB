@@ -43,8 +43,12 @@ public:
     Shadow<idb::IdbRegularWireSegment>& operator=(const Shadow& other) = delete;
 
 public:
-    void toShadow(idb::IdbRegularWireSegment* obj) {
-        _layer_name_sd = obj->get_layer() ? obj->get_layer()->get_name() : obj->get_layer_name();
+    bool toShadow(idb::IdbRegularWireSegment* obj, const uint32_t* idx_ptr = nullptr) {
+        if (obj == nullptr || idx_ptr == nullptr || obj->get_layer() == nullptr) {
+            return false;
+        }
+        _vec_idx = *idx_ptr;
+        _layer_name_sd = obj->get_layer()->get_name();
         _is_via_sd = obj->is_via();
         _is_rect_sd = obj->is_rect();
 
@@ -53,21 +57,37 @@ public:
         if (_is_rect_sd && obj->get_delta_rect() != nullptr) {
             _delta_rect_sd = new idb::IdbRect(*obj->get_delta_rect());
         }
+        if (_is_rect_sd && (obj->get_delta_rect() == nullptr || obj->get_point_list().empty())) {
+            return false;
+        }
         if (_is_via_sd && !obj->get_via_list().empty()) {
             _via_name_sd = obj->get_via_list().front()->get_name();
+        } else if (_is_via_sd) {
+            return false;
+        } else if (!_is_rect_sd && obj->get_point_list().size() < _POINT_MAX_) {
+            return false;
         }
 
         if (obj->get_point_number() > 1) {
             _is_second_point_virtual_sd = obj->is_virtual(obj->get_point_second());
         }
 
-        assert(_point_list_sd.empty());
         for (auto point : obj->get_point_list()) {
+            if (point == nullptr) {
+                return false;
+            }
             _point_list_sd.emplace_back(new idb::IdbCoordinate<int32_t>(*point));
         }
+        return true;
     }
 
-    bool fromShadow(idb::IdbRegularWireSegment* obj) {
+    bool fromShadow(idb::IdbRegularWireSegment* obj, uint32_t* idx_ptr = nullptr) {
+        if (obj == nullptr) {
+            return false;
+        }
+        if (idx_ptr != nullptr) {
+            *idx_ptr = static_cast<uint32_t>(_vec_idx);
+        }
         obj->set_is_via(_is_via_sd);
         obj->set_is_rect(_is_rect_sd);
 
@@ -81,6 +101,9 @@ public:
         // Match DEFIPATH_POINT / DEFIPATH_VIRTUALPOINT.
         for (size_t point_idx = 0; point_idx < _point_list_sd.size(); ++point_idx) {
             auto point_sd = _point_list_sd.at(point_idx);
+            if (point_sd == nullptr) {
+                return false;
+            }
             if (point_idx == _POINT_SECOND_ && _is_second_point_virtual_sd) {
                 obj->add_virtual_point(point_sd->get_x(), point_sd->get_y());
             } else {
@@ -96,16 +119,7 @@ public:
 
         // Match DEFIPATH_VIA: DEF via lookup first, then LEF via lookup.
         if (_is_via_sd) {
-            idb::IdbVias* via_list_def = idb::edadb_adapter::EdadbIdbHelper::getIdbDefVias();
-            idb::IdbVias* via_list_lef = idb::edadb_adapter::EdadbIdbHelper::getIdbLefVias();
-            if (via_list_def == nullptr || via_list_lef == nullptr) {
-                return false;
-            }
-
-            idb::IdbVia* via = via_list_def->find_via(_via_name_sd);
-            if (via == nullptr) {
-                via = via_list_lef->find_via(_via_name_sd);
-            }
+            idb::IdbVia* via = idb::edadb_adapter::EdadbIdbHelper::findIdbViaByName(_via_name_sd);
             if (via == nullptr) {
                 std::cout << "Error : can not find the via = " << _via_name_sd << std::endl;
                 return true;
@@ -122,6 +136,7 @@ public:
 
 public:
     uint64_t primary_key = 0;
+    uint64_t _vec_idx = 0;
     std::string _layer_name_sd;
     std::string _via_name_sd;
     bool _is_via_sd = false;
@@ -150,23 +165,40 @@ public:
     Shadow<idb::IdbRegularWire>& operator=(const Shadow& other) = delete;
 
 public:
-    void toShadow(idb::IdbRegularWire* obj) {
+    bool toShadow(idb::IdbRegularWire* obj, const uint32_t* idx_ptr = nullptr) {
+        if (obj == nullptr || idx_ptr == nullptr) {
+            return false;
+        }
+        _vec_idx = *idx_ptr;
         _wire_state_sd = obj->get_wire_statement();
         _shield_name_sd = obj->get_shiled_name();
 
-        assert(_segment_list_sd.empty());
+        uint32_t segment_idx = 0;
         for (auto segment : obj->get_segment_list()) {
             auto* segment_sd = new Shadow<idb::IdbRegularWireSegment>();
-            segment_sd->toShadow(segment);
+            if (!segment_sd->toShadow(segment, &segment_idx)) {
+                delete segment_sd;
+                return false;
+            }
             _segment_list_sd.emplace_back(segment_sd);
+            ++segment_idx;
         }
+        return true;
     }
 
-    bool fromShadow(idb::IdbRegularWire* obj) {
+    bool fromShadow(idb::IdbRegularWire* obj, uint32_t* idx_ptr = nullptr) {
+        if (obj == nullptr) {
+            return false;
+        }
+        if (idx_ptr != nullptr) {
+            *idx_ptr = static_cast<uint32_t>(_vec_idx);
+        }
         obj->set_wire_state(_wire_state_sd);
         obj->set_shield_name(_shield_name_sd);
         obj->init(_segment_list_sd.size());
 
+        std::sort(_segment_list_sd.begin(), _segment_list_sd.end(),
+                  [](const auto* lhs, const auto* rhs) { return lhs->_vec_idx < rhs->_vec_idx; });
         for (auto segment_sd : _segment_list_sd) {
             idb::IdbRegularWireSegment* segment = obj->add_segment(nullptr);
             if (!segment_sd->fromShadow(segment)) {
@@ -179,6 +211,7 @@ public:
 
 public:
     uint64_t primary_key = 0;
+    uint64_t _vec_idx = 0;
     idb::IdbWiringStatement _wire_state_sd = idb::IdbWiringStatement::kNone;
     std::string _shield_name_sd;
     std::vector<Shadow<idb::IdbRegularWireSegment>*> _segment_list_sd;
@@ -203,16 +236,27 @@ public:
     Shadow<idb::IdbNet>& operator=(const Shadow& other) = delete;
 
 public:
-    void toShadow(idb::IdbNet* obj) {
+    bool toShadow(idb::IdbNet* obj, const uint32_t* idx_ptr = nullptr) {
+        if (obj == nullptr || idx_ptr == nullptr || obj->get_io_pins() == nullptr
+            || obj->get_instance_pin_list() == nullptr || obj->get_wire_list() == nullptr) {
+            return false;
+        }
         _net_name_sd = obj->get_net_name();
+        _order_sd = *idx_ptr;
 
         // Match DefWrite::write_net(): IO connections, then instance connections.
         for (auto pin : obj->get_io_pins()->get_pin_list()) {
+            if (pin == nullptr) {
+                return false;
+            }
             _io_pin_name_list_sd.emplace_back(pin->get_pin_name());
         }
 
         uint64_t pin_order = 0;
         for (auto pin : obj->get_instance_pin_list()->get_pin_list()) {
+            if (pin == nullptr || pin->get_instance() == nullptr) {
+                return false;
+            }
             idb::edadb_adapter::NetPinRef pin_ref_sd;
             pin_ref_sd._order_sd = pin_order++;
             pin_ref_sd.instance_name = pin->get_instance() ? pin->get_instance()->get_name() : "";
@@ -230,15 +274,26 @@ public:
         _frequency_sd = obj->get_frequency();
 
         // Match DefWrite::write_net_wire().
-        assert(_wire_list_sd.empty());
+        uint32_t wire_idx = 0;
         for (auto wire : obj->get_wire_list()->get_wire_list()) {
             auto* wire_sd = new Shadow<idb::IdbRegularWire>();
-            wire_sd->toShadow(wire);
+            if (!wire_sd->toShadow(wire, &wire_idx)) {
+                delete wire_sd;
+                return false;
+            }
             _wire_list_sd.emplace_back(wire_sd);
+            ++wire_idx;
         }
+        return true;
     }
 
-    bool fromShadow(idb::IdbNet* obj) {
+    bool fromShadow(idb::IdbNet* obj, uint32_t* idx_ptr = nullptr) {
+        if (obj == nullptr) {
+            return false;
+        }
+        if (idx_ptr != nullptr) {
+            *idx_ptr = static_cast<uint32_t>(_order_sd);
+        }
         // Match DefRead::parse_net() optional header fields.
         obj->set_connect_type(_connect_type_sd);
         obj->set_source_type(_source_type_sd);
@@ -298,6 +353,8 @@ public:
 
         // Match DefRead::parse_net() regular-wire reconstruction.
         idb::IdbRegularWireList* wire_list = obj->get_wire_list();
+        std::sort(_wire_list_sd.begin(), _wire_list_sd.end(),
+                  [](const auto* lhs, const auto* rhs) { return lhs->_vec_idx < rhs->_vec_idx; });
         for (auto wire_sd : _wire_list_sd) {
             idb::IdbRegularWire* wire = wire_list->add_wire(nullptr);
             if (!wire_sd->fromShadow(wire)) {

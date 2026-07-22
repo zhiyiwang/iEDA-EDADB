@@ -318,6 +318,7 @@ class IdbNetList
   bool remove_net(string name);
 
   void clear_wire_list();
+  void reset();
 
   // operator
   void init(int32_t size) { _net_list.reserve(size); }

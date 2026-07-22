@@ -209,10 +209,9 @@ class IdbSpecialNetList
   IdbSpecialNetEdgeSegmenArray* add_edge_segment_array_for_layer(IdbLayerRouting* layer);
   IdbSpecialNetEdgeSegmenArray* add_edge_segment_array(IdbSpecialNetEdgeSegmenArray* edge_segment = nullptr);
   void clear_edge_list();
+  void reset();
 
   void resize(size_t size) { _net_list.reserve(size); }
-
-  //   void reset();
 
   // operator
   IdbSpecialWire* generateWire(string net_name);

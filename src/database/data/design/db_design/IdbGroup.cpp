@@ -92,6 +92,7 @@ void IdbGroupList::reset()
 
   _group_list.clear();
   std::vector<IdbGroup*>().swap(_group_list);
+  _num = 0;
 }
 
 }  // namespace idb

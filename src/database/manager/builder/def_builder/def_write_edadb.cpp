@@ -452,7 +452,14 @@ int32_t DefWriteEdadb::writeIdbBlockage(void) {
     blockage_sd_vec.reserve(blockage_vec.size());
     for (auto& blockage : blockage_vec) {
         auto* blockage_sd = new edadb::Shadow<idb::IdbBlockage>();
-        blockage_sd->toShadow(blockage);
+        if (!blockage_sd->toShadow(blockage)) {
+            delete blockage_sd;
+            for (auto* converted_blockage_sd : blockage_sd_vec) {
+                delete converted_blockage_sd;
+            }
+            std::cerr << "DefWriteEdadb::writeIdbBlockage failed to convert blockage shadow" << std::endl;
+            return kDbFail;
+        }
         blockage_sd_vec.emplace_back(blockage_sd);
     }
 
@@ -524,7 +531,14 @@ int32_t DefWriteEdadb::writeIdbSlot(void) {
     slot_sd_vec.reserve(slot_vec.size());
     for (uint32_t slot_idx = 0; slot_idx < slot_vec.size(); ++slot_idx) {
         auto* slot_sd = new edadb::Shadow<idb::IdbSlot>();
-        slot_sd->toShadow(slot_vec[slot_idx], &slot_idx);
+        if (!slot_sd->toShadow(slot_vec[slot_idx], &slot_idx)) {
+            delete slot_sd;
+            for (auto* converted_slot_sd : slot_sd_vec) {
+                delete converted_slot_sd;
+            }
+            std::cerr << "DefWriteEdadb::writeIdbSlot failed to convert slot shadow" << std::endl;
+            return kDbFail;
+        }
         slot_sd_vec.emplace_back(slot_sd);
     }
 
@@ -567,7 +581,14 @@ int32_t DefWriteEdadb::writeIdbGroup(void) {
     group_sd_vec.reserve(group_vec.size());
     for (auto* group : group_vec) {
         auto* group_sd = new edadb::Shadow<idb::IdbGroup>();
-        group_sd->toShadow(group);
+        if (!group_sd->toShadow(group)) {
+            delete group_sd;
+            for (auto* converted_group_sd : group_sd_vec) {
+                delete converted_group_sd;
+            }
+            std::cerr << "DefWriteEdadb::writeIdbGroup failed to convert group shadow" << std::endl;
+            return kDbFail;
+        }
         group_sd_vec.emplace_back(group_sd);
     }
 
@@ -610,7 +631,14 @@ int32_t DefWriteEdadb::writeIdbFill(void) {
     fill_sd_vec.reserve(fill_vec.size());
     for (auto& fill : fill_vec) {
         auto* fill_sd = new edadb::Shadow<idb::IdbFill>();
-        fill_sd->toShadow(fill);
+        if (!fill_sd->toShadow(fill)) {
+            delete fill_sd;
+            for (auto* converted_fill_sd : fill_sd_vec) {
+                delete converted_fill_sd;
+            }
+            std::cerr << "DefWriteEdadb::writeIdbFill failed to convert fill shadow" << std::endl;
+            return kDbFail;
+        }
         fill_sd_vec.emplace_back(fill_sd);
     }
 
@@ -654,7 +682,14 @@ int32_t DefWriteEdadb::writeIdbSpecialNet(void) {
     special_net_sd_vec.reserve(special_net_vec.size());
     for (auto& special_net : special_net_vec) {
         auto* special_net_sd = new edadb::Shadow<idb::IdbSpecialNet>();
-        special_net_sd->toShadow(special_net);
+        if (!special_net_sd->toShadow(special_net)) {
+            delete special_net_sd;
+            for (auto* converted_special_net_sd : special_net_sd_vec) {
+                delete converted_special_net_sd;
+            }
+            std::cerr << "DefWriteEdadb::writeIdbSpecialNet failed to convert special-net shadow" << std::endl;
+            return kDbFail;
+        }
         special_net_sd_vec.emplace_back(special_net_sd);
     }
 
@@ -696,11 +731,16 @@ int32_t DefWriteEdadb::writeIdbNet(void) {
 
     vector<edadb::Shadow<idb::IdbNet>*> net_sd_vec;
     net_sd_vec.reserve(net_vec.size());
-    uint64_t net_order = 0;
-    for (auto& net : net_vec) {
+    for (uint32_t net_idx = 0; net_idx < net_vec.size(); ++net_idx) {
         auto* net_sd = new edadb::Shadow<idb::IdbNet>();
-        net_sd->toShadow(net);
-        net_sd->_order_sd = net_order++;
+        if (!net_sd->toShadow(net_vec[net_idx], &net_idx)) {
+            delete net_sd;
+            for (auto* converted_net_sd : net_sd_vec) {
+                delete converted_net_sd;
+            }
+            std::cerr << "DefWriteEdadb::writeIdbNet failed to convert net shadow" << std::endl;
+            return kDbFail;
+        }
         net_sd_vec.emplace_back(net_sd);
     }
 

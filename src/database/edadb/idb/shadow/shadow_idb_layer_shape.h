@@ -80,6 +80,9 @@ public:
     } // toShadow
 
     bool fromShadow(idb::IdbLayerShape* obj, uint32_t* idx_ptr = nullptr) {
+        if (obj == nullptr) {
+            return false;
+        }
         if (idx_ptr != nullptr) {
             *idx_ptr = _vec_idx;
         }

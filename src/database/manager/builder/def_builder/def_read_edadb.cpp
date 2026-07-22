@@ -512,6 +512,8 @@ bool DefReadEdadb::readIdbRegion(void) {
         return false;
     }
 
+    region_list->reset();
+
     auto region_reader = edadb::makeReadAllOp<idb::IdbRegion>();
 
     int32_t region_count = 0;
@@ -524,6 +526,7 @@ bool DefReadEdadb::readIdbRegion(void) {
         }
         if (read_count < 0) {
             delete region;
+            region_list->reset();
             std::cout << "DefReadEdadb::readIdbRegion failed to read!" << std::endl;
             return false;
         }
@@ -550,6 +553,8 @@ bool DefReadEdadb::readIdbSlot(void) {
         return false;
     }
 
+    slot_list->reset();
+
     auto slot_reader = edadb::makeGenericQueryOp<edadb::Shadow<idb::IdbSlot>>();
     if (slot_reader.preparePredicate("ORDER BY \"_order_sd\"") < 0) {
         std::cerr << "DefReadEdadb::readIdbSlot failed to prepare ordered slot query!" << std::endl;
@@ -558,21 +563,23 @@ bool DefReadEdadb::readIdbSlot(void) {
 
     int32_t slot_count = 0;
     while (true) {
-        auto* slot_sd = new edadb::Shadow<idb::IdbSlot>();
-        const int read_count = edadb::readNext<edadb::Shadow<idb::IdbSlot>>(slot_reader, slot_sd);
+        edadb::Shadow<idb::IdbSlot> slot_sd;
+        const int read_count = edadb::readNext<edadb::Shadow<idb::IdbSlot>>(slot_reader, &slot_sd);
         if (read_count == 0) {
-            delete slot_sd;
             break;
         }
         if (read_count < 0) {
-            delete slot_sd;
+            slot_list->reset();
             std::cout << "DefReadEdadb::readIdbSlot failed to read!" << std::endl;
             return false;
         }
 
         IdbSlot* slot = slot_list->add_slot();
-        slot_sd->fromShadow(slot);
-        delete slot_sd;
+        if (!slot_sd.fromShadow(slot)) {
+            slot_list->reset();
+            std::cerr << "DefReadEdadb::readIdbSlot failed to restore slot shadow" << std::endl;
+            return false;
+        }
         ++slot_count;
     }
 
@@ -588,44 +595,35 @@ bool DefReadEdadb::readIdbGroup(void) {
         return false;
     }
 
-    IdbRegionList* region_list = design->get_region_list();
-    IdbInstanceList* instance_list = design->get_instance_list();
     IdbGroupList* group_list = design->get_group_list();
-    if (region_list == nullptr || instance_list == nullptr || group_list == nullptr) {
-        std::cerr << "DefReadEdadb::readIdbGroup failed, required list is nullptr!" << std::endl;
+    if (group_list == nullptr) {
+        std::cerr << "DefReadEdadb::readIdbGroup failed, group_list is nullptr!" << std::endl;
         return false;
     }
+
+    group_list->reset();
 
     auto group_reader = edadb::makeReadAllOp<edadb::Shadow<idb::IdbGroup>>();
 
     int32_t group_count = 0;
     while (true) {
-        auto* group_sd = new edadb::Shadow<idb::IdbGroup>();
-        const int read_count = edadb::readNext<edadb::Shadow<idb::IdbGroup>>(group_reader, group_sd);
+        edadb::Shadow<idb::IdbGroup> group_sd;
+        const int read_count = edadb::readNext<edadb::Shadow<idb::IdbGroup>>(group_reader, &group_sd);
         if (read_count == 0) {
-            delete group_sd;
             break;
         }
         if (read_count < 0) {
-            delete group_sd;
+            group_list->reset();
             std::cout << "DefReadEdadb::readIdbGroup failed to read!" << std::endl;
             return false;
         }
 
-        IdbGroup* group = group_list->add_group(group_sd->_group_name_sd);
-        group_sd->fromShadow(group);
-        if (!group_sd->_region_name_sd.empty()) {
-            group->set_region(region_list->find_region(group_sd->_region_name_sd));
+        IdbGroup* group = group_list->add_group(group_sd._group_name_sd);
+        if (!group_sd.fromShadow(group)) {
+            group_list->reset();
+            std::cerr << "DefReadEdadb::readIdbGroup failed to restore group shadow" << std::endl;
+            return false;
         }
-
-        for (auto& instance_name_sd : group_sd->_instance_name_vec_sd) {
-            IdbInstance* instance = instance_list->find_instance(instance_name_sd);
-            if (instance != nullptr) {
-                group->add_instance(instance);
-            }
-        }
-
-        delete group_sd;
         ++group_count;
     }
 
@@ -636,69 +634,41 @@ bool DefReadEdadb::readIdbGroup(void) {
 
 bool DefReadEdadb::readIdbFill(void) {
     IdbDesign* design = _def_service->get_design();  // def
-    IdbLayout* layout = _def_service->get_layout();  // lef
-    if (design == nullptr || layout == nullptr) {
-        std::cerr << "DefReadEdadb::readIdbFill failed, design or layout is nullptr!" << std::endl;
+    if (design == nullptr) {
+        std::cerr << "DefReadEdadb::readIdbFill failed, design is nullptr!" << std::endl;
         return false;
     }
 
-    IdbLayers* layer_list = layout->get_layers();
-    IdbVias* via_list_def = design->get_via_list();
-    IdbVias* via_list_lef = layout->get_via_list();
     IdbFillList* fill_list = design->get_fill_list();
-    if (layer_list == nullptr || via_list_def == nullptr || via_list_lef == nullptr || fill_list == nullptr) {
-        std::cerr << "DefReadEdadb::readIdbFill failed, required list is nullptr!" << std::endl;
+    if (fill_list == nullptr) {
+        std::cerr << "DefReadEdadb::readIdbFill failed, fill_list is nullptr!" << std::endl;
         return false;
     }
+
+    fill_list->reset();
 
     auto fill_reader = edadb::makeReadAllOp<edadb::Shadow<idb::IdbFill>>();
     int32_t fill_count = 0;
     while (true) {
-        auto* fill_sd = new edadb::Shadow<idb::IdbFill>();
-        const int read_count = edadb::readNext<edadb::Shadow<idb::IdbFill>>(fill_reader, fill_sd);
+        edadb::Shadow<idb::IdbFill> fill_sd;
+        const int read_count = edadb::readNext<edadb::Shadow<idb::IdbFill>>(fill_reader, &fill_sd);
         if (read_count == 0) {
-            delete fill_sd;
             break;
         }
         if (read_count < 0) {
-            delete fill_sd;
+            fill_list->reset();
             std::cout << "DefReadEdadb::readIdbFill failed to read!" << std::endl;
             return false;
         }
 
-        if (fill_sd->_type_sd == IdbFill::IdbFillType::kLayer) {
-            IdbLayer* layer = layer_list->find_layer(fill_sd->_layer_name_sd);
-            if (layer == nullptr) {
-                std::cerr << "DefReadEdadb::readIdbFill failed to find layer: "
-                          << fill_sd->_layer_name_sd << std::endl;
-                delete fill_sd;
-                return false;
-            }
-
-            IdbFillLayer* fill_layer = fill_list->add_fill_layer(layer);
-            for (auto& rect_sd : fill_sd->_rect_list_sd) {
-                fill_layer->add_rect(rect_sd->get_low_x(), rect_sd->get_low_y(), rect_sd->get_high_x(), rect_sd->get_high_y());
-            }
-        } else if (fill_sd->_type_sd == IdbFill::IdbFillType::kVia) {
-            IdbVia* via = via_list_def->find_via(fill_sd->_via_name_sd);
-            if (via == nullptr) {
-                via = via_list_lef->find_via(fill_sd->_via_name_sd);
-            }
-            if (via == nullptr) {
-                std::cerr << "DefReadEdadb::readIdbFill failed to find via: "
-                          << fill_sd->_via_name_sd << std::endl;
-                delete fill_sd;
-                return false;
-            }
-
-            IdbVia* via_new = via->clone();
-            IdbFillVia* fill_via = fill_list->add_fill_via(via_new);
-            for (auto& coordinate_sd : fill_sd->_coordinate_list_sd) {
-                fill_via->add_coordinate(coordinate_sd->get_x(), coordinate_sd->get_y());
-            }
+        IdbFill* fill = new IdbFill();
+        if (!fill_sd.fromShadow(fill)) {
+            delete fill;
+            fill_list->reset();
+            std::cerr << "DefReadEdadb::readIdbFill failed to restore fill shadow" << std::endl;
+            return false;
         }
-
-        delete fill_sd;
+        fill_list->add_fill(fill);
         ++fill_count;
     }
 
@@ -795,6 +765,7 @@ bool DefReadEdadb::readIdbPin(void) {
             break;
         }
         if (read_count < 0) {
+            pin_list->reset();
             std::cout << "DefReadEdadb::readIdbPin failed to read!" << std::endl;
             return false;
         }
@@ -802,6 +773,7 @@ bool DefReadEdadb::readIdbPin(void) {
         IdbPin* pin = new IdbPin();
         if (!pin_sd.fromShadow(pin)) {
             delete pin;
+            pin_list->reset();
             std::cerr << "DefReadEdadb::readIdbPin failed to restore pin" << std::endl;
             return false;
         }
@@ -817,17 +789,14 @@ bool DefReadEdadb::readIdbPin(void) {
 
 bool DefReadEdadb::readIdbBlockage(void) {
     IdbDesign* design = _def_service->get_design();  // Def
-    IdbLayout* layout = _def_service->get_layout();  // Lef
-    if (design == nullptr || layout == nullptr) {
-        std::cerr << "DefReadEdadb::readIdbBlockage failed, design or layout is nullptr!" << std::endl;
+    if (design == nullptr) {
+        std::cerr << "DefReadEdadb::readIdbBlockage failed, design is nullptr!" << std::endl;
         return false;
     }
 
     IdbBlockageList* blockage_list = design->get_blockage_list();
-    IdbInstanceList* instance_list = design->get_instance_list();
-    IdbLayers* layer_list = layout->get_layers();
-    if (blockage_list == nullptr || instance_list == nullptr || layer_list == nullptr) {
-        std::cerr << "DefReadEdadb::readIdbBlockage failed, required list is nullptr!" << std::endl;
+    if (blockage_list == nullptr) {
+        std::cerr << "DefReadEdadb::readIdbBlockage failed, blockage_list is nullptr!" << std::endl;
         return false;
     }
 
@@ -842,33 +811,26 @@ bool DefReadEdadb::readIdbBlockage(void) {
             break;
         }
         if (read_count < 0) {
+            blockage_list->reset();
             std::cout << "DefReadEdadb::readIdbBlockage failed to read!" << std::endl;
             return false;
         }
 
         IdbBlockage* blockage = nullptr;
         if (blockage_sd._type_sd == idb::IdbBlockage::IdbBlockageType::kRoutingBlockage) {
-            IdbRoutingBlockage* routing_blockage = blockage_list->add_blockage_routing(blockage_sd._layer_name_sd);
-            blockage_sd.fromShadow(routing_blockage);
-            routing_blockage->set_layer(layer_list->find_layer(blockage_sd._layer_name_sd));
-            blockage = routing_blockage;
+            blockage = blockage_list->add_blockage_routing(blockage_sd._layer_name_sd);
         } else if (blockage_sd._type_sd == idb::IdbBlockage::IdbBlockageType::kPlacementBlockage) {
-            IdbPlacementBlockage* placement_blockage = blockage_list->add_blockage_placement();
-            blockage_sd.fromShadow(placement_blockage);
-            blockage = placement_blockage;
+            blockage = blockage_list->add_blockage_placement();
         } else {
+            blockage_list->reset();
             std::cerr << "DefReadEdadb::readIdbBlockage failed, unknown blockage type" << std::endl;
             return false;
         }
 
-        if (!blockage_sd._instance_name_sd.empty()) {
-            IdbInstance* inst = instance_list->find_instance(blockage_sd._instance_name_sd);
-            if (inst == nullptr) {
-                std::cerr << "DefReadEdadb::readIdbBlockage failed to find instance: "
-                          << blockage_sd._instance_name_sd << std::endl;
-                return false;
-            }
-            blockage->set_instance(inst);
+        if (!blockage_sd.fromShadow(blockage)) {
+            blockage_list->reset();
+            std::cerr << "DefReadEdadb::readIdbBlockage failed to restore blockage shadow" << std::endl;
+            return false;
         }
 
         ++blockage_count;
@@ -893,6 +855,8 @@ bool DefReadEdadb::readIdbSpecialNet(void) {
         return false;
     }
 
+    net_list->reset();
+
     auto special_net_reader = edadb::makeReadAllOp<edadb::Shadow<idb::IdbSpecialNet>>();
     int32_t special_net_count = 0;
     int32_t segment_count = 0;
@@ -905,6 +869,7 @@ bool DefReadEdadb::readIdbSpecialNet(void) {
         }
         if (read_count < 0) {
             delete special_net_sd;
+            net_list->reset();
             std::cout << "DefReadEdadb::readIdbSpecialNet failed to read!" << std::endl;
             return false;
         }
@@ -914,10 +879,12 @@ bool DefReadEdadb::readIdbSpecialNet(void) {
             std::cerr << "DefReadEdadb::readIdbSpecialNet failed to create special net: "
                       << special_net_sd->_net_name_sd << std::endl;
             delete special_net_sd;
+            net_list->reset();
             return false;
         }
         if (!special_net_sd->fromShadow(special_net)) {
             delete special_net_sd;
+            net_list->reset();
             return false;
         }
         segment_count += special_net_sd->getSegmentCount();
@@ -944,6 +911,8 @@ bool DefReadEdadb::readIdbNet(void) {
         return false;
     }
 
+    net_list->reset();
+
     auto net_reader = edadb::makeGenericQueryOp<edadb::Shadow<idb::IdbNet>>();
     if (net_reader.preparePredicate("ORDER BY \"_order_sd\"") < 0) {
         std::cerr << "DefReadEdadb::readIdbNet failed to prepare ordered query!" << std::endl;
@@ -960,6 +929,7 @@ bool DefReadEdadb::readIdbNet(void) {
         }
         if (read_count < 0) {
             delete net_sd;
+            net_list->reset();
             std::cout << "DefReadEdadb::readIdbNet failed to read!" << std::endl;
             return false;
         }
@@ -968,11 +938,13 @@ bool DefReadEdadb::readIdbNet(void) {
         if (net == nullptr) {
             std::cout << "Create Net Error..." << std::endl;
             delete net_sd;
+            net_list->reset();
             return false;
         }
 
         if (!net_sd->fromShadow(net)) {
             delete net_sd;
+            net_list->reset();
             return false;
         }
         segment_count += net_sd->getSegmentCount();

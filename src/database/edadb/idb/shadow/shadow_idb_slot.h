@@ -21,30 +21,39 @@ public:
     Shadow<idb::IdbSlot>& operator=(const Shadow& other) = delete;
 
 public:
-    void toShadow(idb::IdbSlot* obj, const uint32_t* idx_ptr = nullptr) {
-        assert(idx_ptr != nullptr);
+    bool toShadow(idb::IdbSlot* obj, const uint32_t* idx_ptr = nullptr) {
+        if (obj == nullptr || idx_ptr == nullptr) {
+            return false;
+        }
 
         _order_sd = *idx_ptr;
         _layer_name_sd = obj->get_layer_name();
 
-        assert(_rect_list_sd.empty());
+        _rect_list_sd.clear();
         for (auto rect : obj->get_rect_list()) {
+            if (rect == nullptr) {
+                return false;
+            }
             _rect_list_sd.push_back(*rect);
         }
+        return true;
     } // toShadow
 
-    void fromShadow(idb::IdbSlot* obj, uint32_t* idx_ptr = nullptr) {
+    bool fromShadow(idb::IdbSlot* obj, uint32_t* idx_ptr = nullptr) {
+        if (obj == nullptr || !obj->get_rect_list().empty()) {
+            return false;
+        }
         if (idx_ptr != nullptr) {
             *idx_ptr = static_cast<uint32_t>(_order_sd);
         }
 
         obj->set_layer_name(_layer_name_sd);
 
-        assert(obj->get_rect_list().empty());
         for (auto& rect_sd : _rect_list_sd) {
             idb::IdbRect* rect = obj->add_rect();
             *rect = rect_sd;
         }
+        return true;
     } // fromShadow
 
 public:

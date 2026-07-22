@@ -28,6 +28,8 @@ void initPrimKeys(void) {
     edadb::Cpp2SqlTypeTrait<edadb::Shadow<idb::IdbViaMasterGenerate>>::hasPrimKey = false;
     edadb::Cpp2SqlTypeTrait<idb::IdbHalo>::hasPrimKey = false;
     edadb::Cpp2SqlTypeTrait<edadb::Shadow<idb::IdbRouteHalo>>::hasPrimKey = false;
+    edadb::Cpp2SqlTypeTrait<idb::edadb_adapter::SpecialNetPinRef>::hasPrimKey = false;
+    edadb::Cpp2SqlTypeTrait<idb::edadb_adapter::NetPinRef>::hasPrimKey = false;
 } // initPrimKeys
 
 

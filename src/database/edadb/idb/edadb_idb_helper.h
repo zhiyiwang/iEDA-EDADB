@@ -79,6 +79,14 @@ public:
         return design->get_instance_list();
     }
 
+    static idb::IdbInstance* findIdbInstanceByName(const std::string& instance_name) {
+        idb::IdbInstanceList* instance_list = getIdbInstanceList();
+        if (instance_list == nullptr) {
+            return nullptr;
+        }
+        return instance_list->find_instance(instance_name);
+    }
+
     static idb::IdbRegionList* getIdbRegionList() {
         idb::IdbDesign* design = getIdbDesign();
         if (design == nullptr) {
@@ -125,6 +133,17 @@ public:
             return nullptr;
         }
         return layout->get_via_list();
+    }
+
+    static idb::IdbVia* findIdbViaByName(const std::string& via_name) {
+        idb::IdbVias* via_list_def = getIdbDefVias();
+        idb::IdbVias* via_list_lef = getIdbLefVias();
+        if (via_list_def == nullptr || via_list_lef == nullptr) {
+            return nullptr;
+        }
+
+        idb::IdbVia* via = via_list_def->find_via(via_name);
+        return via != nullptr ? via : via_list_lef->find_via(via_name);
     }
 
 

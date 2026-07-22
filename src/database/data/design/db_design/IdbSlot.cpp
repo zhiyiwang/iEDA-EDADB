@@ -132,6 +132,7 @@ void IdbSlotList::reset()
 
   _slot_list.clear();
   std::vector<IdbSlot*>().swap(_slot_list);
+  _num = 0;
 }
 
 }  // namespace idb

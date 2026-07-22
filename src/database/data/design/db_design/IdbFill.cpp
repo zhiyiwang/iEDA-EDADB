@@ -149,6 +149,11 @@ IdbFillList::IdbFillList()
 
 IdbFillList::~IdbFillList()
 {
+  reset();
+}
+
+void IdbFillList::reset()
+{
   for (IdbFill* fill : _fill_list) {
     if (fill != nullptr) {
       delete fill;
@@ -157,6 +162,7 @@ IdbFillList::~IdbFillList()
   }
   _fill_list.clear();
   std::vector<IdbFill*>().swap(_fill_list);
+  _num_fill = 0;
 }
 
 // IdbFill* IdbFillList::find_fill_by_layer(string name)
@@ -183,6 +189,17 @@ IdbFillList::~IdbFillList()
 
 //     return nullptr;
 // }
+IdbFill* IdbFillList::add_fill(IdbFill* fill)
+{
+  if (fill == nullptr) {
+    fill = new IdbFill();
+  }
+  _fill_list.emplace_back(fill);
+  _num_fill++;
+
+  return fill;
+}
+
 IdbFillLayer* IdbFillList::add_fill_layer(IdbLayer* layer)
 {
   IdbFill* fill = new IdbFill();
@@ -191,8 +208,7 @@ IdbFillLayer* IdbFillList::add_fill_layer(IdbLayer* layer)
   IdbFillLayer* fill_layer = fill->get_layer();
   fill_layer->set_layer(layer);
 
-  _fill_list.emplace_back(fill);
-  _num_fill++;
+  add_fill(fill);
 
   return fill_layer;
 }
@@ -205,8 +221,7 @@ IdbFillVia* IdbFillList::add_fill_via(IdbVia* via)
   IdbFillVia* fill_via = fill->get_via();
   fill_via->set_via(via);
 
-  _fill_list.emplace_back(fill);
-  _num_fill++;
+  add_fill(fill);
 
   return fill_via;
 }

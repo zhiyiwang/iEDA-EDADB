@@ -98,6 +98,7 @@ class IdbRegionList
   // setter
   IdbRegion* add_region(IdbRegion* region = nullptr);
   IdbRegion* add_region(std::string name);
+  void reset();
 
   // operator
   IdbRegion* find_region(std::string name);

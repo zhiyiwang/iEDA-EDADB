@@ -12,6 +12,7 @@ BASE_DEF="$SKY130_WORKSPACE/result/iPL_result.def"
 ROUTED_DEF="$SKY130_WORKSPACE/result/iRT_result.def"
 DESIGN_TCL_SCRIPT_DIR="$SKY130_WORKSPACE/script"
 NORMALIZE_DEF_FOR_DIFF="$SCRIPT_DIR/normalize_def_for_diff.py"
+EDADB_TEST_JOBS="${EDADB_TEST_JOBS:-8}"
 
 export WORKSPACE="$SKY130_WORKSPACE"
 export CONFIG_DIR="$WORKSPACE/iEDA_config"
@@ -190,14 +191,22 @@ check_aux_optional_sql() {
     assert_eq "$(sql_value "$edadb_db" "select count(*) from iSlotSD;")" "1" "$name slot count"
     assert_eq "$(sql_value "$edadb_db" "select count(*) from iGroupSD;")" "1" "$name group count"
     assert_eq "$(sql_value "$edadb_db" "select count(*) from iFillSD;")" "2" "$name fill count"
-    assert_eq "$(sql_value "$edadb_db" "select group_concat(_type_sd || '|' || coalesce(_layer_name_sd,'') || '|' || _is_pushdown_sd || '|' || _is_except_pgnet_sd, ';') from (select * from iBlockageSD order by _type_sd, coalesce(_layer_name_sd,''), _is_pushdown_sd, _is_except_pgnet_sd);")" \
-        "1|met1|1|1;2||0|0" "$name blockage fields"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_type_sd || '|' || coalesce(_layer_name_sd,'') || '|' || _is_pushdown_sd || '|' || _is_except_pgnet_sd || '|' || _instance_name_sd, ';') from (select * from iBlockageSD order by _type_sd, coalesce(_layer_name_sd,''), _is_pushdown_sd, _is_except_pgnet_sd, _instance_name_sd);")" \
+        "1|met1|1|1|ctrl/_34_;2||0|0|ctrl/_35_" "$name blockage fields"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_type_sd || ':' || _vec_idx || ':' || _lx_sd || ',' || _ly_sd || ',' || _hx_sd || ',' || _hy_sd, ';') from (select b._type_sd, r._vec_idx, r._lx_sd, r._ly_sd, r._hx_sd, r._hy_sd from iBlockageSD b join iBlockageSD__rect_list_sd_IdbRectSD r on r.iBlockageSD_primary_key=b.primary_key order by b._type_sd, r._vec_idx);")" \
+        "1:0:1000,1000,2000,2000;1:1:1200,1200,1800,1800;2:0:3000,3000,4000,4000;2:1:3200,3200,3800,3800" "$name blockage ordered rects"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_vec_idx, ',') from iBlockageSD__rect_list_sd_IdbRectSD order by rowid;")" \
+        "1,0,1,0" "$name blockage rect physical order was perturbed"
     assert_eq "$(sql_value "$edadb_db" "select _name || '|' || _type from iRegion;")" "test_region|1" "$name region fields"
-    assert_eq "$(sql_value "$edadb_db" "select _vec_idx || '|' || _lx_sd || '|' || _ly_sd || '|' || _hx_sd || '|' || _hy_sd from iRegion__boudary_list_IdbRectSD;")" \
-        "0|1000|1000|10000|10000" "$name region rect"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_vec_idx || '|' || _lx_sd || '|' || _ly_sd || '|' || _hx_sd || '|' || _hy_sd, ';') from (select * from iRegion__boudary_list_IdbRectSD order by _vec_idx);")" \
+        "0|1000|1000|10000|10000;1|12000|12000|14000|15000" "$name region ordered rects"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_vec_idx, ',') from iRegion__boudary_list_IdbRectSD order by rowid;")" \
+        "1,0" "$name region rect physical order was perturbed"
     assert_eq "$(sql_value "$edadb_db" "select _order_sd || '|' || _layer_name_sd from iSlotSD;")" "0|met1" "$name slot layer"
-    assert_eq "$(sql_value "$edadb_db" "select _vec_idx || '|' || _lx_sd || '|' || _ly_sd || '|' || _hx_sd || '|' || _hy_sd from iSlotSD__rect_list_sd_IdbRectSD;")" \
-        "0|5000|5000|6000|6000" "$name slot rect"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_vec_idx || '|' || _lx_sd || '|' || _ly_sd || '|' || _hx_sd || '|' || _hy_sd, ';') from (select * from iSlotSD__rect_list_sd_IdbRectSD order by _vec_idx);")" \
+        "0|5000|5000|6000|6000;1|5100|5200|5800|5900" "$name ordered slot rects"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_vec_idx, ',') from iSlotSD__rect_list_sd_IdbRectSD order by rowid;")" \
+        "1,0" "$name slot rect physical order was perturbed"
     assert_eq "$(sql_value "$edadb_db" "select count(*) from pragma_table_info('iGroupSD') where name='_order_sd';")" \
         "0" "$name group has no root order column"
     assert_eq "$(sql_value "$edadb_db" "select _group_name_sd || '|' || _region_name_sd from iGroupSD;")" "test_group|test_region" "$name group region"
@@ -217,8 +226,14 @@ check_aux_optional_sql() {
         "0" "$name fill has no root order column"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_type_sd || '|' || coalesce(_layer_name_sd,'') || '|' || coalesce(_via_name_sd,''), ';') from (select * from iFillSD order by _type_sd, coalesce(_layer_name_sd,''), coalesce(_via_name_sd,''));")" \
         "1|met1|;2||via_1600x480" "$name fill typed rows"
-    assert_eq "$(sql_value "$edadb_db" "select count(*) from iFillSD__rect_list_sd_IdbRectSD;")" "1" "$name fill rect count"
-    assert_eq "$(sql_value "$edadb_db" "select count(*) from iFillSD__coordinate_list_sd_iCoordSD;")" "1" "$name fill via coordinate count"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_vec_idx || ':' || _lx_sd || ',' || _ly_sd || ',' || _hx_sd || ',' || _hy_sd, ';') from (select * from iFillSD__rect_list_sd_IdbRectSD order by _vec_idx);")" \
+        "0:7000,7000,8000,8000;1:7100,7200,7800,7900" "$name ordered fill rects"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_vec_idx, ',') from iFillSD__rect_list_sd_IdbRectSD order by rowid;")" \
+        "1,0" "$name fill rect physical order was perturbed"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_vec_idx || ':' || _x_sd || ',' || _y_sd, ';') from (select * from iFillSD__coordinate_list_sd_iCoordSD order by _vec_idx);")" \
+        "0:9000,9000;1:9200,9300" "$name ordered fill via coordinates"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_vec_idx, ',') from iFillSD__coordinate_list_sd_iCoordSD order by rowid;")" \
+        "1,0" "$name fill coordinate physical order was perturbed"
     assert_eq "$(sql_value "$edadb_db" "select _original_net_name_sd || '|' || _source_type_sd || '|' || _weight_sd from iSpecNetSD where _net_name_sd='VDD';")" \
         "orig_vdd_net|1|5" "$name special net optional fields"
     assert_eq "$(sql_value "$edadb_db" "select (select count(*) from iSpecNetSD__pin_string_list_sd___edadb_primitive_vector) || '|' || (select count(*) from iSpecNetSD__io_pin_name_list_sd___edadb_primitive_vector) || '|' || (select count(*) from iSpecNetSD__instance_pin_list_sd_iSpecPinRef);")" \
@@ -227,6 +242,16 @@ check_aux_optional_sql() {
         "clk" "$name special net io pin ref"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || ':' || instance_name || ':' || pin_name, ',') from (select _order_sd, instance_name, pin_name from iSpecNetSD__instance_pin_list_sd_iSpecPinRef where iSpecNetSD__net_name_sd='VSS' order by _order_sd);")" \
         "0:ctrl/_34_:A" "$name special net instance pin ref"
+    assert_eq "$(sql_value "$edadb_db" "select sum(pk) from pragma_table_info('iSpecNetSD__instance_pin_list_sd_iSpecPinRef');")" \
+        "0" "$name special-net pin-ref order is not a primary key"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from pragma_table_info('iSpecNetSD__wire_list_sd_iSpecWireSD') where name='_vec_idx';")" \
+        "1" "$name special-wire vector index column"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from pragma_table_info('iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD') where name='_vec_idx';")" \
+        "1" "$name special-segment vector index column"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) > 0 from iSpecNetSD__wire_list_sd_iSpecWireSD a join iSpecNetSD__wire_list_sd_iSpecWireSD b on a.iSpecNetSD__net_name_sd=b.iSpecNetSD__net_name_sd and a.rowid < b.rowid and a._vec_idx > b._vec_idx;")" \
+        "1" "$name special-wire physical order was perturbed"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) > 0 from iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD a join iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD b on a.iSpecNetSD__net_name_sd=b.iSpecNetSD__net_name_sd and a.iSpecNetSD__wire_list_sd_iSpecWireSD_primary_key=b.iSpecNetSD__wire_list_sd_iSpecWireSD_primary_key and a.rowid < b.rowid and a._vec_idx > b._vec_idx;")" \
+        "1" "$name special-segment physical order was perturbed"
     assert_eq "$(sql_value "$edadb_db" "select (select count(*) from iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD where _is_via_sd=1) || '|' || (select count(*) from iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD where _is_rect_sd=1) || '|' || (select count(*) from iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD where _is_via_sd=0 and _is_rect_sd=0);")" \
         "581|1|58" "$name special net segment dispatch with rect"
     assert_eq "$(sql_value "$edadb_db" "select _layer_name_sd || '|' || _delta_rect_sd__lx_sd || ',' || _delta_rect_sd__ly_sd || ',' || _delta_rect_sd__hx_sd || ',' || _delta_rect_sd__hy_sd from iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD where iSpecNetSD__net_name_sd='VSS' and _is_rect_sd=1;")" \
@@ -255,10 +280,18 @@ check_routed_sql() {
         "3716|22|${expected_virtual_count}|3716" "$name regular wire segment types"
     assert_eq "$(sql_value "$edadb_db" "select min(_order_sd) || '|' || max(_order_sd) || '|' || count(*) from iNetSD__instance_pin_list_sd_iNetPinRef where iNetSD__net_name_sd='clk_0';")" \
         "0|18|19" "$name clk_0 ordered pin refs"
+    assert_eq "$(sql_value "$edadb_db" "select sum(pk) from pragma_table_info('iNetSD__instance_pin_list_sd_iNetPinRef');")" \
+        "0" "$name net pin-ref order is not a primary key"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || ':' || instance_name || ':' || pin_name, ',') from (select _order_sd, instance_name, pin_name from iNetSD__instance_pin_list_sd_iNetPinRef where iNetSD__net_name_sd='clk_0' order by _order_sd limit 5);")" \
         "0:clk_0_buf:X,1:dpath/b_reg/_140_:CLK,2:dpath/b_reg/_139_:CLK,3:dpath/b_reg/_138_:CLK,4:dpath/b_reg/_137_:CLK" "$name clk_0 pin order prefix"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(iNetSD__net_name_sd || ':' || cnt, ',') from (select iNetSD__net_name_sd, count(*) as cnt from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD group by iNetSD__net_name_sd order by cnt desc, iNetSD__net_name_sd limit 3);")" \
         "clk_0:138,clk_1:137,dpath/a_mux/_066_:103" "$name largest routed segment nets"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from pragma_table_info('iNetSD__wire_list_sd_iRegWireSD') where name='_vec_idx';")" \
+        "1" "$name regular-wire vector index column"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from pragma_table_info('iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD') where name='_vec_idx';")" \
+        "1" "$name regular-segment vector index column"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) > 0 from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD a join iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD b on a.iNetSD__net_name_sd=b.iNetSD__net_name_sd and a.iNetSD__wire_list_sd_iRegWireSD_primary_key=b.iNetSD__wire_list_sd_iRegWireSD_primary_key and a.rowid < b.rowid and a._vec_idx > b._vec_idx;")" \
+        "1" "$name regular-segment physical order was perturbed"
 
     assert_contains "$def2edadb_log" "[EDADB-IDB] writeIdbNet insert net_count=677" "$name write routed net log"
     assert_contains "$edadb2def_log" "[EDADB-IDB] readIdbNet restored net_count=677" "$name read routed net log"
@@ -486,7 +519,7 @@ generate_aux_optional_fixture() {
             }
             if ($0 ~ /^COMPONENTS /) {
                 print "REGIONS 1 ;"
-                print "    - test_region ( 1000 1000 ) ( 10000 10000 ) + TYPE FENCE ;"
+                print "    - test_region ( 1000 1000 ) ( 10000 10000 ) ( 12000 12000 ) ( 14000 15000 ) + TYPE FENCE ;"
                 print "END REGIONS"
                 print ""
                 print
@@ -532,11 +565,11 @@ generate_aux_optional_fixture() {
             if ($0 ~ /^END PINS$/) {
                 print ""
                 print "BLOCKAGES 2 ;"
-                print "    - LAYER met1 + PUSHDOWN + EXCEPTPGNET RECT ( 1000 1000 ) ( 2000 2000 ) ;"
-                print "    - PLACEMENT RECT ( 3000 3000 ) ( 4000 4000 ) ;"
+                print "    - LAYER met1 + PUSHDOWN + EXCEPTPGNET + COMPONENT ctrl/_34_ RECT ( 1000 1000 ) ( 2000 2000 ) RECT ( 1200 1200 ) ( 1800 1800 ) ;"
+                print "    - PLACEMENT + COMPONENT ctrl/_35_ RECT ( 3000 3000 ) ( 4000 4000 ) RECT ( 3200 3200 ) ( 3800 3800 ) ;"
                 print "END BLOCKAGES"
                 print "SLOTS 1 ;"
-                print "    - LAYER met1 RECT ( 5000 5000 ) ( 6000 6000 ) ;"
+                print "    - LAYER met1 RECT ( 5000 5000 ) ( 6000 6000 ) RECT ( 5100 5200 ) ( 5800 5900 ) ;"
                 print "END SLOTS"
                 print ""
                 print "GROUPS 1 ;"
@@ -544,8 +577,8 @@ generate_aux_optional_fixture() {
                 print "END GROUPS"
                 print ""
                 print "FILLS 2 ;"
-                print "    - LAYER met1 RECT ( 7000 7000 ) ( 8000 8000 ) ;"
-                print "    - VIA via_1600x480 ( 9000 9000 ) ;"
+                print "    - LAYER met1 RECT ( 7000 7000 ) ( 8000 8000 ) RECT ( 7100 7200 ) ( 7800 7900 ) ;"
+                print "    - VIA via_1600x480 ( 9000 9000 ) ( 9200 9300 ) ;"
                 print "END FILLS"
             }
         }
@@ -725,6 +758,83 @@ INSERT INTO iInstSD SELECT * FROM instances_reversed;
 SQL
 }
 
+perturb_aux_child_query_order() {
+    local edadb_db="$1"
+
+    sqlite3 "$edadb_db" <<'SQL'
+CREATE TEMP TABLE blockage_rects_reversed AS
+SELECT * FROM iBlockageSD__rect_list_sd_IdbRectSD
+ORDER BY iBlockageSD_primary_key, _vec_idx DESC;
+DELETE FROM iBlockageSD__rect_list_sd_IdbRectSD;
+INSERT INTO iBlockageSD__rect_list_sd_IdbRectSD
+SELECT * FROM blockage_rects_reversed;
+
+CREATE TEMP TABLE region_rects_reversed AS
+SELECT * FROM iRegion__boudary_list_IdbRectSD
+ORDER BY iRegion__name, _vec_idx DESC;
+DELETE FROM iRegion__boudary_list_IdbRectSD;
+INSERT INTO iRegion__boudary_list_IdbRectSD
+SELECT * FROM region_rects_reversed;
+
+CREATE TEMP TABLE slot_rects_reversed AS
+SELECT * FROM iSlotSD__rect_list_sd_IdbRectSD
+ORDER BY iSlotSD_primary_key, _vec_idx DESC;
+DELETE FROM iSlotSD__rect_list_sd_IdbRectSD;
+INSERT INTO iSlotSD__rect_list_sd_IdbRectSD
+SELECT * FROM slot_rects_reversed;
+
+CREATE TEMP TABLE fill_rects_reversed AS
+SELECT * FROM iFillSD__rect_list_sd_IdbRectSD
+ORDER BY iFillSD_primary_key, _vec_idx DESC;
+DELETE FROM iFillSD__rect_list_sd_IdbRectSD;
+INSERT INTO iFillSD__rect_list_sd_IdbRectSD
+SELECT * FROM fill_rects_reversed;
+
+CREATE TEMP TABLE fill_coordinates_reversed AS
+SELECT * FROM iFillSD__coordinate_list_sd_iCoordSD
+ORDER BY iFillSD_primary_key, _vec_idx DESC;
+DELETE FROM iFillSD__coordinate_list_sd_iCoordSD;
+INSERT INTO iFillSD__coordinate_list_sd_iCoordSD
+SELECT * FROM fill_coordinates_reversed;
+
+PRAGMA foreign_keys = OFF;
+CREATE TEMP TABLE special_wires_reversed AS
+SELECT * FROM iSpecNetSD__wire_list_sd_iSpecWireSD
+ORDER BY iSpecNetSD__net_name_sd, _vec_idx DESC;
+DELETE FROM iSpecNetSD__wire_list_sd_iSpecWireSD;
+INSERT INTO iSpecNetSD__wire_list_sd_iSpecWireSD
+SELECT * FROM special_wires_reversed;
+
+CREATE TEMP TABLE special_segments_reversed AS
+SELECT * FROM iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD
+ORDER BY iSpecNetSD__net_name_sd, iSpecNetSD__wire_list_sd_iSpecWireSD_primary_key, _vec_idx DESC;
+DELETE FROM iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD;
+INSERT INTO iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD
+SELECT * FROM special_segments_reversed;
+SQL
+}
+
+perturb_net_child_query_order() {
+    local edadb_db="$1"
+
+    sqlite3 "$edadb_db" <<'SQL'
+PRAGMA foreign_keys = OFF;
+CREATE TEMP TABLE regular_wires_reversed AS
+SELECT * FROM iNetSD__wire_list_sd_iRegWireSD
+ORDER BY iNetSD__net_name_sd, _vec_idx DESC;
+DELETE FROM iNetSD__wire_list_sd_iRegWireSD;
+INSERT INTO iNetSD__wire_list_sd_iRegWireSD
+SELECT * FROM regular_wires_reversed;
+
+CREATE TEMP TABLE regular_segments_reversed AS
+SELECT * FROM iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD
+ORDER BY iNetSD__net_name_sd, iNetSD__wire_list_sd_iRegWireSD_primary_key, _vec_idx DESC;
+DELETE FROM iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD;
+INSERT INTO iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD
+SELECT * FROM regular_segments_reversed;
+SQL
+}
+
 perturb_via_query_order() {
     local edadb_db="$1"
 
@@ -780,11 +890,17 @@ run_case() {
         perturb_row_query_order "$edadb_db"
         perturb_instance_query_order "$edadb_db"
     fi
+    if [[ "$check_mode" == "aux" ]]; then
+        perturb_aux_child_query_order "$edadb_db"
+    fi
     if [[ "$check_mode" == "grid_branches" ]]; then
         perturb_grid_query_order "$edadb_db"
     fi
     if [[ "$check_mode" == "via_branches" ]]; then
         perturb_via_query_order "$edadb_db"
+    fi
+    if [[ "$check_mode" == "routed" || "$check_mode" == "net_branches" ]]; then
+        perturb_net_child_query_order "$edadb_db"
     fi
 
     export OUTPUT_DEF="$edadb_def"
@@ -832,8 +948,8 @@ run_case() {
                 "0|0|0|1000|2000" "$name asymmetric no-PORT rect"
             ;;
         pin_writer)
-            assert_eq "$(sql_value "$edadb_db" "select _io_term_sd__has_port_sd || '|' || _no_port_orient_sd || '|' || _no_port_placement_status_sd from iPinSD where _pin_name_sd='req_msg[0]';")" \
-                "1|1|0" "$name stores canonical writer PORT branch"
+            assert_eq "$(sql_value "$edadb_db" "select _io_term_sd__has_port_sd || '|' || _io_term_sd__is_special_net_sd || '|' || _no_port_orient_sd || '|' || _no_port_placement_status_sd from iPinSD where _pin_name_sd='req_msg[0]';")" \
+                "1|1|1|0" "$name stores canonical writer PORT and SPECIAL branches"
             assert_eq "$(sql_value "$edadb_db" "select _placement_status_sd || '|' || _coordinate_sd__x_sd || ',' || _coordinate_sd__y_sd || '|' || _orient_sd from iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD where iPinSD__pin_name_sd='req_msg[0]';")" \
                 "0|0,0|1" "$name writer PORT fields come from implicit port"
             assert_contains "$direct_def" " - req_msg[0] + NET req_msg[0] + SPECIAL" "$name direct writer special pin"
@@ -881,6 +997,110 @@ run_case() {
     echo "case output: $case_dir"
 }
 
+case_is_selected() {
+    local case_name="$1"
+    shift
+
+    if [[ "$#" -eq 0 ]]; then
+        return 0
+    fi
+
+    local requested_case
+    for requested_case in "$@"; do
+        if [[ "$requested_case" == "$case_name" ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+wait_for_one_case() {
+    local -n case_names_ref="$1"
+    local -n case_logs_ref="$2"
+    local finished_pid
+    local status
+
+    if wait -n -p finished_pid "${!case_names_ref[@]}"; then
+        status=0
+    else
+        status=$?
+    fi
+
+    local case_name="${case_names_ref[$finished_pid]}"
+    local case_log="${case_logs_ref[$finished_pid]}"
+    cat "$case_log"
+    if [[ "$status" -eq 0 ]]; then
+        echo "PASS: completed case $case_name"
+    else
+        echo "FAIL: case $case_name exited with status $status; log: $case_log" >&2
+    fi
+
+    unset 'case_names_ref[$finished_pid]'
+    unset 'case_logs_ref[$finished_pid]'
+    return "$status"
+}
+
+run_cases_parallel() {
+    local -a requested_cases=("$@")
+    local -a case_specs=(
+        "default_ipl|$BASE_DEF|default"
+        "design_fields|$OUT_DIR/fixtures/design_fields.def|design_fields"
+        "design_fallback|$OUT_DIR/fixtures/design_fallback.def|design_fallback"
+        "die_polygon|$OUT_DIR/fixtures/die_polygon.def|die_polygon"
+        "aux_optional|$OUT_DIR/fixtures/aux_optional.def|aux"
+        "pin_derived|$OUT_DIR/fixtures/pin_derived.def|pin_derived"
+        "pin_writer|$OUT_DIR/fixtures/pin_writer.def|pin_writer"
+        "pin_branches|$OUT_DIR/fixtures/pin_branches.def|pin_branches"
+        "grid_branches|$OUT_DIR/fixtures/grid_branches.def|grid_branches"
+        "via_branches|$OUT_DIR/fixtures/via_branches.def|via_branches"
+        "instance_branches|$OUT_DIR/fixtures/instance_branches.def|instance_branches"
+        "routed_irt|$ROUTED_DEF|routed"
+        "net_branches|$OUT_DIR/fixtures/net_branches.def|net_branches"
+    )
+    local -A running_case_names=()
+    local -A running_case_logs=()
+    local selected_count=0
+    local failed=0
+
+    mkdir -p "$OUT_DIR/case-logs"
+    local case_spec case_name input_def check_mode case_log case_pid
+    for case_spec in "${case_specs[@]}"; do
+        IFS='|' read -r case_name input_def check_mode <<<"$case_spec"
+        if ! case_is_selected "$case_name" "${requested_cases[@]}"; then
+            continue
+        fi
+
+        selected_count=$((selected_count + 1))
+        case_log="$OUT_DIR/case-logs/$case_name.log"
+        (
+            run_case "$case_name" "$input_def" "$check_mode"
+        ) >"$case_log" 2>&1 &
+        case_pid=$!
+        running_case_names["$case_pid"]="$case_name"
+        running_case_logs["$case_pid"]="$case_log"
+        echo "START: case=$case_name pid=$case_pid log=$case_log"
+
+        if [[ "${#running_case_names[@]}" -ge "$EDADB_TEST_JOBS" ]]; then
+            if ! wait_for_one_case running_case_names running_case_logs; then
+                failed=1
+            fi
+        fi
+    done
+
+    if [[ "$selected_count" -eq 0 ]]; then
+        echo "No matching cases selected: ${requested_cases[*]}" >&2
+        return 1
+    fi
+
+    while [[ "${#running_case_names[@]}" -gt 0 ]]; do
+        if ! wait_for_one_case running_case_names running_case_logs; then
+            failed=1
+        fi
+    done
+
+    return "$failed"
+}
+
 main() {
     require_file "$IEDA_BIN"
     require_file "$BASE_DEF"
@@ -890,6 +1110,10 @@ main() {
     require_file "$NORMALIZE_DEF_FOR_DIFF"
     command -v sqlite3 >/dev/null
     command -v python3 >/dev/null
+    if [[ ! "$EDADB_TEST_JOBS" =~ ^[1-9][0-9]*$ ]]; then
+        echo "EDADB_TEST_JOBS must be a positive integer: $EDADB_TEST_JOBS" >&2
+        exit 1
+    fi
 
     rm -rf "$OUT_DIR"
     mkdir -p "$OUT_DIR/fixtures"
@@ -932,19 +1156,13 @@ main() {
     echo "generated fixture: $via_branch_def"
     echo "generated fixture: $instance_branch_def"
 
-    run_case "default_ipl" "$BASE_DEF" "default"
-    run_case "design_fields" "$design_fields_def" "design_fields"
-    run_case "design_fallback" "$design_fallback_def" "design_fallback"
-    run_case "die_polygon" "$die_polygon_def" "die_polygon"
-    run_case "aux_optional" "$aux_def" "aux"
-    run_case "pin_derived" "$pin_derived_def" "pin_derived"
-    run_case "pin_writer" "$pin_writer_def" "pin_writer"
-    run_case "pin_branches" "$pin_branches_def" "pin_branches"
-    run_case "grid_branches" "$grid_branch_def" "grid_branches"
-    run_case "via_branches" "$via_branch_def" "via_branches"
-    run_case "instance_branches" "$instance_branch_def" "instance_branches"
-    run_case "routed_irt" "$ROUTED_DEF" "routed"
-    run_case "net_branches" "$net_branch_def" "net_branches"
+    echo "parallel jobs: $EDADB_TEST_JOBS"
+    if [[ "$#" -gt 0 ]]; then
+        echo "selected cases: $*"
+    else
+        echo "selected cases: all"
+    fi
+    run_cases_parallel "$@"
 
     echo "All EDADB iDB roundtrip regression tests passed."
 }

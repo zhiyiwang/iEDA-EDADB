@@ -49,6 +49,12 @@ EDADB adapter 文档的核心目标是：每个 root class 都必须按 `src/dat
 
 ## Test Convergence Rules
 
+- Regression cases are process-isolated and run concurrently. Select jobs from physical
+  cores, available RAM, and measured per-case load; this 20-core/125-GiB host defaults to
+  `EDADB_TEST_JOBS=8`, with an environment override for shared/smaller machines.
+- Use selected cases for local iteration, then run the complete suite before handoff.
+  Each case must own its output directory, SQLite DB, and logs; concurrency must not
+  remove SQL, raw/normalized DEF diff, or order-perturbation checks.
 - Fixture 必须符合当前 LEF/DEF grammar；不可用 parser 无法接受的输入假装覆盖分支。源码中存在但 grammar 不可达的分支要记录为不可达，不得伪造测试结论。
 - 每个原始 `if/else`、optional field 和 nested loop 至少要有一个合法输入覆盖；测试数据要能区分分支，不能只依赖默认 sky130 样例。
 - 同时验证三层结果：direct `DefRead/DefWrite` baseline、EDADB 表中的 source/identity/order 字段、EDADB 重建后的 DEF。Derived/cache 列应通过 schema absence assertion 证明未被误存。

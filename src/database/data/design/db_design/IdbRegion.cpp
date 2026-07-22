@@ -127,4 +127,13 @@ IdbRegion* IdbRegionList::add_region(string name)
   return pRegion;
 }
 
+void IdbRegionList::reset()
+{
+  for (IdbRegion*& region : _region_list) {
+    delete region;
+    region = nullptr;
+  }
+  _region_list.clear();
+}
+
 }  // namespace idb

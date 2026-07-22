@@ -1,188 +1,118 @@
 # IdbRegion EDADB Adapter Review
 
-## Scope
+## Scope And Constraints
 
-`IdbRegion` 对应 DEF 的 `REGIONS` section。
+`IdbRegion` 对应 DEF `REGIONS`，root container 是 `IdbRegionList::_region_list`。
 
-- Write: `DefWrite::write_region()`
-- Read: `regionCallback()` / `DefRead::parse_region()`
-- EDADB Write: `DefWriteEdadb::writeIdbRegion()`
-- EDADB Read: `DefReadEdadb::readIdbRegion()`
+- 原始 write：`DefWrite::write_region()`，`src/database/manager/builder/def_builder/def_write.cpp:1040`
+- 原始 read：`DefRead::parse_region()`，`src/database/manager/builder/def_builder/def_read.cpp:2093`
+- EDADB write：`DefWriteEdadb::writeIdbRegion()`，`src/database/manager/builder/def_builder/def_write_edadb.cpp:480`
+- EDADB read：`DefReadEdadb::readIdbRegion()`，`src/database/manager/builder/def_builder/def_read_edadb.cpp:502`
 
-本文件按 `src/database/edadb/docs/def-ieda-mapping-and-order.md` 的约束检查：
+按 `src/database/edadb/docs/def-ieda-mapping-and-order.md` 检查：
 
-- DEF section 映射：`REGIONS` section。
-- iEDA root container：`IdbRegionList::_region_list`。
-- root-vector order 等级：Level D，当前没有发现点工具依赖 `IdbRegionList::_region_list` 的 root index/order。
-- nested vector 约束：boundary rectangle vector 是 region 内部几何列表，必须随 root record 保持原始顺序，不参与 D-level root sort。
-
-## Original Write Semantics
-
-原始 `DefWrite::write_region()` 输出：
-
-- region name: `region->_name`
-- boundary rectangles: `region->_boudary_list`
-- type: `region->_type`，通过 `IdbRegionProperty` 转成 `FENCE` / `GUIDE`
-
-空 region list 时，原始 writer 返回 `kDbFail`，但 top-level DEF writer 不把它当作整体失败。
-
-## Original Read Semantics
-
-原始 `DefRead::parse_region()`：
-
-- 通过 `region_list->add_region(def_region->name())` 创建或复用 region。
-- `hasType()` 时设置 region type。
-- 逐个 DEF rectangle 调用 `region->add_boundary(...)`。
-- property 当前仍是 TBD，不进入 iDB 状态。
-
-## EDADB Schema
-
-当前 schema：
-
-```cpp
-TABLE4CLASS_WVEC(idb::IdbRegion, "iRegion", (_name, _type), (_boudary_list));
-```
-
-Schema / init 代码位置：
-
-- `iRegion` direct table macro: `src/database/edadb/idb/edadb_idb_schema.h:106`
-- Primary-key setup: `src/database/edadb/idb/edadb_idb_init.cpp:21`
-- Table registration: `src/database/edadb/idb/edadb_idb_init.cpp:90`
-
-保存字段覆盖原始 DEF writer/read 需要的 name、type 和 boundary rectangle vector。
-
-Schema 与 order/index 约束的关系：
-
-- 依据 `src/database/edadb/docs/def-ieda-mapping-and-order.md`，`REGIONS` 映射到 `IdbRegionList::_region_list`，等级为 Level D。
-- Level D 的含义是当前未发现点工具依赖 root vector index/order；normalized diff 可以按 stable key 排序 `REGIONS` root records。
-- 当前 adapter 不保存 `_order_sd`；如果 DB 读回顺序不同，测试应通过 Level-D normalized diff 判断语义一致性。
-- `_name` 是 direct table 的 primary key，表达 region identity；它不表达 vector order。
-
-Primary-key audit:
-
-- `initPrimKeys()` 没有关闭 `IdbRegion` 的 primary-key 行为；`iRegion` 使用 table macro 第一列 `_name` 作为 root identity。
-- `_boudary_list` 是 owned child vector，使用 `Shadow<IdbRect>::_vec_idx` 保存其 nested order。
-- `initReadDb()` / `initWriteDb()` 都先调用 `initPrimKeys()`，再调用 `initAllTables()`，因此 read/write 的 table metadata 一致。
-
-## Original DEF Write/Read Roundtrip Mapping
-
-### Original DEF Write Flow
-
-| 原始 `DefWrite` 执行顺序 | EDADB write 对应 | DEF 域 / iDB 变量 / EDADB 域 |
-| --- | --- | --- |
-| 1. `write_region()` 检查 list；空 list 返回失败；输出 section count，见 `def_write.cpp:1042-1053` | `writeIdbRegion()` 检查 list 后直接 `insertVector<IdbRegion>()`；空 vector 返回成功，见 `def_write_edadb.cpp:446-470` | `REGIONS <N>` / `IdbRegionList::_region_list` / `iRegion` row count |
-| 2. 按 root vector 遍历并输出 region name，见 `def_write.cpp:1055-1056` | direct mapping 保存 `IdbRegion::_name`；不保存 root order | `- <region_name>` / `IdbRegion::_name` / `iRegion._name` |
-| 3. 按 boundary vector 顺序输出所有 rectangle，见 `def_write.cpp:1058-1060` | `TABLE4CLASS_WVEC` 保存 `_boudary_list`；nested `IdbRect` 顺序由 child vector index 保留 | region rectangles / `IdbRegion::_boudary_list` / `iRegion._boudary_list` child rows |
-| 4. 将 region enum 转为名称并无条件输出 `TYPE`，见 `def_write.cpp:1062-1063` | direct mapping 保存 `_type` enum | `+ TYPE` / `IdbRegion::_type` / `iRegion._type` |
-| 5. 输出 record/section terminator，见 `def_write.cpp:1065-1068` | 由 table row 和 vector 边界重建，不存文本终止符 | `;`, `END REGIONS` / 无 iDB 成员 / 无 EDADB 字段 |
-
-### Original DEF Read Flow
-
-| 原始 `DefRead` 执行顺序 | EDADB read 对应 | DEF 域 / iDB 变量 / EDADB 域 |
-| --- | --- | --- |
-| 1. `regionCallback()` 校验参数后调用 `parse_region()`，后者按 name `add_region()`，见 `def_read.cpp:2075-2101` | `readIdbRegion()` 创建 `IdbRegion`，由 EDADB direct mapping 恢复 `_name` 后 append 到 list，见 `def_read_edadb.cpp:504-535` | region root/name / `IdbRegionList::_region_list`, `IdbRegion::_name` / `iRegion._name` |
-| 2. DEF record 有 `TYPE` 时恢复 type，见 `def_read.cpp:2103-2105` | direct mapping 从 `iRegion._type` 恢复 enum | `+ TYPE` / `IdbRegion::_type` / `iRegion._type` |
-| 3. 按 DEF rectangle 顺序调用 `add_boundary()`，见 `def_read.cpp:2107-2109` | EDADB 按 child vector index 恢复 `_boudary_list` | region rectangles / `IdbRegion::_boudary_list` / `iRegion._boudary_list` child rows |
-| 4. property 分支仍为 TODO，见 `def_read.cpp:2111-2112` | schema 不保存 region property，与原始 parser 最终 iDB 状态一致 | property / 无已实现 iDB 成员 / 无 EDADB 字段 |
-
-## Child Storage View
-
-`IdbRegion` 是 `REGIONS` root，当前持久化子节点是 boundary rectangle vector：
-
-- `_boudary_list`：`vector<IdbRect*>`，使用 `Shadow<IdbRect>` child table；字段名沿用 iEDA 原始类中的拼写。
-- `Shadow<IdbRect>` 保存 `_vec_idx/_lx_sd/_ly_sd/_hx_sd/_hy_sd`，用 `_vec_idx` 恢复 boundary rectangle vector 的原始顺序。
-
-不保存 `_instance_list`：它不是 DEF `REGIONS` section 的直接输出字段，而是由 `COMPONENTS` 中的 region name 在 `readIdbInstance()` 阶段反向补回。
+- root order 等级为 Level D；点工具通过 region name lookup 或遍历使用，没有 root index/order 语义依赖。
+- root 不保存 `_order_sd`；`IdbRegion::_name` 是 natural identity 和 table PK。
+- nested boundary rectangle vector 必须保序；完整 region record 重排时它随 owner 移动，内部不排序。
 
 ## Why Direct Mapping
 
-当前使用 direct `IdbRegion` mapping：
+Region 不需要 root shadow：
 
-- `IdbRegion` 的 DEF-visible root identity 是 `_name`，可直接作为 PK，不需要 shadow 另造 `_name_sd`。
-- `IdbRegionList` 是 Level D；root order 没有点工具语义依赖，因此不额外保存 `_order_sd`。
-- boundary 是 owning vector child，可由 `TABLE4CLASS_WVEC` 直接表达。
-- `_instance_list` 不入库；instance/group 到 region 的引用由它们各自的 adapter 保存 region name 后重建。
-- 当前没有需要通过 shadow 重建的 non-owning pointer。
-- 旧的 dormant `shadow_idb_region.h` 已删除，避免保留未启用 shadow 造成误导。
+- DEF-visible fields 正好是 `_name`、`_type`、`_boudary_list`。
+- `_name` 可直接作为 PK，不需要 synthetic identity。
+- boundary 是 owned vector，可由 `TABLE4CLASS_WVEC` 和 registered `Shadow<IdbRect>` 表达。
+- `_instance_list` 不是 `REGIONS` source field；它由 `COMPONENTS` 中的 region reference 在 Instance adapter 恢复。
+- 没有需要 Region shadow 处理的 polymorphism 或 non-owning pointer lookup。
 
-当前实现与 order 约束没有出入：schema 是 direct no-shadow/no-order，write/read 也都没有 `ORDER BY` 或 `_order_sd`。
+## EDADB Schema
 
-## EDADB Write Path
+```cpp
+TABLE4CLASS_WVEC(idb::IdbRegion, "iRegion",
+                 (_name, _type),
+                 (_boudary_list));
+```
 
-当前 `writeIdbRegion()`：
+- Region table macro：`src/database/edadb/idb/edadb_idb_schema.h:106`
+- Rect table macro：`src/database/edadb/idb/edadb_idb_schema.h:69`
+- Rect shadow PK disabled：`src/database/edadb/idb/edadb_idb_init.cpp:27`
+- Region table registration：`src/database/edadb/idb/edadb_idb_init.cpp:87`
 
-- Code: `src/database/manager/builder/def_builder/def_write_edadb.cpp:448`
-- Region vector access: `src/database/manager/builder/def_builder/def_write_edadb.cpp:459`
-- Empty-list return: `src/database/manager/builder/def_builder/def_write_edadb.cpp:463`
-- EDADB direct insert: `src/database/manager/builder/def_builder/def_write_edadb.cpp:467`
+Primary-key audit：
 
-- 从 `design->get_region_list()` 取得 region vector。
-- 空列表返回 `kDbSuccess`，避免 EDADB dispatcher 中断整个写流程。
-- 非空时直接 `edadb::insertVector<IdbRegion>(region_vec)` 写入。
-- direct table 保存 name、type 和 boundary rectangles。
+- `IdbRegion::_name` 使用 EDADB 默认 PK 行为，表达 region identity，不表达 vector order。
+- `Shadow<IdbRect>::_vec_idx` 是 owner 内 child order，不是全局 identity，因此 shadow PK 关闭。
 
-这与原始 DEF 输出字段一致；空列表返回值是 adapter 层为 dispatcher 做的语义调整。
+## Original DEF Write Mapping
 
-## EDADB Read Path
+| Original writer brace/order | DEF output | EDADB correspondence | Stored source |
+| --- | --- | --- | --- |
+| list/null/empty checks and section count, `def_write.cpp:1042-1053` | `REGIONS <N>` | `writeIdbRegion()` reads active root vector, `def_write_edadb.cpp:480-499` | `iRegion` row count |
+| root loop and name, `def_write.cpp:1055-1056` | `- <name>` | direct mapping stores `_name`; no root order column | `IdbRegion::_name` → `iRegion._name` |
+| boundary loop, `def_write.cpp:1058-1060` | repeated rectangle pairs | `TABLE4CLASS_WVEC` stores the complete `_boudary_list` | child `IdbRectSD` rows + `_vec_idx` |
+| type conversion/output, `def_write.cpp:1062-1063` | `+ TYPE FENCE/GUIDE` | direct mapping stores `_type` enum | `IdbRegion::_type` → `iRegion._type` |
+| record/section terminators, `def_write.cpp:1065-1068` | `;`, `END REGIONS` | reconstructed from table/vector structure | no DB column |
 
-当前 `readIdbRegion()`：
+## Original DEF Read Mapping
 
-- Code: `src/database/manager/builder/def_builder/def_read_edadb.cpp:511`
-- EDADB read op: `src/database/manager/builder/def_builder/def_read_edadb.cpp:524`
-- EDADB read loop: `src/database/manager/builder/def_builder/def_read_edadb.cpp:527`
-- Add to active list: `src/database/manager/builder/def_builder/def_read_edadb.cpp:540`
+| Original parser brace/order | EDADB correspondence | Source / rebuild |
+| --- | --- | --- |
+| active design/list lookup and `add_region(name)`, `def_read.cpp:2099-2101` | `readIdbRegion()` obtains and resets active list, then EDADB direct-read creates and appends each complete `IdbRegion`, `def_read_edadb.cpp:502-535` | `_name` and root object |
+| optional type, `def_read.cpp:2103-2105` | direct mapping restores `_type` | `iRegion._type` |
+| rectangle loop, `def_read.cpp:2107-2109` | EDADB nested-vector reader restores boundary children by saved `_vec_idx` | `iRegion__boudary_list_IdbRectSD` |
+| property TODO, `def_read.cpp:2111-2112` | no schema field | no implemented iDB state |
 
-- 使用 `makeReadAllOp<IdbRegion>()` 循环读取 direct rows。
-- 读出的 `IdbRegion` 已包含 name/type/boundary rectangles。
-- 直接加入 `design->get_region_list()`。
-- `createDbByDef()` 不注册 region callback，避免 DEF 文本重复创建 region。
+## Write And Read Paths
 
-读取顺序在 `readIdbInstance()` / `readIdbGroup()` 之前，因此 instance/group 可通过 region name 查找并恢复引用。
+Write：
 
-## Computed Fields
+- `writeIdbRegion()`：`def_write_edadb.cpp:480-507`
+- vector access：`def_write_edadb.cpp:493`
+- direct insert：`def_write_edadb.cpp:501`
+- Empty list is accepted by the EDADB dispatcher so other families can continue.
 
-`IdbRegion` 当前没有 read 后计算字段：
+Read：
 
-- name/type/boundary 全部来自 DEF/EDADB。
-- `_instance_list` 不入库，由 instance read 阶段按 `_region_name` 反向补回。
-- region property 尚未在原始 parser 中实现，不进入 EDADB schema。
+- `readIdbRegion()`：`def_read_edadb.cpp:502-541`
+- reset active list：`def_read_edadb.cpp:515`
+- direct read loop：`def_read_edadb.cpp:517-535`
+- read failure resets the list again, avoiding partial active state：`def_read_edadb.cpp:527-531`
+- `IdbRegionList::reset()`：`src/database/data/design/db_design/IdbRegion.cpp:130`
 
-## Order / Index
+Read order places Region before Instance/Group, so those adapters can resolve region names and rebuild Region membership.
 
-`IdbRegionList` 在 iEDA 点工具语义上是 Level D；当前 adapter 不保存 root order。
+## Computed And Cross-Adapter State
 
-依据：
+- `_name`、`_type`、`_boudary_list` are DEF source fields and are persisted.
+- `_instance_list` is not persisted in Region; Instance adapter restores the instance-to-region reference and reverse membership.
+- Region property parsing is unimplemented in original iEDA, so it has no active state or EDADB column.
+- Region has no post-read geometric cache/bbox rebuild step.
 
-- 原始 `parse_region()` 按 DEF 出现顺序 `add_region()`。
-- 原始 `write_region()` 按 `region_list->get_region_list()` 当前顺序输出，因此 raw text roundtrip 可能受 DB 读回顺序影响。
-- instance/group 对 region 的语义引用靠 `find_region(name)`，不是靠 list index。
-- `def-ieda-mapping-and-order.md` 中记录：iPL wrapping 会遍历 region，但后续语义主要通过 region name lookup；未发现 root index/front/order-derived ID 依赖。
-- `IDBWrapper::wrapRegions()` 按 `IdbRegionList` 遍历并创建 iPL `Region`，见 `src/operation/iPL/source/module/wrapper/IDBWrapper.cc:700-733`。
-- iPL `Design::add_region()` 会按插入顺序分配 `_region_id`，见 `src/operation/iPL/source/data/Design.hh:156-161`；但当前代码中只发现 `get_region_id()` 定义，未发现算法消费该 ID。
-- legalizer/detail placer 后续通过 region name map 查找实例所属 region，见 `src/operation/iPL/source/module/detail_placer/DetailPlacer.cc:205-210`、`src/operation/iPL/source/module/detail_placer/database/DPLayout.cc:58-75`。
-- `PlacerDB` / `MapFiller` / `NesterovPlace` 对 region list 的遍历用于插入 boundary geometry 或累积 blockage area，见 `src/operation/iPL/source/PlacerDB.cc:477-484`、`src/operation/iPL/source/module/filler/src/MapFiller.cpp:35-53`、`src/operation/iPL/source/module/global_placer/electrostatic_placer/NesterovPlace.cc:558-564`；这些使用没有 root index/front/order-derived ID。
-- 因为 root order 没有点工具语义依赖，当前不引入 `_order_sd`；如果 raw diff 只因 Level-D root order 变化失败，应使用 normalized diff。
+## Order And Point-Tool Evidence
 
-当前状态：已实现 direct no-shadow/no-order mapping。
+Root `IdbRegionList` is Level D：
 
-对 normalized diff 的影响：
+- iPL wraps regions by iteration, `src/operation/iPL/source/module/wrapper/IDBWrapper.cc:706`.
+- Region membership is subsequently resolved by name map, for example `src/operation/iPL/source/module/detail_placer/DetailPlacer.cc:206` and `src/operation/iPL/source/module/detail_placer/database/DPLayout.cc:58`.
+- Other region traversals accumulate geometry/area and do not consume root index, for example `src/operation/iPL/source/PlacerDB.cc:477` and `src/operation/iPL/source/module/filler/src/MapFiller.cpp:35`.
+- iPL assigns an insertion-order `_region_id`, but the current audit found no algorithm consuming that ID; therefore the highest applicable level remains D.
 
-- `REGIONS` 是 Level D root list；如果 raw diff 只因为不同 `REGIONS` root record 顺序失败，normalized diff 可以按 region name 排序后通过。
-- 排序单位必须是完整 region record；record 内部 boundary rectangle vector 不排序。
-- 如果 name/type/boundary rectangle 内容不同，normalized diff 必须失败。
+Consequences：
 
-boundary rectangle vector 也应保持原始 DEF 顺序；当前由 `Shadow<IdbRect>::_vec_idx` 负责，不依赖 SQLite child-row 返回顺序。
+- `iRegion` has no `_order_sd` and read uses no root `ORDER BY`.
+- Normalized diff may sort complete `REGIONS` root records by name.
+- `_boudary_list` remains nested-order-sensitive and is never normalized independently.
 
 ## Tests
 
-- demo `sky130_gcd` 覆盖空列表路径：`writeIdbRegion insert region_count=0`，`readIdbRegion restored region_count=0`。
-- `src/database/edadb/test/run_idb_roundtrip_regression.sh` 的 `aux_optional` case 覆盖非空 region，并检查 `iRegion` count、name/type、boundary rectangle 和 group-region 引用。
+- `sky130_gcd` covers empty Region handling.
+- `aux_optional` contains one named FENCE region with two boundary rectangles.
+- Regression physically reverses the SQLite boundary child rows, verifies their rowid order is reversed, then confirms EDADB restores `_vec_idx` order and final DEF exactly matches the direct baseline.
+- SQL checks region count/name/type, both ordered boundary values, and physical child-row disorder.
 
 ## Risks / TODO
 
-- `IdbRegion::clear_boundary()` 删除 rect 后没有清空 vector；当前 read path 不调用它，暂不影响 roundtrip。
-- 原始 writer 对空 region list 返回失败，EDADB writer 对空 vector 返回成功。
-- `readIdbRegion()` 不清空现有 list，依赖“新 design、单次恢复”的调用前提。
-- 若未来原始 DEF parser 支持 region property，需要同步扩展 schema 和 read/write。
-- `_instance_list` 仍由 instance read 阶段反向补回，不随 region root record 入库。
-- direct no-order mapping 可能导致 raw DEF 中多个 region 的输出顺序变化；这是 Level D 场景，应由 normalized diff 处理。
+- Original writer rejects an empty list while EDADB dispatcher treats it as success.
+- Root row order may differ because Region is Level D; raw order-only differences are handled by normalized diff.
+- If point tools begin consuming insertion-derived region IDs, the order level must be re-audited before changing the adapter.
+- If original parser implements region properties, schema/read/write/tests must be extended together.

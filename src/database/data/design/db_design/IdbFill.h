@@ -141,6 +141,7 @@ class IdbFillList
   //   IdbFill* find_fill_by_via(string name);
 
   // setter
+  IdbFill* add_fill(IdbFill* fill = nullptr);
   IdbFillLayer* add_fill_layer(IdbLayer* layer = nullptr);
   IdbFillVia* add_fill_via(IdbVia* via = nullptr);
 

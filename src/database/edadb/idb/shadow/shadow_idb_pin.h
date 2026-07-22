@@ -29,10 +29,11 @@ public:
 
 public:
     bool toShadow(idb::IdbPin* obj, const uint32_t* idx_ptr = nullptr) {
-        _pin_name_sd = obj->get_pin_name();
-        if (idx_ptr != nullptr) {
-            _order_sd = *idx_ptr;
+        if (obj == nullptr || idx_ptr == nullptr) {
+            return false;
         }
+        _pin_name_sd = obj->get_pin_name();
+        _order_sd = *idx_ptr;
         _net_name_sd = obj->get_net_name();
 
         idb::IdbTerm* term = obj->get_term();
@@ -42,9 +43,12 @@ public:
 
         const bool writer_uses_port_branch =
                 term->is_port_exist() || obj->is_special_net_pin();
+        const bool writer_is_special =
+                term->is_special_net() || obj->is_special_net_pin();
 
         _io_term_sd = new edadb::Shadow<idb::IdbTerm>();
         _io_term_sd->setWriterUsesPortBranch(writer_uses_port_branch);
+        _io_term_sd->setWriterIsSpecial(writer_is_special);
         if (!_io_term_sd->toShadow(term)) {
             return false;
         }
@@ -59,6 +63,9 @@ public:
     } // toShadow
 
     bool fromShadow(idb::IdbPin* obj, uint32_t* idx_ptr = nullptr) {
+        if (obj == nullptr) {
+            return false;
+        }
         if (idx_ptr != nullptr) {
             *idx_ptr = static_cast<uint32_t>(_order_sd);
         }

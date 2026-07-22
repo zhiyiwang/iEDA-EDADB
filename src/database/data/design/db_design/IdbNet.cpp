@@ -252,14 +252,31 @@ IdbNetList::IdbNetList()
 
 IdbNetList::~IdbNetList()
 {
+  reset();
+}
+
+void IdbNetList::reset()
+{
   for (auto& net : _net_list) {
     if (net != nullptr) {
+      for (IdbPin* pin : net->get_io_pins()->get_pin_list()) {
+        if (pin != nullptr && pin->get_net() == net) {
+          pin->set_net(nullptr);
+        }
+      }
+      for (IdbPin* pin : net->get_instance_pin_list()->get_pin_list()) {
+        if (pin != nullptr && pin->get_net() == net) {
+          pin->set_net(nullptr);
+        }
+      }
       delete net;
       net = nullptr;
     }
   }
 
   _net_list.clear();
+  _net_map.clear();
+  _mutex_index = 0;
 }
 
 IdbNet* IdbNetList::find_net(string name)

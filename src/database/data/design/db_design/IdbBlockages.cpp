@@ -216,6 +216,7 @@ void IdbBlockageList::reset()
   }
 
   _blockage_list.clear();
+  _num = 0;
 }
 
 void IdbBlockageList::clearPlacementBlockage()

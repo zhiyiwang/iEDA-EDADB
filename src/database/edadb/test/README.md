@@ -8,6 +8,17 @@ Run from the repository root:
 bash src/database/edadb/test/run_idb_roundtrip_regression.sh
 ```
 
+Cases run in separate processes. The current host has 20 physical cores / 40 logical CPUs
+and 125 GiB RAM, so the conservative default concurrency is eight. Override it for a
+shared/smaller machine, or run only selected cases:
+
+```bash
+EDADB_TEST_JOBS=8 bash src/database/edadb/test/run_idb_roundtrip_regression.sh
+EDADB_TEST_JOBS=2 bash src/database/edadb/test/run_idb_roundtrip_regression.sh aux_optional design_fields
+```
+
+Each case owns a separate output directory, SQLite database, iEDA processes, and log. Fixtures are generated once before parallel execution. Per-case scheduler logs are under `OUT_DIR/case-logs/`.
+
 Default output is written to:
 
 ```text
@@ -20,7 +31,7 @@ Override paths when needed:
 IEDA_BIN=/path/to/iEDA OUT_DIR=/tmp/my_edadb_run bash src/database/edadb/test/run_idb_roundtrip_regression.sh
 ```
 
-The script currently runs four cases with detailed DEF-diff, SQLite, and selected log assertions:
+The script runs independent cases with detailed DEF-diff, SQLite, and selected log assertions. Core cases include:
 
 - `default_ipl`: normal sky130_gcd `iPL_result.def`, using direct iDB `DEF -> DEF` as the baseline.
 - `aux_optional`: generated from `iPL_result.def`, adding non-empty `BLOCKAGES`, `REGIONS`, `SLOTS`, a two-member `GROUPS` entry, `FILLS`, special-net optional fields, and regular-net optional fields.
@@ -66,7 +77,7 @@ For `net_branches`, it repeats all `routed_irt` checks and additionally verifies
 
 - `FIXED`, `COVER`, and `NOSHIELD` enum values in `iRegWireSD`;
 - one `_is_second_point_virtual_sd` segment;
-- raw direct-DEF vs EDADB-DEF equality for all four cases.
+- raw direct-DEF vs EDADB-DEF equality for the routed and branch fixtures.
 
 Regular `+ SHIELD <name>` is not generated: the current native writer has a `kShield` branch, but the native DEF parser rejects that regular-NETS syntax. This remains an original writer/parser limitation rather than a supported adapter roundtrip case.
 

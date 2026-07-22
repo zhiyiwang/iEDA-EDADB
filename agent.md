@@ -28,6 +28,10 @@ cd /home/zhiyiwang/cs/arch/eda/iEDA-EDADB
 bash src/database/edadb/test/run_idb_roundtrip_regression.sh
 ```
 
+Regression cases run in independent processes. This host has 20 physical cores / 40
+logical CPUs and 125 GiB RAM, so the default is `EDADB_TEST_JOBS=8`; override it for
+shared or smaller machines, and use selected case names during iteration.
+
 The regression definition is stored in `src/database/edadb/test/`.
 By default it writes generated fixtures, logs, EDADB SQLite databases, direct iDB
 DEF baselines, EDADB DEF outputs, and diffs to `/tmp/iedadb_regression`.
@@ -242,6 +246,12 @@ Current uncovered or weakly covered areas:
 - Current reviewed-class exception: `IdbSlotList` is Level D but keeps `primary_key +
   _order_sd` because DEF `SLOTS` records are anonymous and raw roundtrip needs stable
   anonymous record output.
+- Run independent regression cases concurrently. Choose concurrency from physical CPU,
+  available memory, and per-case iEDA cost rather than logical CPUs alone; current default
+  is 8 on the 20-core/125-GiB host. Every case must own separate output, DB, and log paths.
+- During development run only affected cases; before handoff run the full case set with
+  the selected concurrency. Parallel execution must not weaken per-case SQL, DEF diff,
+  or nested-order perturbation assertions.
 - Update schema/init, builder read/write, DEF callbacks, regression SQL, and docs together.
 - Re-read current source and recheck every documented line number after code changes.
   Line ranges must identify a real function or brace body, not a vague phase.

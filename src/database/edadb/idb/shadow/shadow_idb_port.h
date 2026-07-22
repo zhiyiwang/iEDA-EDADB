@@ -63,9 +63,10 @@ public:
     void setWriterUsesPortBranch(bool value) { _writer_uses_port_branch = value; }
 
     bool toShadow(idb::IdbPort* obj, const uint32_t* idx_ptr = nullptr) {
-        if (idx_ptr != nullptr) {
-            _vec_idx = *idx_ptr;
+        if (obj == nullptr || idx_ptr == nullptr) {
+            return false;
         }
+        _vec_idx = *idx_ptr;
         if (_writer_uses_port_branch && obj->is_placed()) {
             _orient_sd = obj->get_orient();
             _placement_status_sd = obj->get_placement_status();
@@ -93,6 +94,9 @@ public:
     } // toShadow
 
     bool fromShadow(idb::IdbPort* obj, uint32_t* idx_ptr = nullptr) {
+        if (obj == nullptr) {
+            return false;
+        }
         if (idx_ptr != nullptr) {
             *idx_ptr = _vec_idx;
         }
