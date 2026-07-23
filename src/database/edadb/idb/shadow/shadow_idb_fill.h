@@ -17,17 +17,7 @@ class Shadow<idb::IdbFill> {
 public:
     Shadow<idb::IdbFill> (void): primary_key(next_primary_key++) {}
     ~Shadow<idb::IdbFill>() {
-        for ( auto& rect_sd : _rect_list_sd ) {
-            delete rect_sd;
-            rect_sd = nullptr;
-        }
-        _rect_list_sd.clear();
-
-        for ( auto& coordinate_sd : _coordinate_list_sd ) {
-            delete coordinate_sd;
-            coordinate_sd = nullptr;
-        }
-        _coordinate_list_sd.clear();
+        resetStorage();
     }
     Shadow<idb::IdbFill>(const Shadow& other) = delete;
     Shadow<idb::IdbFill>& operator=(const Shadow& other) = delete;
@@ -37,6 +27,7 @@ public:
             return false;
         }
 
+        resetStorage();
         _type_sd = obj->get_type();
         if ( _type_sd == idb::IdbFill::IdbFillType::kLayer && obj->get_layer() != nullptr ) {
             if (obj->get_layer()->get_layer() == nullptr) {
@@ -75,6 +66,9 @@ public:
 
         obj->set_type(_type_sd);
         if (_type_sd == idb::IdbFill::IdbFillType::kLayer) {
+            if (!_via_name_sd.empty() || !_coordinate_list_sd.empty() || obj->get_layer() == nullptr) {
+                return false;
+            }
             idb::IdbLayer* layer = idb::edadb_adapter::EdadbIdbHelper::findIdbLayerByName(_layer_name_sd);
             if (layer == nullptr) {
                 return false;
@@ -87,6 +81,9 @@ public:
                 obj->get_layer()->add_rect(rect_sd->get_low_x(), rect_sd->get_low_y(), rect_sd->get_high_x(), rect_sd->get_high_y());
             }
         } else if (_type_sd == idb::IdbFill::IdbFillType::kVia) {
+            if (!_layer_name_sd.empty() || !_rect_list_sd.empty() || obj->get_via() == nullptr) {
+                return false;
+            }
             idb::IdbVia* via = idb::edadb_adapter::EdadbIdbHelper::findIdbViaByName(_via_name_sd);
             if (via == nullptr) {
                 return false;
@@ -107,6 +104,23 @@ public:
         }
         return true;
     } // fromShadow
+private:
+    void resetStorage() {
+        _layer_name_sd.clear();
+        _via_name_sd.clear();
+
+        for (auto& rect_sd : _rect_list_sd) {
+            delete rect_sd;
+            rect_sd = nullptr;
+        }
+        _rect_list_sd.clear();
+
+        for (auto& coordinate_sd : _coordinate_list_sd) {
+            delete coordinate_sd;
+            coordinate_sd = nullptr;
+        }
+        _coordinate_list_sd.clear();
+    }
 public:
     uint64_t primary_key = 0;
     idb::IdbFill::IdbFillType _type_sd = idb::IdbFill::IdbFillType::kNone;

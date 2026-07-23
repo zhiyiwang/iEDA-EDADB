@@ -34,7 +34,7 @@ IEDA_BIN=/path/to/iEDA OUT_DIR=/tmp/my_edadb_run bash src/database/edadb/test/ru
 The script runs independent cases with detailed DEF-diff, SQLite, and selected log assertions. Core cases include:
 
 - `default_ipl`: normal sky130_gcd `iPL_result.def`, using direct iDB `DEF -> DEF` as the baseline.
-- `aux_optional`: generated from `iPL_result.def`, adding seven routing/placement `BLOCKAGES` records, `REGIONS`, `SLOTS`, a two-member `GROUPS` entry, `FILLS`, special-net optional fields, and regular-net optional fields.
+- `aux_optional`: generated from `iPL_result.def`, adding seven routing/placement `BLOCKAGES` records, `REGIONS`, `SLOTS`, a two-member `GROUPS` entry, repeated same-name layer/via `FILLS`, special-net optional fields, and regular-net optional fields.
 - `group_branches`: replaces the Group member list with a regex plus a duplicate exact member, then checks parser expansion/deduplication, primitive-vector order recovery, and EDADB output reparsing.
 - `routed_irt`: sky130_gcd `iRT_result.def`, covering non-empty regular NETS routed wires, segments, point rows, and ordered pin refs.
 - `net_branches`: generated from `iRT_result.def`, covering legal regular-wire states `FIXED`, `COVER`, and `NOSHIELD`, plus a `VIRTUAL` second point while retaining the full routed-net fixture.
@@ -59,7 +59,7 @@ For `aux_optional`, it also checks SQLite content for key EDADB tables and field
 
 - `iBlockageSD`, `iRegion`, `iSlotSD`, `iGroupSD`, `iFillSD`;
 - blockage writer fields plus parser-only slots/fills/spacing/width/soft/density, readback state, ordered rectangles, region/slot rectangles, group region and ordered member child rows;
-- fill layer/via typed rows and child rows;
+- fill synthetic root identity, layer/via branch isolation, repeated same-name roots, ordered child rows, and root/child physical-order perturbation;
 - special-net `ORIGINAL`, `SOURCE`, and `WEIGHT`;
 - regular-net `ORIGINAL`, `SOURCE`, `WEIGHT`, `XTALK`, `FIXEDBUMP`, and `FREQUENCY`.
 

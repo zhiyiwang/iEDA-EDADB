@@ -191,7 +191,7 @@ check_aux_optional_sql() {
     assert_eq "$(sql_value "$edadb_db" "select count(*) from iRegion;")" "1" "$name region count"
     assert_eq "$(sql_value "$edadb_db" "select count(*) from iSlotSD;")" "1" "$name slot count"
     assert_eq "$(sql_value "$edadb_db" "select count(*) from iGroupSD;")" "1" "$name group count"
-    assert_eq "$(sql_value "$edadb_db" "select count(*) from iFillSD;")" "2" "$name fill count"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) || '|' || count(distinct primary_key) from iFillSD;")" "4|4" "$name fill count and root identity"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_layer_name_sd || '|' || _is_slots_sd || '|' || _is_fills_sd || '|' || _is_pushdown_sd || '|' || _is_except_pgnet_sd || '|' || _instance_name_sd || '|' || _min_spacing_sd || '|' || _effective_width_sd, ';') from (select * from iBlockageSD where _type_sd=1 order by _layer_name_sd);")" \
         "met1|1|0|0|0||111|-1;met2|0|1|0|0||-1|222;met3|0|0|1|1|ctrl/_34_|-1|-1" "$name routing blockage parser fields"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_lx_sd || '|' || _is_soft_sd || '|' || printf('%.3f', _max_density_sd) || '|' || _is_pushdown_sd || '|' || _instance_name_sd, ';') from (select r._lx_sd, b._is_soft_sd, b._max_density_sd, b._is_pushdown_sd, b._instance_name_sd from iBlockageSD b join iBlockageSD__rect_list_sd_IdbRectSD r on r.iBlockageSD_primary_key=b.primary_key and r._vec_idx=0 where b._type_sd=2 order by r._lx_sd);")" \
@@ -238,14 +238,24 @@ check_aux_optional_sql() {
     assert_eq "$(sql_value "$edadb_db" "select count(*) from pragma_table_info('iFillSD') where name='_order_sd';")" \
         "0" "$name fill has no root order column"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_type_sd || '|' || coalesce(_layer_name_sd,'') || '|' || coalesce(_via_name_sd,''), ';') from (select * from iFillSD order by _type_sd, coalesce(_layer_name_sd,''), coalesce(_via_name_sd,''));")" \
-        "1|met1|;2||via_1600x480" "$name fill typed rows"
-    assert_eq "$(sql_value "$edadb_db" "select group_concat(_vec_idx || ':' || _lx_sd || ',' || _ly_sd || ',' || _hx_sd || ',' || _hy_sd, ';') from (select * from iFillSD__rect_list_sd_IdbRectSD order by _vec_idx);")" \
+        "1|met1|;1|met1|;2||via_1600x480;2||via_1600x480" "$name repeated fill typed rows"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(primary_key, ',') from (select primary_key from iFillSD order by rowid);")" \
+        "4,3,2,1" "$name fill root physical order was perturbed"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from iFillSD where (_type_sd=1 and coalesce(_via_name_sd,'')<>'') or (_type_sd=2 and coalesce(_layer_name_sd,'')<>'');")" \
+        "0" "$name fill inactive reference fields are empty"
+    assert_eq "$(sql_value "$edadb_db" "select (select count(*) from iFillSD__coordinate_list_sd_iCoordSD c join iFillSD f on f.primary_key=c.iFillSD_primary_key where f._type_sd=1) || '|' || (select count(*) from iFillSD__rect_list_sd_IdbRectSD r join iFillSD f on f.primary_key=r.iFillSD_primary_key where f._type_sd=2);")" \
+        "0|0" "$name fill child rows follow type branch"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(cnt, ',') from (select count(*) cnt from iFillSD__rect_list_sd_IdbRectSD group by iFillSD_primary_key order by cnt);")" \
+        "1,2" "$name repeated layer fills keep separate rect owners"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_vec_idx || ':' || _lx_sd || ',' || _ly_sd || ',' || _hx_sd || ',' || _hy_sd, ';') from (select * from iFillSD__rect_list_sd_IdbRectSD where iFillSD_primary_key=(select iFillSD_primary_key from iFillSD__rect_list_sd_IdbRectSD group by iFillSD_primary_key having count(*)=2) order by _vec_idx);")" \
         "0:7000,7000,8000,8000;1:7100,7200,7800,7900" "$name ordered fill rects"
-    assert_eq "$(sql_value "$edadb_db" "select group_concat(_vec_idx, ',') from iFillSD__rect_list_sd_IdbRectSD order by rowid;")" \
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_vec_idx, ',') from iFillSD__rect_list_sd_IdbRectSD where iFillSD_primary_key=(select iFillSD_primary_key from iFillSD__rect_list_sd_IdbRectSD group by iFillSD_primary_key having count(*)=2) order by rowid;")" \
         "1,0" "$name fill rect physical order was perturbed"
-    assert_eq "$(sql_value "$edadb_db" "select group_concat(_vec_idx || ':' || _x_sd || ',' || _y_sd, ';') from (select * from iFillSD__coordinate_list_sd_iCoordSD order by _vec_idx);")" \
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(cnt, ',') from (select count(*) cnt from iFillSD__coordinate_list_sd_iCoordSD group by iFillSD_primary_key order by cnt);")" \
+        "1,2" "$name repeated via fills keep separate coordinate owners"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_vec_idx || ':' || _x_sd || ',' || _y_sd, ';') from (select * from iFillSD__coordinate_list_sd_iCoordSD where iFillSD_primary_key=(select iFillSD_primary_key from iFillSD__coordinate_list_sd_iCoordSD group by iFillSD_primary_key having count(*)=2) order by _vec_idx);")" \
         "0:9000,9000;1:9200,9300" "$name ordered fill via coordinates"
-    assert_eq "$(sql_value "$edadb_db" "select group_concat(_vec_idx, ',') from iFillSD__coordinate_list_sd_iCoordSD order by rowid;")" \
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_vec_idx, ',') from iFillSD__coordinate_list_sd_iCoordSD where iFillSD_primary_key=(select iFillSD_primary_key from iFillSD__coordinate_list_sd_iCoordSD group by iFillSD_primary_key having count(*)=2) order by rowid;")" \
         "1,0" "$name fill coordinate physical order was perturbed"
     assert_eq "$(sql_value "$edadb_db" "select _original_net_name_sd || '|' || _source_type_sd || '|' || _weight_sd from iSpecNetSD where _net_name_sd='VDD';")" \
         "orig_vdd_net|1|5" "$name special net optional fields"
@@ -594,9 +604,11 @@ generate_aux_optional_fixture() {
                 print "    - test_group ctrl/_34_ ctrl/_35_ + REGION test_region ;"
                 print "END GROUPS"
                 print ""
-                print "FILLS 2 ;"
+                print "FILLS 4 ;"
                 print "    - LAYER met1 RECT ( 7000 7000 ) ( 8000 8000 ) RECT ( 7100 7200 ) ( 7800 7900 ) ;"
+                print "    - LAYER met1 RECT ( 8100 8200 ) ( 8800 8900 ) ;"
                 print "    - VIA via_1600x480 ( 9000 9000 ) ( 9200 9300 ) ;"
+                print "    - VIA via_1600x480 ( 9400 9500 ) ;"
                 print "END FILLS"
             }
         }
@@ -792,6 +804,7 @@ perturb_aux_child_query_order() {
     local edadb_db="$1"
 
     sqlite3 "$edadb_db" <<'SQL'
+PRAGMA foreign_keys = OFF;
 CREATE TEMP TABLE blockage_rects_reversed AS
 SELECT * FROM iBlockageSD__rect_list_sd_IdbRectSD
 ORDER BY iBlockageSD_primary_key, _vec_idx DESC;
@@ -834,7 +847,11 @@ DELETE FROM iFillSD__coordinate_list_sd_iCoordSD;
 INSERT INTO iFillSD__coordinate_list_sd_iCoordSD
 SELECT * FROM fill_coordinates_reversed;
 
-PRAGMA foreign_keys = OFF;
+CREATE TEMP TABLE fills_reversed AS
+SELECT * FROM iFillSD ORDER BY rowid DESC;
+DELETE FROM iFillSD;
+INSERT INTO iFillSD SELECT * FROM fills_reversed;
+
 CREATE TEMP TABLE special_wires_reversed AS
 SELECT * FROM iSpecNetSD__wire_list_sd_iSpecWireSD
 ORDER BY iSpecNetSD__net_name_sd, _vec_idx DESC;
