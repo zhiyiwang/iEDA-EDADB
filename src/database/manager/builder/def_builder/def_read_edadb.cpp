@@ -877,8 +877,12 @@ bool DefReadEdadb::readIdbSpecialNet(void) {
     net_list->reset();
 
     auto special_net_reader = edadb::makeReadAllOp<edadb::Shadow<idb::IdbSpecialNet>>();
+#if EDADB_OUTPUT_DEBUG
     int32_t special_net_count = 0;
     int32_t segment_count = 0;
+    int32_t styled_segment_count = 0;
+    int32_t shield_wire_count = 0;
+#endif
     while (true) {
         auto* special_net_sd = new edadb::Shadow<idb::IdbSpecialNet>();
         const int read_count = edadb::readNext<edadb::Shadow<idb::IdbSpecialNet>>(special_net_reader, special_net_sd);
@@ -906,14 +910,32 @@ bool DefReadEdadb::readIdbSpecialNet(void) {
             net_list->reset();
             return false;
         }
+#if EDADB_OUTPUT_DEBUG
         segment_count += special_net_sd->getSegmentCount();
+        for (IdbSpecialWire* wire : special_net->get_wire_list()->get_wire_list()) {
+            if (wire->get_wire_state() == IdbWiringStatement::kShield) {
+                ++shield_wire_count;
+            }
+            for (IdbSpecialWireSegment* segment : wire->get_segment_list()) {
+                if (segment->get_style() >= 0) {
+                    ++styled_segment_count;
+                }
+            }
+        }
+#endif
 
         delete special_net_sd;
+#if EDADB_OUTPUT_DEBUG
         ++special_net_count;
+#endif
     }
 
+#if EDADB_OUTPUT_DEBUG
     EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] readIdbSpecialNet restored special_net_count="
-              << special_net_count << " segment_count=" << segment_count << std::endl;
+              << special_net_count << " segment_count=" << segment_count
+              << " styled_segment_count=" << styled_segment_count
+              << " shield_wire_count=" << shield_wire_count << std::endl;
+#endif
     return true;
 } // readIdbSpecialNet
 

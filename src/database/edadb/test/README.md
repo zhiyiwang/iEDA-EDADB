@@ -36,6 +36,7 @@ The script runs independent cases with detailed DEF-diff, SQLite, and selected l
 - `default_ipl`: normal sky130_gcd `iPL_result.def`, using direct iDB `DEF -> DEF` as the baseline.
 - `aux_optional`: generated from `iPL_result.def`, adding seven routing/placement `BLOCKAGES` records, `REGIONS`, `SLOTS`, a two-member `GROUPS` entry, repeated same-name layer/via `FILLS`, special-net optional fields, and regular-net optional fields.
 - `group_branches`: replaces the Group member list with a regex plus a duplicate exact member, then checks parser expansion/deduplication, primitive-vector order recovery, and EDADB output reparsing.
+- `special_net_branches`: adds explicit IO/instance connections, STYLE, SHIELD, two-point Via, and three-point route branches; checks complete DB/read-state restoration and native-writer canonical output.
 - `routed_irt`: sky130_gcd `iRT_result.def`, covering non-empty regular NETS routed wires, segments, point rows, and ordered pin refs.
 - `net_branches`: generated from `iRT_result.def`, covering legal regular-wire states `FIXED`, `COVER`, and `NOSHIELD`, plus a `VIRTUAL` second point while retaining the full routed-net fixture.
 

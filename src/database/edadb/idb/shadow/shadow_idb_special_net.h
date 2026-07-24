@@ -30,13 +30,7 @@ class Shadow<idb::IdbSpecialWireSegment> {
 public:
     Shadow<idb::IdbSpecialWireSegment>(void) : primary_key(next_primary_key++) {}
     ~Shadow<idb::IdbSpecialWireSegment>() {
-        delete _delta_rect_sd;
-        _delta_rect_sd = nullptr;
-        for (auto& point : _point_list_sd) {
-            delete point;
-            point = nullptr;
-        }
-        _point_list_sd.clear();
+        resetStorage();
     }
 
     Shadow<idb::IdbSpecialWireSegment>(const Shadow& other) = delete;
@@ -47,16 +41,23 @@ public:
         if (obj == nullptr || idx_ptr == nullptr || obj->get_layer() == nullptr) {
             return false;
         }
+
+        resetStorage();
         _vec_idx = *idx_ptr;
         _is_via_sd = obj->is_via();
         _is_rect_sd = obj->is_rect();
+        if (_is_via_sd && _is_rect_sd) {
+            return false;
+        }
         _shape_type_sd = obj->get_shape_type();
         _layer_name_sd = obj->get_layer()->get_name();
 
         if (_is_via_sd) {
             // Match DefWrite::write_specialnet_wire_segment_via():
-            // layer + route width + shape + point list + via name.
+            // layer + route width + shape + point list + via name;
+            // keep parser-only STYLE so EDADB restores the complete iDB state.
             _route_width_sd = obj->get_route_width();
+            _style_sd = obj->get_style();
             if (obj->get_via() == nullptr || obj->get_point_list().empty()) {
                 return false;
             }
@@ -77,8 +78,10 @@ public:
             _delta_rect_sd = new idb::IdbRect(*obj->get_delta_rect());
         } else {
             // Match DefWrite::write_specialnet_wire_segment_points():
-            // layer + route width + shape + point list.
+            // layer + route width + shape + point list;
+            // keep parser-only STYLE so EDADB restores the complete iDB state.
             _route_width_sd = obj->get_route_width();
+            _style_sd = obj->get_style();
             if (obj->get_point_list().size() < _POINT_MAX_) {
                 return false;
             }
@@ -93,40 +96,36 @@ public:
     }
 
     bool fromShadow(idb::IdbSpecialWireSegment* obj, uint32_t* idx_ptr = nullptr) {
-        if (obj == nullptr) {
+        if (obj == nullptr || _layer_name_sd.empty() || (_is_via_sd && _is_rect_sd)) {
             return false;
         }
         if (idx_ptr != nullptr) {
             *idx_ptr = static_cast<uint32_t>(_vec_idx);
         }
-        obj->set_route_width(_route_width_sd);
+
+        idb::IdbLayer* layer = idb::edadb_adapter::EdadbIdbHelper::findIdbLayerByName(_layer_name_sd);
+        if (layer == nullptr) {
+            std::cerr << "edadb::Shadow<idb::IdbSpecialWireSegment>::fromShadow failed to find layer: "
+                      << _layer_name_sd << std::endl;
+            return false;
+        }
+        obj->set_layer(layer);
         obj->set_shape_type(_shape_type_sd);
-        obj->set_is_via(_is_via_sd);
-        obj->set_is_rect(_is_rect_sd);
-
-        if (!_layer_name_sd.empty()) {
-            idb::IdbLayer* layer = idb::edadb_adapter::EdadbIdbHelper::findIdbLayerByName(_layer_name_sd);
-            if (layer == nullptr) {
-                std::cerr << "edadb::Shadow<idb::IdbSpecialWireSegment>::fromShadow failed to find layer: "
-                          << _layer_name_sd << std::endl;
-                return false;
-            }
-            obj->set_layer(layer);
-        }
-
-        for (auto point_sd : _point_list_sd) {
-            if (point_sd == nullptr) {
-                return false;
-            }
-            obj->add_point(point_sd->get_x(), point_sd->get_y());
-        }
-
-        if (_delta_rect_sd != nullptr) {
-            obj->set_delta_rect(_delta_rect_sd->get_low_x(), _delta_rect_sd->get_low_y(),
-                                _delta_rect_sd->get_high_x(), _delta_rect_sd->get_high_y());
-        }
 
         if (_is_via_sd) {
+            // Match DefRead::parse_pdn_wire() DEFIPATH_WIDTH/STYLE/POINT/VIA.
+            if (_via_name_sd.empty() || _point_list_sd.empty() || _delta_rect_sd != nullptr) {
+                return false;
+            }
+            obj->set_route_width(_route_width_sd);
+            obj->set_style(_style_sd);
+            obj->set_is_via(true);
+            for (auto point_sd : _point_list_sd) {
+                if (point_sd == nullptr) {
+                    return false;
+                }
+                obj->add_point(point_sd->get_x(), point_sd->get_y());
+            }
             idb::IdbVia* via = idb::edadb_adapter::EdadbIdbHelper::findIdbViaByName(_via_name_sd);
             if (via == nullptr) {
                 std::cerr << "edadb::Shadow<idb::IdbSpecialWireSegment>::fromShadow failed to find via: "
@@ -138,10 +137,51 @@ public:
             if (via_new != nullptr) {
                 via_new->set_coordinate(obj->get_point_start());
             }
+        } else if (_is_rect_sd) {
+            // Match DefRead::parse_pdn_rects(): shape/layer/delta rect only.
+            if (!_via_name_sd.empty() || !_point_list_sd.empty() || _delta_rect_sd == nullptr
+                || _route_width_sd != -1 || _style_sd != -1) {
+                return false;
+            }
+            obj->set_is_rect(true);
+            obj->set_delta_rect(_delta_rect_sd->get_low_x(), _delta_rect_sd->get_low_y(),
+                                _delta_rect_sd->get_high_x(), _delta_rect_sd->get_high_y());
+        } else {
+            // Match DefRead::parse_pdn_wire() DEFIPATH_WIDTH/STYLE/POINT.
+            if (!_via_name_sd.empty() || _delta_rect_sd != nullptr || _point_list_sd.size() < _POINT_MAX_) {
+                return false;
+            }
+            obj->set_route_width(_route_width_sd);
+            obj->set_style(_style_sd);
+            for (auto point_sd : _point_list_sd) {
+                if (point_sd == nullptr) {
+                    return false;
+                }
+                obj->add_point(point_sd->get_x(), point_sd->get_y());
+            }
         }
 
         obj->set_bounding_box();
         return true;
+    }
+
+private:
+    void resetStorage() {
+        _layer_name_sd.clear();
+        _via_name_sd.clear();
+        _route_width_sd = -1;
+        _shape_type_sd = idb::IdbWireShapeType::kNone;
+        _style_sd = -1;
+        _is_via_sd = false;
+        _is_rect_sd = false;
+
+        delete _delta_rect_sd;
+        _delta_rect_sd = nullptr;
+        for (auto& point : _point_list_sd) {
+            delete point;
+            point = nullptr;
+        }
+        _point_list_sd.clear();
     }
 
 public:
@@ -151,6 +191,7 @@ public:
     std::string _via_name_sd;
     int32_t _route_width_sd = -1;
     idb::IdbWireShapeType _shape_type_sd = idb::IdbWireShapeType::kNone;
+    int32_t _style_sd = -1;
     bool _is_via_sd = false;
     bool _is_rect_sd = false;
     idb::IdbRect* _delta_rect_sd = nullptr;
@@ -165,11 +206,7 @@ class Shadow<idb::IdbSpecialWire> {
 public:
     Shadow<idb::IdbSpecialWire>(void) : primary_key(next_primary_key++) {}
     ~Shadow<idb::IdbSpecialWire>() {
-        for (auto& segment : _segment_list_sd) {
-            delete segment;
-            segment = nullptr;
-        }
-        _segment_list_sd.clear();
+        resetStorage();
     }
 
     Shadow<idb::IdbSpecialWire>(const Shadow& other) = delete;
@@ -180,9 +217,15 @@ public:
         if (obj == nullptr || idx_ptr == nullptr) {
             return false;
         }
+
+        resetStorage();
         _vec_idx = *idx_ptr;
         _wire_state_sd = obj->get_wire_state();
-        _shield_name_sd = obj->get_shiled_name();
+        if (_wire_state_sd == idb::IdbWiringStatement::kShield) {
+            // DefRead::parse_pdn_wire()/parse_pdn_rects() retain SHIELD state;
+            // the native writer currently omits it, but EDADB must not lose it.
+            _shield_name_sd = obj->get_shiled_name();
+        }
 
         uint32_t segment_idx = 0;
         for (auto segment : obj->get_segment_list()) {
@@ -204,8 +247,13 @@ public:
         if (idx_ptr != nullptr) {
             *idx_ptr = static_cast<uint32_t>(_vec_idx);
         }
+        if (_wire_state_sd != idb::IdbWiringStatement::kShield && !_shield_name_sd.empty()) {
+            return false;
+        }
         obj->set_wire_state(_wire_state_sd);
-        obj->set_shield_name(_shield_name_sd);
+        if (_wire_state_sd == idb::IdbWiringStatement::kShield) {
+            obj->set_shield_name(_shield_name_sd);
+        }
         obj->init(_segment_list_sd.size());
 
         std::sort(_segment_list_sd.begin(), _segment_list_sd.end(),
@@ -218,6 +266,17 @@ public:
         }
 
         return true;
+    }
+
+private:
+    void resetStorage() {
+        _wire_state_sd = idb::IdbWiringStatement::kNone;
+        _shield_name_sd.clear();
+        for (auto& segment : _segment_list_sd) {
+            delete segment;
+            segment = nullptr;
+        }
+        _segment_list_sd.clear();
     }
 
 public:
@@ -236,11 +295,7 @@ class Shadow<idb::IdbSpecialNet> {
 public:
     Shadow<idb::IdbSpecialNet>(void) = default;
     ~Shadow<idb::IdbSpecialNet>() {
-        for (auto& wire : _wire_list_sd) {
-            delete wire;
-            wire = nullptr;
-        }
-        _wire_list_sd.clear();
+        resetStorage();
     }
 
     Shadow<idb::IdbSpecialNet>(const Shadow& other) = delete;
@@ -249,9 +304,11 @@ public:
 public:
     bool toShadow(idb::IdbSpecialNet* obj, const uint32_t* idx_ptr = nullptr) {
         if (obj == nullptr || obj->get_io_pin_list() == nullptr || obj->get_instance_pin_list() == nullptr
-            || obj->get_wire_list() == nullptr) {
+            || obj->get_wire_list() == nullptr || obj->get_net_name().empty()) {
             return false;
         }
+
+        resetStorage();
         _net_name_sd = obj->get_net_name();
         _original_net_name_sd = obj->get_original_net_name();
         _connect_type_sd = obj->get_connect_type();
@@ -297,7 +354,9 @@ public:
     }
 
     bool fromShadow(idb::IdbSpecialNet* obj, uint32_t* idx_ptr = nullptr) {
-        if (obj == nullptr) {
+        if (obj == nullptr || _net_name_sd.empty()
+            || (!_pin_string_list_sd.empty()
+                && (!_io_pin_name_list_sd.empty() || !_instance_pin_list_sd.empty()))) {
             return false;
         }
         // Match DefRead::parse_pdn(): restore SPECIALNETS header fields.
@@ -365,6 +424,22 @@ public:
     }
 
 private:
+    void resetStorage() {
+        _net_name_sd.clear();
+        _original_net_name_sd.clear();
+        _connect_type_sd = idb::IdbConnectType::kNone;
+        _source_type_sd = idb::IdbInstanceType::kNone;
+        _weight_sd = 0;
+        _pin_string_list_sd.clear();
+        _io_pin_name_list_sd.clear();
+        _instance_pin_list_sd.clear();
+        for (auto& wire : _wire_list_sd) {
+            delete wire;
+            wire = nullptr;
+        }
+        _wire_list_sd.clear();
+    }
+
     void restorePinStringConnection(idb::IdbSpecialNet* obj, const std::string& pin_name_sd) {
         obj->add_pin_string(pin_name_sd);
     }

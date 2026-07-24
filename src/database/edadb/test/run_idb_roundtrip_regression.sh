@@ -70,6 +70,17 @@ assert_contains() {
     echo "PASS: $label contains '$pattern'"
 }
 
+assert_not_contains() {
+    local file="$1"
+    local pattern="$2"
+    local label="$3"
+    if grep -Fq "$pattern" "$file"; then
+        echo "FAIL: $label: unexpected '$pattern' in $file" >&2
+        exit 1
+    fi
+    echo "PASS: $label excludes '$pattern'"
+}
+
 assert_def_equivalent() {
     local expected="$1"
     local actual="$2"
@@ -281,6 +292,48 @@ check_aux_optional_sql() {
         "met1|11000,11000,13000,14000" "$name special net rect segment"
     assert_eq "$(sql_value "$edadb_db" "select _original_net_name_sd || '|' || _source_type_sd || '|' || _weight_sd || '|' || _xtalk_sd || '|' || _fix_bump_sd || '|' || _frequency_sd from iNetSD where _net_name_sd='ctrl\$a_mux_sel[0]';")" \
         "orig_ctrl_net|3|7|11|1|250.0" "$name regular net optional fields"
+}
+
+check_special_net_branch_sql() {
+    local name="$1"
+    local edadb_db="$2"
+    local input_def="$3"
+    local direct_def="$4"
+    local edadb2def_log="$5"
+
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from pragma_table_info('iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD') where name='_style_sd';")" \
+        "1" "$name special segment style column"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) || '|' || min(_style_sd) || '|' || max(_style_sd) from iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD where _style_sd >= 0;")" \
+        "1|7|7" "$name parser-only STYLE state"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) || '|' || group_concat(_shield_name_sd, ',') from iSpecNetSD__wire_list_sd_iSpecWireSD where _wire_state_sd=5;")" \
+        "1|VDD" "$name parser-only SHIELD state"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD s where iSpecNetSD__net_name_sd='VSS' and _is_via_sd=1 and _via_name_sd='via_1600x480' and (select count(*) from iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD__point_list_sd_iCoordSD p where p.iSpecNetSD__net_name_sd=s.iSpecNetSD__net_name_sd and p.iSpecNetSD__wire_list_sd_iSpecWireSD_primary_key=s.iSpecNetSD__wire_list_sd_iSpecWireSD_primary_key and p.iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD_primary_key=s.primary_key)=2;")" \
+        "1" "$name two-point via branch"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_vec_idx || ':' || _x_sd || ',' || _y_sd, ';') from (select p._vec_idx, p._x_sd, p._y_sd from iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD s join iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD__point_list_sd_iCoordSD p on p.iSpecNetSD__net_name_sd=s.iSpecNetSD__net_name_sd and p.iSpecNetSD__wire_list_sd_iSpecWireSD_primary_key=s.iSpecNetSD__wire_list_sd_iSpecWireSD_primary_key and p.iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD_primary_key=s.primary_key where s.iSpecNetSD__net_name_sd='VSS' and s._is_via_sd=0 and s._is_rect_sd=0 and s._layer_name_sd='met1' and s._route_width_sd=480 and (select count(*) from iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD__point_list_sd_iCoordSD points where points.iSpecNetSD__net_name_sd=s.iSpecNetSD__net_name_sd and points.iSpecNetSD__wire_list_sd_iSpecWireSD_primary_key=s.iSpecNetSD__wire_list_sd_iSpecWireSD_primary_key and points.iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD_primary_key=s.primary_key)=3 order by p._vec_idx);")" \
+        "0:15000,15000;1:25000,15000;2:30000,15000" "$name ordered three-point branch"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(__edadb_vec_idx || ':' || value, ',') from (select __edadb_vec_idx, value from iSpecNetSD__pin_string_list_sd___edadb_primitive_vector where iSpecNetSD__net_name_sd='VDD' order by __edadb_vec_idx);")" \
+        "0:VPWR,1:VPB,2:vdd" "$name ordered pin-string connections"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(__edadb_vec_idx || ':' || value, ',') from (select __edadb_vec_idx, value from iSpecNetSD__io_pin_name_list_sd___edadb_primitive_vector where iSpecNetSD__net_name_sd='VSS' order by __edadb_vec_idx);")" \
+        "0:clk,1:req_msg[0]" "$name ordered IO-pin connections"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || ':' || instance_name || ':' || pin_name, ',') from (select _order_sd, instance_name, pin_name from iSpecNetSD__instance_pin_list_sd_iSpecPinRef where iSpecNetSD__net_name_sd='VSS' order by _order_sd);")" \
+        "0:ctrl/_34_:A,1:ctrl/_35_:A" "$name ordered instance-pin connections"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_net_name_sd, ',') from (select _net_name_sd from iSpecNetSD order by rowid);")" \
+        "VSS,VDD" "$name special-net root physical order was perturbed"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(value, ',') from (select value from iSpecNetSD__pin_string_list_sd___edadb_primitive_vector where iSpecNetSD__net_name_sd='VDD' order by rowid);")" \
+        "vdd,VPB,VPWR" "$name pin-string physical order was perturbed"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) > 0 from iSpecNetSD__wire_list_sd_iSpecWireSD a join iSpecNetSD__wire_list_sd_iSpecWireSD b on a.iSpecNetSD__net_name_sd=b.iSpecNetSD__net_name_sd and a.rowid < b.rowid and a._vec_idx > b._vec_idx;")" \
+        "1" "$name special-wire physical order was perturbed"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) > 0 from iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD a join iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD b on a.iSpecNetSD__net_name_sd=b.iSpecNetSD__net_name_sd and a.iSpecNetSD__wire_list_sd_iSpecWireSD_primary_key=b.iSpecNetSD__wire_list_sd_iSpecWireSD_primary_key and a.rowid < b.rowid and a._vec_idx > b._vec_idx;")" \
+        "1" "$name special-segment physical order was perturbed"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) > 0 from iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD__point_list_sd_iCoordSD a join iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD__point_list_sd_iCoordSD b on a.iSpecNetSD__net_name_sd=b.iSpecNetSD__net_name_sd and a.iSpecNetSD__wire_list_sd_iSpecWireSD_primary_key=b.iSpecNetSD__wire_list_sd_iSpecWireSD_primary_key and a.iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD_primary_key=b.iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD_primary_key and a.rowid < b.rowid and a._vec_idx > b._vec_idx;")" \
+        "1" "$name special-point physical order was perturbed"
+    assert_contains "$input_def" "+ STYLE 7" "$name input STYLE token"
+    assert_not_contains "$direct_def" "+ STYLE 7" "$name native writer omits STYLE"
+    assert_contains "$input_def" "+ SHIELD VDD" "$name input SHIELD wire"
+    assert_not_contains "$direct_def" "+ SHIELD VDD" "$name native writer omits SHIELD wire"
+    assert_contains "$input_def" "( 15000 15000 ) ( 25000 * ) ( 30000 * )" "$name input three-point path"
+    assert_not_contains "$direct_def" "( 15000 15000 ) ( 25000 * ) ( 30000 * )" "$name native writer truncates after second point"
+    assert_contains "$edadb2def_log" "styled_segment_count=1 shield_wire_count=1" "$name restored parser-only segment state"
 }
 
 check_routed_sql() {
@@ -571,7 +624,7 @@ generate_aux_optional_fixture() {
                 print "  + ROUTED + RECT met1 ( 11000 11000 ) ( 13000 14000 )"
                 next
             }
-            if (in_vss_special_net && $0 ~ /^;$/) {
+            if (in_vss_special_net && $0 ~ /^[[:space:]]*;[[:space:]]*$/) {
                 in_vss_special_net = 0
             }
             if ($0 ~ /^- ctrl\$a_mux_sel\\\[0\\\]/) {
@@ -611,6 +664,32 @@ generate_aux_optional_fixture() {
                 print "    - VIA via_1600x480 ( 9400 9500 ) ;"
                 print "END FILLS"
             }
+        }
+    ' "$input" >"$output"
+}
+
+generate_special_net_branch_fixture() {
+    local input="$1"
+    local output="$2"
+
+    awk '
+        {
+            if (!style_added && $0 ~ /^[[:space:]]+\+ ROUTED met1 480 \+ SHAPE FOLLOWPIN/) {
+                sub(/\+ SHAPE FOLLOWPIN/, "+ SHAPE FOLLOWPIN + STYLE 7")
+                style_added = 1
+            }
+            if ($0 ~ /^- VSS \( PIN clk \) \( ctrl\/_34_ A \)/) {
+                print "- VSS ( PIN clk ) ( PIN req_msg[0] ) ( ctrl/_34_ A ) ( ctrl/_35_ A ) "
+                in_vss_special_net = 1
+                next
+            }
+            if (in_vss_special_net && $0 ~ /^[[:space:]]*;[[:space:]]*$/) {
+                print "  + ROUTED met2 0 + SHAPE STRIPE ( 10000 10000 ) ( * 12000 ) via_1600x480"
+                print "  + ROUTED met1 480 + SHAPE STRIPE ( 15000 15000 ) ( 25000 * ) ( 30000 * )"
+                print "  + SHIELD VDD met1 480 + SHAPE STRIPE ( 20000 20000 ) ( 30000 * )"
+                in_vss_special_net = 0
+            }
+            print
         }
     ' "$input" >"$output"
 }
@@ -868,6 +947,61 @@ SELECT * FROM special_segments_reversed;
 SQL
 }
 
+perturb_special_net_query_order() {
+    local edadb_db="$1"
+
+    sqlite3 "$edadb_db" <<'SQL'
+PRAGMA foreign_keys = OFF;
+CREATE TEMP TABLE special_points_reversed AS
+SELECT * FROM iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD__point_list_sd_iCoordSD
+ORDER BY iSpecNetSD__net_name_sd, iSpecNetSD__wire_list_sd_iSpecWireSD_primary_key,
+         iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD_primary_key, _vec_idx DESC;
+DELETE FROM iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD__point_list_sd_iCoordSD;
+INSERT INTO iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD__point_list_sd_iCoordSD
+SELECT * FROM special_points_reversed;
+
+CREATE TEMP TABLE special_segments_reversed AS
+SELECT * FROM iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD
+ORDER BY iSpecNetSD__net_name_sd, iSpecNetSD__wire_list_sd_iSpecWireSD_primary_key, _vec_idx DESC;
+DELETE FROM iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD;
+INSERT INTO iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD
+SELECT * FROM special_segments_reversed;
+
+CREATE TEMP TABLE special_wires_reversed AS
+SELECT * FROM iSpecNetSD__wire_list_sd_iSpecWireSD
+ORDER BY iSpecNetSD__net_name_sd, _vec_idx DESC;
+DELETE FROM iSpecNetSD__wire_list_sd_iSpecWireSD;
+INSERT INTO iSpecNetSD__wire_list_sd_iSpecWireSD
+SELECT * FROM special_wires_reversed;
+
+CREATE TEMP TABLE special_pin_strings_reversed AS
+SELECT * FROM iSpecNetSD__pin_string_list_sd___edadb_primitive_vector
+ORDER BY iSpecNetSD__net_name_sd, __edadb_vec_idx DESC;
+DELETE FROM iSpecNetSD__pin_string_list_sd___edadb_primitive_vector;
+INSERT INTO iSpecNetSD__pin_string_list_sd___edadb_primitive_vector
+SELECT * FROM special_pin_strings_reversed;
+
+CREATE TEMP TABLE special_io_pins_reversed AS
+SELECT * FROM iSpecNetSD__io_pin_name_list_sd___edadb_primitive_vector
+ORDER BY iSpecNetSD__net_name_sd, __edadb_vec_idx DESC;
+DELETE FROM iSpecNetSD__io_pin_name_list_sd___edadb_primitive_vector;
+INSERT INTO iSpecNetSD__io_pin_name_list_sd___edadb_primitive_vector
+SELECT * FROM special_io_pins_reversed;
+
+CREATE TEMP TABLE special_instance_pins_reversed AS
+SELECT * FROM iSpecNetSD__instance_pin_list_sd_iSpecPinRef
+ORDER BY iSpecNetSD__net_name_sd, _order_sd DESC;
+DELETE FROM iSpecNetSD__instance_pin_list_sd_iSpecPinRef;
+INSERT INTO iSpecNetSD__instance_pin_list_sd_iSpecPinRef
+SELECT * FROM special_instance_pins_reversed;
+
+CREATE TEMP TABLE special_nets_reversed AS
+SELECT * FROM iSpecNetSD ORDER BY rowid DESC;
+DELETE FROM iSpecNetSD;
+INSERT INTO iSpecNetSD SELECT * FROM special_nets_reversed;
+SQL
+}
+
 perturb_net_child_query_order() {
     local edadb_db="$1"
 
@@ -946,6 +1080,9 @@ run_case() {
     fi
     if [[ "$check_mode" == "aux" || "$check_mode" == "group_branches" ]]; then
         perturb_aux_child_query_order "$edadb_db"
+    fi
+    if [[ "$check_mode" == "special_net_branches" ]]; then
+        perturb_special_net_query_order "$edadb_db"
     fi
     if [[ "$check_mode" == "grid_branches" ]]; then
         perturb_grid_query_order "$edadb_db"
@@ -1042,6 +1179,9 @@ run_case() {
             run_ieda "$SCRIPT_DIR/tcl/direct_def_roundtrip.tcl" "$case_dir/reparse.log"
             assert_def_equivalent "$edadb_def" "$reparsed_def" "$case_dir/reparse.diff"
             ;;
+        special_net_branches)
+            check_special_net_branch_sql "$name" "$edadb_db" "$input_def" "$direct_def" "$case_dir/edadb2def.log"
+            ;;
         design_fields)
             check_design_sql "$name" "$edadb_db" "gcd_design|5.7|2000|{|}"
             ;;
@@ -1117,6 +1257,7 @@ run_cases_parallel() {
         "pin_writer|$OUT_DIR/fixtures/pin_writer.def|pin_writer"
         "pin_branches|$OUT_DIR/fixtures/pin_branches.def|pin_branches"
         "group_branches|$OUT_DIR/fixtures/group_branches.def|group_branches"
+        "special_net_branches|$OUT_DIR/fixtures/special_net_branches.def|special_net_branches"
         "grid_branches|$OUT_DIR/fixtures/grid_branches.def|grid_branches"
         "via_branches|$OUT_DIR/fixtures/via_branches.def|via_branches"
         "instance_branches|$OUT_DIR/fixtures/instance_branches.def|instance_branches"
@@ -1190,6 +1331,7 @@ main() {
     local pin_writer_def="$OUT_DIR/fixtures/pin_writer.def"
     local pin_branches_def="$OUT_DIR/fixtures/pin_branches.def"
     local group_branches_def="$OUT_DIR/fixtures/group_branches.def"
+    local special_net_branches_def="$OUT_DIR/fixtures/special_net_branches.def"
     local design_fields_def="$OUT_DIR/fixtures/design_fields.def"
     local design_fallback_def="$OUT_DIR/fixtures/design_fallback.def"
     local die_polygon_def="$OUT_DIR/fixtures/die_polygon.def"
@@ -1202,6 +1344,7 @@ main() {
     generate_pin_writer_fixture "$aux_def" "$pin_writer_def"
     generate_pin_branches_fixture "$aux_def" "$pin_branches_def"
     generate_group_branches_fixture "$aux_def" "$group_branches_def"
+    generate_special_net_branch_fixture "$aux_def" "$special_net_branches_def"
     generate_design_fields_fixture "$BASE_DEF" "$design_fields_def"
     generate_design_fallback_fixture "$BASE_DEF" "$design_fallback_def"
     generate_die_polygon_fixture "$BASE_DEF" "$die_polygon_def"
@@ -1218,6 +1361,7 @@ main() {
     echo "generated fixture: $pin_writer_def"
     echo "generated fixture: $pin_branches_def"
     echo "generated fixture: $group_branches_def"
+    echo "generated fixture: $special_net_branches_def"
     echo "generated fixture: $design_fields_def"
     echo "generated fixture: $design_fallback_def"
     echo "generated fixture: $die_polygon_def"
