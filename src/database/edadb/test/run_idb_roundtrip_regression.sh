@@ -342,18 +342,29 @@ check_routed_sql() {
     local def2edadb_log="$3"
     local edadb2def_log="$4"
     local expected_virtual_count="${5:-0}"
+    local expected_net_count="${6:-677}"
+    local expected_point_count="${7:-14256}"
+    local expected_via_count="${8:-3716}"
+    local expected_order_prefix="${9:-0:ctrl\$a_mux_sel[0],1:ctrl\$a_mux_sel[1],2:ctrl\$a_reg_en,3:ctrl\$b_mux_sel,4:ctrl\$b_reg_en}"
 
     assert_eq "$(sql_value "$edadb_db" "select count(*) from iGCellGrid;")" "6" "$name gcell grid count"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_direction || ':' || _start || ':' || _num || ':' || _space, ';') from (select * from iGCellGrid order by _direction, _start, _num, _space);")" \
         "1:0:2:3600;1:3600:43:3360;1:144720:2:5240;2:0:2:3600;2:3600:43:3360;2:144720:2:5408" "$name gcell grid fields"
-    assert_eq "$(sql_value "$edadb_db" "select count(*) from iNetSD;")" "677" "$name net count"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from iNetSD;")" "$expected_net_count" "$name net count"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || ':' || _net_name_sd, ',') from (select _order_sd, _net_name_sd from iNetSD order by _order_sd limit 5);")" \
-        "0:ctrl\$a_mux_sel[0],1:ctrl\$a_mux_sel[1],2:ctrl\$a_reg_en,3:ctrl\$b_mux_sel,4:ctrl\$b_reg_en" "$name routed net order prefix"
+        "$expected_order_prefix" "$name routed net order prefix"
+    assert_eq "$(sql_value "$edadb_db" "select _order_sd from iNetSD order by rowid limit 1;")" \
+        "$((expected_net_count - 1))" "$name net root physical order was perturbed"
     assert_eq "$(sql_value "$edadb_db" "select count(*) from iNetSD__wire_list_sd_iRegWireSD;")" "677" "$name regular wire count"
     assert_eq "$(sql_value "$edadb_db" "select count(*) from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD;")" "8997" "$name regular wire segment count"
-    assert_eq "$(sql_value "$edadb_db" "select count(*) from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__point_list_sd_iCoordSD;")" "14256" "$name regular wire point count"
-    assert_eq "$(sql_value "$edadb_db" "select (select count(*) from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD where _is_via_sd=1) || '|' || (select count(*) from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD where _is_rect_sd=1) || '|' || (select count(*) from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD where _is_second_point_virtual_sd=1) || '|' || (select count(*) from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD where _via_name_sd is not null and _via_name_sd != '');")" \
-        "3716|22|${expected_virtual_count}|3716" "$name regular wire segment types"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__point_list_sd_iCoordSD;")" \
+        "$expected_point_count" "$name regular wire point count"
+    assert_eq "$(sql_value "$edadb_db" "select (select count(*) from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD where _is_via_sd=1) || '|' || (select count(*) from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD where _is_rect_sd=1) || '|' || (select count(*) from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__virtual_point_index_list_sd___edadb_primitive_vector) || '|' || (select count(*) from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__via_ref_list_sd_iRegViaRef);")" \
+        "3716|22|${expected_virtual_count}|${expected_via_count}" "$name regular wire segment types"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from pragma_table_info('iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD') where name in ('_via_name_sd','_is_second_point_virtual_sd');")" \
+        "0" "$name old reduced segment columns removed"
+    assert_eq "$(sql_value "$edadb_db" "select sum(pk) from pragma_table_info('iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__via_ref_list_sd_iRegViaRef');")" \
+        "0" "$name via-ref order is not a primary key"
     assert_eq "$(sql_value "$edadb_db" "select min(_order_sd) || '|' || max(_order_sd) || '|' || count(*) from iNetSD__instance_pin_list_sd_iNetPinRef where iNetSD__net_name_sd='clk_0';")" \
         "0|18|19" "$name clk_0 ordered pin refs"
     assert_eq "$(sql_value "$edadb_db" "select sum(pk) from pragma_table_info('iNetSD__instance_pin_list_sd_iNetPinRef');")" \
@@ -368,9 +379,11 @@ check_routed_sql() {
         "1" "$name regular-segment vector index column"
     assert_eq "$(sql_value "$edadb_db" "select count(*) > 0 from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD a join iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD b on a.iNetSD__net_name_sd=b.iNetSD__net_name_sd and a.iNetSD__wire_list_sd_iRegWireSD_primary_key=b.iNetSD__wire_list_sd_iRegWireSD_primary_key and a.rowid < b.rowid and a._vec_idx > b._vec_idx;")" \
         "1" "$name regular-segment physical order was perturbed"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) > 0 from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__point_list_sd_iCoordSD a join iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__point_list_sd_iCoordSD b on a.iNetSD__net_name_sd=b.iNetSD__net_name_sd and a.iNetSD__wire_list_sd_iRegWireSD_primary_key=b.iNetSD__wire_list_sd_iRegWireSD_primary_key and a.iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD_primary_key=b.iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD_primary_key and a.rowid < b.rowid and a._vec_idx > b._vec_idx;")" \
+        "1" "$name regular-point physical order was perturbed"
 
-    assert_contains "$def2edadb_log" "[EDADB-IDB] writeIdbNet insert net_count=677" "$name write routed net log"
-    assert_contains "$edadb2def_log" "[EDADB-IDB] readIdbNet restored net_count=677" "$name read routed net log"
+    assert_contains "$def2edadb_log" "[EDADB-IDB] writeIdbNet insert net_count=${expected_net_count}" "$name write routed net log"
+    assert_contains "$edadb2def_log" "[EDADB-IDB] readIdbNet restored net_count=${expected_net_count}" "$name read routed net log"
 }
 
 check_grid_branch_sql() {
@@ -452,14 +465,36 @@ check_net_branch_sql() {
     local edadb_db="$2"
     local def2edadb_log="$3"
     local edadb2def_log="$4"
+    local input_def="$5"
+    local direct_def="$6"
 
-    check_routed_sql "$name" "$edadb_db" "$def2edadb_log" "$edadb2def_log" "1"
+    check_routed_sql "$name" "$edadb_db" "$def2edadb_log" "$edadb2def_log" \
+        "2" "678" "14257" "3717" \
+        "0:special_signal,1:ctrl\$a_mux_sel[0],2:ctrl\$a_mux_sel[1],3:ctrl\$a_reg_en,4:ctrl\$b_mux_sel"
     assert_eq "$(sql_value "$edadb_db" "select _wire_state_sd from iNetSD__wire_list_sd_iRegWireSD where iNetSD__net_name_sd='ctrl\$a_mux_sel[0]' order by primary_key limit 1;")" \
         "2" "$name fixed wire state"
     assert_eq "$(sql_value "$edadb_db" "select _wire_state_sd from iNetSD__wire_list_sd_iRegWireSD where iNetSD__net_name_sd='ctrl\$a_mux_sel[1]' order by primary_key limit 1;")" \
         "1" "$name cover wire state"
     assert_eq "$(sql_value "$edadb_db" "select _wire_state_sd from iNetSD__wire_list_sd_iRegWireSD where iNetSD__net_name_sd='ctrl\$a_reg_en' order by primary_key limit 1;")" \
         "4" "$name no-shield wire state"
+    assert_eq "$(sql_value "$edadb_db" "select _connect_type_sd || '|' || _order_sd from iNetSD where _net_name_sd='special_signal';")" \
+        "1|0" "$name SPECIALNETS SIGNAL dispatched to IdbNet"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || ':' || _via_name_sd || '@' || _point_index_sd, ',') from (select v._order_sd, v._via_name_sd, v._point_index_sd from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD s join iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__via_ref_list_sd_iRegViaRef v on v.iNetSD__net_name_sd=s.iNetSD__net_name_sd and v.iNetSD__wire_list_sd_iRegWireSD_primary_key=s.iNetSD__wire_list_sd_iRegWireSD_primary_key and v.iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD_primary_key=s.primary_key where s.iNetSD__net_name_sd='ctrl\$a_mux_sel[0]' and s._vec_idx=1 order by v._order_sd);")" \
+        "0:L1M1_PR@0,1:M1M2_PR@0" "$name ordered multi-via references"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(v._order_sd, ',') from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD s join iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__via_ref_list_sd_iRegViaRef v on v.iNetSD__net_name_sd=s.iNetSD__net_name_sd and v.iNetSD__wire_list_sd_iRegWireSD_primary_key=s.iNetSD__wire_list_sd_iRegWireSD_primary_key and v.iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD_primary_key=s.primary_key where s.iNetSD__net_name_sd='ctrl\$a_mux_sel[0]' and s._vec_idx=1 order by v.rowid;")" \
+        "1,0" "$name multi-via physical order was perturbed"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(value, ',') from (select value from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__virtual_point_index_list_sd___edadb_primitive_vector where iNetSD__net_name_sd='ctrl\$a_mux_sel[0]' order by value);")" \
+        "1,2" "$name all virtual-point indices"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(value, ',') from (select value from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__virtual_point_index_list_sd___edadb_primitive_vector where iNetSD__net_name_sd='ctrl\$a_mux_sel[0]' order by rowid);")" \
+        "2,1" "$name virtual-point physical order was perturbed"
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_vec_idx || ':' || _x_sd || ',' || _y_sd, ';') from (select p._vec_idx, p._x_sd, p._y_sd from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD s join iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__point_list_sd_iCoordSD p on p.iNetSD__net_name_sd=s.iNetSD__net_name_sd and p.iNetSD__wire_list_sd_iRegWireSD_primary_key=s.iNetSD__wire_list_sd_iRegWireSD_primary_key and p.iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD_primary_key=s.primary_key where s.iNetSD__net_name_sd='ctrl\$a_mux_sel[0]' and s._vec_idx=0 order by p._vec_idx);")" \
+        "0:67320,85535;1:68160,85535;2:69000,85535" "$name complete three-point storage view"
+    assert_contains "$input_def" "VIRTUAL ( 68160 85535 ) VIRTUAL ( 69000 85535 )" "$name multi-VIRTUAL input"
+    assert_not_contains "$direct_def" "VIRTUAL ( 69000 85535 )" "$name native writer omits third point"
+    assert_contains "$input_def" "L1M1_PR M1M2_PR" "$name multi-Via input"
+    assert_not_contains "$direct_def" "L1M1_PR M1M2_PR" "$name native writer emits first Via only"
+    assert_contains "$edadb2def_log" "via_count=3717 virtual_point_count=2 multi_via_segment_count=1" \
+        "$name restored parser-only regular-wire state"
 }
 
 check_design_sql() {
@@ -698,6 +733,17 @@ generate_net_branch_fixture() {
     local input="$1"
     local output="$2"
     awk '
+        /^SPECIALNETS [0-9]+ ;$/ {
+            print "SPECIALNETS " ($2 + 1) " ;"
+            in_special_nets = 1
+            next
+        }
+        in_special_nets && /^END SPECIALNETS$/ {
+            print "- special_signal ( PIN clk )"
+            print "  + USE SIGNAL"
+            print " ;"
+            in_special_nets = 0
+        }
         /^NETS / {
             in_nets = 1
         }
@@ -707,7 +753,9 @@ generate_net_branch_fixture() {
         in_nets && /^  \+ ROUTED/ {
             ++wire_index
             if (wire_index == 1) {
-                sub(/\+ ROUTED[[:space:]]+/, "+ FIXED ")
+                print "  + FIXED  met1 ( 67320 85535 ) VIRTUAL ( 68160 85535 ) VIRTUAL ( 69000 85535 )"
+                virtual_done = 1
+                next
             } else if (wire_index == 2) {
                 sub(/\+ ROUTED[[:space:]]+/, "+ COVER ")
             } else if (wire_index == 3) {
@@ -716,6 +764,11 @@ generate_net_branch_fixture() {
                 sub(/\)[[:space:]]+\(/, ") VIRTUAL (")
                 virtual_done = 1
             }
+        }
+        in_nets && !multi_via_done && /^    NEW  met1 \( 67320 85535 \) L1M1_PR$/ {
+            print "    NEW  met1 ( 67320 85535 ) L1M1_PR M1M2_PR"
+            multi_via_done = 1
+            next
         }
         { print }
     ' "$input" >"$output"
@@ -1007,6 +1060,30 @@ perturb_net_child_query_order() {
 
     sqlite3 "$edadb_db" <<'SQL'
 PRAGMA foreign_keys = OFF;
+CREATE TEMP TABLE regular_points_reversed AS
+SELECT * FROM iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__point_list_sd_iCoordSD
+ORDER BY iNetSD__net_name_sd, iNetSD__wire_list_sd_iRegWireSD_primary_key,
+         iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD_primary_key, _vec_idx DESC;
+DELETE FROM iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__point_list_sd_iCoordSD;
+INSERT INTO iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__point_list_sd_iCoordSD
+SELECT * FROM regular_points_reversed;
+
+CREATE TEMP TABLE regular_via_refs_reversed AS
+SELECT * FROM iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__via_ref_list_sd_iRegViaRef
+ORDER BY iNetSD__net_name_sd, iNetSD__wire_list_sd_iRegWireSD_primary_key,
+         iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD_primary_key, _order_sd DESC;
+DELETE FROM iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__via_ref_list_sd_iRegViaRef;
+INSERT INTO iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__via_ref_list_sd_iRegViaRef
+SELECT * FROM regular_via_refs_reversed;
+
+CREATE TEMP TABLE regular_virtual_points_reversed AS
+SELECT * FROM iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__virtual_point_index_list_sd___edadb_primitive_vector
+ORDER BY iNetSD__net_name_sd, iNetSD__wire_list_sd_iRegWireSD_primary_key,
+         iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD_primary_key, __edadb_vec_idx DESC;
+DELETE FROM iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__virtual_point_index_list_sd___edadb_primitive_vector;
+INSERT INTO iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__virtual_point_index_list_sd___edadb_primitive_vector
+SELECT * FROM regular_virtual_points_reversed;
+
 CREATE TEMP TABLE regular_wires_reversed AS
 SELECT * FROM iNetSD__wire_list_sd_iRegWireSD
 ORDER BY iNetSD__net_name_sd, _vec_idx DESC;
@@ -1020,6 +1097,25 @@ ORDER BY iNetSD__net_name_sd, iNetSD__wire_list_sd_iRegWireSD_primary_key, _vec_
 DELETE FROM iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD;
 INSERT INTO iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD
 SELECT * FROM regular_segments_reversed;
+
+CREATE TEMP TABLE regular_io_pins_reversed AS
+SELECT * FROM iNetSD__io_pin_name_list_sd___edadb_primitive_vector
+ORDER BY iNetSD__net_name_sd, __edadb_vec_idx DESC;
+DELETE FROM iNetSD__io_pin_name_list_sd___edadb_primitive_vector;
+INSERT INTO iNetSD__io_pin_name_list_sd___edadb_primitive_vector
+SELECT * FROM regular_io_pins_reversed;
+
+CREATE TEMP TABLE regular_instance_pins_reversed AS
+SELECT * FROM iNetSD__instance_pin_list_sd_iNetPinRef
+ORDER BY iNetSD__net_name_sd, _order_sd DESC;
+DELETE FROM iNetSD__instance_pin_list_sd_iNetPinRef;
+INSERT INTO iNetSD__instance_pin_list_sd_iNetPinRef
+SELECT * FROM regular_instance_pins_reversed;
+
+CREATE TEMP TABLE regular_nets_reversed AS
+SELECT * FROM iNetSD ORDER BY _order_sd DESC;
+DELETE FROM iNetSD;
+INSERT INTO iNetSD SELECT * FROM regular_nets_reversed;
 SQL
 }
 
@@ -1129,7 +1225,8 @@ run_case() {
             check_instance_branch_sql "$name" "$edadb_db" "$case_dir/def2edadb.log" "$case_dir/edadb2def.log"
             ;;
         net_branches)
-            check_net_branch_sql "$name" "$edadb_db" "$case_dir/def2edadb.log" "$case_dir/edadb2def.log"
+            check_net_branch_sql "$name" "$edadb_db" "$case_dir/def2edadb.log" "$case_dir/edadb2def.log" \
+                "$input_def" "$direct_def"
             ;;
         pin_derived)
             check_default_sql "$name" "$edadb_db" "$case_dir/def2edadb.log" "$case_dir/edadb2def.log"

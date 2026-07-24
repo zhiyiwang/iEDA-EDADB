@@ -38,7 +38,7 @@ The script runs independent cases with detailed DEF-diff, SQLite, and selected l
 - `group_branches`: replaces the Group member list with a regex plus a duplicate exact member, then checks parser expansion/deduplication, primitive-vector order recovery, and EDADB output reparsing.
 - `special_net_branches`: adds explicit IO/instance connections, STYLE, SHIELD, two-point Via, and three-point route branches; checks complete DB/read-state restoration and native-writer canonical output.
 - `routed_irt`: sky130_gcd `iRT_result.def`, covering non-empty regular NETS routed wires, segments, point rows, and ordered pin refs.
-- `net_branches`: generated from `iRT_result.def`, covering legal regular-wire states `FIXED`, `COVER`, and `NOSHIELD`, plus a `VIRTUAL` second point while retaining the full routed-net fixture.
+- `net_branches`: generated from `iRT_result.def`, covering legal regular-wire states `FIXED`, `COVER`, and `NOSHIELD`, `SPECIALNETS USE SIGNAL` dispatch into `IdbNet`, multiple Via tokens, and multiple `VIRTUAL` points while retaining the full routed-net fixture.
 
 For each case the script runs:
 
@@ -70,7 +70,7 @@ For `routed_irt`, it also checks SQLite content for routed regular-net tables:
 - `iNetSD__wire_list_sd_iRegWireSD = 677`;
 - `iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD = 8997`;
 - `iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__point_list_sd_iCoordSD = 14256`.
-- routed segment type counters cover via segments, rect segments, virtual second points, and via-name rows;
+- routed segment type counters cover via segments, rect segments, virtual-point indices, and ordered Via-reference rows;
 - `clk_0` ordered instance-pin refs preserve `_order_sd = 0..18`;
 - largest routed segment nets remain `clk_0`, `clk_1`, and `dpath/a_mux/_066_`;
 - write/read logs report `net_count=677`.
@@ -78,7 +78,9 @@ For `routed_irt`, it also checks SQLite content for routed regular-net tables:
 For `net_branches`, it repeats all `routed_irt` checks and additionally verifies:
 
 - `FIXED`, `COVER`, and `NOSHIELD` enum values in `iRegWireSD`;
-- one `_is_second_point_virtual_sd` segment;
+- complete parser state for multiple Via tokens and multiple `VIRTUAL` points in one segment;
+- physical DB order perturbation for Net roots, pin references, wires, segments, points, Via references, and virtual-point indices;
+- native-writer canonicalization that emits only the first Via and its supported point subset;
 - raw direct-DEF vs EDADB-DEF equality for the routed and branch fixtures.
 
 Regular `+ SHIELD <name>` is not generated: the current native writer has a `kShield` branch, but the native DEF parser rejects that regular-NETS syntax. This remains an original writer/parser limitation rather than a supported adapter roundtrip case.

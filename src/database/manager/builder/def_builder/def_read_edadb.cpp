@@ -959,8 +959,13 @@ bool DefReadEdadb::readIdbNet(void) {
         std::cerr << "DefReadEdadb::readIdbNet failed to prepare ordered query!" << std::endl;
         return false;
     }
+#if EDADB_OUTPUT_DEBUG
     int32_t net_count = 0;
     int32_t segment_count = 0;
+    int32_t via_count = 0;
+    int32_t virtual_point_count = 0;
+    int32_t multi_via_segment_count = 0;
+#endif
     while (true) {
         auto* net_sd = new edadb::Shadow<idb::IdbNet>();
         const int read_count = edadb::readNext<edadb::Shadow<idb::IdbNet>>(net_reader, net_sd);
@@ -988,14 +993,37 @@ bool DefReadEdadb::readIdbNet(void) {
             net_list->reset();
             return false;
         }
+#if EDADB_OUTPUT_DEBUG
         segment_count += net_sd->getSegmentCount();
+        for (IdbRegularWire* wire : net->get_wire_list()->get_wire_list()) {
+            for (IdbRegularWireSegment* segment : wire->get_segment_list()) {
+                std::vector<IdbVia*> via_list = segment->get_via_list();
+                via_count += via_list.size();
+                if (via_list.size() > 1) {
+                    ++multi_via_segment_count;
+                }
+                for (IdbCoordinate<int32_t>* point : segment->get_point_list()) {
+                    if (segment->is_virtual(point)) {
+                        ++virtual_point_count;
+                    }
+                }
+            }
+        }
+#endif
 
         delete net_sd;
+#if EDADB_OUTPUT_DEBUG
         ++net_count;
+#endif
     }
 
+#if EDADB_OUTPUT_DEBUG
     EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] readIdbNet restored net_count="
-              << net_count << " segment_count=" << segment_count << std::endl;
+              << net_count << " segment_count=" << segment_count
+              << " via_count=" << via_count
+              << " virtual_point_count=" << virtual_point_count
+              << " multi_via_segment_count=" << multi_via_segment_count << std::endl;
+#endif
     return true;
 } // readIdbNet
 

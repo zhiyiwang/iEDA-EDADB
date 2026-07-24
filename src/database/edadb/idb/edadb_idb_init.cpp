@@ -30,6 +30,7 @@ void initPrimKeys(void) {
     edadb::Cpp2SqlTypeTrait<edadb::Shadow<idb::IdbRouteHalo>>::hasPrimKey = false;
     edadb::Cpp2SqlTypeTrait<idb::edadb_adapter::SpecialNetPinRef>::hasPrimKey = false;
     edadb::Cpp2SqlTypeTrait<idb::edadb_adapter::NetPinRef>::hasPrimKey = false;
+    edadb::Cpp2SqlTypeTrait<idb::edadb_adapter::RegularWireViaRef>::hasPrimKey = false;
 } // initPrimKeys
 
 
