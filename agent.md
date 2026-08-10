@@ -269,11 +269,13 @@ Current uncovered or weakly covered areas:
   pointer-ordered consumer views. A semantic field/order difference fails the adapter gate;
   an equal value multiset with different pointer iteration is a native determinism review.
   Do not hide either case by globally sorting the complete snapshot.
-- 2026-08-11 PicoRV32A stage status: iPL and stable-profile iCTS pass strict native/EDADB
-  validation; the isolated iRT semantic input gate passes using the legal iPL output.
-  Native iTO DRV is blocked before EDADB attribution because repeated runs abort on
-  `trace_data[5]` missing from `fanout_net_56`'s RC tree after an upstream duplicate net-alias
-  representation. Do not patch the adapter or suppress the RC-tree invariant.
+- 2026-08-11 PicoRV32A stage status: iPL, stable-profile iCTS, and iTO DRV pass strict
+  native/EDADB validation; the isolated iRT semantic input gate also passes. The prior native
+  iTO failure was proven to be a Verilog builder bug: assign processing left one IO pin in two
+  root-net containers and the writer reversed output-port assignments. The fix centralizes
+  single-owner IO-pin rebinding and emits `assign output_port = net`; the minimal alias fixture,
+  full object regression, refreshed Pico chain, three native iTO controls, and one EDADB iTO
+  control all pass.
 - Stage-input preparation must pass every output path explicitly and assert that each expected
   DEF is non-empty and no save-failure message appears. A zero iEDA exit status alone does not
   prove that a Tcl stage produced its output.

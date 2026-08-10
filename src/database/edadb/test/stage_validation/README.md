@@ -76,6 +76,15 @@ first-principles iRT input test:
 bash src/database/edadb/test/stage_validation/run_generated_via_fixture.sh
 ```
 
+The minimal Verilog alias fixture checks both sides of IO-port connectivity:
+
+```bash
+bash src/database/edadb/test/stage_validation/test_verilog_alias_roundtrip.sh
+```
+
+It requires input aliases to be emitted as `assign net = input_port`, output aliases as
+`assign output_port = net`, and every IO pin to occur in exactly one DEF root-net membership.
+
 Strict mode is the current regression and requires native/EDADB equality. Set
 `EXPECT_KNOWN_DEFECT=1` only with a pre-fix binary to reproduce the historical `27 -> 65`
 signature; that mode must fail for the fixed implementation.
@@ -139,7 +148,8 @@ fixed-structure equality plus native and EDADB samples for total/per-layer wire 
 segment, via, patch, and final DRC-violation counts. Native observed min/max values are descriptive
 evidence only; three samples are not promoted into an arbitrary acceptance tolerance.
 
-PicoRV32A currently passes strict iPL, stable-profile iCTS, and the isolated iRT semantic input
-gate. Native iTO DRV aborts reproducibly because `trace_data[5]` is absent from the RC tree for
-`fanout_net_56`; the native/EDADB iTO pre-tool gate passes first. The detailed duplicate net-alias
-evidence and why no speculative fix is accepted are recorded in `../../docs/stage-validation/README.md`.
+PicoRV32A currently passes strict iPL, stable-profile iCTS, iTO DRV, and the isolated iRT
+semantic input gate. The earlier iTO failure was reduced to native Verilog reader/writer alias
+bugs, fixed with single-root-net IO-pin rebinding and direction-correct output assignments, then
+validated by the minimal fixture and the full Pico stage gate. Detailed evidence is recorded in
+`../../docs/stage-validation/README.md`.

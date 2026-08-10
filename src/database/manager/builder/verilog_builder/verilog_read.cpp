@@ -414,8 +414,27 @@ int32_t RustVerilogRead::build_assign()
   // record the merge nets.
   std::map<std::string, IdbNet*> remove_to_merge_nets;
 
+  auto connect_io_pin = [](IdbPin* io_pin, IdbNet* idb_net) {
+    if (io_pin == nullptr || idb_net == nullptr) {
+      return;
+    }
+
+    IdbNet* old_net = io_pin->get_net();
+    if (old_net != nullptr && old_net != idb_net) {
+      old_net->remove_pin(io_pin);
+    }
+
+    auto& io_pin_list = idb_net->get_io_pins()->get_pin_list();
+    if (std::find(io_pin_list.begin(), io_pin_list.end(), io_pin) == io_pin_list.end()) {
+      idb_net->add_io_pin(io_pin);
+    }
+    io_pin->set_net(idb_net);
+    io_pin->set_net_name(idb_net->get_net_name());
+  };
+
   auto process_one_to_one_net
-      = [idb_design, idb_io_pin_list, idb_net_list, &remove_to_merge_nets](std::string left_net_name, std::string right_net_name) {
+      = [idb_design, idb_io_pin_list, idb_net_list, &remove_to_merge_nets, &connect_io_pin](std::string left_net_name,
+                                                                                        std::string right_net_name) {
           left_net_name = ieda::Str::trimmed(left_net_name.c_str());
           right_net_name = ieda::Str::trimmed(right_net_name.c_str());
 
@@ -456,10 +475,7 @@ int32_t RustVerilogRead::build_assign()
             }
 
             for (auto* left_io_pin : left_io_pin_list) {
-              the_right_idb_net->add_io_pin(left_io_pin);
-              the_left_idb_net->remove_pin(left_io_pin);
-              left_io_pin->set_net(the_right_idb_net);
-              left_io_pin->set_net_name(right_net_name);
+              connect_io_pin(left_io_pin, the_right_idb_net);
             }
 
             assert(the_left_idb_net != the_right_idb_net);
@@ -476,18 +492,14 @@ int32_t RustVerilogRead::build_assign()
           } else if (the_left_idb_net && !the_left_io_pin) {
             // assign net = input_port;
             if (the_right_io_pin && the_right_io_pin->is_io_pin()) {
-              the_left_idb_net->add_io_pin(the_right_io_pin);
-              the_right_io_pin->set_net(the_left_idb_net);
-              the_right_io_pin->set_net_name(the_left_idb_net->get_net_name());
+              connect_io_pin(the_right_io_pin, the_left_idb_net);
             } else {
               std::cout << "assign " << left_net_name << " = " << right_net_name << " is not processed." << "\n";
             }
           } else if (the_right_idb_net && !the_right_io_pin) {
             // assign output_port = net;
             if (the_left_io_pin->is_io_pin()) {
-              the_right_idb_net->add_io_pin(the_left_io_pin);
-              the_left_io_pin->set_net(the_right_idb_net);
-              the_left_io_pin->set_net_name(the_right_idb_net->get_net_name());
+              connect_io_pin(the_left_io_pin, the_right_idb_net);
             } else {
               std::cout << "assign " << left_net_name << " = " << right_net_name << " is not processed." << "\n";
             }
@@ -497,14 +509,10 @@ int32_t RustVerilogRead::build_assign()
             idb_net->set_net_name(right_net_name.c_str());
             idb_net->set_connect_type(IdbConnectType::kSignal);
             if (the_left_io_pin->is_io_pin()) {
-              idb_net->add_io_pin(the_left_io_pin);
-              the_left_io_pin->set_net(idb_net);
-              the_left_io_pin->set_net_name(idb_net->get_net_name());
+              connect_io_pin(the_left_io_pin, idb_net);
             }
             if (the_right_io_pin->is_io_pin()) {
-              idb_net->add_io_pin(the_right_io_pin);
-              the_right_io_pin->set_net(idb_net);
-              the_right_io_pin->set_net_name(idb_net->get_net_name());
+              connect_io_pin(the_right_io_pin, idb_net);
             }
             idb_net_list->add_net(idb_net);
           } else if (!the_left_idb_net && !the_right_idb_net && !the_right_io_pin) {
@@ -513,17 +521,18 @@ int32_t RustVerilogRead::build_assign()
             idb_net->set_net_name(left_net_name.c_str());
             idb_net->set_connect_type(IdbConnectType::kSignal);
             if (the_left_io_pin && the_left_io_pin->is_io_pin()) {
-              idb_net->add_io_pin(the_left_io_pin);
-              the_left_io_pin->set_net(idb_net);
-              the_left_io_pin->set_net_name(idb_net->get_net_name());
+              connect_io_pin(the_left_io_pin, idb_net);
             } else {
               std::cout << "assign " << left_net_name << " = " << right_net_name << " is not processed." << "\n";
             }
           } else if (the_left_idb_net && the_right_idb_net && the_left_io_pin && the_right_io_pin) {
-            // assign output_port = output_port
-            the_left_idb_net->add_io_pin(the_right_io_pin);
-            the_right_io_pin->set_net(the_left_idb_net);
-            the_right_io_pin->set_net_name(the_left_idb_net->get_net_name());
+            if (the_left_io_pin->is_primary_output() && the_right_io_pin->is_primary_output()) {
+              // assign output_port = output_port
+              connect_io_pin(the_left_io_pin, the_right_idb_net);
+            } else {
+              // assign output_port = input_port
+              connect_io_pin(the_right_io_pin, the_left_idb_net);
+            }
 
           } else {
             std::cout << "assign " << left_net_name << " = " << right_net_name << " is not processed." << "\n";

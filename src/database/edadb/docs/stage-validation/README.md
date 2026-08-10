@@ -132,33 +132,36 @@ Before changing production code, the validation uses the grilling workflow:
 | Input preparation through iPL | Pass | iFP, iNO, and iPL produce non-empty isolated outputs. |
 | iPL | Pass | Native/EDADB pre-tool state matches; three native controls are stable; EDADB matches. |
 | iCTS | Pass with stable algorithm profile | Three native controls are stable and EDADB matches under the documented no-skew-tree profile. |
-| iTO DRV pre-tool gate | Pass | Native and EDADB reconstruction of the same iCTS DEF match before invoking iTO. |
-| iTO DRV tool execution | Blocked by native input/model defect | Three native attempts abort on the same missing RC-tree pin; no adapter code is involved. |
-| iTO Hold / downstream legalization | Not run | Their canonical inputs depend on the blocked iTO DRV stage. |
+| iTO DRV | Pass after native Verilog alias fix | Pre-tool state matches; three native controls are stable; EDADB matches the native result. |
+| iTO Hold / downstream legalization | Not run on refreshed input | Canonical refreshed inputs now exist through iTO DRV; these remain the next Pico stages. |
 | iRT semantic input gate | Pass on isolated iPL input | Native and EDADB semantic DataManager snapshots match; only pointer iteration order differs. Full routing is deferred. |
 
-### PicoRV32A Native Net-Alias / RC-Tree Boundary
+### Resolved PicoRV32A Net-Alias / RC-Tree Defect
 
-The Pico failure is upstream of EDADB and stable across repeated native runs:
+The Pico failure was upstream of EDADB and stable across three native runs. The bug-proof audit
+reduced it to two native Verilog builder defects:
 
-1. The iFP DEF already represents `trace_data[5]` in two root NETS records while the PIN
-   declares `+ NET _17496_`: `_17496_` and `trace_data\[5\]` both reference the same IO pin.
-2. Fanout repair later moves that IO load into `fanout_net_56`; the alias record remains, so the
-   generated DEF still has conflicting root-net ownership for the same pin.
-3. The iTO pre-tool native/EDADB gate passes, proving adapter reconstruction is not the first
-   divergence.
-4. Native iTO then builds the RC tree for `fanout_net_56`; its node list contains the tie cell,
-   fanout buffer, and numbered fanout nodes but not `trace_data[5]`.
-5. `RcNet::updateRcTreeInfo()` requires every logical net pin to have an RC node and aborts at
-   `src/operation/iSTA/source/module/delay/ElmoreDelayCalc.cc:1078-1110` with
-   `pin trace_data[5] can not found in RCTree fanout_net_56`.
+1. `build_nets()` initially attaches each IO pin to its same-name net. The assign branches in
+   `RustVerilogRead::build_assign()` then added the pin to the assigned net and changed its single
+   `_net` pointer without removing it from the old net container. One pin therefore appeared in
+   two `IdbNet::_io_pin_list` vectors even though its back-reference named only one net.
+2. `VerilogWriter::writeAssign()` emitted both input and output aliases as `assign net = port`.
+   For an output port this reverses Verilog semantics; it must emit `assign output_port = net`.
 
-This is a real native iEDA topology/modeling defect, but the first responsible alias-construction
-layer is not yet reduced to a safe local correction. Relaxing the fatal check would leave an
-incomplete RC tree; deleting one DEF net record would guess which logical alias owns the port.
-Under the bug-proof protocol, no production patch is retained. iPL, iCTS, and the isolated iRT
-input gate remain valid independent-stage evidence; iTO Hold and chained-flow claims remain
-explicitly blocked.
+The local correction enforces one invariant: moving an IO pin to a new logical net removes it
+from the previous net, inserts it only once in the target net, and then synchronizes its `_net`
+and `_net_name` back-references. This is centralized in `connect_io_pin()` at
+`src/database/manager/builder/verilog_builder/verilog_read.cpp:417-433` and used by all existing
+one-to-one assign branches at `src/database/manager/builder/verilog_builder/verilog_read.cpp:477-535`.
+Output assignment direction is corrected at
+`src/database/manager/builder/verilog_builder/verilog_write.cpp:309-313`.
+
+The minimal fixture `test/stage_validation/fixtures/verilog/io_port_alias.v` covers input-to-net,
+net-to-output, and output-to-output assignments. Its regression checks direction-correct Verilog
+and exactly one DEF root-net membership per IO pin. On the real Pico design, `trace_data[5]` now occurs
+only under `_17496_` in the iFP DEF, iNO emits `assign trace_data[5] = fanout_net_56`, native iTO
+DRV completes, three native controls are stable, and the EDADB-restored control matches. This
+proves the fix at the original failing consumer instead of weakening the RC-tree invariant.
 
 ### IHP130 CTS Native Boundary
 
