@@ -106,7 +106,7 @@ Call order:
 1. `DefWriteEdadb::writeDb2Edadb()`
 2. `idb::edadb_adapter::initWriteDb()`
 3. `DefWriteEdadb::writeChip2Edadb()`
-4. `writeIdbDesign()`, `writeIdbDie()`, `writeIdbRow()`, `writeIdbTrackGrid()`, `writeIdbGCellGrid()`, `writeIdbVia()`, `writeIdbInstance()`, `writeIdbPin()`, `writeIdbBlockage()`, `writeIdbRegion()`, `writeIdbSlot()`, `writeIdbGroup()`, `writeIdbFill()`, `writeSpecialNet()`, `writeIdbNet()`
+4. `writeIdbDesign()`, `writeIdbDie()`, `writeIdbRow()`, `writeIdbTrackGrid()`, `writeIdbGCellGrid()`, `writeIdbVia()`, `writeIdbInstance()`, `writeIdbPin()`, `writeIdbBlockage()`, `writeIdbRegion()`, `writeIdbSlot()`, `writeIdbGroup()`, `writeIdbFill()`, `writeIdbSpecialNet()`, `writeIdbNet()`
 
 For each class, compare with `src/database/manager/builder/def_builder/def_write.cpp`:
 
@@ -123,7 +123,7 @@ For each class, compare with `src/database/manager/builder/def_builder/def_write
 - `writeIdbSlot()` <-> `write_slot()`
 - `writeIdbGroup()` <-> `write_group()`
 - `writeIdbFill()` <-> `write_fill()`
-- `writeSpecialNet()` <-> `write_special_net()`
+- `writeIdbSpecialNet()` <-> `write_special_net()`
 - `writeIdbNet()` <-> `write_net()`
 
 ### 6. Read The EDADB Read Path
@@ -135,7 +135,7 @@ Call order:
 1. `DefReadEdadb::createDbFromEdadb()`
 2. `idb::edadb_adapter::initReadDb()`
 3. `DefReadEdadb::createDbByEdadb()`
-4. `readIdbDesign()`, `readIdbDie()`, `readIdbRow()`, `readIdbTrackGrid()`, `readIdbGCellGrid()`, `readIdbVia()`, `readIdbRegion()`, `readIdbInstance()`, `readIdbPin()`, `readIdbBlockage()`, `readIdbSlot()`, `readIdbGroup()`, `readIdbFill()`, `readSpecialNet()`, `readIdbNet()`
+4. `readIdbDesign()`, `readIdbDie()`, `readIdbRow()`, `readIdbTrackGrid()`, `readIdbGCellGrid()`, `readIdbVia()`, `readIdbRegion()`, `readIdbInstance()`, `readIdbPin()`, `readIdbBlockage()`, `readIdbSlot()`, `readIdbGroup()`, `readIdbFill()`, `readIdbSpecialNet()`, `readIdbNet()`
 5. `DefReadEdadb::createDbByDef()` still parses DEF text, but disables callbacks for objects restored from EDADB.
 
 For each class, compare with `src/database/manager/builder/def_builder/def_read.cpp` and its callbacks. The EDADB read path must rebuild the same iDB state that the original DEF callback would have built.
@@ -174,33 +174,13 @@ Focus on these APIs:
 
 Only then go deeper into EDADB core traversers and SQLite implementation.
 
-## Per-Class Review Checklist
+## Review And Validation References
 
-Use this checklist before changing any new `IdbXXX` adapter:
+This onboarding guide owns only the architecture and reading path. Use the canonical documents for implementation decisions:
 
-1. Read original `DefWrite::write_xxx()` and list exact DEF output fields.
-2. Read original `DefRead` callback/parser and list exact iDB fields it sets.
-3. Separate persisted fields from fields recomputed by iEDA after read.
-4. Decide direct class mapping or shadow mapping.
-5. Verify `edadb_idb_schema.h` columns match the persisted/rebuild fields.
-6. Verify `edadb_idb_init.cpp` creates/registers the matching table.
-7. Verify `writeIdbXXX()` follows original `DefWrite` semantics.
-8. Verify `readIdbXXX()` follows original `DefRead` reconstruction semantics.
-9. Verify matching DEF callbacks are disabled only after EDADB read is implemented.
-10. Run the demo and inspect `run.out`, output DEF diff, and EDADB table counts.
-
-Recommended review order:
-
-1. `IdbDesign`, `IdbUnits`, `IdbBusBitChars`
-2. `IdbDie`
-3. `IdbRow`, `IdbSite`
-4. `IdbTrackGrid`, `IdbGCellGrid`
-5. `IdbVia`, `IdbViaMaster`, layer shapes
-6. `IdbInstance`
-7. `IdbPin`, term/port/layer shape
-8. `IdbBlockage`, `IdbRegion`, `IdbSlot`, `IdbGroup`, `IdbFill`
-9. `IdbSpecialNet`
-10. `IdbNet`
+- `idb-adapter/README.md`: adapter rules, per-class checklist, review order, and document template.
+- `def-ieda-mapping-and-order.md`: root-order classification, current implementation status, and future order experiments.
+- `../test/README.md`: executable roundtrip cases, commands, assertions, and concurrency behavior.
 
 ## Useful Search Commands
 
@@ -208,7 +188,7 @@ Recommended review order:
 rg -n "CmdEdadb|edadb_read|edadb_write|def_init|def_save" src/interface/tcl/tcl_idb
 rg -n "readDefFromEdadb|saveDefToEdadb|buildDefFromEdadb|saveDefToEdadb" src/platform src/database
 rg -n "createDbFromEdadb|createDbByDef|createDbByEdadb|readIdb" src/database/manager/builder/def_builder/def_read_edadb.cpp
-rg -n "writeDb2Edadb|writeChip2Edadb|writeIdb|writeSpecialNet" src/database/manager/builder/def_builder/def_write_edadb.cpp
+rg -n "writeDb2Edadb|writeChip2Edadb|writeIdb" src/database/manager/builder/def_builder/def_write_edadb.cpp
 rg -n "TABLE4|EDADB_INIT_TABLE|initReadDb|initWriteDb|Shadow<" src/database/edadb/idb
 ```
 
@@ -219,19 +199,3 @@ rg -n "TABLE4|EDADB_INIT_TABLE|initReadDb|initWriteDb|Shadow<" src/database/edad
 - `edadb_idb_schema.h`: table columns define what can be restored; wrong columns create silent semantic drift.
 - `shadow/*.h`: most ownership, PK, vector, and lookup bugs appear here.
 - EDADB core traversal: inspect only after adapter behavior is understood.
-
-## Validation Notes
-
-After a class is enabled, validate three levels:
-
-1. Flow: demo ends with `Input def and output def are the same.`
-2. Log: `run.out` shows the matching `writeIdbXXX` and `readIdbXXX` counts.
-3. DB: inspect table counts and representative rows with SQLite.
-
-Example:
-
-```bash
-sqlite3 scripts/edadb/demo/result/edadb.db '.tables'
-sqlite3 scripts/edadb/demo/result/edadb.db 'select count(*) from iDesign;'
-sqlite3 scripts/edadb/demo/result/edadb.db 'select count(*) from iRow;'
-```

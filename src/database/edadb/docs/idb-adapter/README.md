@@ -180,10 +180,5 @@ EDADB adapter 文档的核心目标是：每个 root class 都必须按 `src/dat
 - `13_idb_fill.md`: `IdbFill` for `FILLS`, including layer/via typed storage, geometry vectors, and Level D root-order policy.
 - `14_idb_special_net.md`: `IdbSpecialNet` for `SPECIALNETS`, including pin refs, special wires, segments, geometry, and Level D root-order policy.
 - `15_idb_net.md`: `IdbNet` for `NETS`, including pin refs, regular wires, segments, geometry, and explicit root order.
-- `todo.md`: root list order guarantees that still need implementation or verification.
 
-## Suggested Next Steps
-
-1. Keep each new root adapter aligned with original `DefWrite` / `DefRead` semantics.
-2. For each root list, decide whether order needs explicit `_order_sd`; A/B/C preserve order, Level D defaults to normalized diff unless documented as an exception.
-3. After each class: update schema/read/write if needed, extend SQL assertions, run demo and regression, then commit.
+Root-order implementation status and planned order-stress experiments are maintained only in `../def-ieda-mapping-and-order.md`.

@@ -2,20 +2,28 @@
 
 This directory keeps repeatable EDADB adapter tests close to the EDADB code.
 
+- `run_idb_roundtrip_regression.sh`: object/field/schema/DEF roundtrip regression.
+- `stage_validation/`: native versus EDADB-restored point-tool stage validation.
+
 Run from the repository root:
 
 ```bash
 bash src/database/edadb/test/run_idb_roundtrip_regression.sh
 ```
 
-Cases run in separate processes. The current host has 20 physical cores / 40 logical CPUs
-and 125 GiB RAM, so the conservative default concurrency is eight. Override it for a
-shared/smaller machine, or run only selected cases:
+Cases run in separate processes. Automatic scheduling is bounded by both logical CPU count
+and current `MemAvailable`. On the current 20-physical-core / 40-logical-CPU / 125-GiB host,
+the resulting cap is eight. Override it for a shared/smaller machine, or run only selected
+cases:
 
 ```bash
 EDADB_TEST_JOBS=8 bash src/database/edadb/test/run_idb_roundtrip_regression.sh
 EDADB_TEST_JOBS=2 bash src/database/edadb/test/run_idb_roundtrip_regression.sh aux_optional design_fields
 ```
+
+The automatic memory budget reserves 16 GiB for the host and budgets 8 GiB per active case.
+Change `EDADB_TEST_PROCESS_MEMORY_GIB` or `EDADB_TEST_MEMORY_RESERVE_GIB` only after measuring
+the selected dataset.
 
 Each case owns a separate output directory, SQLite database, iEDA processes, and log. Fixtures are generated once before parallel execution. Per-case scheduler logs are under `OUT_DIR/case-logs/`.
 
@@ -105,13 +113,6 @@ Current class coverage:
 | Blockage / Region / Slot / Group / Fill | direct or shadow | routing/placement source fields, parser-only blockage state, region type, ordered group members, layer-fill vs via-fill |
 | SpecialNet / Net | shadow | ordered pin refs, optional fields, routed wire/segment/point rows |
 
-## Planned Order-Stress Tests
+## Future Test Plans
 
-Do not implement or run these yet; they are parked here for later test-design review.
-
-- Add a SQLite unordered-read stress mode using `PRAGMA reverse_unordered_selects=ON`; any EDADB read path that needs deterministic vector order must use explicit `ORDER BY`.
-- Add real DEF perturbation cases for root-order evidence:
-  - swap top-level `PINS` and run iFP `auto_place_pins`;
-  - swap top-level `ROWS` and run the iPDN follow-pin stripe path;
-  - swap top-level `COMPONENTS` and run iPL with the same seed;
-  - check `NETS` ID/list consistency with a targeted adapter/unit harness.
+Future order-stress experiments are maintained only in `../docs/def-ieda-mapping-and-order.md`. Add them here after they become executable cases; this README documents current behavior rather than duplicating planned work.

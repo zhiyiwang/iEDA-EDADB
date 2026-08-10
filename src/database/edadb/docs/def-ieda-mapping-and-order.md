@@ -1,12 +1,8 @@
 # DEF iEDA Mapping And Order
 
-This is the canonical bridge note between the DEF file-format summary and iEDA/iDB implementation behavior. Keep one copy here, under `knowledge/01_file-formats/lef-def/`, because the primary anchor is still the DEF section model; iEDA notes should link here instead of duplicating the tables.
+This is the canonical bridge note between DEF sections and iEDA/iDB implementation behavior. Keep one copy in `src/database/edadb/docs/`; other iEDA and EDADB documents should link here instead of duplicating the tables.
 
-Link targets:
-
-- From this directory: `def-ieda-mapping-and-order.md`
-- From `knowledge/05_ieda/`: `../01_file-formats/lef-def/def-ieda-mapping-and-order.md`
-- Related DEF standard summary: keep the extracted DEF 5.7 summary next to this file as `def-file-spec-5.7.md` when available.
+Related DEF standard material is external to this adapter note. This file records only iEDA-specific mapping, point-tool order evidence, adapter policy, and planned dynamic validation.
 
 ## Scope
 
@@ -116,9 +112,25 @@ iEDA-aware normalized-diff rule:
 - Normalized diff may sort Level-D root records by stable key: track axis/start/layer set, gcell axis/start/step, via name, region name, blockage signature, slot/fill geometry signature, group name, or special-net name. Do this only for records that are not duplicate/update streams.
 - Normalized diff must not reorder Level A/B/C root lists and must not reorder deeper nested route/geometry vectors.
 
+## Current Adapter Order Status
+
+This table is the single root-order implementation status for the current `sort-abc-no-sort-d` adapter. Identity and order remain separate; vector index is never used as a root primary key.
+
+| Root object/container | Level | Current handling |
+|---|---:|---|
+| `IdbDesign`, `IdbDie` | D | Singleton objects; no root-vector order. Die polygon point order is nested order and uses `_vec_idx`. |
+| `IdbRows::_row_list` | B | `Shadow<IdbRow>::_order_sd` plus ordered read preserves append order. |
+| `IdbInstanceList::_instance_list` | C | `Shadow<IdbInstance>::_order_sd` plus ordered read preserves append order. |
+| `IdbPins::_pin_list` | B | `Shadow<IdbPin>::_order_sd` plus ordered read preserves append order. |
+| `IdbNetList::_net_list` | A | `Shadow<IdbNet>::_order_sd` plus ordered read preserves list/ID consistency. |
+| `IdbSlotList::_slot_list` | D exception | Anonymous roots retain synthetic identity and `_order_sd` for stable raw DEF emission. Nested rectangles use `_vec_idx`. |
+| `TRACKS`, `GCELLGRID`, `VIAS`, `BLOCKAGES`, `REGIONS`, `GROUPS`, `FILLS`, `SPECIALNETS` roots | D | No semantic root order is stored. Raw root-order-only differences may use normalized diff. Natural or synthetic identity remains independent of order. |
+
+All deeper nested vectors remain order-sensitive unless a class document proves otherwise. Their owner association and order are implemented by EDADB child-vector metadata or explicit `_vec_idx`/`_order_sd` fields described in `idb-adapter/01_idb_design.md` through `15_idb_net.md`.
+
 ## Planned Dynamic Order Tests
 
-These tests are planned evidence for the static point-tool analysis above. Do not generate or run them until the test design is reviewed.
+These tests are planned evidence for the static point-tool analysis above. This section is their canonical planning location; executable tests and commands belong in `../test/README.md` only after implementation.
 
 - SQLite unordered-read stress: run EDADB read paths with `PRAGMA reverse_unordered_selects=ON` to expose any adapter query that depends on implicit SQLite row order. SQLite documents that `SELECT` without `ORDER BY` has undefined row order, so every order-sensitive EDADB read must use explicit `ORDER BY`.
 - `PINS` / iFP physical-order test: swap two top-level IO pin records in a real sky130 DEF, run `auto_place_pins`, and compare pin coordinates. Expected result: order changes physical pin placement because iFP consumes `pin_list[pin_index++]`.

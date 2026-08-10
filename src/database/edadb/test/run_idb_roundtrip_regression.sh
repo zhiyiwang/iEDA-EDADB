@@ -12,7 +12,9 @@ BASE_DEF="$SKY130_WORKSPACE/result/iPL_result.def"
 ROUTED_DEF="$SKY130_WORKSPACE/result/iRT_result.def"
 DESIGN_TCL_SCRIPT_DIR="$SKY130_WORKSPACE/script"
 NORMALIZE_DEF_FOR_DIFF="$SCRIPT_DIR/normalize_def_for_diff.py"
-EDADB_TEST_JOBS="${EDADB_TEST_JOBS:-8}"
+EDADB_TEST_JOBS="${EDADB_TEST_JOBS:-auto}"
+EDADB_TEST_PROCESS_MEMORY_GIB="${EDADB_TEST_PROCESS_MEMORY_GIB:-8}"
+EDADB_TEST_MEMORY_RESERVE_GIB="${EDADB_TEST_MEMORY_RESERVE_GIB:-16}"
 
 export WORKSPACE="$SKY130_WORKSPACE"
 export CONFIG_DIR="$WORKSPACE/iEDA_config"
@@ -29,6 +31,34 @@ require_file() {
     if [[ ! -f "$path" ]]; then
         echo "missing required file: $path" >&2
         exit 1
+    fi
+}
+
+resolve_test_jobs() {
+    if [[ "$EDADB_TEST_JOBS" != "auto" ]]; then
+        return
+    fi
+
+    local logical_cpus cpu_jobs
+    logical_cpus="$(nproc)"
+    cpu_jobs=$((logical_cpus / 5))
+    [[ "$cpu_jobs" -ge 1 ]] || cpu_jobs=1
+    [[ "$cpu_jobs" -le 8 ]] || cpu_jobs=8
+
+    local available_kib available_gib memory_jobs
+    available_kib="$(awk '/^MemAvailable:/ {print $2}' /proc/meminfo)"
+    available_gib=$((available_kib / 1024 / 1024))
+    if [[ "$available_gib" -le "$EDADB_TEST_MEMORY_RESERVE_GIB" ]]; then
+        memory_jobs=1
+    else
+        memory_jobs=$(((available_gib - EDADB_TEST_MEMORY_RESERVE_GIB) / EDADB_TEST_PROCESS_MEMORY_GIB))
+        [[ "$memory_jobs" -ge 1 ]] || memory_jobs=1
+    fi
+
+    if [[ "$memory_jobs" -lt "$cpu_jobs" ]]; then
+        EDADB_TEST_JOBS="$memory_jobs"
+    else
+        EDADB_TEST_JOBS="$cpu_jobs"
     fi
 }
 
@@ -1414,10 +1444,19 @@ main() {
     require_file "$NORMALIZE_DEF_FOR_DIFF"
     command -v sqlite3 >/dev/null
     command -v python3 >/dev/null
-    if [[ ! "$EDADB_TEST_JOBS" =~ ^[1-9][0-9]*$ ]]; then
-        echo "EDADB_TEST_JOBS must be a positive integer: $EDADB_TEST_JOBS" >&2
+    if [[ "$EDADB_TEST_JOBS" != "auto" && ! "$EDADB_TEST_JOBS" =~ ^[1-9][0-9]*$ ]]; then
+        echo "EDADB_TEST_JOBS must be auto or a positive integer: $EDADB_TEST_JOBS" >&2
         exit 1
     fi
+    if [[ ! "$EDADB_TEST_PROCESS_MEMORY_GIB" =~ ^[1-9][0-9]*$ ]]; then
+        echo "EDADB_TEST_PROCESS_MEMORY_GIB must be a positive integer" >&2
+        exit 1
+    fi
+    if [[ ! "$EDADB_TEST_MEMORY_RESERVE_GIB" =~ ^[1-9][0-9]*$ ]]; then
+        echo "EDADB_TEST_MEMORY_RESERVE_GIB must be a positive integer" >&2
+        exit 1
+    fi
+    resolve_test_jobs
 
     rm -rf "$OUT_DIR"
     mkdir -p "$OUT_DIR/fixtures"
