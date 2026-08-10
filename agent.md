@@ -2,6 +2,16 @@
 
 This file keeps only the branch facts, EDADB layout, validation command, and current C-branch rules.
 
+## Current Demo Branch
+
+- Branch: `demo/20260810`.
+- Baseline: `edadb-idb-dev/sort-abc-no-sort-d @ 77fbe5c67` (`milestone/edadb-idb-adapter-15class-20260810`).
+- EDADB read/write: Design, Die, Row, TrackGrid, GCellGrid, Via, Instance, Pin, Blockage, Region, Slot, Group, Fill.
+- SpecialNet: schema/shadows/init and EDADB write are retained; runtime read uses the original `SPECIALNETS` callbacks.
+- Net: original DEF read/write only; EDADB Net schema, shadow, and builder methods are removed.
+- Regression must assert `iFillSD` and `iSpecNetSD` exist, `iNetSD` is absent, `writeIdbSpecialNet()` runs, and `readIdbSpecialNet()` does not run.
+- Validation on 2026-08-10: full `iEDA` build passed; canonical demo reported `Input def and output def are the same.`; all 15 regression cases passed with `EDADB_TEST_JOBS=8` under `/tmp/iedadb_demo_20260810_full`.
+
 ## Validation Rule
 
 Use the iEDA superproject commit as the source of truth:
@@ -48,14 +58,10 @@ Current cases:
 - `aux_optional`: generated from `iPL_result.def`; adds non-empty `BLOCKAGES`, `REGIONS`,
   `SLOTS`, `GROUPS`, `FILLS`, plus special-net explicit pin refs, special-net `RECT`,
   and regular/special-net optional fields.
-- `routed_irt`: sky130_gcd `iRT_result.def`; covers non-empty regular NETS routed wires
-  and segments.
+- `routed_irt`: sky130_gcd `iRT_result.def`; verifies complex routed NETS through the original DEF fallback.
 
-The `aux_optional` case also checks SQLite table content for blockage/region/slot/group/fill
-counts, group region/member rows, fill child rows, special-net optional fields, explicit IO/instance
-pin refs, special-net rect segments, and regular-net optional fields.
-The `routed_irt` case checks SQLite counts for `iNetSD`, regular wire child rows, regular
-wire segment child rows, and regular wire point child rows.
+The `aux_optional` case checks EDADB tables through Fill and the SpecialNet write view.
+The routed cases assert that no `iNetSD` table exists and compare the native DEF fallback output.
 
 Latest run on 2026-07-09:
 

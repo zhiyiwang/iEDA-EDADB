@@ -145,8 +145,8 @@ EDADB adapter 文档的核心目标是：每个 root class 都必须按 `src/dat
 | Slot | Done | `primary_key` identity for anonymous root records, `_order_sd` root order, rectangle vector uses `Shadow<IdbRect>::_vec_idx`. |
 | Group | Done | Level D root order; `_group_name_sd` identity, no `_order_sd`, member vector order preserved. |
 | Fill | Done | Level D root order; `primary_key` identity, no `_order_sd`, layer/via references rebuilt by name. |
-| SpecialNet | Done | Level D root order; `_net_name_sd` identity, no root `_order_sd`, pin-string/explicit pin refs plus via/rect/point segment branches covered. |
-| Net | Done | `_net_name_sd` identity, `_order_sd` root order, pin/wire/segment vectors preserved. |
+| SpecialNet | EDADB write / DEF read | Schema, shadows and `writeIdbSpecialNet()` remain active; original `SPECIALNETS` callbacks rebuild runtime objects. |
+| Net | DEF fallback | EDADB schema/read/write implementation is removed from this demo. |
 
 ## Output Template
 
@@ -178,8 +178,7 @@ EDADB adapter 文档的核心目标是：每个 root class 都必须按 `src/dat
 - `11_idb_slot.md`: `IdbSlot` for `SLOTS`, including layer name, rectangle vector, and anonymous root identity.
 - `12_idb_group.md`: `IdbGroup` for `GROUPS`, including region/member name references, Level D root-order policy, and member order.
 - `13_idb_fill.md`: `IdbFill` for `FILLS`, including layer/via typed storage, geometry vectors, and Level D root-order policy.
-- `14_idb_special_net.md`: `IdbSpecialNet` for `SPECIALNETS`, including pin refs, special wires, segments, geometry, and Level D root-order policy.
-- `15_idb_net.md`: `IdbNet` for `NETS`, including pin refs, regular wires, segments, geometry, and explicit root order.
+- `14_idb_special_net.md`: hybrid demo path: EDADB SpecialNet write storage plus original DEF SpecialNet/Net read dispatch.
 - `todo.md`: root list order guarantees that still need implementation or verification.
 
 ## Suggested Next Steps

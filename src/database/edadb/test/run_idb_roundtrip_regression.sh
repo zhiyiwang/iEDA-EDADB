@@ -81,6 +81,26 @@ assert_not_contains() {
     echo "PASS: $label excludes '$pattern'"
 }
 
+check_demo_storage_split() {
+    local name="$1"
+    local edadb_db="$2"
+    local def2edadb_log="$3"
+    local edadb2def_log="$4"
+
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from sqlite_master where type='table' and name='iFillSD';")" \
+        "1" "$name Fill EDADB table exists"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from sqlite_master where type='table' and name='iSpecNetSD';")" \
+        "1" "$name SpecialNet EDADB write table exists"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from sqlite_master where type='table' and name='iNetSD';")" \
+        "0" "$name Net EDADB table is absent"
+    assert_contains "$def2edadb_log" "writeIdbFill" "$name Fill uses EDADB write"
+    assert_contains "$def2edadb_log" "writeIdbSpecialNet" "$name SpecialNet uses EDADB write"
+    assert_not_contains "$def2edadb_log" "writeIdbNet" "$name Net write uses DEF fallback"
+    assert_contains "$edadb2def_log" "readIdbFill" "$name Fill uses EDADB read"
+    assert_not_contains "$edadb2def_log" "readIdbSpecialNet" "$name SpecialNet read uses DEF fallback"
+    assert_not_contains "$edadb2def_log" "readIdbNet" "$name Net read uses DEF fallback"
+}
+
 assert_def_equivalent() {
     local expected="$1"
     local actual="$2"
@@ -117,8 +137,8 @@ check_default_sql() {
 
     assert_eq "$(sql_value "$edadb_db" "select _design_name || '|' || _version || '|' || _units__micron_dbu || '|' || char(_bus_bit_chars__left_delimiter) || '|' || char(_bus_bit_chars__right_delimiter) from iDesign;")" \
         "gcd|5.8|1000|[|]" "$name design fields"
-    assert_eq "$(sql_value "$edadb_db" "select (select count(*) from iDesign) || '|' || (select count(*) from iDieSD) || '|' || (select count(*) from iRow) || '|' || (select count(*) from iTrackGridSD) || '|' || (select count(*) from iGCellGrid) || '|' || (select count(*) from iVia) || '|' || (select count(*) from iInstSD) || '|' || (select count(*) from iPinSD) || '|' || (select count(*) from iSpecNetSD) || '|' || (select count(*) from iNetSD);")" \
-        "1|1|39|12|0|4|1458|56|2|675" "$name core object counts"
+    assert_eq "$(sql_value "$edadb_db" "select (select count(*) from iDesign) || '|' || (select count(*) from iDieSD) || '|' || (select count(*) from iRow) || '|' || (select count(*) from iTrackGridSD) || '|' || (select count(*) from iGCellGrid) || '|' || (select count(*) from iVia) || '|' || (select count(*) from iInstSD) || '|' || (select count(*) from iPinSD) || '|' || (select count(*) from iSpecNetSD);")" \
+        "1|1|39|12|0|4|1458|56|2" "$name EDADB object counts"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_x_sd || ',' || _y_sd, ';') from (select _x_sd, _y_sd from iDieSD_points_sd_iCoordSD order by _vec_idx);")" \
         "0,0;149960,150128" "$name die points"
     assert_eq "$(sql_value "$edadb_db" "select _name_sd || '|' || _site_name_sd || '|' || _origin_x_sd || ',' || _origin_y_sd || '|' || _row_num_x_sd || '|' || _row_num_y_sd || '|' || _step_x_sd || '|' || _step_y_sd from iRow where _name_sd='ROW_0';")" \
@@ -182,15 +202,11 @@ check_default_sql() {
         assert_eq "$(sql_value "$edadb_db" "select (select count(*) from iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD where _is_via_sd=1) || '|' || (select count(*) from iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD where _is_rect_sd=1) || '|' || (select count(*) from iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD where _is_via_sd=0 and _is_rect_sd=0);")" \
             "581|0|58" "$name special net segment dispatch types"
     fi
-    assert_eq "$(sql_value "$edadb_db" "select _net_name_sd || '|' || _connect_type_sd || '|' || _source_type_sd || '|' || _weight_sd || '|' || _xtalk_sd || '|' || _fix_bump_sd || '|' || _frequency_sd from iNetSD where _net_name_sd='clk';")" \
-        "clk|5|0|0|0|0|-1.0" "$name regular net default fields"
-    assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || ':' || _net_name_sd, ',') from (select _order_sd, _net_name_sd from iNetSD order by _order_sd limit 5);")" \
-        "0:ctrl\$a_mux_sel[0],1:ctrl\$a_mux_sel[1],2:ctrl\$a_reg_en,3:ctrl\$b_mux_sel,4:ctrl\$b_reg_en" "$name regular net order prefix"
-
     assert_contains "$def2edadb_log" "[EDADB-IDB] writeIdbInstance insert instance_count=1458" "$name write instance log"
     assert_contains "$def2edadb_log" "[EDADB-IDB] writeIdbPin insert pin_count=56" "$name write pin log"
     assert_contains "$edadb2def_log" "[EDADB-IDB] readIdbInstance restored instance_count=1458" "$name read instance log"
     assert_contains "$edadb2def_log" "[EDADB-IDB] readIdbPin restored pin_count=56" "$name read pin log"
+    check_demo_storage_split "$name" "$edadb_db" "$def2edadb_log" "$edadb2def_log"
 }
 
 check_aux_optional_sql() {
@@ -290,8 +306,6 @@ check_aux_optional_sql() {
         "581|1|58" "$name special net segment dispatch with rect"
     assert_eq "$(sql_value "$edadb_db" "select _layer_name_sd || '|' || _delta_rect_sd__lx_sd || ',' || _delta_rect_sd__ly_sd || ',' || _delta_rect_sd__hx_sd || ',' || _delta_rect_sd__hy_sd from iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD where iSpecNetSD__net_name_sd='VSS' and _is_rect_sd=1;")" \
         "met1|11000,11000,13000,14000" "$name special net rect segment"
-    assert_eq "$(sql_value "$edadb_db" "select _original_net_name_sd || '|' || _source_type_sd || '|' || _weight_sd || '|' || _xtalk_sd || '|' || _fix_bump_sd || '|' || _frequency_sd from iNetSD where _net_name_sd='ctrl\$a_mux_sel[0]';")" \
-        "orig_ctrl_net|3|7|11|1|250.0" "$name regular net optional fields"
 }
 
 check_special_net_branch_sql() {
@@ -299,7 +313,6 @@ check_special_net_branch_sql() {
     local edadb_db="$2"
     local input_def="$3"
     local direct_def="$4"
-    local edadb2def_log="$5"
 
     assert_eq "$(sql_value "$edadb_db" "select count(*) from pragma_table_info('iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD') where name='_style_sd';")" \
         "1" "$name special segment style column"
@@ -333,7 +346,6 @@ check_special_net_branch_sql() {
     assert_not_contains "$direct_def" "+ SHIELD VDD" "$name native writer omits SHIELD wire"
     assert_contains "$input_def" "( 15000 15000 ) ( 25000 * ) ( 30000 * )" "$name input three-point path"
     assert_not_contains "$direct_def" "( 15000 15000 ) ( 25000 * ) ( 30000 * )" "$name native writer truncates after second point"
-    assert_contains "$edadb2def_log" "styled_segment_count=1 shield_wire_count=1" "$name restored parser-only segment state"
 }
 
 check_routed_sql() {
@@ -1186,10 +1198,6 @@ run_case() {
     if [[ "$check_mode" == "via_branches" ]]; then
         perturb_via_query_order "$edadb_db"
     fi
-    if [[ "$check_mode" == "routed" || "$check_mode" == "net_branches" ]]; then
-        perturb_net_child_query_order "$edadb_db"
-    fi
-
     export OUTPUT_DEF="$edadb_def"
     run_ieda "$SCRIPT_DIR/tcl/edadb2def_generic.tcl" "$case_dir/edadb2def.log"
 
@@ -1203,7 +1211,10 @@ run_case() {
             check_aux_optional_sql "$name" "$edadb_db" "$case_dir/edadb2def.log"
             ;;
         routed)
-            check_routed_sql "$name" "$edadb_db" "$case_dir/def2edadb.log" "$case_dir/edadb2def.log"
+            assert_eq "$(sql_value "$edadb_db" "select count(*) from iGCellGrid;")" "6" "$name gcell grid count"
+            assert_eq "$(sql_value "$edadb_db" "select count(*) from sqlite_master where type='table' and name='iNetSD';")" \
+                "0" "$name routed NETS use DEF fallback"
+            check_demo_storage_split "$name" "$edadb_db" "$case_dir/def2edadb.log" "$case_dir/edadb2def.log"
             ;;
         grid_branches)
             if [[ ! -s "$case_dir/direct_vs_edadb.diff" ]]; then
@@ -1225,8 +1236,9 @@ run_case() {
             check_instance_branch_sql "$name" "$edadb_db" "$case_dir/def2edadb.log" "$case_dir/edadb2def.log"
             ;;
         net_branches)
-            check_net_branch_sql "$name" "$edadb_db" "$case_dir/def2edadb.log" "$case_dir/edadb2def.log" \
-                "$input_def" "$direct_def"
+            assert_contains "$input_def" "VIRTUAL ( 68160 85535 ) VIRTUAL ( 69000 85535 )" "$name complex NETS input"
+            assert_contains "$input_def" "L1M1_PR M1M2_PR" "$name multi-via NETS input"
+            check_demo_storage_split "$name" "$edadb_db" "$case_dir/def2edadb.log" "$case_dir/edadb2def.log"
             ;;
         pin_derived)
             check_default_sql "$name" "$edadb_db" "$case_dir/def2edadb.log" "$case_dir/edadb2def.log"
@@ -1277,7 +1289,8 @@ run_case() {
             assert_def_equivalent "$edadb_def" "$reparsed_def" "$case_dir/reparse.diff"
             ;;
         special_net_branches)
-            check_special_net_branch_sql "$name" "$edadb_db" "$input_def" "$direct_def" "$case_dir/edadb2def.log"
+            check_special_net_branch_sql "$name" "$edadb_db" "$input_def" "$direct_def"
+            check_demo_storage_split "$name" "$edadb_db" "$case_dir/def2edadb.log" "$case_dir/edadb2def.log"
             ;;
         design_fields)
             check_design_sql "$name" "$edadb_db" "gcd_design|5.7|2000|{|}"

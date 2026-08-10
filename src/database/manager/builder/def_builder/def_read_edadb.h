@@ -44,6 +44,7 @@ protected:
     bool createDbByEdadb(const char* edadb_path);
 
 protected:
+    void setDefFallbackCallbacks(void);
     bool readIdbDesign(void);
     bool readIdbDie(void);
     bool readIdbRow(void);
@@ -57,8 +58,6 @@ protected:
     bool readIdbSlot(void);
     bool readIdbGroup(void);
     bool readIdbFill(void);
-    bool readIdbSpecialNet(void);
-    bool readIdbNet(void);
 
 }; // class DefReadEdadb
 
