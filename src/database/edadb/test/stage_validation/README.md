@@ -10,7 +10,7 @@ This directory validates that a point tool consumes an EDADB-restored iDB in the
 - Native controls: three runs by default.
 - EDADB controls: one run when native results are stable and equal; three runs after variability or mismatch.
 - Resource-aware scheduling: process concurrency is bounded by both CPU capacity and `MemAvailable`; iCTS, iTO, and iRT remain serial because each tool already uses many worker threads.
-- iRT wrapper gate: native and EDADB paths must produce identical wrapped die, obstacle, and pin-shape environments before routing starts.
+- iRT wrapper gate: native and EDADB paths must produce identical semantic DataManager inputs before routing starts. A separate pointer-order view reports allocator-dependent iteration without confusing it with missing adapter data.
 
 ## Run
 
@@ -37,6 +37,15 @@ bash src/database/edadb/test/stage_validation/run_stage_validation.sh ipl
 `ipl_lg`. Use `DATASET=ihp130_picorv32a` for the PicoRV32A profile. The preparation
 script passes explicit output/report paths and fails when the expected DEF is absent,
 empty, or accompanied by a DEF-save failure message.
+
+The default IHP130 bound-skew-tree profile fails natively on AES before any EDADB
+comparison. Use the existing non-skew-tree CTS implementation for the stable stage profile:
+
+```bash
+CTS_CONFIG_FILE=$PWD/src/database/edadb/test/stage_validation/config/ihp130_cts_no_skew_tree.json \
+DATASET=ihp130_aes PREPARE_THROUGH=ipl_lg \
+bash src/database/edadb/test/stage_validation/prepare_ihp130_stage_inputs.sh
+```
 
 Run every isolated stage:
 
@@ -71,7 +80,19 @@ Strict mode is the current regression and requires native/EDADB equality. Set
 `EXPECT_KNOWN_DEFECT=1` only with a pre-fix binary to reproduce the historical `27 -> 65`
 signature; that mode must fail for the fixed implementation.
 
-For iRT input-state diagnosis, set `RT_ENABLE_NOTIFICATION=1 RT_SNAPSHOT_ONLY=1`. Normal runs leave both disabled. The options ask iRT to emit its wrapped environment JSON under each run's `rt/` directory and stop before routing; notification delivery itself may remain disabled.
+For iRT input-state diagnosis, set `RT_ENABLE_NOTIFICATION=1 RT_SNAPSHOT_ONLY=1`. Normal runs leave both disabled. The options ask iRT to emit `input_snapshot.json` under each run's `rt/data_manager/` directory and stop before routing. The snapshot separates the ordered semantic database from pointer-ordered consumer views; notification delivery itself may remain disabled.
+
+Run only the strict native-vs-EDADB iRT wrapper gate without starting full routing:
+
+```bash
+IRT_INPUT_GATE_ONLY=1 \
+bash src/database/edadb/test/stage_validation/run_stage_validation.sh irt
+```
+
+The gate fails on any semantic field or ordered-vector difference. If only the
+`std::set<EXTLayerRect*>` iteration view differs while its rectangle multiset is equal, the
+comparator reports `REVIEW` and keeps the semantic adapter gate passing. This distinguishes a
+native pointer-order determinism defect from missing EDADB data.
 
 Generated artifacts stay outside the repository by default. Every process writes a `manifest.json` containing the commit, branch, input/config hashes, command, host, thread setting, and exit status.
 
@@ -112,3 +133,8 @@ produce different routed DEFs and QoR values. Detailed evidence and the next com
 are recorded in `../../docs/stage-validation/README.md`. A single-thread diagnostic further proves
 that pointer-address iteration inside iRT can produce different legal routes from semantically
 identical native and EDADB inputs; this is classified separately from adapter restoration.
+
+When native iRT controls vary, the harness writes `variability_summary.json`. It records exact
+fixed-structure equality plus native and EDADB samples for total/per-layer wire length, wire,
+segment, via, patch, and final DRC-violation counts. Native observed min/max values are descriptive
+evidence only; three samples are not promoted into an arbitrary acceptance tolerance.

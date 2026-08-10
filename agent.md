@@ -265,6 +265,10 @@ Current uncovered or weakly covered areas:
   iteration feeds an order-sensitive vector or floating-point reduction, traverse an existing
   stable source vector or sort by a stable logical key; verify the change with native-repeatability,
   strict pre-tool equality, and native-vs-EDADB post-tool tests before committing.
+- iRT input diagnostics must separate the ordered semantic DataManager database from
+  pointer-ordered consumer views. A semantic field/order difference fails the adapter gate;
+  an equal value multiset with different pointer iteration is a native determinism review.
+  Do not hide either case by globally sorting the complete snapshot.
 - Stage-input preparation must pass every output path explicitly and assert that each expected
   DEF is non-empty and no save-failure message appears. A zero iEDA exit status alone does not
   prove that a Tcl stage produced its output.

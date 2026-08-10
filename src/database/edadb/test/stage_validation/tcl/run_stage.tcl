@@ -79,7 +79,8 @@ switch -- $stage {
     }
     icts {
         file mkdir $::env(RESULT_DIR)/cts
-        run_cts -config $::env(CONFIG_DIR)/cts_default_config.json -work_dir $::env(RESULT_DIR)/cts
+        set cts_config [expr {[info exists ::env(CTS_CONFIG_FILE)] ? $::env(CTS_CONFIG_FILE) : "$::env(CONFIG_DIR)/cts_default_config.json"}]
+        run_cts -config $cts_config -work_dir $::env(RESULT_DIR)/cts
         feature_tool -path $::env(RESULT_DIR)/feature/tool.json -step CTS
         cts_report -path $::env(RESULT_DIR)/cts
         set feature_step CTS

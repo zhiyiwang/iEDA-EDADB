@@ -21,7 +21,7 @@ The adapter is correct for tool `T` only when the restored pre-tool state is equ
 1. Uses identical LEF, DEF, liberty, SDC, tool configuration, thread count, and fixed code revision.
 2. Creates native and EDADB pre-tool snapshots in separate processes.
 3. Compares canonical DEF and stable `report_db` content before invoking the point tool.
-4. For iRT, compares the wrapped die, obstacle, and pin-shape environment before routing starts.
+4. For iRT, compares the semantic DataManager source database: layers, axes, vias, obstacles, ordered nets/pins/shapes, derived geometry, and scalar database values. Pointer-ordered fixed-rectangle iteration is reported separately.
 5. Runs three native controls to measure native determinism.
 6. Runs one EDADB control when native output is stable; expands to three after variability or mismatch.
 7. Compares structure, connectivity-facing outputs, geometry, reports, feature metrics, and final DEF.
@@ -29,7 +29,7 @@ The adapter is correct for tool `T` only when the restored pre-tool state is equ
 
 Process concurrency is resource-aware rather than uniform. On the current 40-logical-CPU, 125-GiB host, iPL controls have a CPU cap of three, but the scheduler also reserves 16 GiB for the host and budgets 16 GiB per iEDA process from current `MemAvailable`. iCTS/iTO/iRT already use large internal thread pools, so their controls run serially to avoid CPU oversubscription and a distorted repeatability baseline. Interrupted fixture tests terminate child processes so an orphaned iEDA process cannot silently invalidate later measurements.
 
-`RT_ENABLE_NOTIFICATION=1 RT_SNAPSHOT_ONLY=1` is a diagnostic-only mode that emits iRT's wrapped environment JSON and stops before routing. It is disabled by default and does not modify the production adapter.
+`RT_ENABLE_NOTIFICATION=1 RT_SNAPSHOT_ONLY=1` is a diagnostic-only mode that emits iRT's semantic database and pointer-order views in `input_snapshot.json`, then stops before routing. It is disabled by default and does not modify the production adapter.
 
 ### Why Independent Stages Come First
 
@@ -109,7 +109,7 @@ Before changing production code, the validation uses the grilling workflow:
 | iTO DRV | Pass with native-field exclusion | DEF, Verilog, DB report, and stable metrics match. Native `TimingOptSummary::HPWL/STWL` are uninitialized and excluded while raw JSON is retained. |
 | iTO Hold | Pass | Three native controls are stable; EDADB matches. |
 | Incremental legalization | Pass | Three native controls are stable; EDADB matches. |
-| iRT input gate | Pass after generated-via fix | Canonical DEF/report and the complete iRT-wrapped die/obstacle/pin-shape environment match. |
+| iRT input gate | Pass after generated-via fix | Canonical DEF/report and the semantic DataManager source database match; pointer-order differences are reported separately. |
 | iRT full routing | Review | Three native controls produce different legal routing geometries and QoR values. EDADB attribution therefore requires a native variability envelope rather than pairwise exact DEF equality. |
 
 ## IHP130 AES Results
@@ -118,9 +118,25 @@ Before changing production code, the validation uses the grilling workflow:
 |---|---|---|
 | Input preparation through iPL | Pass | Explicit iFP, iNO, and iPL outputs were created under `/tmp/iedadb_stage_inputs/ihp130_aes/result`. |
 | iPL | Pass after native iPL fix | Native pre-tool and EDADB pre-tool DEFs are byte-identical; three native controls are stable; EDADB matches the native DEF, feature JSON, reports, and QoR. |
+| iCTS | Pass with stable algorithm profile | The default IHP skew-tree algorithm fails natively before EDADB attribution. With the documented no-skew-tree profile, three native controls are stable and EDADB matches. |
+| iTO DRV | Pass | Three native controls are stable and EDADB matches. |
+| iTO Hold | Pass | Three native controls are stable and EDADB matches. |
+| Incremental legalization | Pass | Three native controls are stable and EDADB matches. |
+| iRT semantic input gate | Pass | Native and EDADB `semantic_database` snapshots are exactly equal; pointer-ordered fixed-rectangle iteration differs with an identical value multiset. |
+| iRT full routing | Review | Three native and three EDADB runs complete, but native routing is not deterministic; observed QoR ranges are retained as evidence, not promoted to a tolerance. |
 
 The PicoRV32A dataset profile has separately passed its iFP preparation smoke test; its staged
 point-tool validation remains the third dataset layer and is not claimed complete here.
+
+### IHP130 CTS Native Boundary
+
+The default IHP130 configuration enables the bound-skew-tree algorithm. Three native AES runs
+fail at `src/operation/iCTS/source/solver/tools/tree_builder/bound_skew_tree/BoundSkewTree.cc:1600`
+because an edge has stored length zero while its endpoint Manhattan distance is `55.239`. This is
+not a floating-point tolerance issue and occurs before an EDADB comparison. The stage harness
+therefore keeps the default failure as native evidence and uses
+`test/stage_validation/config/ihp130_cts_no_skew_tree.json` for the stable comparison profile.
+That profile selects the existing non-skew-tree implementation; it does not patch CTS geometry.
 
 ### Resolved iPL Pointer-Ordered Connectivity
 
@@ -255,6 +271,16 @@ access points, segments, patches, and violations are consumed throughout later r
 Replacing the containers also requires care: a value-only `std::set` comparator could collapse
 distinct objects with equal geometry. No incomplete production fix is retained; the strict input
 gate remains authoritative while an iRT-wide stable identity/value-order design is deferred.
+
+The complete AES input snapshot strengthens that boundary. It compares ordered layers, track and
+GCell axes, via masters, derived layer geometry, obstacles, ordered nets, ordered pins, driver
+flags, access points, routing/cut shapes, bounding boxes, and scalar database values. Native and
+EDADB semantic payloads are exactly equal. The separately recorded
+`DataManager::getTypeLayerNetFixedRectMap()` view differs only in pointer iteration order; sorting
+each group by rectangle value makes the views equal. A repository audit finds pointer-address
+sets in GCell state and throughout downstream router modules, so changing one return path would
+not remove the architectural source of nondeterminism. Under the bug-proof protocol, this is a
+proven native iRT determinism defect but not a safe local adapter fix.
 
 Test-framework defects may be fixed directly with a self-test. Native iEDA behavior and adapter storage semantics are not changed opportunistically during stage validation.
 

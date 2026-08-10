@@ -9,6 +9,7 @@ DATASET="${DATASET:-ihp130_aes}"
 OUT_ROOT="${OUT_ROOT:-/tmp/iedadb_stage_inputs}"
 PREPARE_THROUGH="${PREPARE_THROUGH:-ipl_lg}"
 PREPARE_CLEAN="${PREPARE_CLEAN:-0}"
+RUN_STAGE_TCL="$SCRIPT_DIR/tcl/run_stage.tcl"
 
 WORKSPACE="$REPO_ROOT/scripts/design/ihp130_gcd"
 RESULT_DIR="$OUT_ROOT/$DATASET/result"
@@ -16,6 +17,7 @@ CONFIG_DIR="$WORKSPACE/iEDA_config"
 TCL_SCRIPT_DIR="$WORKSPACE/script"
 FOUNDRY_DIR="$REPO_ROOT/scripts/foundry/ihp130"
 SDC_FILE="$WORKSPACE/default.sdc"
+CTS_CONFIG_FILE="${CTS_CONFIG_FILE:-$CONFIG_DIR/cts_default_config.json}"
 
 die() {
     echo "ERROR: $*" >&2
@@ -52,6 +54,8 @@ esac
 require_file "$IEDA_BIN"
 require_file "$NETLIST_FILE"
 require_file "$SDC_FILE"
+require_file "$CTS_CONFIG_FILE"
+require_file "$RUN_STAGE_TCL"
 
 if [[ -d "$RESULT_DIR" && "$PREPARE_CLEAN" == "1" ]]; then
     rm -rf "$RESULT_DIR"
@@ -61,7 +65,7 @@ fi
 
 mkdir -p "$RESULT_DIR"/{cts,feature,metric,pl,report,to}
 
-export RESULT_DIR CONFIG_DIR TCL_SCRIPT_DIR FOUNDRY_DIR SDC_FILE
+export RESULT_DIR CONFIG_DIR TCL_SCRIPT_DIR FOUNDRY_DIR SDC_FILE CTS_CONFIG_FILE
 export IEDA_CONFIG_DIR="$CONFIG_DIR"
 export IEDA_TCL_SCRIPT_DIR="$TCL_SCRIPT_DIR"
 export TOP_NAME NETLIST_FILE
@@ -117,14 +121,15 @@ run_step ipl "$TCL_SCRIPT_DIR/iPL_script/run_iPL.tcl" "$RESULT_DIR/iPL_result.de
     TOOL_REPORT_DIR="$RESULT_DIR/pl"
 stop_after ipl
 
-run_step icts "$TCL_SCRIPT_DIR/iCTS_script/run_iCTS.tcl" "$RESULT_DIR/iCTS_result.def" \
+run_step icts "$RUN_STAGE_TCL" "$RESULT_DIR/iCTS_result.def" \
+    STAGE=icts \
+    RUN_TOOL=1 \
+    INPUT_MODE=native \
     INPUT_DEF="$RESULT_DIR/iPL_result.def" \
+    PRE_TOOL_DEF="$RESULT_DIR/iCTS_pre_tool.def" \
+    PRE_TOOL_REPORT="$RESULT_DIR/report/iCTS_pre_tool_db.rpt" \
     OUTPUT_DEF="$RESULT_DIR/iCTS_result.def" \
-    OUTPUT_VERILOG="$RESULT_DIR/iCTS_result.v" \
-    DESIGN_STAT_TEXT="$RESULT_DIR/report/cts_stat.rpt" \
-    DESIGN_STAT_JSON="$RESULT_DIR/report/cts_stat.json" \
-    TOOL_METRICS_JSON="$RESULT_DIR/metric/iCTS_metrics.json" \
-    TOOL_REPORT_DIR="$RESULT_DIR/cts"
+    CTS_CONFIG_FILE="$CTS_CONFIG_FILE"
 stop_after icts
 
 run_step ito_drv "$TCL_SCRIPT_DIR/iTO_script/run_iTO_drv.tcl" "$RESULT_DIR/iTO_drv_result.def" \

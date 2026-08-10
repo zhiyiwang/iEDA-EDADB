@@ -11,12 +11,14 @@ NORMALIZER="$SCRIPT_DIR/../normalize_def_for_diff.py"
 COMPARE="$SCRIPT_DIR/compare_stage_runs.py"
 MANIFEST="$SCRIPT_DIR/create_manifest.py"
 COMPARE_IRT_INPUT="$SCRIPT_DIR/compare_irt_input_snapshots.py"
+SUMMARIZE_IRT_VARIABILITY="$SCRIPT_DIR/summarize_irt_variability.py"
 RUN_STAGE_TCL="$SCRIPT_DIR/tcl/run_stage.tcl"
 WRITE_EDADB_TCL="$SCRIPT_DIR/../tcl/def2edadb_generic.tcl"
 NATIVE_RUNS="${NATIVE_RUNS:-3}"
 STAGE_RUN_JOBS="${STAGE_RUN_JOBS:-auto}"
 IEDA_PROCESS_MEMORY_GIB="${IEDA_PROCESS_MEMORY_GIB:-16}"
 IEDA_MEMORY_RESERVE_GIB="${IEDA_MEMORY_RESERVE_GIB:-16}"
+IRT_INPUT_GATE_ONLY="${IRT_INPUT_GATE_ONLY:-0}"
 
 ALL_STAGES=(ipl icts ito_drv ito_hold ipl_lg irt)
 
@@ -46,7 +48,7 @@ stage_configs() {
     printf '%s\n' "$CONFIG_DIR/flow_config.json" "$CONFIG_DIR/db_default_config.json"
     case "$stage" in
         ipl|ipl_lg) echo "$CONFIG_DIR/pl_default_config.json" ;;
-        icts) echo "$CONFIG_DIR/cts_default_config.json" ;;
+        icts) echo "$CTS_CONFIG_FILE" ;;
         ito_drv) echo "$CONFIG_DIR/to_default_config_drv.json" ;;
         ito_hold) echo "$CONFIG_DIR/to_default_config_hold.json" ;;
         irt) ;;
@@ -232,13 +234,18 @@ validate_stage() {
         RT_THREAD_NUMBER=1 RT_ENABLE_NOTIFICATION=1 RT_SNAPSHOT_ONLY=1 \
             run_ieda_process "$stage_root/precheck/irt-edadb" "$stage" edadb "$input_def" 1 "$edadb_db"
         python3 "$COMPARE_IRT_INPUT" \
-            "$stage_root/precheck/irt-native/rt/data_manager/env_map.json" \
-            "$stage_root/precheck/irt-edadb/rt/data_manager/env_map.json" \
+            "$stage_root/precheck/irt-native/rt/data_manager/input_snapshot.json" \
+            "$stage_root/precheck/irt-edadb/rt/data_manager/input_snapshot.json" \
             >"$stage_root/precheck/irt-input-compare.log" 2>&1 || {
-                echo "FAIL: iRT wrapped input differs; routing was not run" >&2
+                echo "FAIL: iRT semantic input database differs; routing was not run" >&2
                 cat "$stage_root/precheck/irt-input-compare.log" >&2
                 return 1
             }
+        cat "$stage_root/precheck/irt-input-compare.log"
+        if [[ "$IRT_INPUT_GATE_ONLY" == "1" ]]; then
+            echo "PASS: iRT native and EDADB semantic input databases match"
+            return 0
+        fi
     fi
 
     local jobs
@@ -276,6 +283,9 @@ validate_stage() {
     done
 
     if [[ "$native_stable" -eq 0 ]]; then
+        if [[ "$stage" == "irt" ]]; then
+            python3 "$SUMMARIZE_IRT_VARIABILITY" "$stage_root" --output "$stage_root/variability_summary.json"
+        fi
         echo "REVIEW: native $stage controls are not deterministic; artifacts retained at $stage_root" >&2
     else
         echo "FAIL: EDADB $stage result differs from stable native result; artifacts retained at $stage_root" >&2
@@ -336,15 +346,19 @@ main() {
     [[ "$STAGE_RUN_JOBS" == "auto" || "$STAGE_RUN_JOBS" =~ ^[1-9][0-9]*$ ]] || die "STAGE_RUN_JOBS must be auto or positive"
     [[ "$IEDA_PROCESS_MEMORY_GIB" =~ ^[1-9][0-9]*$ ]] || die "IEDA_PROCESS_MEMORY_GIB must be positive"
     [[ "$IEDA_MEMORY_RESERVE_GIB" =~ ^[1-9][0-9]*$ ]] || die "IEDA_MEMORY_RESERVE_GIB must be positive"
+    [[ "$IRT_INPUT_GATE_ONLY" == "0" || "$IRT_INPUT_GATE_ONLY" == "1" ]] || die "IRT_INPUT_GATE_ONLY must be 0 or 1"
     require_file "$IEDA_BIN"
     require_file "$RUN_STAGE_TCL"
     require_file "$WRITE_EDADB_TCL"
     require_file "$NORMALIZER"
     require_file "$COMPARE_IRT_INPUT"
+    require_file "$SUMMARIZE_IRT_VARIABILITY"
 
     export DESIGN_TCL_SCRIPT_DIR="$TCL_SCRIPT_DIR"
+    export CTS_CONFIG_FILE="${CTS_CONFIG_FILE:-$CONFIG_DIR/cts_default_config.json}"
     require_file "$NETLIST_FILE"
     require_file "$SDC_FILE"
+    require_file "$CTS_CONFIG_FILE"
 
     local stages=("$@")
     if [[ "${#stages[@]}" -eq 0 ]]; then
