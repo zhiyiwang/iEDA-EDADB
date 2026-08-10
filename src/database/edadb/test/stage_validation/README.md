@@ -69,6 +69,11 @@ Generated artifacts stay outside the repository by default. Every process writes
 6. Run one EDADB control; expand to three after native variability or EDADB mismatch.
 7. Compare normalized DEF, timestamp-normalized Verilog, stable DB-report content, point-tool feature JSON, and runtime/memory-normalized summary JSON.
 
+Before a mismatch is called an adapter bug, require a stable native control, identical pre-tool
+state, a localized first divergence, and a source-derived causal explanation. Only complete local
+fixes with failing-before/passing-after evidence are committed; partial point-tool determinism
+patches are not accepted merely because they change the final diff.
+
 `feature_tool` fields `optDrv/optHold/optSetup.HPWL` and `.STWL` are excluded from semantic comparison. `ToApi::outputSummary()` declares these fields in `TimingOptSummary` but does not initialize or assign them (`src/operation/iTO/api/ToApi.cpp:114-163`), so emitted subnormal values depend on process memory rather than design state. The raw JSON remains in every run directory as evidence.
 
 Raw DEF differences remain available in the artifacts. The existing normalizer may reorder only Level-D root records; it never reorders A/B/C roots or nested vectors.
@@ -79,4 +84,6 @@ The generated-via defect is fixed. The strict minimal fixture reports `27 == 27`
 sky130 wrapper gate reports identical native/EDADB iRT input environments with `27,299`
 obstacles. Full routing reaches the repeatability review gate because three native controls
 produce different routed DEFs and QoR values. Detailed evidence and the next comparison boundary
-are recorded in `../../docs/stage-validation/README.md`.
+are recorded in `../../docs/stage-validation/README.md`. A single-thread diagnostic further proves
+that pointer-address iteration inside iRT can produce different legal routes from semantically
+identical native and EDADB inputs; this is classified separately from adapter restoration.

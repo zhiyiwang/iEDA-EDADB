@@ -255,6 +255,12 @@ Current uncovered or weakly covered areas:
 - During development run only affected cases; before handoff run the full case set with
   the selected concurrency. Parallel execution must not weaken per-case SQL, DEF diff,
   or nested-order perturbation assertions.
+- Before fixing a reported defect, use the grilling workflow to prove the failure boundary:
+  compare native controls, require identical pre-tool state, isolate the first divergent
+  consumer, derive a minimal causal fixture, and trace the object lifecycle in source. Fix
+  and commit only when the evidence identifies a complete, local correction. If the cause is
+  a cross-module point-tool property, record it and reject partial patches that merely move
+  the divergence downstream.
 - Update schema/init, builder read/write, DEF callbacks, regression SQL, and docs together.
 - Re-read current source and recheck every documented line number after code changes.
   Line ranges must identify a real function or brace body, not a vague phase.

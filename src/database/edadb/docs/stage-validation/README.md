@@ -81,6 +81,16 @@ Fixtures are small for causal isolation, not as substitutes for real designs. Ea
 | Only runtime/memory differs | Volatile measurement | Exclude from semantic equality; retain for later performance work. |
 | Schema/ownership/order semantics need change | Architectural adapter issue | Present evidence and obtain review before modification. |
 
+### Bug-Proof Protocol
+
+Before changing production code, the validation uses the grilling workflow:
+
+1. Establish whether native controls are stable under the same input, configuration, threads, and revision.
+2. Require native and EDADB pre-tool state to match before attributing any post-tool difference to the adapter.
+3. Locate the first divergent consumer or derived state, then reduce it to a legal minimal fixture when possible.
+4. Trace the full object lifecycle and derive the expected count/value change from source instead of guessing from the final DEF.
+5. Commit only a complete local fix with a failing-before/passing-after oracle. Cross-module point-tool defects remain documented review boundaries until an end-to-end fix is designed and tested.
+
 ## Sky130 Isolated Results
 
 | Stage | Result | Evidence |
@@ -168,6 +178,25 @@ Because the native oracle is not point-deterministic, an EDADB run cannot be rej
 not matching `native-1` byte-for-byte. The next comparator must first model the native result
 distribution and then test whether EDADB structural/DRC/QoR results fall within that envelope.
 The identical pre-tool iRT environment remains a strict, deterministic adapter gate.
+
+A single-thread follow-up separates thread scheduling from object-allocation order. All three
+native controls are mutually identical, and all three EDADB controls are mutually identical,
+but the two groups converge to different legal routes. Enhanced diagnostic snapshots confirmed
+that the ordered nets, pin grouping/driver flags, routing and cut shapes, GCell axes, via masters,
+and geometry multisets are identical before routing. The first observed difference is iteration
+order inside `DataManager::getTypeLayerNetFixedRectMap()` (`src/operation/iRT/source/data_manager/DataManager.cpp:345`):
+the same rectangle pointers are returned by `std::set<EXTLayerRect*>` in address order. iRT stores
+these and other routing objects in pointer-ordered sets (`src/operation/iRT/source/data_manager/advance/GCell.hpp:85-107`),
+and algorithmic consumers iterate that order, for example obstacle clipping in
+`src/operation/iRT/source/module/pin_accessor/PinAccessor.cpp:287-317`.
+
+This is a real iRT determinism defect: semantically identical inputs with different allocation
+histories can select different physical implementations. It is not evidence of a missing EDADB
+field. A local sort in PinAccessor is insufficient because pointer-ordered fixed rectangles,
+access points, segments, patches, and violations are consumed throughout later routing stages.
+Replacing the containers also requires care: a value-only `std::set` comparator could collapse
+distinct objects with equal geometry. No incomplete production fix is retained; the strict input
+gate remains authoritative while an iRT-wide stable identity/value-order design is deferred.
 
 Test-framework defects may be fixed directly with a self-test. Native iEDA behavior and adapter storage semantics are not changed opportunistically during stage validation.
 
