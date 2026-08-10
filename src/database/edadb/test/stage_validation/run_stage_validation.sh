@@ -31,12 +31,12 @@ require_file() {
 
 stage_input() {
     case "$1" in
-        ipl) echo "$WORKSPACE/result/iTO_fix_fanout_result.def" ;;
-        icts) echo "$WORKSPACE/result/iPL_result.def" ;;
-        ito_drv) echo "$WORKSPACE/result/iCTS_result.def" ;;
-        ito_hold) echo "$WORKSPACE/result/iTO_drv_result.def" ;;
-        ipl_lg) echo "$WORKSPACE/result/iTO_hold_result.def" ;;
-        irt) echo "$WORKSPACE/result/iPL_lg_result.def" ;;
+        ipl) echo "$DATASET_RESULT_DIR/$IPL_INPUT_DEF" ;;
+        icts) echo "$DATASET_RESULT_DIR/iPL_result.def" ;;
+        ito_drv) echo "$DATASET_RESULT_DIR/iCTS_result.def" ;;
+        ito_hold) echo "$DATASET_RESULT_DIR/iTO_drv_result.def" ;;
+        ipl_lg) echo "$DATASET_RESULT_DIR/iTO_hold_result.def" ;;
+        irt) echo "$DATASET_RESULT_DIR/iPL_lg_result.def" ;;
         *) die "unsupported stage: $1" ;;
     esac
 }
@@ -284,7 +284,54 @@ validate_stage() {
 }
 
 main() {
-    [[ "$DATASET" == "sky130_gcd" ]] || die "current harness supports DATASET=sky130_gcd only"
+    case "$DATASET" in
+        sky130_gcd)
+            export WORKSPACE="$REPO_ROOT/scripts/design/sky130_gcd"
+            export DATASET_RESULT_DIR="${DATASET_RESULT_DIR:-$WORKSPACE/result}"
+            export CONFIG_DIR="$WORKSPACE/iEDA_config"
+            export FOUNDRY_DIR="$WORKSPACE/../../foundry/sky130"
+            export TCL_SCRIPT_DIR="$WORKSPACE/script"
+            export DESIGN_TOP=gcd
+            export NETLIST_FILE="$WORKSPACE/result/verilog/gcd.v"
+            export SDC_FILE="$FOUNDRY_DIR/sdc/gcd.sdc"
+            export SPEF_FILE="$FOUNDRY_DIR/spef/gcd.spef"
+            export IPL_INPUT_DEF=iTO_fix_fanout_result.def
+            export RT_BOTTOM_LAYER=met1
+            export RT_TOP_LAYER=met4
+            ;;
+        ihp130_aes)
+            export WORKSPACE="$REPO_ROOT/scripts/design/ihp130_gcd"
+            export DATASET_RESULT_DIR="${DATASET_RESULT_DIR:-/tmp/iedadb_stage_inputs/ihp130_aes/result}"
+            export CONFIG_DIR="$WORKSPACE/iEDA_config"
+            export FOUNDRY_DIR="$REPO_ROOT/scripts/foundry/ihp130"
+            export TCL_SCRIPT_DIR="$WORKSPACE/script"
+            export DESIGN_TOP=aes_cipher_top
+            export NETLIST_FILE="$WORKSPACE/result/verilog/aes_nl.v"
+            export SDC_FILE="$WORKSPACE/default.sdc"
+            unset SPEF_FILE || true
+            export IPL_INPUT_DEF=iNO_fix_fanout_result.def
+            export RT_BOTTOM_LAYER=Metal2
+            export RT_TOP_LAYER=Metal5
+            ;;
+        ihp130_picorv32a)
+            export WORKSPACE="$REPO_ROOT/scripts/design/ihp130_gcd"
+            export DATASET_RESULT_DIR="${DATASET_RESULT_DIR:-/tmp/iedadb_stage_inputs/ihp130_picorv32a/result}"
+            export CONFIG_DIR="$WORKSPACE/iEDA_config"
+            export FOUNDRY_DIR="$REPO_ROOT/scripts/foundry/ihp130"
+            export TCL_SCRIPT_DIR="$WORKSPACE/script"
+            export DESIGN_TOP=picorv32a
+            export NETLIST_FILE="$WORKSPACE/result/verilog/picorv32a_nl.v"
+            export SDC_FILE="$WORKSPACE/default.sdc"
+            unset SPEF_FILE || true
+            export IPL_INPUT_DEF=iNO_fix_fanout_result.def
+            export RT_BOTTOM_LAYER=Metal2
+            export RT_TOP_LAYER=Metal5
+            ;;
+        *)
+            die "unsupported DATASET=$DATASET"
+            ;;
+    esac
+
     [[ "$NATIVE_RUNS" =~ ^[1-9][0-9]*$ ]] || die "NATIVE_RUNS must be positive"
     [[ "$STAGE_RUN_JOBS" == "auto" || "$STAGE_RUN_JOBS" =~ ^[1-9][0-9]*$ ]] || die "STAGE_RUN_JOBS must be auto or positive"
     [[ "$IEDA_PROCESS_MEMORY_GIB" =~ ^[1-9][0-9]*$ ]] || die "IEDA_PROCESS_MEMORY_GIB must be positive"
@@ -295,15 +342,9 @@ main() {
     require_file "$NORMALIZER"
     require_file "$COMPARE_IRT_INPUT"
 
-    export WORKSPACE="$REPO_ROOT/scripts/design/sky130_gcd"
-    export CONFIG_DIR="$WORKSPACE/iEDA_config"
-    export FOUNDRY_DIR="$WORKSPACE/../../foundry/sky130"
-    export TCL_SCRIPT_DIR="$WORKSPACE/script"
     export DESIGN_TCL_SCRIPT_DIR="$TCL_SCRIPT_DIR"
-    export DESIGN_TOP=gcd
-    export NETLIST_FILE="$WORKSPACE/result/verilog/gcd.v"
-    export SDC_FILE="$FOUNDRY_DIR/sdc/gcd.sdc"
-    export SPEF_FILE="$FOUNDRY_DIR/spef/gcd.spef"
+    require_file "$NETLIST_FILE"
+    require_file "$SDC_FILE"
 
     local stages=("$@")
     if [[ "${#stages[@]}" -eq 0 ]]; then

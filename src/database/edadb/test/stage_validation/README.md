@@ -5,7 +5,7 @@ This directory validates that a point tool consumes an EDADB-restored iDB in the
 ## Current Scope
 
 - Branch baseline: `edadb-idb-dev/sort-abc-no-sort-d` milestone implementation.
-- Dataset: `sky130_gcd`.
+- Dataset profiles: `sky130_gcd`, `ihp130_aes`, and `ihp130_picorv32a`.
 - Isolated stages: `ipl`, `icts`, `ito_drv`, `ito_hold`, `ipl_lg`, `irt`.
 - Native controls: three runs by default.
 - EDADB controls: one run when native results are stable and equal; three runs after variability or mismatch.
@@ -21,6 +21,22 @@ bash src/database/edadb/test/stage_validation/run_stage_validation.sh ipl
 bash src/database/edadb/test/stage_validation/run_stage_validation.sh icts ito_drv ito_hold
 bash src/database/edadb/test/stage_validation/run_stage_validation.sh irt
 ```
+
+Generate isolated IHP130 inputs outside the repository, then validate a stage:
+
+```bash
+DATASET=ihp130_aes PREPARE_THROUGH=ipl \
+bash src/database/edadb/test/stage_validation/prepare_ihp130_stage_inputs.sh
+
+DATASET=ihp130_aes \
+DATASET_RESULT_DIR=/tmp/iedadb_stage_inputs/ihp130_aes/result \
+bash src/database/edadb/test/stage_validation/run_stage_validation.sh ipl
+```
+
+`PREPARE_THROUGH` accepts `ifp`, `ino`, `ipl`, `icts`, `ito_drv`, `ito_hold`, or
+`ipl_lg`. Use `DATASET=ihp130_picorv32a` for the PicoRV32A profile. The preparation
+script passes explicit output/report paths and fails when the expected DEF is absent,
+empty, or accompanied by a DEF-save failure message.
 
 Run every isolated stage:
 
@@ -77,6 +93,15 @@ patches are not accepted merely because they change the final diff.
 `feature_tool` fields `optDrv/optHold/optSetup.HPWL` and `.STWL` are excluded from semantic comparison. `ToApi::outputSummary()` declares these fields in `TimingOptSummary` but does not initialize or assign them (`src/operation/iTO/api/ToApi.cpp:114-163`), so emitted subnormal values depend on process memory rather than design state. The raw JSON remains in every run directory as evidence.
 
 Raw DEF differences remain available in the artifacts. The existing normalizer may reorder only Level-D root records; it never reorders A/B/C roots or nested vectors.
+
+## Current iPL Status
+
+Sky130 GCD and IHP130 AES both pass strict native-vs-EDADB iPL validation. The AES test
+exposed a native iPL defect in which `NesterovPlace::completeConnection()` iterated a
+pointer-keyed map while constructing order-sensitive instance-pin and net-loader vectors.
+The implementation now traverses the existing logical `_nPin_list` and uses the map only
+for lookup. Three native controls and the EDADB result are identical on both datasets; the
+full causal chain and hashes are recorded in `../../docs/stage-validation/README.md`.
 
 ## Current iRT Status
 

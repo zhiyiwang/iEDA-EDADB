@@ -103,10 +103,12 @@ switch -- $stage {
         set rt_threads [expr {[info exists ::env(RT_THREAD_NUMBER)] ? $::env(RT_THREAD_NUMBER) : 64}]
         set rt_enable_notification [expr {[info exists ::env(RT_ENABLE_NOTIFICATION)] ? $::env(RT_ENABLE_NOTIFICATION) : 0}]
         set rt_snapshot_only [expr {[info exists ::env(RT_SNAPSHOT_ONLY)] ? $::env(RT_SNAPSHOT_ONLY) : 0}]
+        set rt_bottom_layer [expr {[info exists ::env(RT_BOTTOM_LAYER)] ? $::env(RT_BOTTOM_LAYER) : "met1"}]
+        set rt_top_layer [expr {[info exists ::env(RT_TOP_LAYER)] ? $::env(RT_TOP_LAYER) : "met4"}]
         file mkdir $::env(RESULT_DIR)/rt
         init_rt -temp_directory_path $::env(RESULT_DIR)/rt/ \
-                -bottom_routing_layer met1 \
-                -top_routing_layer met4 \
+                -bottom_routing_layer $rt_bottom_layer \
+                -top_routing_layer $rt_top_layer \
                 -thread_number $rt_threads \
                 -enable_notification $rt_enable_notification
         if {!$rt_snapshot_only} {

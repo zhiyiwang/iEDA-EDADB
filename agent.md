@@ -261,6 +261,13 @@ Current uncovered or weakly covered areas:
   and commit only when the evidence identifies a complete, local correction. If the cause is
   a cross-module point-tool property, record it and reject partial patches that merely move
   the divergence downstream.
+- Pointer-keyed maps and sets are lookup structures, not semantic iteration orders. When their
+  iteration feeds an order-sensitive vector or floating-point reduction, traverse an existing
+  stable source vector or sort by a stable logical key; verify the change with native-repeatability,
+  strict pre-tool equality, and native-vs-EDADB post-tool tests before committing.
+- Stage-input preparation must pass every output path explicitly and assert that each expected
+  DEF is non-empty and no save-failure message appears. A zero iEDA exit status alone does not
+  prove that a Tcl stage produced its output.
 - Update schema/init, builder read/write, DEF callbacks, regression SQL, and docs together.
 - Re-read current source and recheck every documented line number after code changes.
   Line ranges must identify a real function or brace body, not a vague phase.

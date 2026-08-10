@@ -251,9 +251,8 @@ void NesterovPlace::wrapNesPin(Pin* pin, NesPin* nesPin)
 
 void NesterovPlace::completeConnection()
 {
-  for (auto pair : _nes_database->_nPin_map) {
-    auto* pin = pair.first;
-    auto* n_pin = pair.second;
+  for (auto* n_pin : _nes_database->_nPin_list) {
+    auto* pin = _nes_database->_pin_map.at(n_pin);
 
     auto* inst = pin->get_instance();
 

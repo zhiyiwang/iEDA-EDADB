@@ -56,6 +56,15 @@ Independent inputs prevent one upstream mismatch from contaminating every downst
 
 The first three datasets are introduced sequentially. A larger dataset is not used to hide a failure in a smaller one.
 
+IHP130 stage inputs are generated outside the repository so existing design results remain
+read-only. The preparation script passes every output path explicitly and rejects a missing or
+empty DEF even if iEDA returns zero:
+
+```bash
+DATASET=ihp130_aes PREPARE_THROUGH=ipl \
+bash src/database/edadb/test/stage_validation/prepare_ihp130_stage_inputs.sh
+```
+
 ## Minimal Fixture Contract
 
 Every fixture must document:
@@ -102,6 +111,55 @@ Before changing production code, the validation uses the grilling workflow:
 | Incremental legalization | Pass | Three native controls are stable; EDADB matches. |
 | iRT input gate | Pass after generated-via fix | Canonical DEF/report and the complete iRT-wrapped die/obstacle/pin-shape environment match. |
 | iRT full routing | Review | Three native controls produce different legal routing geometries and QoR values. EDADB attribution therefore requires a native variability envelope rather than pairwise exact DEF equality. |
+
+## IHP130 AES Results
+
+| Stage | Result | Evidence |
+|---|---|---|
+| Input preparation through iPL | Pass | Explicit iFP, iNO, and iPL outputs were created under `/tmp/iedadb_stage_inputs/ihp130_aes/result`. |
+| iPL | Pass after native iPL fix | Native pre-tool and EDADB pre-tool DEFs are byte-identical; three native controls are stable; EDADB matches the native DEF, feature JSON, reports, and QoR. |
+
+The PicoRV32A dataset profile has separately passed its iFP preparation smoke test; its staged
+point-tool validation remains the third dataset layer and is not claimed complete here.
+
+### Resolved iPL Pointer-Ordered Connectivity
+
+The initial AES iPL comparison satisfied the strict adapter gate but failed after placement:
+
+- native and EDADB pre-tool DEFs were byte-identical;
+- three native controls produced one stable result and three EDADB controls produced a second
+  stable result;
+- reducing iPL to one internal thread did not remove the difference;
+- the first numerical divergence occurred at Nesterov iteration 320, where HPWL differed by two
+  DBU before later branch decisions amplified it.
+
+The source path identifies a native iPL determinism defect rather than a missing EDADB field:
+
+1. `IDBWrapper::wrapNetlists()` traverses the logical iDB net and pin relationships at
+   `src/operation/iPL/source/module/wrapper/IDBWrapper.cc:572-629`; `wrapPin()` appends each new
+   placement pin to `Design::_pin_list` at
+   `src/operation/iPL/source/module/wrapper/IDBWrapper.cc:631-697`.
+2. `NesterovPlace::wrapNesPinList()` preserves that logical order in `_nPin_list`, while also
+   creating pointer-keyed lookup maps, at
+   `src/operation/iPL/source/module/global_placer/electrostatic_placer/NesterovPlace.cc:192-204`.
+3. The old `completeConnection()` iterated `std::map<Pin*, NesPin*>`, so allocation addresses
+   selected the append order of `NesInstance::_nPin_list` and `NesNet::_loader_list`. Those vectors
+   feed placement calculations, including per-instance wirelength preconditioning.
+4. The correction at
+   `src/operation/iPL/source/module/global_placer/electrostatic_placer/NesterovPlace.cc:252-282`
+   traverses `_nPin_list` and uses `_pin_map` only for reverse lookup. It changes no identity,
+   connectivity, or numerical formula.
+5. `initNodes()` still uses a pointer-keyed lookup map because it immediately sorts the resulting
+   node vector by stable `pin_id` at
+   `src/operation/iPL/source/module/global_placer/electrostatic_placer/NesterovPlace.cc:326-353`;
+   it does not create the order-sensitive vectors involved in this failure.
+
+Passing-after evidence:
+
+- IHP130 AES: three native DEFs and the EDADB DEF share SHA-256
+  `c8458e6342d2e8c041c63ad05df24f76fb9f47c26a3990a536100eb66802e336`;
+- sky130 GCD: three native DEFs and the EDADB DEF share SHA-256
+  `26fc1e9ff16bf660c403cb9d3f0a8714be0ffd7a945d20fae76027e6c6d5dd85`.
 
 ### Resolved iRT Generated-Via Cut Duplication
 
