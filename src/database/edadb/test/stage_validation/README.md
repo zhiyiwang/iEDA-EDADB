@@ -48,10 +48,12 @@ The [generated-via fixture](fixtures/sky130_generated_via/README.md) provides a 
 first-principles iRT input test:
 
 ```bash
-EXPECT_KNOWN_DEFECT=1 bash src/database/edadb/test/stage_validation/run_generated_via_fixture.sh
+bash src/database/edadb/test/stage_validation/run_generated_via_fixture.sh
 ```
 
-Its strict mode omits `EXPECT_KNOWN_DEFECT` and must pass after the adapter defect is fixed.
+Strict mode is the current regression and requires native/EDADB equality. Set
+`EXPECT_KNOWN_DEFECT=1` only with a pre-fix binary to reproduce the historical `27 -> 65`
+signature; that mode must fail for the fixed implementation.
 
 For iRT input-state diagnosis, set `RT_ENABLE_NOTIFICATION=1 RT_SNAPSHOT_ONLY=1`. Normal runs leave both disabled. The options ask iRT to emit its wrapped environment JSON under each run's `rt/` directory and stop before routing; notification delivery itself may remain disabled.
 
@@ -71,6 +73,10 @@ Generated artifacts stay outside the repository by default. Every process writes
 
 Raw DEF differences remain available in the artifacts. The existing normalizer may reorder only Level-D root records; it never reorders A/B/C roots or nested vectors.
 
-## Current iRT Gate Failure
+## Current iRT Status
 
-The sky130 iRT gate currently stops before routing because EDADB restores generated-via cut geometry three times. The wrapper comparison reports `obs: native=27299 edadb=33861 added=6562 removed=0`. Detailed evidence and the two-phase `fromShadow()` cause are recorded in `../../docs/stage-validation/README.md`.
+The generated-via defect is fixed. The strict minimal fixture reports `27 == 27`, and the full
+sky130 wrapper gate reports identical native/EDADB iRT input environments with `27,299`
+obstacles. Full routing reaches the repeatability review gate because three native controls
+produce different routed DEFs and QoR values. Detailed evidence and the next comparison boundary
+are recorded in `../../docs/stage-validation/README.md`.

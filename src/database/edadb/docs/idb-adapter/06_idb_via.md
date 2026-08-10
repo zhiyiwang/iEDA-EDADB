@@ -32,8 +32,8 @@
 | `hasViaRule()`：恢复 rule、layer refs、cut/spacing/enclosure，见 `def_read.cpp:1815-1841` | generated shadow 按 name 经 helper 查找 LEF rule/layers，见 `shadow_idb_via_master.h:63-103` | generated-via source fields |
 | 可选恢复 `ORIGIN/OFFSET`，见 `def_read.cpp:1843-1855` | 保存并恢复 original/offset scalar fields | `ORIGIN/OFFSET` |
 | 恢复默认或显式 `ROWCOL`、可选 `PATTERN`，见 `def_read.cpp:1862-1873` | 恢复 rows/cols/pattern | `ROWCOL/PATTERN` |
-| 计算 cut rect、cut bbox 和公共 via shapes，见 `def_read.cpp:1878-1900` | `fromShadow()` 用相同公式重建 cut rect/bbox，parent 再调 `set_via_shape()`，见 `shadow_idb_via_master.h:108-129`、`shadow_idb_via_master.h:194-199` | derived geometry，不入库 |
-| fixed branch 按 DEF `RECT` 创建 fixed master/layer/rect，见 `def_read.cpp:1901-1919` | layer-shape/rect children 读回后，master shadow 调 `add_fixed()/add_rect()`，见 `shadow_idb_via_master.h:205-237` | fixed layer/rect source fields |
+| 计算 cut rect、cut bbox 和公共 via shapes，见 `def_read.cpp:1878-1900` | `fromShadow()` 清空旧派生数据后用相同公式重建 cut rect/bbox，parent 再调 `set_via_shape()`，见 `shadow_idb_via_master.h:107-135`、`shadow_idb_via_master.h:204-212` | derived geometry，不入库 |
+| fixed branch 按 DEF `RECT` 创建 fixed master/layer/rect，见 `def_read.cpp:1901-1919` | layer-shape/rect children 读回后，master shadow 调 `add_fixed()/add_rect()`，见 `shadow_idb_via_master.h:220-252` | fixed layer/rect source fields |
 | fixed branch 计算 cut bbox 与公共 via shapes，见 `def_read.cpp:1921-1931` | 按 cut-layer rect 计算同一结果并调用 `set_via_shape()` | derived geometry，不入库 |
 
 ## Schema And Shadow Audit
@@ -76,6 +76,13 @@ Primary-key audit：
 - Fixed via 的 source of truth 是 `IdbViaMaster::_master_fixed_list -> IdbLayerShape::_rect_list`；这些 rect 不是 generated cut rect。
 - 两条分支只在 `set_via_shape()` 后形成统一的 bottom/cut/top layer-shape 消费接口。
 
+### Two-phase restoration idempotence
+
+- `TABLE4SHADOW_WVEC(IdbViaMaster)` 的 SELECT lifecycle 会在 scalar restore 后和 vector-child restore 后各调用一次 `fromShadow()`；因此恢复函数必须满足 `restore(restore(obj)) == restore(obj)`。
+- generated-via 的 cut list 和公共 bottom/cut/top shapes 都是派生且由目标对象拥有。每次恢复先删除并清空旧 cut rect，见 `shadow_idb_via_master.h:107-113`；parent 再清空三个公共 layer shape，见 `shadow_idb_via_master.h:204-211`，随后确定性重建。
+- 修复前两次 append 会把 `N` 个 source cuts 变成 `3N` 个公共 cut shapes；修复后两次调用都得到同一对象状态。fixed-via child 只在 vector phase 恢复，分支逻辑未修改。
+- 该规则不是文本 canonicalization：iRT 会把公共 via shapes 转成 routing obstacles，因此重复派生几何会改变点工具实际输入。
+
 ## Fixed RECT Grouping And Shape Rebuild
 
 ### DEF RECT 与 EDADB layer/rect vector 的等价关系
@@ -83,7 +90,7 @@ Primary-key audit：
 - 原始 `parse_via()` 的循环按每一条 DEF `RECT` record 执行，不是按唯一 layer 执行，见 `def_read.cpp:1908-1919`。
 - `add_fixed(layer_name)` 第一次遇到 layer 时创建 `IdbViaMasterFixed`，再次遇到同名 layer 时返回已有对象；随后每条 DEF `RECT` 都通过 `add_rect()` 追加到该 layer 的 rect vector，见 `IdbViaMaster.cpp:382-395`。
 - 因此原始 parser 已把 DEF records 聚合为 `vector<IdbViaMasterFixed*> -> vector<IdbRect*>`。例如两个 `met1` RECT 会形成一个 `met1` fixed master 和两个 rect，而不是两个 fixed master。
-- EDADB 保存的是这个已聚合的 iDB storage view：外层 `fixed_layer_shape_list_sd` 表示唯一 layer，内层 `_rect_list_sd` 表示该 layer 的全部 RECT。`fromShadow()` 外层按 layer 重建 fixed master，内层逐个 `add_rect()`，见 `shadow_idb_via_master.h:217-242`。
+- EDADB 保存的是这个已聚合的 iDB storage view：外层 `fixed_layer_shape_list_sd` 表示唯一 layer，内层 `_rect_list_sd` 表示该 layer 的全部 RECT。`fromShadow()` 外层按 layer 重建 fixed master，内层逐个 `add_rect()`，见 `shadow_idb_via_master.h:226-251`。
 - 两条路径严格保持 layer 首次出现顺序、同 layer 内 rect 顺序、rect 坐标和 cut-layer bbox 计算；跨 layer 的原始 RECT 交错顺序不会保留，因为原始 iDB parser 本身已经按 layer 聚合。
 
 ### `set_type_fixed()` 与 `set_via_shape()` 的职责
@@ -91,15 +98,15 @@ Primary-key audit：
 - `set_type_fixed()` 只设置 `IdbViaMaster::_type = kFixed`，用于选择 fixed 分支，见 `def_read.cpp:1902`、`IdbViaMaster.h:359`。
 - parser 收集所有 layer/rect 并计算 cut bbox 后，再调用 `set_via_shape()` 建立派生的 bottom/cut/top layer-shape 缓存，见 `def_read.cpp:1930-1931`、`IdbViaMaster.h:367-372`。
 - 两者不冲突也不冗余，调用顺序必须是 `set_type_fixed() -> add_fixed/add_rect -> set_cut_rect() -> set_via_shape()`。缺少 type 设置无法进入 fixed rebuild；缺少 shape rebuild 则 `_master_fixed_list` 已恢复但公共 layer-shape 消费接口仍为空。
-- `Shadow<IdbViaMaster>::fromShadow()` 使用相同顺序：先恢复 `_type_sd`，再恢复 fixed layer/rect，随后计算 cut bbox 并调用 `set_via_shape()`，见 `shadow_idb_via_master.h:195-247`。
+- `Shadow<IdbViaMaster>::fromShadow()` 使用相同顺序：先恢复 `_type_sd`，再恢复 fixed layer/rect，随后计算 cut bbox 并调用 `set_via_shape()`，见 `shadow_idb_via_master.h:201-260`。
 - `via_branches` fixture 使用同一 layer 的多个 RECT，并检查数据库物理顺序被打乱后，读回的 layer/rect vector、cut bbox 和 fixed geometry 签名仍与原始 parser 对象一致。
 
 ## EDADB Paths
 
 - Write：`writeIdbVia()` 直接 batch 写 root vector；nested direct-to-shadow 转换由 EDADB schema 递归完成，见 `def_write_edadb.cpp:301-328`。
 - Read：`readIdbVia()` 只负责 cursor、错误处理和 `IdbVias::add_via()`；`469-491` 的代码仅在 debug 模式输出 fixed geometry 验证签名，nested rebuild 位于标准 `fromShadow()`，见 `def_read_edadb.cpp:441-499`。
-- Generated shadow：`src/database/edadb/idb/shadow/shadow_idb_via_master.h:22-158`。
-- Master/fixed shadow：`src/database/edadb/idb/shadow/shadow_idb_via_master.h:161-266`。
+- Generated shadow：`src/database/edadb/idb/shadow/shadow_idb_via_master.h:22-162`。
+- Master/fixed shadow：`src/database/edadb/idb/shadow/shadow_idb_via_master.h:166-275`。
 - Layer/rect shadow：`src/database/edadb/idb/shadow/shadow_idb_layer_shape.h:18-114`、`src/database/edadb/idb/shadow/shadow_idb_geometry.h:45-80`。
 
 ## Tests
@@ -110,6 +117,7 @@ Primary-key audit：
 - `via_branches` fixture：generated `ORIGIN/OFFSET` 和 fixed via 三层 rect。
 - fixed layer-shape/rect child table、nested `_vec_idx` 与重建路径。
 - 逆序重建 `iVia` 物理行；Level-D normalized diff 允许 root 顺序变化，nested block 不归一化。
+- generated-via 最小 fixture：原生与 EDADB 均为 `19` cut + `8` enclosure = `27` obstacles；full sky130 iRT wrapper 输入均为 `27,299` obstacles。
 
 ## Known Native Writer Differences
 

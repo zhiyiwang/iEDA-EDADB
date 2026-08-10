@@ -104,8 +104,14 @@ public:
         // use pattern name string to create and set pattern instance 
         obj->set_patttern(_pattern_name_sd);
 
-
         // build core cut shape for via master generate if pattern exist, since cut array must follow the pattern rule
+        std::vector<idb::IdbRect*>& cut_rect_list = obj->get_cut_rect_list();
+        for (idb::IdbRect*& cut_rect : cut_rect_list) {
+            delete cut_rect;
+            cut_rect = nullptr;
+        }
+        cut_rect_list.clear();
+
         int32_t cut_width_total = _num_cut_cols_sd * _cut_size_x_sd + (_num_cut_cols_sd - 1) * _cut_spacing_x_sd;
         int32_t cut_height_total = _num_cut_rows_sd * _cut_size_y_sd + (_num_cut_rows_sd - 1) * _cut_spacing_y_sd;
 
@@ -199,6 +205,9 @@ public:
             if (!_master_generate_sd.fromShadow(obj->get_master_generate())) {
                 return false;
             }
+            obj->get_bottom_layer_shape()->clear();
+            obj->get_cut_layer_shape()->clear();
+            obj->get_top_layer_shape()->clear();
             obj->set_via_shape();
             return true;
         }

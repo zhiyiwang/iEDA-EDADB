@@ -19,23 +19,23 @@ The records are reduced from `scripts/design/sky130_gcd/result/iPL_lg_result.def
 
 Each generated via contributes two routing-layer enclosure rectangles. The four vias therefore contribute eight enclosure shapes. Their cut arrays contribute `10 + 4 + 4 + 1 = 19` cut shapes. A correct native or EDADB snapshot must contain exactly 27 obstacles with the same rectangle multiset.
 
-The current open adapter defect produces:
+The pre-fix adapter defect produced:
 
 - native: 19 cuts + 8 enclosures = 27 obstacles;
 - EDADB: 57 cuts + 8 enclosures = 65 obstacles;
 - difference: every cut rectangle has multiplicity three instead of one, adding 38 shapes; enclosure geometry is unchanged.
 
-This exact `27 -> 65` signature proves the two-phase EDADB `fromShadow()` lifecycle appends generated cuts more than once. It does not merely show a textual DEF ordering difference.
+This exact `27 -> 65` signature proved that the two-phase EDADB `fromShadow()` lifecycle appended generated cuts more than once. It was not a textual DEF ordering difference. The fixed implementation clears owned source and derived rectangles before reconstruction, so both phases now produce the same `27`-shape state.
 
 ## Run
 
-Strict regression mode expects semantic equivalence and currently fails until the adapter is fixed:
+Strict regression mode expects semantic equivalence and is the default acceptance test:
 
 ```bash
 bash src/database/edadb/test/stage_validation/run_generated_via_fixture.sh
 ```
 
-Diagnostic mode succeeds only when the exact known defect is reproduced:
+Historical diagnostic mode succeeds only when the exact pre-fix defect is reproduced:
 
 ```bash
 EXPECT_KNOWN_DEFECT=1 \

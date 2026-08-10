@@ -90,11 +90,12 @@ Fixtures are small for causal isolation, not as substitutes for real designs. Ea
 | iTO DRV | Pass with native-field exclusion | DEF, Verilog, DB report, and stable metrics match. Native `TimingOptSummary::HPWL/STWL` are uninitialized and excluded while raw JSON is retained. |
 | iTO Hold | Pass | Three native controls are stable; EDADB matches. |
 | Incremental legalization | Pass | Three native controls are stable; EDADB matches. |
-| iRT | Open adapter defect | Canonical pre-tool DEF/report match, but the iRT-wrapped obstacle environment differs before routing. |
+| iRT input gate | Pass after generated-via fix | Canonical DEF/report and the complete iRT-wrapped die/obstacle/pin-shape environment match. |
+| iRT full routing | Review | Three native controls produce different legal routing geometries and QoR values. EDADB attribution therefore requires a native variability envelope rather than pairwise exact DEF equality. |
 
-### iRT Generated-Via Cut Duplication
+### Resolved iRT Generated-Via Cut Duplication
 
-The single-thread diagnostic is deterministic: all three native runs match one another, all three EDADB runs match one another, but the two groups differ. The raw pre-tool DEF is byte-identical, so this is hidden iDB state rather than DEF text order.
+Before the fix, the single-thread diagnostic was deterministic: all three native runs matched one another, all three EDADB runs matched one another, but the two groups differed. The raw pre-tool DEF was byte-identical, so this was hidden iDB state rather than DEF text order.
 
 The iRT wrapper snapshot localizes the difference to `env_shape.obs`:
 
@@ -108,8 +109,8 @@ The source-level lifecycle explains the exact `N -> 3N` result:
 
 1. The input defines four generated DEF vias at `scripts/design/sky130_gcd/result/iPL_lg_result.def:71`.
 2. EDADB SELECT calls `fromShadow()` after scalar restoration at `src/database/edadb/core/include/edadb/backend/sqlite/DbTableOpSelect4Sqlite.h:165` and again after vector-child restoration at `src/database/edadb/core/include/edadb/backend/sqlite/DbTableOpSelect4Sqlite.h:201` for `TABLE4SHADOW_WVEC` objects.
-3. `Shadow<IdbViaMasterGenerate>::fromShadow()` appends `N` generated cuts at `src/database/edadb/idb/shadow/shadow_idb_via_master.h:108`.
-4. `Shadow<IdbViaMaster>::fromShadow()` then calls `set_via_shape()` at `src/database/edadb/idb/shadow/shadow_idb_via_master.h:202`. The first pass creates `N` derived cut shapes. The second pass appends another `N` source cuts, then appends all `2N` cuts to the existing `N` derived shapes, producing `3N`.
+3. The old `Shadow<IdbViaMasterGenerate>::fromShadow()` appended `N` generated cuts at the reconstruction loop now located at `src/database/edadb/idb/shadow/shadow_idb_via_master.h:120-132`.
+4. `Shadow<IdbViaMaster>::fromShadow()` then calls `set_via_shape()` at `src/database/edadb/idb/shadow/shadow_idb_via_master.h:211`. The first pass created `N` derived cut shapes. The second pass appended another `N` source cuts, then appended all `2N` cuts to the existing `N` derived shapes, producing `3N`.
 5. iRT consumes those derived cut shapes as special-net obstacles at `src/operation/iRT/interface/RTInterface.cpp:1017` and `src/operation/iRT/interface/RTInterface.cpp:1030`.
 
 ### Minimal Generated-Via Confirmation
@@ -121,7 +122,8 @@ The oracle follows directly from the DEF `ROWCOL` values:
 - native cut shapes: `2x5 + 1x4 + 1x4 + 1x1 = 19`;
 - routing-layer enclosures: two per via, so `8`;
 - expected native and correct EDADB total: `19 + 8 = 27` obstacles;
-- current EDADB total: `3x19 + 8 = 65`, with exactly 38 added cut shapes and unchanged enclosures.
+- pre-fix EDADB total: `3x19 + 8 = 65`, with exactly 38 added cut shapes and unchanged enclosures;
+- fixed EDADB total: `19 + 8 = 27`, with the same rectangle multiset as native.
 
 Both serial and two-process fixture scheduling reproduce the same exact signature. Diagnostic
 mode passes only for that signature:
@@ -131,11 +133,12 @@ EXPECT_KNOWN_DEFECT=1 \
 bash src/database/edadb/test/stage_validation/run_generated_via_fixture.sh
 ```
 
-Strict mode omits `EXPECT_KNOWN_DEFECT`; it returns failure until native and EDADB obstacle
-multisets are equal. The fixture README records why one row and the routing tracks are the
-minimum valid iRT physical context.
+Strict mode omits `EXPECT_KNOWN_DEFECT` and is the acceptance test. The historical diagnostic
+mode remains available to prove that a pre-fix binary has the exact `27 -> 65` signature; it
+must fail for a fixed binary. The fixture README records why one row and the routing tracks are
+the minimum valid iRT physical context.
 
-### Reviewable Adapter Correction
+### Adapter Correction And Acceptance
 
 The smallest sufficient production change is limited to generated-via reconstruction:
 
@@ -148,10 +151,23 @@ The smallest sufficient production change is limited to generated-via reconstruc
    fixed child rows are populated only during the vector phase and do not cause this defect.
 
 This makes both generated-via calls replacement-based and idempotent without adding phase
-flags, changing schema, or changing the standard `toShadow/fromShadow` signatures. Acceptance
-requires the strict minimal fixture to change from `27 != 65` to `27 == 27`, the full sky130
-iRT wrapper gate to change from `27299 != 33861` to equality, and existing fixed/generated via
-roundtrip tests to remain green. Production adapter code remains unchanged until review.
+flags, changing schema, or changing the standard `toShadow/fromShadow` signatures. The fix was
+accepted by all required checks:
+
+- strict minimal fixture: `27 == 27`;
+- historical known-defect checker rejects the fixed result;
+- full sky130 iRT wrapper gate: native and EDADB both contain `27,299` obstacle shapes;
+- fixed/generated Via regression and the complete object-level regression remain green.
+
+### Current Full-Routing Review Boundary
+
+After the input gate passed, three single-process native iRT controls produced different routed
+DEFs, wire lengths, segment/via counts, and patch counts. For example, native controls changed
+total wire length from `13,083,995` to `13,087,655` DBU and patch count from `18` to `24`.
+Because the native oracle is not point-deterministic, an EDADB run cannot be rejected merely for
+not matching `native-1` byte-for-byte. The next comparator must first model the native result
+distribution and then test whether EDADB structural/DRC/QoR results fall within that envelope.
+The identical pre-tool iRT environment remains a strict, deterministic adapter gate.
 
 Test-framework defects may be fixed directly with a self-test. Native iEDA behavior and adapter storage semantics are not changed opportunistically during stage validation.
 

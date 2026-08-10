@@ -88,7 +88,7 @@ def check_known_defect(
     if edadb_cuts != expected_edadb_cuts:
         raise AssertionError("EDADB cut geometry is not the exact native multiset tripled")
 
-    print("PASS: reproduced the known generated-via restoration defect")
+    print("PASS: reproduced the historical generated-via restoration defect")
     print("  native: 19 cut shapes + 8 enclosure shapes = 27 obstacles")
     print("  EDADB:  57 cut shapes + 8 enclosure shapes = 65 obstacles")
     print("  delta:   38 duplicate cut shapes; routing-layer geometry unchanged")
@@ -101,7 +101,7 @@ def main(argv: Iterable[str]) -> int:
     parser.add_argument(
         "--expect-known-defect",
         action="store_true",
-        help="pass only when the exact current 27-to-65 defect is reproduced",
+        help="pass only when the exact historical 27-to-65 defect is reproduced",
     )
     args = parser.parse_args(list(argv))
 
