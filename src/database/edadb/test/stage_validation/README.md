@@ -138,3 +138,8 @@ When native iRT controls vary, the harness writes `variability_summary.json`. It
 fixed-structure equality plus native and EDADB samples for total/per-layer wire length, wire,
 segment, via, patch, and final DRC-violation counts. Native observed min/max values are descriptive
 evidence only; three samples are not promoted into an arbitrary acceptance tolerance.
+
+PicoRV32A currently passes strict iPL, stable-profile iCTS, and the isolated iRT semantic input
+gate. Native iTO DRV aborts reproducibly because `trace_data[5]` is absent from the RC tree for
+`fanout_net_56`; the native/EDADB iTO pre-tool gate passes first. The detailed duplicate net-alias
+evidence and why no speculative fix is accepted are recorded in `../../docs/stage-validation/README.md`.

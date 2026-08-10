@@ -125,8 +125,40 @@ Before changing production code, the validation uses the grilling workflow:
 | iRT semantic input gate | Pass | Native and EDADB `semantic_database` snapshots are exactly equal; pointer-ordered fixed-rectangle iteration differs with an identical value multiset. |
 | iRT full routing | Review | Three native and three EDADB runs complete, but native routing is not deterministic; observed QoR ranges are retained as evidence, not promoted to a tolerance. |
 
-The PicoRV32A dataset profile has separately passed its iFP preparation smoke test; its staged
-point-tool validation remains the third dataset layer and is not claimed complete here.
+## IHP130 PicoRV32A Results
+
+| Stage | Result | Evidence |
+|---|---|---|
+| Input preparation through iPL | Pass | iFP, iNO, and iPL produce non-empty isolated outputs. |
+| iPL | Pass | Native/EDADB pre-tool state matches; three native controls are stable; EDADB matches. |
+| iCTS | Pass with stable algorithm profile | Three native controls are stable and EDADB matches under the documented no-skew-tree profile. |
+| iTO DRV pre-tool gate | Pass | Native and EDADB reconstruction of the same iCTS DEF match before invoking iTO. |
+| iTO DRV tool execution | Blocked by native input/model defect | Three native attempts abort on the same missing RC-tree pin; no adapter code is involved. |
+| iTO Hold / downstream legalization | Not run | Their canonical inputs depend on the blocked iTO DRV stage. |
+| iRT semantic input gate | Pass on isolated iPL input | Native and EDADB semantic DataManager snapshots match; only pointer iteration order differs. Full routing is deferred. |
+
+### PicoRV32A Native Net-Alias / RC-Tree Boundary
+
+The Pico failure is upstream of EDADB and stable across repeated native runs:
+
+1. The iFP DEF already represents `trace_data[5]` in two root NETS records while the PIN
+   declares `+ NET _17496_`: `_17496_` and `trace_data\[5\]` both reference the same IO pin.
+2. Fanout repair later moves that IO load into `fanout_net_56`; the alias record remains, so the
+   generated DEF still has conflicting root-net ownership for the same pin.
+3. The iTO pre-tool native/EDADB gate passes, proving adapter reconstruction is not the first
+   divergence.
+4. Native iTO then builds the RC tree for `fanout_net_56`; its node list contains the tie cell,
+   fanout buffer, and numbered fanout nodes but not `trace_data[5]`.
+5. `RcNet::updateRcTreeInfo()` requires every logical net pin to have an RC node and aborts at
+   `src/operation/iSTA/source/module/delay/ElmoreDelayCalc.cc:1078-1110` with
+   `pin trace_data[5] can not found in RCTree fanout_net_56`.
+
+This is a real native iEDA topology/modeling defect, but the first responsible alias-construction
+layer is not yet reduced to a safe local correction. Relaxing the fatal check would leave an
+incomplete RC tree; deleting one DEF net record would guess which logical alias owns the port.
+Under the bug-proof protocol, no production patch is retained. iPL, iCTS, and the isolated iRT
+input gate remain valid independent-stage evidence; iTO Hold and chained-flow claims remain
+explicitly blocked.
 
 ### IHP130 CTS Native Boundary
 
