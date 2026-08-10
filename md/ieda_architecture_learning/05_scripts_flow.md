@@ -1,205 +1,140 @@
-# 示例脚本 Flow
+---
+title: sky130 iEDA 多进程物理设计流程
+aliases:
+  - iEDA Script Flow
+tags:
+  - iEDA
+  - flow
+  - sky130
+---
 
-这一层回答：真实运行时，脚本怎样把 LEF/DEF/Lib/SDC 和各点工具串起来。
+# sky130 iEDA 多进程物理设计流程
 
-## 相关类及执行过程
+> [!info] Source baseline
+> 脚本和源码链接按 `edadb-idb-dev/sort-abc-no-sort-d @ 77fbe5c67` 核对。
 
-示例目录：`scripts/design/sky130_gcd`
+[学习地图](00_learning_map.md) · [代码主线](10_complete_tutorial.md) · [点工具](04_eda_tools.md)
 
-核心内容：
+## 1. The Most Important Runtime Fact
 
-| 文件/目录 | 作用 |
-| --- | --- |
-| `run_iEDA.py`、`run_iEDA.sh` | 组织执行 iEDA flow。 |
-| `config.py` | 设置设计目录、foundry、结果目录等路径。 |
-| `iEDA_config/*.json` | 各工具配置，例如 DB、FP、PL、CTS、RT、TO、DRC、PNP。 |
-| `script/DB_script` | 读 LEF/DEF/Verilog/Lib/SDC/SPEF，保存 DEF/GDS/JSON/Verilog。 |
-| `script/iFP_script` | floorplan flow。 |
-| `script/iPL_script` | placement/filler/legalization flow。 |
-| `script/iCTS_script` | CTS flow。 |
-| `script/iRT_script` | routing flow。 |
-| `script/iSTA_script` | STA flow。 |
-| `script/iTO_script` | timing optimization flow。 |
-| `script/iDRC_script` | DRC flow。 |
+The driver starts a fresh `iEDA` executable for every stage:
 
-### 典型 DB 初始化脚本
-
-位置：`scripts/design/sky130_gcd/script/DB_script/run_db.tcl`
-
-执行过程：
+- first floorplan process: [`run_iEDA.sh`](../../scripts/design/sky130_gcd/run_iEDA.sh#L25)
+- ordered stage list: [`run_iEDA.sh`](../../scripts/design/sky130_gcd/run_iEDA.sh#L28)
+- process loop: [`run_iEDA.sh`](../../scripts/design/sky130_gcd/run_iEDA.sh#L42)
 
 ```text
-flow_init -config flow_config.json
-db_init -config db_default_config.json -output_dir_path result
-source db_path_setting.tcl
-source db_init_lef.tcl
-def_init -path result/iRT_result.def
-def_save -path result/data_out.def
-netlist_save -path result/data_out.v
-flow_exit
+process N: read LEF + previous DEF -> run one tool -> save DEF/Verilog -> exit
+process N+1: read LEF + previous result -> run next tool -> save -> exit
 ```
 
-对应 C++：
+So the stage output is not only a report; it is the persistent input of the next process.
 
-| Tcl 命令 | C++ 执行 |
-| --- | --- |
-| `flow_init` | flow/config Tcl command，初始化平台配置。 |
-| `db_init` | DB 配置初始化。 |
-| `tech_lef_init` | `CmdInitTechLef::exec()` -> `dmInst->readLef(..., true)` |
-| `lef_init` | `CmdInitLef::exec()` -> `dmInst->readLef(...)` |
-| `def_init` | `CmdInitDef::exec()` -> `dmInst->readDef(...)` |
-| `def_save` | `CmdSaveDef::exec()` -> `dmInst->saveDef(...)` |
-| `netlist_save` | `DataManager::saveVerilog(...)` |
+## 2. Stage Pipeline
 
-### Netlist 到 DEF
-
-位置：`scripts/design/sky130_gcd/script/DB_script/run_netlist_to_def.tcl`
-
-执行过程：
-
-```text
-读 flow/db config
-读 LEF
-verilog_init -path result/verilog/gcd.v -top gcd
-def_save -path result/netlist_result.def
-netlist_save -path result/netlist_result.v
-```
-
-对应 EDA 含义：
-
-```text
-Verilog logical netlist
-  -> RustVerilogRead
-  -> IdbDesign instance/net/pin
-  -> DEF physical design shell
-```
-
-这里的 DEF 不一定已经完成 placement/routing，它更像把逻辑网表放入 iDB 后导出的物理设计容器。
-
-### Placement flow
-
-位置：`scripts/design/sky130_gcd/script/iPL_script/run_iPL.tcl`
-
-典型过程：
-
-```text
-读 config / LEF / input DEF
-run_placer -config pl_default_config.json
-def_save -path result/iPL_result.def
-netlist_save -path result/iPL_result.v
-report_db
-feature_summary
-flow_exit
-```
-
-对应 C++：
-
-```text
-run_placer
-  -> CmdPlacerAutoRun::exec()
-  -> ToolManager::autoRunPlacer()
-  -> plInst->runPlacement()
-  -> 更新 IdbInstance 坐标
-```
-
-### CTS flow
-
-位置：`scripts/design/sky130_gcd/script/iCTS_script/run_iCTS.tcl`
-
-典型过程：
-
-```text
-读 Lib/SDC/LEF
-def_init -path result/iPL_lg_result.def
-run_cts -config cts_default_config.json -work_dir result/cts
-def_save -path result/iCTS_result.def
-netlist_save -path result/iCTS_result.v
-report_db
-feature_summary
-```
-
-对应 C++：
-
-```text
-run_cts
-  -> CmdCTSAutoRun::exec()
-  -> ToolManager::autoRunCTS()
-  -> ctsInst->runCTS()
-  -> 插入 clock tree 相关 instance/net
-```
-
-### Routing flow
-
-位置：`scripts/design/sky130_gcd/script/iRT_script/run_iRT.tcl`
-
-典型过程：
-
-```text
-读 Lib/SDC/LEF
-def_init -path result/iPL_lg_result.def 或后续输入 DEF
-init_drc_api
-init_rt ...
-run_rt -flow "dr"
-destroy_rt
-destroy_drc_api
-def_save -path result/iRT_result.def
-netlist_save -path result/iRT_result.v
-```
-
-对应 C++：
-
-```text
-init_rt/run_rt/destroy_rt
-  -> src/interface/tcl/tcl_irt
-  -> src/operation/iRT
-  -> 更新 IdbNet wire/via
-```
-
-### Timing optimization flow
-
-位置：`scripts/design/sky130_gcd/script/iTO_script`
-
-常见脚本：
-
-| 脚本 | 输入 | 命令 | 输出 |
+| Order | Script | Main action | Persistent output |
 | --- | --- | --- | --- |
-| `run_iTO_drv.tcl` | `iCTS_result.def` | `run_to_drv` | `iTO_drv_result.def` |
-| `run_iTO_hold.tcl` | `iTO_drv_result.def` | `run_to_hold` | `iTO_hold_result.def` |
-| `run_iTO_setup.tcl` | `iTO_hold_result.def` | `run_to_setup` | `iTO_setup_result.def` |
+| 1 | `iFP_script/run_iFP.tcl` | Build floorplan from LEF + Verilog/config. | `iFP_result.def` |
+| 2 | `iNO_script/run_iNO_fix_fanout.tcl` | Insert fanout buffers and split nets. | fanout-fixed DEF/Verilog |
+| 3 | `iPL_script/run_iPL.tcl` | Global/legal/detailed placement. | `iPL_result.def` |
+| 4 | `iCTS_script/run_iCTS.tcl` | Build clock tree. | `iCTS_result.def` |
+| 5 | `iCTS_script/run_iCTS_STA.tcl` | Analyze CTS timing. | reports |
+| 6 | `iTO_script/run_iTO_drv.tcl` | Fix DRV. | `iTO_drv_result.def` |
+| 7 | `iTO_script/run_iTO_hold.tcl` | Fix hold. | `iTO_hold_result.def` |
+| 8 | `iPL_script/run_iPL_legalization.tcl` | Legalize inserted/changed cells. | `iPL_lg_result.def` |
+| 9 | `iRT_script/run_iRT.tcl` | Route signal nets. | `iRT_result.def` |
+| 10 | `iRT_script/run_iRT_DRC.tcl` | Check routed design. | DRC report |
+| 11 | `iPL_script/run_iPL_filler.tcl` | Insert filler-cell instances. | filler DEF/Verilog |
+| 12 | `DB_script/run_def_to_gds_text.tcl` | Export final layout. | GDS/text |
 
-对应 EDA 含义：
+The authoritative order is the shell script, not the document table: [`run_iEDA.sh`](../../scripts/design/sky130_gcd/run_iEDA.sh#L28).
 
-```text
-timing/DRV analysis
-  -> buffer insertion / netlist modification
-  -> iDB design update
-  -> save DEF + Verilog
-```
+## 3. Common Stage Template
 
-## EDA 抽象与 iEDA 类的对应关系
-
-| 脚本阶段 | 输入文件 | iEDA 抽象 | 输出文件 |
-| --- | --- | --- | --- |
-| DB init | LEF/DEF/Verilog | `IdbLayout`、`IdbDesign` | DEF/Verilog/GDS/JSON |
-| Netlist to DEF | Verilog + LEF | `RustVerilogRead`、`IdbDesign` | `netlist_result.def` |
-| Floorplan | initial design + FP config | die/core/row/blockage/macro | `iFP_result.def` |
-| Placement | floorplan DEF + PL config | instance placement | `iPL_result.def` |
-| CTS | placed DEF + Lib/SDC | clock tree | `iCTS_result.def` |
-| TO | CTS/placed DEF + timing config | buffer/netlist update | `iTO_*_result.def` |
-| Routing | placed/optimized DEF + RT config | wire/via routing | `iRT_result.def` |
-| DRC | routed DEF | violation check | `detail.drc` |
-| GDS export | routed/final DEF | layout stream | `final_design.gds2` |
-
-## 阅读建议
-
-脚本是最好的“反向索引”。建议每次按下面顺序读：
+Most stage Tcl files follow this shape:
 
 ```text
-某个 run_*.tcl
-  -> 找其中第一个核心 Tcl 命令
-  -> 找 registerTclCmd
-  -> 找 CmdXXX::exec()
-  -> 看进入 ToolManager、DataManager 还是某个 operation API
+flow/db config
+  -> source LEF paths and read LEF
+  -> def_init previous_stage.def
+  -> run point-tool command
+  -> def_save current_stage.def
+  -> netlist_save current_stage.v
+  -> reports/features
+  -> flow_exit
 ```
 
-这样读比从 `src/operation` 目录硬啃源码轻很多。
+DB command implementations:
+
+- tech LEF: [`CmdInitTechLef::exec()`](../../src/interface/tcl/tcl_idb/tcl_db_file.cpp#L72)
+- LEF: [`CmdInitLef::exec()`](../../src/interface/tcl/tcl_idb/tcl_db_file.cpp#L110)
+- DEF: [`CmdInitDef::exec()`](../../src/interface/tcl/tcl_idb/tcl_db_file.cpp#L148)
+- DEF save: [`CmdSaveDef::exec()`](../../src/interface/tcl/tcl_idb/tcl_db_file.cpp#L228)
+
+## 4. Concrete Examples
+
+### Placement
+
+- load input DEF: [`run_iPL.tcl`](../../scripts/design/sky130_gcd/script/iPL_script/run_iPL.tcl#L35)
+- run placer: [`run_iPL.tcl`](../../scripts/design/sky130_gcd/script/iPL_script/run_iPL.tcl#L40)
+- save result DEF: [`run_iPL.tcl`](../../scripts/design/sky130_gcd/script/iPL_script/run_iPL.tcl#L46)
+
+### CTS
+
+- load placed DEF: [`run_iCTS.tcl`](../../scripts/design/sky130_gcd/script/iCTS_script/run_iCTS.tcl#L35)
+- run CTS: [`run_iCTS.tcl`](../../scripts/design/sky130_gcd/script/iCTS_script/run_iCTS.tcl#L40)
+- save clock-tree DEF: [`run_iCTS.tcl`](../../scripts/design/sky130_gcd/script/iCTS_script/run_iCTS.tcl#L48)
+
+### Timing Optimization
+
+- load previous result: [`run_iTO_drv.tcl`](../../scripts/design/sky130_gcd/script/iTO_script/run_iTO_drv.tcl#L35)
+- optimize DRV: [`run_iTO_drv.tcl`](../../scripts/design/sky130_gcd/script/iTO_script/run_iTO_drv.tcl#L40)
+- save updated design: [`run_iTO_drv.tcl`](../../scripts/design/sky130_gcd/script/iTO_script/run_iTO_drv.tcl#L47)
+
+### Routing
+
+- load legal placement: [`run_iRT.tcl`](../../scripts/design/sky130_gcd/script/iRT_script/run_iRT.tcl#L35)
+- initialize and run router: [`run_iRT.tcl`](../../scripts/design/sky130_gcd/script/iRT_script/run_iRT.tcl#L40)
+- destroy router and trigger output: [`run_iRT.tcl`](../../scripts/design/sky130_gcd/script/iRT_script/run_iRT.tcl#L51)
+- save routed DEF: [`run_iRT.tcl`](../../scripts/design/sky130_gcd/script/iRT_script/run_iRT.tcl#L57)
+
+## 5. What Persists Between Stages
+
+| Data | Main persistence path | Notes |
+| --- | --- | --- |
+| Physical design | DEF | die/rows/components/pins/nets/routes/constraints. |
+| Logical connectivity | DEF and Verilog | Netlist output is important after buffer insertion or net splitting. |
+| Technology/library | LEF re-read | Normally not copied into each DEF. |
+| Timing constraints/models | SDC/Lib re-read | iSTA graph is rebuilt in a new process. |
+| Parasitics | SPEF or tool-computed state | Not generally encoded by ordinary DEF object persistence. |
+| Tool-private state | Usually not persisted | Placement/routing/timing internal IDs and caches are rebuilt. |
+
+This is why a DEF-equivalent EDADB restore is necessary but not automatically sufficient for resuming every internal algorithm state.
+
+## 6. EDADB Research Boundary
+
+The current adapter can replace or supplement the physical-design checkpoint:
+
+```text
+stage N active iDB -> EDADB snapshot
+stage N+1 EDADB restore -> active iDB -> unchanged point-tool import
+```
+
+Potential extensions must distinguish:
+
+1. persistent iDB/DEF source data;
+2. derived iDB fields rebuilt by setters/helpers;
+3. point-tool private state not currently represented in iDB;
+4. analysis files such as Liberty/SDC/SPEF.
+
+## 7. Efficient Reading Order
+
+For one stage, read only these five anchors:
+
+1. stage `run_*.tcl` input;
+2. core Tcl command;
+3. command `exec()` and platform/API forwarding;
+4. tool import/writeback bridge in [EDA 点工具](04_eda_tools.md);
+5. `def_save` output.
+
+This produces a complete data-lifecycle view before studying the algorithm itself.

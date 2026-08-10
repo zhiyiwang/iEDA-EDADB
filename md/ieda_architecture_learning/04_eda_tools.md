@@ -1,226 +1,169 @@
-# EDA 点工具与后端阶段
+---
+title: iEDA 点工具与 iDB 数据桥接
+aliases:
+  - iEDA Point Tools
+tags:
+  - iEDA
+  - point-tool
+  - iDB
+---
 
-这一层回答：数字后端每个阶段在 iEDA 中对应哪个模块，以及它们怎样共享 iDB 数据。
+# iEDA 点工具与 iDB 数据桥接
 
-## 相关类及执行过程
+> [!info] Source baseline
+> 源码链接按 `edadb-idb-dev/sort-abc-no-sort-d @ 77fbe5c67` 核对。
 
-### 平台调度视角
+[学习地图](00_learning_map.md) · [代码主线](10_complete_tutorial.md) · [脚本 Flow](05_scripts_flow.md)
 
-大多数工具由 Tcl 命令进入 `ToolManager`，再由 `ToolManager` 转发到对应点工具的 API/IO 单例。
+## 1. Do Not Assume Every Tool Uses iDB the Same Way
 
-```text
-Tcl command
-  -> CmdXXX::exec()
-  -> ToolManager::autoRunXXX()
-  -> xxxInst / XxxApi / XxxIO
-  -> src/operation/iXXX
-  -> 读取或修改 iDB
-  -> DataManager 保存结果
-```
-
-也有例外，例如 iRT 的常用脚本入口是 `init_rt/run_rt/destroy_rt`，需要从 `src/interface/tcl/tcl_irt` 直接追到 `src/operation/iRT`。
-
-### iFP: Floorplan
-
-位置：`src/operation/iFP`
-
-典型输入：
-
-- 工艺 LEF、cell LEF。
-- 初始 DEF 或 Verilog 转 DEF。
-- floorplan 配置，例如 die/core、IO、macro、tapcell/blockage 等。
-
-典型输出：
-
-- 带 die/core/row/macro/blockage 等 floorplan 信息的 DEF。
-
-EDA 抽象：
-
-| 概念 | iEDA 对应 |
-| --- | --- |
-| Die/Core | `IdbLayout::get_die()`、`IdbCore`、DataManager 的 die/core 操作 |
-| Row/Site | `IdbRows`、`IdbSites` |
-| Macro placement | `IdbInstance` 的位置和状态 |
-| Blockage | `IdbPlacementBlockage`、`IdbBlockageList` |
-
-### iPL: Placement
-
-位置：`src/operation/iPL`
-
-入口：
-
-- Tcl: `run_placer`、`placer_run_gp`、`placer_run_lg`、`placer_run_dp`
-- 平台转发：`ToolManager::autoRunPlacer()` 调用 `plInst->runPlacement(config, enableJsonOutput)`
-
-典型过程：
-
-```text
-读入 iDB design/layout
-  -> global placement
-  -> legalization
-  -> detailed placement
-  -> filler insertion
-  -> 更新 IdbInstance 坐标和 placement status
-  -> def_save / netlist_save
-```
-
-EDA 抽象：
-
-| 概念 | iEDA 对应 |
-| --- | --- |
-| Cell instance | `IdbInstance`、`IdbInstanceList` |
-| Net connectivity | `IdbNet`、`IdbPin` |
-| Placement row/site | `IdbRows`、`IdbSites` |
-| Legalization | iPL 内部 legalizer，结果回写 instance 坐标 |
-| Filler | `run_filler`，回写 filler instance |
-
-### iCTS: Clock Tree Synthesis
-
-位置：`src/operation/iCTS`
-
-入口：
-
-- Tcl: `run_cts -config ... -work_dir ...`
-- 平台转发：`ToolManager::autoRunCTS()` 调用 `ctsInst->runCTS(config, work_dir)`
-
-典型过程：
-
-```text
-读取 placement 后的 iDB
-  -> 找 clock net / sink pins
-  -> 插入 clock buffer/inverter
-  -> 生成 clock tree 拓扑和线段
-  -> 更新 iDB net/instance
-  -> 保存 DEF/Verilog/report
-```
-
-EDA 抽象：
-
-| 概念 | iEDA 对应 |
-| --- | --- |
-| Clock net | `DataManager::getClockNetList()`、`IdbNet` |
-| Clock sink | `IdbPin` / instance pin |
-| Clock buffer | 新增或修改的 `IdbInstance` |
-| Clock tree report | `cts_report`、`cts_save_tree` |
-
-### iRT: Routing
-
-位置：`src/operation/iRT`
-
-入口：
-
-- Tcl: `init_rt`、`run_rt`、`destroy_rt`
-- sky130 示例中常见：`run_rt -flow "dr"`
-
-典型过程：
-
-```text
-读取 placement/CTS/TO 后的 DEF
-  -> 初始化 routing resource
-  -> global routing / detailed routing
-  -> 生成 wire/via
-  -> 回写 IdbNet / IdbRegularWire / IdbVias
-  -> def_save
-```
-
-注意：`ToolManager::autoRunRouter()` 当前代码里打印禁用提示；脚本 flow 中应以 `tcl_irt` 的命令入口为准。
-
-EDA 抽象：
-
-| 概念 | iEDA 对应 |
-| --- | --- |
-| Routing layer | `IdbLayers` |
-| Track/grid | `IdbTrackGridList`、`IdbGCellGridList` |
-| Wire segment | `IdbRegularWire`、`IdbRegularWireSegment` |
-| Via | `IdbVia`、`IdbVias` |
-| DRC-aware routing | iRT 与 DRC API/规则数据交互 |
-
-### iSTA: Static Timing Analysis
-
-位置：`src/operation/iSTA`
-
-入口：
-
-- Tcl: `init_sta`、`run_sta`、`report_sta`
-- 平台转发：`ToolManager::autoRunSTA()`、`initSTA()`、`runSTA()`
-
-输入：
-
-- Netlist/DEF。
-- Liberty `.lib`。
-- SDC。
-- 可选 SPEF/SDF。
-
-EDA 抽象：
-
-| 概念 | iEDA 对应 |
-| --- | --- |
-| Timing graph | iSTA 内部 timing engine |
-| Liberty cell arc | iSTA liberty parser/model |
-| Constraint | SDC reader |
-| Parasitic | SPEF/SDF reader |
-| Timing report | `run_sta`、`report_sta` |
-
-### iTO / iNO: 优化
-
-位置：
-
-- `src/operation/iTO`
-- `src/operation/iNO`
-
-入口：
-
-| 工具 | Tcl 命令 | 平台转发 |
+| Pattern | Tool examples | Data behavior |
 | --- | --- | --- |
-| iTO | `run_to`、`run_to_drv`、`run_to_hold`、`run_to_setup` | `ToolManager::autoRunTO/RunTODrv/RunTOHold/RunTOSetup` |
-| iNO | `run_no_fix_fanout` 或相关 NO 命令 | `ToolManager::RunNOFixFanout` |
+| Direct mutation | iFP, parts of iNO | 直接取得 active iDB 并增删改对象。 |
+| Copy and write back | iPL | iDB 转成工具私有 DB，算法结束后统一回写。 |
+| Mapped private model | iCTS, iSTA/iTO | 工具对象与 iDB 对象通过 wrapper/adapter 建立映射。 |
+| Import and reconstruct | iRT | 导入 routing DB，结束时重建 `IdbNet` wires/segments。 |
+| Read-only analysis | normal iSTA, iDRC, power analysis | 从 iDB 构建分析模型，主要输出 report/violation。 |
 
-EDA 抽象：
+这一区分决定了 EDADB 优化应该放在哪里：恢复完整 active iDB、加速工具 import，或者支持工具结果增量回写。
 
-| 概念 | iEDA 对应 |
-| --- | --- |
-| DRV fix | iTO 插 buffer、调整 net/instance |
-| Hold/setup optimization | iTO 调用 timing 信息并修改设计 |
-| Fanout fix | iNO 插 buffer 或拆分负载 |
-| ECO-style update | 修改 `IdbInstance`、`IdbNet` 后保存 DEF/Verilog |
+## 2. iFP: Directly Build Floorplan Objects
 
-### iDRC / iPA / iIR / iPNP
+Tcl/API chain:
 
-位置：
+- command execution: [`TclFpInit::exec()`](../../src/interface/tcl/tcl_ifp/tcl_init_ifp.cpp#L73)
+- call `initDie/initCore`: [`tcl_init_ifp.cpp`](../../src/interface/tcl/tcl_ifp/tcl_init_ifp.cpp#L141)
+- call `makeTracks`: [`tcl_init_ifp.cpp`](../../src/interface/tcl/tcl_ifp/tcl_init_ifp.cpp#L197)
 
-- `src/operation/iDRC`
-- `src/operation/iPA`
-- `src/operation/iIR`
-- `src/operation/iPNP`
+Direct active-iDB updates:
 
-职责：
+- die points: [`InitDesign::initDie()`](../../src/operation/iFP/source/module/init_design/init_design.cpp#L32)
+- core-site lookup and row reset: [`InitDesign::initCore()`](../../src/operation/iFP/source/module/init_design/init_design.cpp#L45)
+- row creation loop and alternating orientation: [`InitDesign::initCore()`](../../src/operation/iFP/source/module/init_design/init_design.cpp#L87)
+- X/Y track grids: [`InitDesign::makeTracks()`](../../src/operation/iFP/source/module/init_design/init_design.cpp#L114)
 
-| 工具 | 作用 |
-| --- | --- |
-| iDRC | 检查 routing/design rule violation，并可输出 detail DRC。 |
-| iPA/iPW | 功耗分析。 |
-| iIR | IR drop 分析。 |
-| iPNP | Power network planning，生成或优化电源网络。 |
+Reads: LEF sites/layers and current die/layout. Writes: `IdbDie`, `IdbCore`, `IdbRows`, `IdbTrackGridList`.
 
-## EDA 抽象与 iEDA 类的对应关系
+## 3. iNO: Direct Netlist ECO
 
-| 后端阶段 | 输入 | 修改对象 | 输出 |
+iNO scans the timing model, maps a violating timing net back to `IdbNet`, then directly edits iDB:
+
+- scan fanout violations: [`FixFanout::fixFanout()`](../../src/operation/iNO/source/module/fix_fanout/FixFanout.cpp#L32)
+- create split net: [`FixFanout::makeNet()`](../../src/operation/iNO/source/module/fix_fanout/FixFanout.cpp#L130)
+- create buffer instance from LEF master: [`FixFanout::makeInstance()`](../../src/operation/iNO/source/module/fix_fanout/FixFanout.cpp#L137)
+- disconnect/reconnect pins: [`FixFanout.cpp`](../../src/operation/iNO/source/module/fix_fanout/FixFanout.cpp#L151)
+
+Reads: timing fanout plus iDB connectivity. Writes: instance list, net list, pin-to-net relations.
+
+## 4. iPL: Copy, Optimize, Write Back
+
+Entry:
+
+- Tcl: [`CmdPlacerAutoRun::exec()`](../../src/interface/tcl/tcl_ipl/tcl_ipl.cpp#L46)
+- platform forwarding: [`ToolManager::autoRunPlacer()`](../../src/platform/tool_manager/tool_manager.cpp#L184)
+
+Import:
+
+- wrapper entry: [`IDBWrapper::wrapIDBData()`](../../src/operation/iPL/source/module/wrapper/IDBWrapper.cc#L211)
+- copy layout resources: [`IDBWrapper::wrapLayout()`](../../src/operation/iPL/source/module/wrapper/IDBWrapper.cc#L223)
+- copy design instances/nets/regions: [`IDBWrapper::wrapDesign()`](../../src/operation/iPL/source/module/wrapper/IDBWrapper.cc#L394)
+
+Writeback:
+
+- update existing/new instances: [`IDBWrapper::writeBackSourceDatabase()`](../../src/operation/iPL/source/module/wrapper/IDBWrapper.cc#L759)
+- write status: [`IDBWrapper.cc`](../../src/operation/iPL/source/module/wrapper/IDBWrapper.cc#L779)
+- write coordinate: [`IDBWrapper.cc`](../../src/operation/iPL/source/module/wrapper/IDBWrapper.cc#L819)
+
+Reads: die/core/rows/sites/cell masters/instances/nets/regions. Writes: placement status, orientation, coordinates and inserted filler-cell instances.
+
+> [!note] Filler terminology
+> `run_filler` calls `insertLayoutFiller()` through [`PlacerIO::runFillerInsertion()`](../../src/platform/tool_manager/tool_api/ipl_io/ipl_io.cpp#L124). The filler algorithm creates placement `Instance` objects in [`MapFiller::add_filler_instance()`](../../src/operation/iPL/source/module/filler/src/MapFiller.cpp#L194), which are later handled through placement writeback. This is not automatically the same object family as DEF `FILLS` / `IdbFillList`.
+
+## 5. iCTS: Maintain CTS-to-iDB Mappings
+
+Flow:
+
+- `readData -> routing -> evaluate`: [`CTSAPI::runCTS()`](../../src/operation/iCTS/api/CTSAPI.cc#L74)
+- create `CtsDBWrapper` from active builder: [`CTSAPI::init()`](../../src/operation/iCTS/api/CTSAPI.cc#L186)
+- import configured clock nets: [`CTSAPI::readData()`](../../src/operation/iCTS/api/CTSAPI.cc#L222)
+- convert iDB clock nets, pins and instances: [`CtsDBWrapper::read()`](../../src/operation/iCTS/source/data_manager/io/CtsDBWrapper.cc#L40)
+
+Updates:
+
+- create iDB clock buffer instance: [`CtsDBWrapper::makeInstance()`](../../src/operation/iCTS/source/data_manager/io/CtsDBWrapper.cc#L111)
+- create iDB clock net: [`CtsDBWrapper::makeNet()`](../../src/operation/iCTS/source/data_manager/io/CtsDBWrapper.cc#L127)
+- update cell master through mapped instance: [`CtsDBWrapper::updateCell()`](../../src/operation/iCTS/source/data_manager/io/CtsDBWrapper.cc#L101)
+
+Reads: placed clock nets, sink pins, coordinates, LEF cell masters. Writes: clock buffers, clock nets and updated connectivity.
+
+## 6. iSTA and iTO: Timing Model plus ECO Writeback
+
+Normal STA:
+
+- convert active iDB to timing netlist: [`StaIO::readIdb()`](../../src/platform/tool_manager/tool_api/ista_io/ista_io.cpp#L178)
+- build/report timing without normal physical writeback: [`StaIO::runSTA()`](../../src/platform/tool_manager/tool_api/ista_io/ista_io.cpp#L151)
+
+Timing optimization:
+
+- DRV/setup/hold API dispatch: [`ToApi.cpp`](../../src/operation/iTO/api/ToApi.cpp#L61)
+- disconnect old sinks: [`StaIO::insertBuffer()`](../../src/platform/tool_manager/tool_api/ista_io/ista_io.cpp#L402)
+- create buffer and net: [`ista_io.cpp`](../../src/platform/tool_manager/tool_api/ista_io/ista_io.cpp#L434)
+- set iDB placement and update timing engine: [`ista_io.cpp`](../../src/platform/tool_manager/tool_api/ista_io/ista_io.cpp#L450)
+
+Reads: iDB netlist/placement, Liberty, SDC and optional parasitics. Writes during optimization: instances, nets, pin relations, initial buffer placement.
+
+## 7. iRT: Import Routing State and Rebuild Net Wires
+
+Import:
+
+- initialize routing data manager: [`RTInterface::initRT()`](../../src/operation/iRT/interface/RTInterface.cpp#L68)
+- import config and active iDB: [`RTInterface::input()`](../../src/operation/iRT/interface/RTInterface.cpp#L526)
+- wrap die/row/layers/vias/obstacles/nets: [`RTInterface::wrapDatabase()`](../../src/operation/iRT/interface/RTInterface.cpp#L548)
+
+Algorithm stages:
+
+- pin access, topology, layer assignment, routing, track assignment, detailed routing: [`RTInterface::runRT()`](../../src/operation/iRT/interface/RTInterface.cpp#L117)
+
+Writeback:
+
+- `destroyRT()` triggers `RTDM.output()`: [`RTInterface::destroyRT()`](../../src/operation/iRT/interface/RTInterface.cpp#L165)
+- routing DataManager calls `RTInterface::output()`: [`DataManager::output()`](../../src/operation/iRT/source/data_manager/DataManager.cpp#L67)
+- output dispatches track/gcell/net results: [`RTInterface::output()`](../../src/operation/iRT/interface/RTInterface.cpp#L1263)
+- gather detailed route result: [`RTInterface::outputNetList()`](../../src/operation/iRT/interface/RTInterface.cpp#L1341)
+- clear old iDB wires: [`RTInterface.cpp`](../../src/operation/iRT/interface/RTInterface.cpp#L1361)
+- create routed wire and append segments: [`RTInterface.cpp`](../../src/operation/iRT/interface/RTInterface.cpp#L1376)
+
+Reads: layer rules, tracks, vias, rows, obstacles, pins and nets. Writes: `IdbRegularWire`, segments, points, vias and route state.
+
+## 8. iDRC: Convert iDB Geometry to Analysis Shapes
+
+- environment shapes from instances, pins and special nets: [`DRCInterface::buildEnvShapeList()`](../../src/operation/iDRC/interface/DRCInterface.cpp#L638)
+- routed signal shapes from regular wires: [`DRCInterface::buildResultShapeList()`](../../src/operation/iDRC/interface/DRCInterface.cpp#L876)
+
+Normal iDRC produces violations/reports rather than replacing the iDB geometry it checks.
+
+## 9. Stage Summary
+
+| Stage | Main iDB input | Tool-private model | Main iDB update |
 | --- | --- | --- | --- |
-| Floorplan | LEF、初始 DEF/Verilog、FP config | `IdbDie`、`IdbCore`、`IdbRows`、`IdbInstance`、`IdbBlockage` | `iFP_result.def` |
-| Placement | floorplan DEF、PL config | `IdbInstance` 坐标/status、filler | `iPL_result.def`、`iPL_lg_result.def` |
-| CTS | placement DEF、CTS config、Lib/SDC | clock buffer instance、clock net | `iCTS_result.def`、clock report |
-| Routing | CTS/TO 后 DEF、RT config | net wires、vias、routing shapes | `iRT_result.def` |
-| STA | DEF/Verilog、Lib、SDC、SPEF | timing graph/report，不一定修改 iDB | timing report |
-| TO/NO | timed design、optimization config | instance/net/buffer | `iTO_*_result.def`、netlist |
-| DRC | routed DEF、tech/rule data | violation report | `detail.drc`、DRC report |
-| Power/IR/PNP | routed design、power config | power report 或 PDN shapes | report/DEF |
+| iFP | layout sites/layers + logical design | little/no full copy | die/core/rows/tracks/constraints |
+| iNO | nets/pins/instances + timing | timing netlist | buffer/net/pin connectivity |
+| iPL | layout + design | placement DB | instance status/orient/coordinate |
+| iCTS | placed clock connectivity | CTS design/tree | clock buffers/nets/connections |
+| iSTA | design + Liberty/SDC/SPEF | timing graph | report only in normal STA |
+| iTO | timing graph + active iDB | timing/optimization model | ECO instances/nets/connections |
+| iRT | routing resources + design geometry | routing DB | regular wires/segments/vias |
+| iDRC | environment + routed geometry | DRC shapes/index | violation report |
 
-## 阅读建议
+## 10. Reading Checklist
 
-不要从 `src/operation` 全量阅读。每次只选一个阶段：
+For each tool, verify in source:
 
-1. 先看该工具 README。
-2. 找 Tcl 注册文件。
-3. 找 `CmdXXX::exec()`。
-4. 找 `ToolManager` 转发或工具 API。
-5. 看它读取了哪些 iDB 对象，最后回写了哪些 iDB 对象。
+1. import entry;
+2. exact iDB containers traversed;
+3. private object identity/mapping;
+4. algorithm output container;
+5. iDB writeback method;
+6. stage output script.
+
+This checklist is more reliable than assuming a tool directly operates on `IdbDesign` because it includes an `Idb*` header.

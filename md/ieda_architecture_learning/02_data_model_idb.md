@@ -1,140 +1,108 @@
+---
+title: iDB 数据模型与文件读写
+tags:
+  - iEDA
+  - iDB
+  - database
+---
+
 # iDB 数据模型与文件读写
 
-这一层回答：EDA 文件被读进来以后，在 iEDA 内部变成什么对象，后续点工具共享和修改的“设计状态”在哪里。
+> [!info] Source baseline
+> 行号按 `edadb-idb-dev/sort-abc-no-sort-d @ 77fbe5c67` 核对。
 
-## 相关类及执行过程
+[学习地图](00_learning_map.md) · [代码主线](10_complete_tutorial.md) · [点工具](04_eda_tools.md)
 
-### `idm::DataManager`
+## 1. Platform and Builder Roles
 
-位置：`src/platform/data_manager/idm.h`、`src/platform/data_manager/idm.cpp`、`src/platform/data_manager/idm_save.cpp`
-
-`DataManager` 是平台层的数据门面，宏 `dmInst` 指向它的单例。
-
-核心成员：
-
-| 成员 | 类型 | 作用 |
+| Object | Role | Code anchor |
 | --- | --- | --- |
-| `_config` | `DataConfig` | 保存 LEF/DEF/output path 等数据配置。 |
-| `_idb_builder` | `IdbBuilder*` | 调用 parser/writer 构建或保存 iDB。 |
-| `_idb_def_service` | `IdbDefService*` | 维护 DEF/design 侧服务。 |
-| `_idb_lef_service` | `IdbLefService*` | 维护 LEF/layout 侧服务。 |
-| `_design` | `IdbDesign*` | 当前设计对象。 |
-| `_layout` | `IdbLayout*` | 当前工艺/版图对象。 |
+| `DataManager` | 平台数据门面；保存 builder/service/root pointers。 | [`DataManager::readDef()`](../../src/platform/data_manager/idm.cpp#L98) |
+| `IdbBuilder` | 文件格式与 iDB 之间的构建器。 | [`IdbBuilder::buildDef()`](../../src/database/manager/builder/builder.cpp#L100) |
+| `IdbLefService` | 持有 LEF/layout 侧服务。 | [`IdbBuilder::buildLef()`](../../src/database/manager/builder/builder.cpp#L158) |
+| `IdbDefService` | 持有 DEF/design 侧服务，并共享 LEF layout。 | [`IdbBuilder::buildDef()`](../../src/database/manager/builder/builder.cpp#L107) |
 
-关键方法：
+## 2. `IdbLayout` versus `IdbDesign`
 
-| 方法 | 执行过程 |
-| --- | --- |
-| `init(config_path)` | 创建 `IdbBuilder`，读配置，依次 `initLef`、`initDef`。 |
-| `readLef(config_path)` | 读配置，先读 tech LEF，再读普通 LEF。 |
-| `readLef(vector<string>, bool)` | 直接读一组 LEF 文件。 |
-| `readDef(path)` | 要求 LEF/layout 已经存在，然后 `initDef(path)`。 |
-| `readVerilog(path, top)` | 要求 LEF/layout 已经存在，然后由 builder 构建 design。 |
-| `saveDef(path)` | 调用 `_idb_builder->saveDef(path)`。 |
-| `saveGDSII(path)` | 调用 `_idb_builder->saveGDSII(path)`。 |
-| `saveJSON(path, options)` | 调用 `_idb_builder->saveJSON(path, options)`。 |
-
-典型执行链路：
-
-```text
-lef_init / def_init / verilog_init
-  -> CmdXXX::exec()
-  -> dmInst->readLef/readDef/readVerilog
-  -> DataManager::initLef/initDef/initVerilog
-  -> IdbBuilder::buildLef/buildDef/rustBuildVerilog
-  -> LefRead / DefRead / RustVerilogRead
-  -> IdbLayout / IdbDesign
-```
-
-### `idb::IdbBuilder`
-
-位置：`src/database/manager/builder/builder.h`、`src/database/manager/builder/builder.cpp`
-
-`IdbBuilder` 是文件格式与 iDB 对象之间的构建器。
-
-关键方法：
-
-| 方法 | 作用 |
-| --- | --- |
-| `buildLef(files, b_techfile)` | 创建或重建 `IdbLefService`，用 `LefRead` 读入工艺/宏单元/层信息。 |
-| `buildDef(file)` | 基于已有 `IdbLayout` 创建 `IdbDefService`，用 `DefRead` 读入设计。 |
-| `rustBuildVerilog(file, top)` | 用 Rust Verilog reader 从网表生成 design。 |
-| `saveDef(file)` | 用 `DefWrite` 输出 DEF。 |
-| `saveVerilog(file)` | 用 `VerilogWriter` 输出网表。 |
-| `saveGDSII(file)` | 用 `Def2GdsWrite` 输出 GDS。 |
-| `saveJSON(file, options)` | 用 `Gds2JsonWrite` 输出 JSON。 |
-
-`buildDef` 读完 DEF 后会调用：
-
-```text
-buildNet()
-buildBus()
-log()
-```
-
-这表示 parser 只是把文件内容转换成原始对象，builder 还会补充 net/pin/bus 等内部关系，并打印 layout/design 统计信息。
-
-### `idb::IdbLayout`
-
-位置：`src/database/data/design/IdbLayout.h`
-
-`IdbLayout` 描述工艺和布局规则，主要来自 LEF/tech LEF。
-
-核心内容：
-
-| iDB 类 | EDA 含义 |
-| --- | --- |
-| `IdbLayers` | routing/cut/implant 等层信息。 |
-| `IdbSites` | 标准单元摆放 site。 |
-| `IdbRows` | DEF 中的 row，placement 可用轨道。 |
-| `IdbTrackGridList` | routing track。 |
-| `IdbGCellGridList` | global routing grid。 |
-| `IdbCellMasterList` | standard cell/macro master。 |
-| `IdbVias`、`IdbViaRuleList` | via/via rule。 |
-| `IdbDie`、`IdbCore` | die/core 区域。 |
-
-### `idb::IdbDesign`
-
-位置：`src/database/data/design/IdbDesign.h`
-
-`IdbDesign` 描述当前芯片设计实例，主要来自 DEF/Verilog。
-
-核心内容：
-
-| iDB 类 | EDA 含义 |
-| --- | --- |
-| `IdbInstanceList` | instance/cell/macro 实例。 |
-| `IdbPins` | IO pin。 |
-| `IdbNetList` | signal net。 |
-| `IdbSpecialNetList` | power/ground/clock 等 special net。 |
-| `IdbVias` | design 中实际使用的 via。 |
-| `IdbBlockageList` | placement/routing blockage。 |
-| `IdbRegionList` | placement region。 |
-| `IdbFillList` | filler/metal fill 等填充对象。 |
-| `IdbBusList` | bus 结构。 |
-
-## EDA 抽象与 iEDA 类的对应关系
-
-| EDA 抽象 | 文件来源 | iEDA 类/模块 |
+| Root | Source and lifetime | Representative data |
 | --- | --- | --- |
-| Tech LEF | `.tlef` | `IdbLayout`、`IdbLayers`、`IdbViaRuleList` |
-| Standard cell / macro LEF | `.lef` | `IdbCellMasterList`、`IdbTerm`、`IdbSite` |
-| DEF design | `.def` | `IdbDesign`、`IdbInstanceList`、`IdbNetList` |
-| Verilog netlist | `.v` | `RustVerilogRead`、`IdbDesign`、`IdbInstance`、`IdbNet` |
-| Die/core | DEF DIEAREA / ROW + floorplan 信息 | `IdbDie`、`IdbCore`、`IdbRows` |
-| Pin | DEF PINS / LEF pins | `IdbPins`、`IdbTerm` |
-| Net | Verilog/DEF NETS | `IdbNetList`、`IdbNet` |
-| Power grid | DEF SPECIALNETS | `IdbSpecialNetList` |
-| Routing result | DEF wires/vias | `IdbRegularWire`、`IdbSpecialWire`、`IdbVias` |
-| Output artifact | DEF/GDS/Verilog/JSON | `DefWrite`、`Def2GdsWrite`、`VerilogWriter`、`Gds2JsonWrite` |
+| [`IdbLayout`](../../src/database/data/design/IdbLayout.h#L56) | LEF technology/library plus layout-side DEF/floorplan data | layers, sites, rows, tracks, gcell grids, cell masters, via rules, die/core |
+| [`IdbDesign`](../../src/database/data/design/IdbDesign.h#L57) | DEF/Verilog and point-tool implementation updates | instances, IO pins, nets, special nets, design vias, blockages, regions, groups, fills, routed wires |
 
-## 阅读建议
+Useful root accessors:
 
-先把 `Layout` 和 `Design` 分清：
+- rows: [`IdbLayout::get_rows()`](../../src/database/data/design/IdbLayout.h#L69)
+- tracks: [`IdbLayout::get_track_grid_list()`](../../src/database/data/design/IdbLayout.h#L71)
+- cell masters: [`IdbLayout::get_cell_master_list()`](../../src/database/data/design/IdbLayout.h#L73)
+- instances: [`IdbDesign::get_instance_list()`](../../src/database/data/design/IdbDesign.h#L69)
+- IO pins: [`IdbDesign::get_io_pin_list()`](../../src/database/data/design/IdbDesign.h#L70)
+- signal nets: [`IdbDesign::get_net_list()`](../../src/database/data/design/IdbDesign.h#L71)
+- special nets: [`IdbDesign::get_special_net_list()`](../../src/database/data/design/IdbDesign.h#L77)
+
+## 3. LEF Build Path
 
 ```text
-Layout = 工艺/规则/可用资源
-Design = 这颗芯片当前有哪些实例、网络、pin、阻塞和布线
+DataManager::readLef()
+  -> DataManager::initLef()
+  -> IdbBuilder::buildLef()
+  -> LefRead::createDb()
+  -> IdbLayout
 ```
 
-大多数点工具的本质都是读取 `IdbLayout + IdbDesign`，修改 `IdbDesign`，最后由 `DataManager` 保存为 DEF、Verilog、GDS 或 EDADB。
+- read tech LEF before cell LEF: [`DataManager::readLef()`](../../src/platform/data_manager/idm.cpp#L63)
+- save resulting layout pointer: [`DataManager::initLef()`](../../src/platform/data_manager/idm_init.cpp#L33)
+- read every LEF file: [`IdbBuilder::buildLef()`](../../src/database/manager/builder/builder.cpp#L173)
+
+## 4. DEF Build Path
+
+```text
+DataManager::readDef()
+  -> DataManager::initDef()
+  -> IdbBuilder::buildDef()
+  -> DefRead callbacks
+  -> buildNet() / buildBus()
+  -> active IdbDesign
+```
+
+- reject DEF read without LEF/layout: [`DataManager::readDef()`](../../src/platform/data_manager/idm.cpp#L98)
+- assign active design pointer: [`DataManager::initDef()`](../../src/platform/data_manager/idm_init.cpp#L41)
+- create `IdbDefService(layout)`: [`IdbBuilder::buildDef()`](../../src/database/manager/builder/builder.cpp#L107)
+- callback registration: [`DefRead::createDb()`](../../src/database/manager/builder/def_builder/def_read.cpp#L85)
+- parser execution: [`DefRead::createDb()`](../../src/database/manager/builder/def_builder/def_read.cpp#L134)
+- post-parse relationships: [`IdbBuilder::buildDef()`](../../src/database/manager/builder/builder.cpp#L122)
+
+## 5. DEF Save Path
+
+```text
+DataManager::saveDef()
+  -> IdbBuilder::saveDef()
+  -> DefWrite::writeDb()
+  -> DefWrite::writeChip()
+```
+
+- platform forwarding: [`DataManager::saveDef()`](../../src/platform/data_manager/idm_save.cpp#L60)
+- construct `DefWrite`: [`IdbBuilder::saveDef()`](../../src/database/manager/builder/builder.cpp#L263)
+- section order: [`DefWrite::writeChip()`](../../src/database/manager/builder/def_builder/def_write.cpp#L205)
+
+## 6. Derived and Cross-Level State
+
+Not every C++ member is an independent source field:
+
+- instance references a LEF cell master;
+- pins reference layers/nets/instances;
+- parser callbacks and setters calculate bbox, average coordinates and connectivity;
+- `buildNet()`/`buildBus()` add relations after raw parsing.
+
+Therefore persistence should store stable source values and names/keys, then rebuild active references and derived state through the same setters/helpers used by native iEDA.
+
+## 7. Tool Consumption
+
+Most point tools do not operate on the full object graph in-place. They select a view:
+
+- iPL wraps rows, cells, instances, nets and regions into placement DB.
+- iCTS maps clock nets/pins/instances into CTS objects.
+- iRT wraps layers, vias, obstacles and nets into routing DB.
+- iSTA converts connectivity into timing netlist/graph.
+- iDRC converts geometry into DRC shapes.
+
+Continue with [iEDA 点工具与 iDB 数据桥接](04_eda_tools.md).
