@@ -2,6 +2,16 @@
 
 This file keeps only the branch facts, EDADB layout, validation command, and current C-branch rules.
 
+## Current Ordering Experiment
+
+- Branch: `edadb-idb-dev/no-sort-abcd`.
+- Baseline: milestone commit `77fbe5c67`.
+- Root order intentionally removed only for A `IdbNetList`, B `IdbRows/IdbPins`, and C `IdbInstanceList`.
+- Preserve every nested `_vec_idx` / child `_order_sd`, plus Slot `primary_key + _order_sd` and all other existing order mechanisms.
+- Regression uses `normalize_def_for_diff.py --root-levels abcd` only after raw diff fails; it moves complete root records and never sorts nested content.
+- Validation on 2026-08-10: `cmake --build build -j40 --target db_edadb def_builder iEDA` passed; `EDADB_TEST_JOBS=8 OUT_DIR=/tmp/iedadb_no_sort_abcd_full bash src/database/edadb/test/run_idb_roundtrip_regression.sh` passed all 15 cases.
+- Remote history is intentionally rewritten only with `git push --force-with-lease origin HEAD:edadb-idb-dev/no-sort-abcd` after full validation.
+
 ## Validation Rule
 
 Use the iEDA superproject commit as the source of truth:
@@ -301,7 +311,7 @@ git checkout edadb-idb
   prevents full workspace materialization; `sparse-checkout set` chooses only the
   documentation directories to expand locally.
 
-Recent root-order milestones:
+Recent canonical root-order milestones (the current no-sort experiment overrides A/B/C roots as recorded at the top of this file):
 
 - `IdbRowList`: `_name_sd` identity, `_order_sd` order; committed `74420696a`.
 - `IdbTrackGridList`: Level D; `primary_key` identity, no `_order_sd`; nested layer-name vector order remains preserved.
@@ -748,7 +758,7 @@ Class-level EDADB storage map:
 | --- | --- | --- | --- |
 | Design / Units / BusBit | `iDesign` with inline `iUnits` / `iBusBitChars` | no | `default_ipl` DEF diff and logs |
 | Die | `iDieSD` + `iCoordSD` points | yes | `default_ipl` DEF diff |
-| Row | `iRow` shadow table with `_name_sd` identity and `_order_sd` order | yes | `default_ipl` DEF diff |
+| Row | `iRow` shadow table with `_name_sd` identity; no root order in this experiment | yes | `default_ipl` ABCD-normalized DEF diff |
 | TrackGrid | `iTrackGridSD` + primitive vector layer names | yes | `default_ipl` DEF diff |
 | GCellGrid | `iGCellGrid` direct table | no | `default_ipl` DEF diff |
 | Via | `iVia` direct root with via-master/layer-shape member shadows | no root shadow | `default_ipl` DEF diff |

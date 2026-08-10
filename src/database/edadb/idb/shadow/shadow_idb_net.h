@@ -359,8 +359,8 @@ public:
     Shadow<idb::IdbNet>& operator=(const Shadow& other) = delete;
 
 public:
-    bool toShadow(idb::IdbNet* obj, const uint32_t* idx_ptr = nullptr) {
-        if (obj == nullptr || idx_ptr == nullptr || obj->get_io_pins() == nullptr
+    bool toShadow(idb::IdbNet* obj, const uint32_t* = nullptr) {
+        if (obj == nullptr || obj->get_io_pins() == nullptr
             || obj->get_instance_pin_list() == nullptr || obj->get_wire_list() == nullptr
             || obj->get_net_name().empty()) {
             return false;
@@ -368,7 +368,6 @@ public:
 
         resetStorage();
         _net_name_sd = obj->get_net_name();
-        _order_sd = *idx_ptr;
 
         // Match DefWrite::write_net(): IO connections, then instance connections.
         for (auto pin : obj->get_io_pins()->get_pin_list()) {
@@ -413,12 +412,9 @@ public:
         return true;
     }
 
-    bool fromShadow(idb::IdbNet* obj, uint32_t* idx_ptr = nullptr) {
+    bool fromShadow(idb::IdbNet* obj, uint32_t* = nullptr) {
         if (obj == nullptr || _net_name_sd.empty()) {
             return false;
-        }
-        if (idx_ptr != nullptr) {
-            *idx_ptr = static_cast<uint32_t>(_order_sd);
         }
         // Match DefRead::parse_net() optional header fields.
         obj->set_connect_type(_connect_type_sd);
@@ -509,7 +505,6 @@ public:
 private:
     void resetStorage() {
         _net_name_sd.clear();
-        _order_sd = 0;
         _original_net_name_sd.clear();
         _connect_type_sd = idb::IdbConnectType::kNone;
         _source_type_sd = idb::IdbInstanceType::kNone;
@@ -528,7 +523,6 @@ private:
 
 public:
     std::string _net_name_sd;
-    uint64_t _order_sd = 0;
     std::string _original_net_name_sd;
     idb::IdbConnectType _connect_type_sd = idb::IdbConnectType::kNone;
     idb::IdbInstanceType _source_type_sd = idb::IdbInstanceType::kNone;

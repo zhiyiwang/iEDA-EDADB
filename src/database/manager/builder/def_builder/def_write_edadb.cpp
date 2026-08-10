@@ -225,9 +225,9 @@ int32_t DefWriteEdadb::writeIdbRow(void) {
     vector<IdbRow*>& row_vec = rows->get_row_list();
     vector<edadb::Shadow<idb::IdbRow>> row_sd_vec;
     row_sd_vec.reserve(row_vec.size());
-    for (uint32_t row_idx = 0; row_idx < row_vec.size(); ++row_idx) {
+    for (IdbRow* row : row_vec) {
         row_sd_vec.emplace_back();
-        if (!row_sd_vec.back().toShadow(row_vec[row_idx], &row_idx)) {
+        if (!row_sd_vec.back().toShadow(row)) {
             std::cerr << "DefWriteEdadb::writeIdbRow failed to convert row shadow" << std::endl;
             return kDbFail;
         }
@@ -350,9 +350,9 @@ int32_t DefWriteEdadb::writeIdbInstance(void) {
 
     vector<edadb::Shadow<idb::IdbInstance>*> inst_sd_vec;
     inst_sd_vec.reserve(inst_vec.size());
-    for (uint32_t inst_idx = 0; inst_idx < inst_vec.size(); ++inst_idx) {
+    for (IdbInstance* inst : inst_vec) {
         auto* inst_sd = new edadb::Shadow<idb::IdbInstance>();
-        if (!inst_sd->toShadow(inst_vec[inst_idx], &inst_idx)) {
+        if (!inst_sd->toShadow(inst)) {
             delete inst_sd;
             for (auto* converted_inst_sd : inst_sd_vec) {
                 delete converted_inst_sd;
@@ -400,9 +400,9 @@ int32_t DefWriteEdadb::writeIdbPin(void) {
 
     vector<edadb::Shadow<idb::IdbPin>*> pin_sd_vec;
     pin_sd_vec.reserve(pin_vec.size());
-    for (uint32_t pin_idx = 0; pin_idx < pin_vec.size(); ++pin_idx) {
+    for (IdbPin* pin : pin_vec) {
         auto* pin_sd = new edadb::Shadow<idb::IdbPin>();
-        if (!pin_sd->toShadow(pin_vec[pin_idx], &pin_idx)) {
+        if (!pin_sd->toShadow(pin)) {
             delete pin_sd;
             for (auto* stored_pin_sd : pin_sd_vec) {
                 delete stored_pin_sd;
@@ -731,9 +731,9 @@ int32_t DefWriteEdadb::writeIdbNet(void) {
 
     vector<edadb::Shadow<idb::IdbNet>*> net_sd_vec;
     net_sd_vec.reserve(net_vec.size());
-    for (uint32_t net_idx = 0; net_idx < net_vec.size(); ++net_idx) {
+    for (IdbNet* net : net_vec) {
         auto* net_sd = new edadb::Shadow<idb::IdbNet>();
-        if (!net_sd->toShadow(net_vec[net_idx], &net_idx)) {
+        if (!net_sd->toShadow(net)) {
             delete net_sd;
             for (auto* converted_net_sd : net_sd_vec) {
                 delete converted_net_sd;

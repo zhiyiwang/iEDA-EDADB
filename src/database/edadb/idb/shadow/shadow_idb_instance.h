@@ -35,14 +35,13 @@ public:
 
 
 public:
-    bool toShadow(idb::IdbInstance* obj, const uint32_t* idx_ptr = nullptr) {
-        if (obj == nullptr || idx_ptr == nullptr || obj->get_cell_master() == nullptr
+    bool toShadow(idb::IdbInstance* obj, const uint32_t* = nullptr) {
+        if (obj == nullptr || obj->get_cell_master() == nullptr
             || obj->get_coordinate() == nullptr) {
             return false;
         }
 
         _name_sd = obj->get_name();
-        _order_sd = *idx_ptr;
         _cell_master_name_sd = obj->get_cell_master() ? obj->get_cell_master()->get_name() : "";
 
         _type_sd = obj->get_type();
@@ -67,7 +66,7 @@ public:
         return true;
     }
 
-    bool fromShadow(idb::IdbInstance* obj, uint32_t* idx_ptr = nullptr) {
+    bool fromShadow(idb::IdbInstance* obj, uint32_t* = nullptr) {
         if (obj == nullptr || _coordinate_sd == nullptr) {
             return false;
         }
@@ -78,10 +77,6 @@ public:
             std::cerr << "edadb::Shadow<idb::IdbInstance>::fromShadow error: cannot find cell master: "
                       << _cell_master_name_sd << std::endl;
             return false;
-        }
-
-        if (idx_ptr != nullptr) {
-            *idx_ptr = static_cast<uint32_t>(_order_sd);
         }
 
         obj->set_name(_name_sd);
@@ -119,7 +114,6 @@ public:
 
 public:
     std::string _name_sd;
-    uint64_t _order_sd = 0;
     std::string _cell_master_name_sd;
 
     idb::IdbInstanceType _type_sd;

@@ -6,6 +6,11 @@
 
 EDADB adapter 文档的核心目标是：每个 root class 都必须按 `src/database/edadb/docs/def-ieda-mapping-and-order.md` 的约束检查，并把检查结论写进对应 `0X_idb_*.md`。
 
+当前 `edadb-idb-dev/no-sort-abcd` 是 ordering 实验分支：它以 canonical milestone
+`77fbe5c67` 为基线，故意移除 `IdbNetList`、`IdbRows`、`IdbPins`、`IdbInstanceList`
+的 root `_order_sd`/`ORDER BY`。这不改变 A/B/C 的风险等级，也不移除任何 nested
+`_vec_idx`、child `_order_sd` 或 Slot root order。
+
 在这个核心目标下，EDADB adapter 不是 dump 完整 C++ 对象，而是贴近 iEDA 原始 DEF 语义：
 
 - 先确认 DEF section 到 iEDA class/root list 的映射，以及 root order 等级 A/B/C/D。
@@ -118,7 +123,7 @@ EDADB adapter 文档的核心目标是：每个 root class 都必须按 `src/dat
 | --- | --- | --- | --- |
 | `IdbDesign` | No | singleton object | No root list order. |
 | `IdbDie` | No for root; yes for points | singleton root; point order is geometry/DEF semantics | Root no order; point order already handled by nested shadow `_vec_idx`. |
-| `IdbRowList` | Yes | vector traversal plus `front()` / index-derived row logic | Implemented with `_order_sd` and ordered read. |
+| `IdbRowList` | Yes | vector traversal plus `front()` / index-derived row logic | Experiment intentionally omits root order; risk retained. |
 | `IdbTrackGridList` | No | Level D; no point-tool root index/order dependency found | `primary_key` identity; no `_order_sd`; nested layer-name vector preserves order. |
 | `IdbGCellGridList` | No | Level D; no point-tool root index/order dependency found | Direct no-shadow/no-order mapping; normalized diff handles root order-only differences. |
 | `IdbRegionList` | No | Level D; references are name-based and no point-tool root index/order dependency found | Direct no-shadow/no-order mapping; normalized diff handles root order-only differences. |
@@ -127,6 +132,9 @@ EDADB adapter 文档的核心目标是：每个 root class 都必须按 `src/dat
 | `IdbGroupList` | No | Level D; references are name-based and no point-tool root index/order dependency found | `_group_name_sd` identity; no `_order_sd`; member vector preserves order. |
 | `IdbFillList` | No | Level D; no point-tool root index/order dependency found | `primary_key` identity; no `_order_sd`; rect/coordinate vectors preserve order. |
 | `IdbSpecialNetList` | No | Level D; PDN tools resolve nets by name, no root index/order dependency found | `_net_name_sd` identity; no root `_order_sd`; pin refs and wire/segment/point vectors preserve order. |
+| `IdbInstanceList` | Yes | append-derived IDs and placement behavior | Experiment intentionally omits root order; nested/optional state preserved. |
+| `IdbPins` | Yes | pin traversal/order-sensitive point-tool behavior | Experiment intentionally omits root order; Port/LayerShape/Rect order preserved. |
+| `IdbNetList` | Yes | append-derived net IDs and downstream reproducibility | Experiment intentionally omits root order; all connection/route child order preserved. |
 
 ## Current Progress
 
@@ -134,19 +142,19 @@ EDADB adapter 文档的核心目标是：每个 root class 都必须按 `src/dat
 | --- | --- | --- |
 | Design / Units / BusBitChars | Done | Direct `IdbDesign`; only DEF-visible fields are persisted. |
 | Die | Done | Shadow root plus ordered point vector. |
-| Row | Done | `Shadow<IdbRow>`; `_name_sd` identity, `_order_sd` root order, site cloned from LEF. |
+| Row | Experimental no-sort | `Shadow<IdbRow>`; `_name_sd` identity, no root order, site cloned from LEF. |
 | TrackGrid | Done | Level D root order; `primary_key` identity, no `_order_sd`, layer names rebuild LEF/routing references. |
 | GCellGrid | Done | Direct `IdbGCellGrid`; no shadow, no `_order_sd`, DEF four-field view. |
 | Via | Done | Direct root object; member-level via master/layer-shape shadows handle rebuild. |
-| Instance | Done | `_name_sd` identity, `_order_sd` root order, master/region/layer references rebuilt by name. |
-| Pin | Done | `_pin_name_sd` identity, `_order_sd` root order, port/layer shape relative geometry preserved. |
+| Instance | Experimental no-sort | `_name_sd` identity, no root order, master/region/layer references rebuilt by name. |
+| Pin | Experimental no-sort | `_pin_name_sd` identity, no root order, port/layer shape relative geometry preserved. |
 | Blockage | Done | Level D root order; `primary_key` identity, no `_order_sd`, layer/instance references rebuilt by name. |
 | Region | Done | Direct `IdbRegion`; `_name` identity, no `_order_sd`, boundary vector preserved. |
 | Slot | Done | `primary_key` identity for anonymous root records, `_order_sd` root order, rectangle vector uses `Shadow<IdbRect>::_vec_idx`. |
 | Group | Done | Level D root order; `_group_name_sd` identity, no `_order_sd`, member vector order preserved. |
 | Fill | Done | Level D root order; `primary_key` identity, no `_order_sd`, layer/via references rebuilt by name. |
 | SpecialNet | Done | Level D root order; `_net_name_sd` identity, no root `_order_sd`, pin-string/explicit pin refs plus via/rect/point segment branches covered. |
-| Net | Done | `_net_name_sd` identity, `_order_sd` root order, pin/wire/segment vectors preserved. |
+| Net | Experimental no-sort | `_net_name_sd` identity, no root order, pin/wire/segment vectors preserved. |
 
 ## Output Template
 
@@ -171,15 +179,15 @@ EDADB adapter 文档的核心目标是：每个 root class 都必须按 `src/dat
 - `04_idb_track_grid.md`: `IdbTrackGrid` for `TRACKS`, including track fields, layer-name references, and routing-layer backlink rebuild.
 - `05_idb_gcell_grid.md`: `IdbGCellGrid` for `GCELLGRID`, including direct four-field mapping and empty-list adapter semantics.
 - `06_idb_via.md`: `IdbVia` for `VIAS`, including direct root storage and via-master/layer-shape shadow rebuild.
-- `07_idb_instance.md`: `IdbInstance` for `COMPONENTS`, including component fields, name references, and explicit root order.
-- `08_idb_pin.md`: `IdbPin` for `PINS`, including IO term, port/layer shape storage, computed absolute geometry, and explicit root order.
+- `07_idb_instance.md`: `IdbInstance` for `COMPONENTS`, including component fields, name references, and the no-sort root experiment.
+- `08_idb_pin.md`: `IdbPin` for `PINS`, including IO term, port/layer shape storage, computed absolute geometry, and the no-sort root experiment.
 - `09_idb_blockage.md`: `IdbBlockage` for `BLOCKAGES`, including routing/placement polymorphism, rect vector, name references, and Level D root-order policy.
 - `10_idb_region.md`: `IdbRegion` for `REGIONS`, including name/type and boundary rectangle vector persistence.
 - `11_idb_slot.md`: `IdbSlot` for `SLOTS`, including layer name, rectangle vector, and anonymous root identity.
 - `12_idb_group.md`: `IdbGroup` for `GROUPS`, including region/member name references, Level D root-order policy, and member order.
 - `13_idb_fill.md`: `IdbFill` for `FILLS`, including layer/via typed storage, geometry vectors, and Level D root-order policy.
 - `14_idb_special_net.md`: `IdbSpecialNet` for `SPECIALNETS`, including pin refs, special wires, segments, geometry, and Level D root-order policy.
-- `15_idb_net.md`: `IdbNet` for `NETS`, including pin refs, regular wires, segments, geometry, and explicit root order.
+- `15_idb_net.md`: `IdbNet` for `NETS`, including pin refs, regular wires, segments, geometry, and the no-sort root experiment.
 - `todo.md`: root list order guarantees that still need implementation or verification.
 
 ## Suggested Next Steps

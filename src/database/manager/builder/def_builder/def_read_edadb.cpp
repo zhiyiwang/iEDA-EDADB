@@ -328,11 +328,7 @@ bool DefReadEdadb::readIdbRow(void) {
 
     rows->reset();
 
-    auto row_reader = edadb::makeGenericQueryOp<edadb::Shadow<idb::IdbRow>>();
-    if (row_reader.preparePredicate("ORDER BY \"_order_sd\"") < 0) {
-        std::cerr << "DefReadEdadb::readIdbRow failed to prepare ordered row query!" << std::endl;
-        return false;
-    }
+    auto row_reader = edadb::makeReadAllOp<edadb::Shadow<idb::IdbRow>>();
 
     int32_t row_count = 0;
     while (true) {
@@ -692,11 +688,7 @@ bool DefReadEdadb::readIdbInstance(void) {
 
     instance_list->reset();
 
-    auto inst_reader = edadb::makeGenericQueryOp<edadb::Shadow<idb::IdbInstance>>();
-    if (inst_reader.preparePredicate("ORDER BY \"_order_sd\"") < 0) {
-        std::cerr << "DefReadEdadb::readIdbInstance failed to prepare ordered instance query!" << std::endl;
-        return false;
-    }
+    auto inst_reader = edadb::makeReadAllOp<edadb::Shadow<idb::IdbInstance>>();
 
     int32_t instance_count = 0;
     while (true) {
@@ -751,11 +743,7 @@ bool DefReadEdadb::readIdbPin(void) {
 
     pin_list->reset();
 
-    auto pin_reader = edadb::makeGenericQueryOp<edadb::Shadow<idb::IdbPin>>();
-    if (pin_reader.preparePredicate("ORDER BY \"_order_sd\"") < 0) {
-        std::cerr << "DefReadEdadb::readIdbPin failed to prepare ordered pin query!" << std::endl;
-        return false;
-    }
+    auto pin_reader = edadb::makeReadAllOp<edadb::Shadow<idb::IdbPin>>();
 
     int32_t pin_count = 0;
     while (true) {
@@ -954,11 +942,7 @@ bool DefReadEdadb::readIdbNet(void) {
 
     net_list->reset();
 
-    auto net_reader = edadb::makeGenericQueryOp<edadb::Shadow<idb::IdbNet>>();
-    if (net_reader.preparePredicate("ORDER BY \"_order_sd\"") < 0) {
-        std::cerr << "DefReadEdadb::readIdbNet failed to prepare ordered query!" << std::endl;
-        return false;
-    }
+    auto net_reader = edadb::makeReadAllOp<edadb::Shadow<idb::IdbNet>>();
 #if EDADB_OUTPUT_DEBUG
     int32_t net_count = 0;
     int32_t segment_count = 0;

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Normalize DEF files for EDADB regression semantic diff.
+"""Normalize DEF root-record order for EDADB regression semantic diff.
 
-Only D-level root records may be reordered. A/B/C root records and nested
-record contents are kept exactly in their original order.
+The default mode reorders only D-level roots. The experimental ``abcd`` mode
+also reorders A/B/C roots. Nested record contents always keep their order.
 """
 
 from __future__ import annotations
@@ -22,6 +22,12 @@ D_BLOCK_SECTIONS = {
     "FILLS",
     "GROUPS",
     "SPECIALNETS",
+}
+
+ABC_BLOCK_SECTIONS = {
+    "COMPONENTS",
+    "PINS",
+    "NETS",
 }
 
 def compact_text(lines: Sequence[str]) -> str:
@@ -107,20 +113,22 @@ def statement_key(kind: str) -> Callable[[Sequence[str]], Tuple[str, ...]]:
     return lambda record: (compact_text(record),)
 
 
-def section_name_from_header(line: str) -> str | None:
+def section_name_from_header(line: str, block_sections: set[str]) -> str | None:
     stripped = line.strip()
     match = re.match(r"^([A-Z][A-Z0-9_]*)\b", stripped)
     if not match:
         return None
     name = match.group(1)
-    if name in D_BLOCK_SECTIONS:
+    if name in block_sections:
         return name
     return None
 
 
-def top_statement_name(line: str) -> str | None:
+def top_statement_name(line: str, statement_kinds: set[str]) -> str | None:
     stripped = line.strip()
-    match = re.match(r"^(TRACKS|GCELLGRID)\b", stripped)
+    match = re.match(r"^(ROW|TRACKS|GCELLGRID)\b", stripped)
+    if match and match.group(1) not in statement_kinds:
+        return None
     return match.group(1) if match else None
 
 
@@ -163,17 +171,21 @@ def normalize_block(section: str, block: Sequence[str]) -> List[str]:
     return output
 
 
-def flush_statement_run(output: List[str], run_kind: str | None, run_lines: List[str]) -> None:
+def flush_statement_run(
+    output: List[str], run_kind: str | None, run_lines: List[str], statement_kinds: set[str]
+) -> None:
     if not run_lines:
         return
     if run_kind is None:
         output.extend(run_lines)
         run_lines.clear()
         return
+    separator_lines = [line for line in run_lines if not line.strip()]
+    statement_lines = [line for line in run_lines if line.strip()]
     records: List[List[str]] = []
     current: List[str] | None = None
-    for line in run_lines:
-        if top_statement_name(line) == run_kind:
+    for line in statement_lines:
+        if top_statement_name(line, statement_kinds) == run_kind:
             if current is not None:
                 records.append(current)
             current = [line]
@@ -184,21 +196,28 @@ def flush_statement_run(output: List[str], run_kind: str | None, run_lines: List
 
     for record in sorted(records, key=statement_key(run_kind)):
         output.extend(record)
+    output.extend(separator_lines)
     run_lines.clear()
 
 
-def normalize_lines(lines: Sequence[str]) -> List[str]:
+def normalize_lines(lines: Sequence[str], root_levels: str = "d") -> List[str]:
     output: List[str] = []
     index = 0
     statement_run_kind: str | None = None
     statement_run_lines: List[str] = []
 
+    block_sections = set(D_BLOCK_SECTIONS)
+    statement_kinds = {"TRACKS", "GCELLGRID"}
+    if root_levels == "abcd":
+        block_sections.update(ABC_BLOCK_SECTIONS)
+        statement_kinds.add("ROW")
+
     while index < len(lines):
         line = lines[index]
-        statement_kind = top_statement_name(line)
+        statement_kind = top_statement_name(line, statement_kinds)
         if statement_kind is not None:
             if statement_run_kind not in (None, statement_kind):
-                flush_statement_run(output, statement_run_kind, statement_run_lines)
+                flush_statement_run(output, statement_run_kind, statement_run_lines, statement_kinds)
             statement_run_kind = statement_kind
             statement_run_lines.append(line)
             index += 1
@@ -209,10 +228,10 @@ def normalize_lines(lines: Sequence[str]) -> List[str]:
             index += 1
             continue
 
-        flush_statement_run(output, statement_run_kind, statement_run_lines)
+        flush_statement_run(output, statement_run_kind, statement_run_lines, statement_kinds)
         statement_run_kind = None
 
-        section = section_name_from_header(line)
+        section = section_name_from_header(line, block_sections)
         if section is None:
             output.append(line)
             index += 1
@@ -229,22 +248,28 @@ def normalize_lines(lines: Sequence[str]) -> List[str]:
             index += 1
         output.extend(normalize_block(section, block))
 
-    flush_statement_run(output, statement_run_kind, statement_run_lines)
+    flush_statement_run(output, statement_run_kind, statement_run_lines, statement_kinds)
     return output
 
 
-def normalize_file(path: Path) -> str:
+def normalize_file(path: Path, root_levels: str = "d") -> str:
     text = path.read_text()
     lines = text.splitlines(keepends=True)
-    normalized = normalize_lines(lines)
+    normalized = normalize_lines(lines, root_levels)
     return "".join(normalized)
 
 
 def main(argv: Iterable[str]) -> int:
-    parser = argparse.ArgumentParser(description="Normalize DEF for D-level root-order diff")
+    parser = argparse.ArgumentParser(description="Normalize selected DEF root-record order")
+    parser.add_argument(
+        "--root-levels",
+        choices=("d", "abcd"),
+        default="d",
+        help="root order levels to normalize (default: d)",
+    )
     parser.add_argument("def_file", type=Path)
     args = parser.parse_args(list(argv))
-    sys.stdout.write(normalize_file(args.def_file))
+    sys.stdout.write(normalize_file(args.def_file, args.root_levels))
     return 0
 
 

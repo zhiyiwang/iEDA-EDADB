@@ -9,13 +9,13 @@
 - 原始 read：`DefRead::parse_net()`，`src/database/manager/builder/def_builder/def_read.cpp:1028-1240`。
 - `SPECIALNETS` dispatch：`DefRead::parse_special_net()`，`src/database/manager/builder/def_builder/def_read.cpp:1286-1304`。
 - EDADB write：`DefWriteEdadb::writeIdbNet()`，`src/database/manager/builder/def_builder/def_write_edadb.cpp:710-759`。
-- EDADB read：`DefReadEdadb::readIdbNet()`，`src/database/manager/builder/def_builder/def_read_edadb.cpp:942-1028`。
+- EDADB read：`DefReadEdadb::readIdbNet()`，`src/database/manager/builder/def_builder/def_read_edadb.cpp:930-1012`。
 
 按 `src/database/edadb/docs/def-ieda-mapping-and-order.md` 检查：
 
 - Root container 是 `IdbNetList::_net_list/_net_map`，Level A。
-- `IdbNetList::add_net()` 按 append 顺序分配 `_id`，同时写入 vector/map，见 `src/database/data/design/db_design/IdbNet.cpp:308-330`；因此 EDADB 使用 `_order_sd` 恢复 root append order。
-- `_net_name_sd` 是 natural identity/PK；不能用 `_order_sd` 代替 identity。
+- `IdbNetList::add_net()` 按 append 顺序分配 `_id`，同时写入 vector/map，见 `src/database/data/design/db_design/IdbNet.cpp:308-330`；canonical adapter 因此应恢复 root append order。
+- 本实验分支故意不保存 Level-A root order；`_net_name_sd` 仍是 natural identity/PK。
 - IO pins、instance pins、wires、segments、points、Via references 和 virtual-point markers 都是 nested ordered state。
 
 ## EDADB Schema And Primary Key
@@ -34,7 +34,7 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbRegularWire>, "iRegWireSD",
                  (primary_key, _vec_idx, _wire_state_sd, _shield_name_sd),
                  (_segment_list_sd));
 TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbNet>, "iNetSD",
-                 (_net_name_sd, _order_sd, _original_net_name_sd,
+                 (_net_name_sd, _original_net_name_sd,
                   _connect_type_sd, _source_type_sd, _weight_sd,
                   _xtalk_sd, _fix_bump_sd, _frequency_sd),
                  (_io_pin_name_list_sd, _instance_pin_list_sd,
@@ -48,7 +48,7 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbNet>, "iNetSD",
 
 Primary-key audit：
 
-- Root `_net_name_sd` 是 identity；`_order_sd` 只保存 Level-A root order。
+- Root `_net_name_sd` 是 identity；root schema 不包含 `_order_sd`。
 - Wire/Segment synthetic `primary_key` 只关联下一层 child rows；`_vec_idx` 单独恢复 owner-local order。
 - `NetPinRef::_order_sd`、`RegularWireViaRef::_order_sd` 都是 child order，不是 identity，所以显式关闭 PK。
 - Point 使用 `Shadow<IdbCoordinate<int32_t>>::_vec_idx` 恢复顺序；delta rect 通过已注册的 `Shadow<IdbRect>` 存储。
@@ -58,7 +58,7 @@ Primary-key audit：
 - Pin、Instance、Layer、Via 都是运行时 pointer；DB 保存稳定 name/reference，read 时从 active design/LEF lookup。
 - Net/Wire/Segment 是多层 owned vectors，需要 owner identity 和 owner-local order。
 - Segment 需要同时表达 parser 保留的 layer、完整 points、virtual-point membership、多个 Via token、Via 对应 point 和 delta rect；原始 C++ pointer graph 不适合直接持久化。
-- Pin back-reference、Via clone/coordinate 和 root `_id` 是 read 时按原始 parser/list API 重建的 derived state，不作为数据库列。
+- Pin back-reference、Via clone/coordinate 和 root `_id` 是 read 时按当前 DB root 返回顺序重建的 derived state，不作为数据库列。
 
 ## Stored Source And Recomputed State
 
@@ -71,7 +71,7 @@ Primary-key audit：
 
 read 时重新 lookup 或计算：
 
-- `_net_name_sd` 按 `_order_sd` 调用 `IdbNetList::add_net()`，重建 vector/map 和 append-derived `_id`。
+- `_net_name_sd` 按 DB root 返回顺序调用 `IdbNetList::add_net()`，重建 vector/map 和 append-derived `_id`；本实验不保证 `_id` 与原 vector index 一致。
 - IO pin、instance、instance pin、layer、DEF/LEF Via pointers。
 - `setPinNet` back-reference policy。
 - Via clone，以及由对应 point 重新设置的 Via coordinate。
@@ -83,7 +83,7 @@ read 时重新 lookup 或计算：
 | Original `DefWrite` execution order | DEF field / iDB member | EDADB correspondence |
 | --- | --- | --- |
 | 获取 list、检查为空并输出 count，`def_write.cpp:829-841` | `IdbNetList::_net_list` / `NETS <N>` | `writeIdbNet()` 获取同一 list，逐 root 转 shadow 后 batch insert，`def_write_edadb.cpp:711-758` |
-| root vector loop 和 name，`def_write.cpp:843-846` | `- <net_name>` / `IdbNet::_net_name` | `_net_name_sd` + supplied root `_order_sd`，`shadow_idb_net.h:362-371` |
+| root vector loop 和 name，`def_write.cpp:843-846` | `- <net_name>` / `IdbNet::_net_name` | `_net_name_sd`，`shadow_idb_net.h:362-370`；root order 不入库 |
 | IO connection loop，`def_write.cpp:848-851` | `( PIN <pin> )` | ordered `_io_pin_name_list_sd`，`shadow_idb_net.h:373-379` |
 | instance-pin loop，`def_write.cpp:853-855` | `(<instance> <pin>)` | ordered `NetPinRef`，`shadow_idb_net.h:381-391` |
 | optional USE，`def_write.cpp:859-862` | `_connect_type` | `_connect_type_sd`，`shadow_idb_net.h:393-400` |
@@ -105,7 +105,7 @@ read 时重新 lookup 或计算：
 | --- | --- | --- |
 | `SPECIALNETS` USE dispatch，`def_read.cpp:1293-1302` | SIGNAL/CLOCK 调用同一 `parse_net()` | 这类 row 与普通 `NETS` row 一起存入 `iNetSD`；`readIdbNet()` 统一恢复 |
 | section count 初始化，`def_read.cpp:987-1007` | `IdbNetList::init(def_num)` | DB root row count驱动读取；不保存 reserve/capacity |
-| trim name 并 `add_net()`，`def_read.cpp:1035-1053` | root identity；vector/map/ID | builder 按 `_order_sd` query 后调用 `add_net(_net_name_sd)`，`def_read_edadb.cpp:955-991` |
+| trim name 并 `add_net()`，`def_read.cpp:1035-1053` | root identity；vector/map/ID | builder 使用无 `ORDER BY` 的 `makeReadAllOp()`，并按 DB 返回顺序调用 `add_net(_net_name_sd)`，`def_read_edadb.cpp:943-975` |
 | USE/SOURCE/WEIGHT/XTALK/FIXEDBUMP/FREQUENCY/ORIGINAL，`def_read.cpp:1055-1081` | root scalar state | `fromShadow()` 按 parser setter 顺序恢复，`shadow_idb_net.h:423-430` |
 | 根据 connection count 创建 `setPinNet` policy，`def_read.cpp:1083-1092` | computed pin back-reference rule | 从两个 stored connection vectors 的总数重新计算同一 lambda，`shadow_idb_net.h:438-448` |
 | IO connection branch，`def_read.cpp:1094-1106` | IO pin lookup、append、conditional back-reference | name lookup 后 `add_io_pin()` + `set_pin_net()`，`shadow_idb_net.h:450-458` |
@@ -125,8 +125,9 @@ Segment `fromShadow()` 不尝试恢复原始 token interleaving；它恢复 pars
 
 ## Order And Canonicalization
 
-- Root `IdbNetList::_net_list` 用 `_order_sd + ORDER BY` 恢复 Level-A append order，确保 `add_net()` 分配的 `_id` 与原 vector index 一致。
+- Root `IdbNetList::_net_list` 不保存 `_order_sd`，也不使用 root `ORDER BY`；这是本实验分支对 Level-A canonical 约束的有意偏离。
 - IO pin primitive vector、instance refs、wires、segments、points、Via refs、virtual-point indices 都保存 owner-local order；read 不依赖 SQLite physical row order。
+- ABCD normalizer 只移动完整 NET root record；同一 Net 内 connection/wire/segment/point/Via 顺序不归一化。
 - EDADB 保存 parser-built complete state。原始 writer 只输出支持的 canonical subset，因此 raw EDADB output 与 direct iDB output比较，而不是与包含 parser-only state 的原始输入强制逐字相同。
 
 ## EDADB Write Read Path
@@ -134,7 +135,7 @@ Segment `fromShadow()` 不尝试恢复原始 token interleaving；它恢复 pars
 - Write call：`writeChip2Edadb()` 调用 `writeIdbNet()`，`src/database/manager/builder/def_builder/def_write_edadb.cpp:118-119`。
 - Write conversion：root validation `def_write_edadb.cpp:711-730` → standard `toShadow()` `def_write_edadb.cpp:732-745` → batch insert/cleanup `def_write_edadb.cpp:747-758`。
 - Read call：`createDbByEdadb()` 在前置 Design/Via/Instance/Pin 等引用对象恢复后调用 `readIdbNet()`，`src/database/manager/builder/def_builder/def_read_edadb.cpp:212-226`。
-- Read path：reset + ordered query `def_read_edadb.cpp:943-961` → cursor read `def_read_edadb.cpp:969-981` → `add_net()` `def_read_edadb.cpp:983-989` → standard `fromShadow()` `def_read_edadb.cpp:991-995`。
+- Read path：reset + unordered query `def_read_edadb.cpp:930-955` → cursor read `def_read_edadb.cpp:953-965` → `add_net()` `def_read_edadb.cpp:967-973` → standard `fromShadow()` `def_read_edadb.cpp:975-979`。
 - `createDbByDef()` 不注册已由 EDADB 恢复的 callbacks，避免 DEF text 再次创建 Net，`src/database/manager/builder/def_builder/def_read_edadb.cpp:60-76`。
 - 任一 cursor/root/restore failure 都 reset active `IdbNetList`，避免留下部分状态，`def_read_edadb.cpp:976-995`。
 
@@ -142,14 +143,14 @@ Segment `fromShadow()` 不尝试恢复原始 token interleaving；它恢复 pars
 
 `routed_irt` 和 `net_branches` 覆盖：
 
-- 677/678 个 Net roots、root `_order_sd`、IO/instance connections 和 optional header fields。
+- 677/678 个 Net roots、root `_order_sd` absence、IO/instance connections 和 optional header fields。
 - ROUTED/FIXED/COVER/NOSHIELD wire states。
 - points、rect、Via segments，以及完整的 multi-Via/multi-VIRTUAL parser state。
 - `SPECIALNETS USE SIGNAL` → `IdbNet` dispatch。
-- 反转 Net root、connection、wire、segment、point、Via-ref、virtual-index tables 的 physical row order，再验证显式 order 恢复。
+- 反转 Net root physical order并允许完整 root record 重排；同时反转 connection、wire、segment、point、Via-ref、virtual-index child tables，验证所有 nested order 仍显式恢复。
 - SQL 验证 parser-only state；read log 验证 Via/virtual/multi-Via counts；最终 DEF 与 direct iDB canonical output 一致。
 
-Fixture、SQL 和 physical-order perturbation 分别位于 `src/database/edadb/test/run_idb_roundtrip_regression.sh:732`、`src/database/edadb/test/run_idb_roundtrip_regression.sh:339-498`、`src/database/edadb/test/run_idb_roundtrip_regression.sh:1058`。
+Fixture、SQL 和 physical-order perturbation 分别位于 `src/database/edadb/test/run_idb_roundtrip_regression.sh:728`、`src/database/edadb/test/run_idb_roundtrip_regression.sh:337-498`、`src/database/edadb/test/run_idb_roundtrip_regression.sh:1059`。
 
 定向测试：
 

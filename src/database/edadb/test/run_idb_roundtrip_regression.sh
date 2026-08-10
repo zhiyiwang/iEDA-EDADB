@@ -94,11 +94,11 @@ assert_def_equivalent() {
     local actual_norm="${diff_file%.diff}.actual.norm.def"
     local norm_diff="${diff_file%.diff}.normalized.diff"
 
-    python3 "$NORMALIZE_DEF_FOR_DIFF" "$expected" >"$expected_norm"
-    python3 "$NORMALIZE_DEF_FOR_DIFF" "$actual" >"$actual_norm"
+    python3 "$NORMALIZE_DEF_FOR_DIFF" --root-levels abcd "$expected" >"$expected_norm"
+    python3 "$NORMALIZE_DEF_FOR_DIFF" --root-levels abcd "$actual" >"$actual_norm"
 
     if diff -u "$expected_norm" "$actual_norm" >"$norm_diff"; then
-        echo "PASS: DEF semantic match with D-level root order differences: $actual"
+        echo "PASS: DEF semantic match with A/B/C/D root order differences: $actual"
         echo "raw diff saved to: $diff_file"
         return
     fi
@@ -123,14 +123,12 @@ check_default_sql() {
         "0,0;149960,150128" "$name die points"
     assert_eq "$(sql_value "$edadb_db" "select _name_sd || '|' || _site_name_sd || '|' || _origin_x_sd || ',' || _origin_y_sd || '|' || _row_num_x_sd || '|' || _row_num_y_sd || '|' || _step_x_sd || '|' || _step_y_sd from iRow where _name_sd='ROW_0';")" \
         "ROW_0|unit|9600,9990|271|1|480|0" "$name row fields"
-    assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || ':' || _name_sd, ',') from (select _order_sd, _name_sd from iRow order by _order_sd limit 5);")" \
-        "0:ROW_0,1:ROW_1,2:ROW_2,3:ROW_3,4:ROW_4" "$name row order prefix"
-    assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd, ',') from (select _order_sd from iRow order by rowid limit 5);")" \
-        "38,37,36,35,34" "$name row table physical order was perturbed"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from pragma_table_info('iRow') where name='_order_sd';")" \
+        "0" "$name row has no root order column"
+    assert_eq "$(sql_value "$edadb_db" "select _name_sd <> 'ROW_0' from iRow order by rowid limit 1;")" \
+        "1" "$name row table physical order was perturbed"
     assert_eq "$(sql_value "$edadb_db" "select pk from pragma_table_info('iRow') where name='_name_sd';")" \
         "1" "$name row name is primary key"
-    assert_eq "$(sql_value "$edadb_db" "select pk from pragma_table_info('iRow') where name='_order_sd';")" \
-        "0" "$name row order is not primary key"
     assert_eq "$(sql_value "$edadb_db" "select count(*) from sqlite_master where type='table' and name='iSite';")" \
         "0" "$name row does not persist an iSite table"
     assert_eq "$(sql_value "$edadb_db" "select count(*) from pragma_table_info('iTrackGridSD') where name='_order_sd';")" \
@@ -149,16 +147,16 @@ check_default_sql() {
         "ENDCAP_0|sky130_fd_sc_hs__fill_1|1|7|9600,9990" "$name instance fields"
     assert_eq "$(sql_value "$edadb_db" "select _weight_sd || '|' || _region_name_sd from iInstSD where _name_sd='ENDCAP_0';")" \
         "-1|" "$name instance default weight region"
-    assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || ':' || _name_sd, ',') from (select _order_sd, _name_sd from iInstSD order by _order_sd limit 5);")" \
-        "0:ctrl/_17_,1:ctrl/_18_,2:ctrl/_19_,3:ctrl/_20_,4:ctrl/_21_" "$name instance order prefix"
-    assert_eq "$(sql_value "$edadb_db" "select _order_sd from iInstSD order by rowid limit 1;")" \
-        "1457" "$name instance table physical order was perturbed"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from pragma_table_info('iInstSD') where name='_order_sd';")" \
+        "0" "$name instance has no root order column"
+    assert_eq "$(sql_value "$edadb_db" "select _name_sd <> 'ctrl/_17_' from iInstSD order by rowid limit 1;")" \
+        "1" "$name instance table physical order was perturbed"
     assert_eq "$(sql_value "$edadb_db" "select _pin_name_sd || '|' || _net_name_sd || '|' || _io_term_sd__direction_sd || '|' || _io_term_sd__type_sd || '|' || _io_term_sd__has_port_sd || '|' || _no_port_placement_status_sd || '|' || _no_port_location_sd__x_sd || ',' || _no_port_location_sd__y_sd from iPinSD where _pin_name_sd='req_msg[0]';")" \
         "req_msg[0]|req_msg[0]|1|1|0|3|1000,18645" "$name pin DEF source fields"
     assert_eq "$(sql_value "$edadb_db" "select (select count(*) from pragma_table_info('iPinSD') where name in ('_average_coordinate_sd__x_sd','_average_coordinate_sd__y_sd','_is_io_pin_sd','_is_special_net_sd','_layer_num_sd','_io_term_sd__name_sd','_io_term_sd__shape_sd','_io_term_sd__placement_status_sd','_io_term_sd__is_instance_sd')) || '|' || (select count(*) from pragma_table_info('iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD') where name='_class_sd');")" \
         "0|0" "$name excludes derived pin term port columns"
-    assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || ':' || _pin_name_sd, ',') from (select _order_sd, _pin_name_sd from iPinSD order by _order_sd limit 5);")" \
-        "0:clk,1:req_msg[0],2:req_msg[1],3:req_msg[2],4:req_msg[3]" "$name pin order prefix"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from pragma_table_info('iPinSD') where name='_order_sd';")" \
+        "0" "$name pin has no root order column"
     assert_eq "$(sql_value "$edadb_db" "select (select count(*) from iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD) || '|' || (select count(*) from iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD__layer_shape_list_sd_iLayerShapeSD) || '|' || (select count(*) from iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD__layer_shape_list_sd_iLayerShapeSD__rect_list_sd_IdbRectSD);")" \
         "56|56|56" "$name pin port/layer/rect child counts"
     assert_eq "$(sql_value "$edadb_db" "select _net_name_sd || '|' || _connect_type_sd || '|' || _source_type_sd || '|' || _weight_sd from iSpecNetSD where _net_name_sd='VSS';")" \
@@ -184,8 +182,8 @@ check_default_sql() {
     fi
     assert_eq "$(sql_value "$edadb_db" "select _net_name_sd || '|' || _connect_type_sd || '|' || _source_type_sd || '|' || _weight_sd || '|' || _xtalk_sd || '|' || _fix_bump_sd || '|' || _frequency_sd from iNetSD where _net_name_sd='clk';")" \
         "clk|5|0|0|0|0|-1.0" "$name regular net default fields"
-    assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || ':' || _net_name_sd, ',') from (select _order_sd, _net_name_sd from iNetSD order by _order_sd limit 5);")" \
-        "0:ctrl\$a_mux_sel[0],1:ctrl\$a_mux_sel[1],2:ctrl\$a_reg_en,3:ctrl\$b_mux_sel,4:ctrl\$b_reg_en" "$name regular net order prefix"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from pragma_table_info('iNetSD') where name='_order_sd';")" \
+        "0" "$name regular net has no root order column"
 
     assert_contains "$def2edadb_log" "[EDADB-IDB] writeIdbInstance insert instance_count=1458" "$name write instance log"
     assert_contains "$def2edadb_log" "[EDADB-IDB] writeIdbPin insert pin_count=56" "$name write pin log"
@@ -345,16 +343,15 @@ check_routed_sql() {
     local expected_net_count="${6:-677}"
     local expected_point_count="${7:-14256}"
     local expected_via_count="${8:-3716}"
-    local expected_order_prefix="${9:-0:ctrl\$a_mux_sel[0],1:ctrl\$a_mux_sel[1],2:ctrl\$a_reg_en,3:ctrl\$b_mux_sel,4:ctrl\$b_reg_en}"
 
     assert_eq "$(sql_value "$edadb_db" "select count(*) from iGCellGrid;")" "6" "$name gcell grid count"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_direction || ':' || _start || ':' || _num || ':' || _space, ';') from (select * from iGCellGrid order by _direction, _start, _num, _space);")" \
         "1:0:2:3600;1:3600:43:3360;1:144720:2:5240;2:0:2:3600;2:3600:43:3360;2:144720:2:5408" "$name gcell grid fields"
     assert_eq "$(sql_value "$edadb_db" "select count(*) from iNetSD;")" "$expected_net_count" "$name net count"
-    assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || ':' || _net_name_sd, ',') from (select _order_sd, _net_name_sd from iNetSD order by _order_sd limit 5);")" \
-        "$expected_order_prefix" "$name routed net order prefix"
-    assert_eq "$(sql_value "$edadb_db" "select _order_sd from iNetSD order by rowid limit 1;")" \
-        "$((expected_net_count - 1))" "$name net root physical order was perturbed"
+    assert_eq "$(sql_value "$edadb_db" "select count(*) from pragma_table_info('iNetSD') where name='_order_sd';")" \
+        "0" "$name routed net has no root order column"
+    assert_eq "$(sql_value "$edadb_db" "select _net_name_sd <> 'ctrl\$a_mux_sel[0]' from iNetSD order by rowid limit 1;")" \
+        "1" "$name net root physical order was perturbed"
     assert_eq "$(sql_value "$edadb_db" "select count(*) from iNetSD__wire_list_sd_iRegWireSD;")" "677" "$name regular wire count"
     assert_eq "$(sql_value "$edadb_db" "select count(*) from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD;")" "8997" "$name regular wire segment count"
     assert_eq "$(sql_value "$edadb_db" "select count(*) from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__point_list_sd_iCoordSD;")" \
@@ -454,8 +451,8 @@ check_instance_branch_sql() {
         "1|10,20,30,40" "$name instance halo"
     assert_eq "$(sql_value "$edadb_db" "select _route_halo_sd__route_distance_sd || '|' || _route_halo_sd__layer_bottom_name_sd || '|' || _route_halo_sd__layer_top_name_sd from iInstSD where _name_sd='ctrl/_34_';")" \
         "100|met1|met3" "$name instance route halo"
-    assert_eq "$(sql_value "$edadb_db" "select _order_sd from iInstSD order by rowid limit 1;")" \
-        "1457" "$name instance table physical order was perturbed"
+    assert_eq "$(sql_value "$edadb_db" "select _name_sd <> 'ctrl/_17_' from iInstSD order by rowid limit 1;")" \
+        "1" "$name instance table physical order was perturbed"
     assert_contains "$def2edadb_log" "[EDADB-IDB] writeIdbInstance insert instance_count=1458" "$name write instance log"
     assert_contains "$edadb2def_log" "[EDADB-IDB] readIdbInstance restored instance_count=1458" "$name read instance log"
 }
@@ -469,16 +466,15 @@ check_net_branch_sql() {
     local direct_def="$6"
 
     check_routed_sql "$name" "$edadb_db" "$def2edadb_log" "$edadb2def_log" \
-        "2" "678" "14257" "3717" \
-        "0:special_signal,1:ctrl\$a_mux_sel[0],2:ctrl\$a_mux_sel[1],3:ctrl\$a_reg_en,4:ctrl\$b_mux_sel"
+        "2" "678" "14257" "3717"
     assert_eq "$(sql_value "$edadb_db" "select _wire_state_sd from iNetSD__wire_list_sd_iRegWireSD where iNetSD__net_name_sd='ctrl\$a_mux_sel[0]' order by primary_key limit 1;")" \
         "2" "$name fixed wire state"
     assert_eq "$(sql_value "$edadb_db" "select _wire_state_sd from iNetSD__wire_list_sd_iRegWireSD where iNetSD__net_name_sd='ctrl\$a_mux_sel[1]' order by primary_key limit 1;")" \
         "1" "$name cover wire state"
     assert_eq "$(sql_value "$edadb_db" "select _wire_state_sd from iNetSD__wire_list_sd_iRegWireSD where iNetSD__net_name_sd='ctrl\$a_reg_en' order by primary_key limit 1;")" \
         "4" "$name no-shield wire state"
-    assert_eq "$(sql_value "$edadb_db" "select _connect_type_sd || '|' || _order_sd from iNetSD where _net_name_sd='special_signal';")" \
-        "1|0" "$name SPECIALNETS SIGNAL dispatched to IdbNet"
+    assert_eq "$(sql_value "$edadb_db" "select _connect_type_sd from iNetSD where _net_name_sd='special_signal';")" \
+        "1" "$name SPECIALNETS SIGNAL dispatched to IdbNet"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || ':' || _via_name_sd || '@' || _point_index_sd, ',') from (select v._order_sd, v._via_name_sd, v._point_index_sd from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD s join iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__via_ref_list_sd_iRegViaRef v on v.iNetSD__net_name_sd=s.iNetSD__net_name_sd and v.iNetSD__wire_list_sd_iRegWireSD_primary_key=s.iNetSD__wire_list_sd_iRegWireSD_primary_key and v.iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD_primary_key=s.primary_key where s.iNetSD__net_name_sd='ctrl\$a_mux_sel[0]' and s._vec_idx=1 order by v._order_sd);")" \
         "0:L1M1_PR@0,1:M1M2_PR@0" "$name ordered multi-via references"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(v._order_sd, ',') from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD s join iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__via_ref_list_sd_iRegViaRef v on v.iNetSD__net_name_sd=s.iNetSD__net_name_sd and v.iNetSD__wire_list_sd_iRegWireSD_primary_key=s.iNetSD__wire_list_sd_iRegWireSD_primary_key and v.iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD_primary_key=s.primary_key where s.iNetSD__net_name_sd='ctrl\$a_mux_sel[0]' and s._vec_idx=1 order by v.rowid;")" \
@@ -863,6 +859,7 @@ perturb_pin_child_query_order() {
     local layer_parent="${layer_table}_primary_key"
 
     sqlite3 "$edadb_db" <<SQL
+PRAGMA foreign_keys = OFF;
 UPDATE "$rect_table"
 SET "$port_parent" = -"$port_parent", "$layer_parent" = -"$layer_parent"
 WHERE iPinSD__pin_name_sd = 'clk';
@@ -872,6 +869,10 @@ WHERE iPinSD__pin_name_sd = 'clk';
 UPDATE "$port_table"
 SET primary_key = -primary_key
 WHERE iPinSD__pin_name_sd = 'clk';
+CREATE TEMP TABLE pins_reversed AS
+SELECT * FROM iPinSD ORDER BY rowid DESC;
+DELETE FROM iPinSD;
+INSERT INTO iPinSD SELECT * FROM pins_reversed;
 SQL
 }
 
@@ -891,7 +892,7 @@ perturb_row_query_order() {
 
     sqlite3 "$edadb_db" <<'SQL'
 CREATE TEMP TABLE rows_reversed AS
-SELECT * FROM iRow ORDER BY _order_sd DESC;
+SELECT * FROM iRow ORDER BY rowid DESC;
 DELETE FROM iRow;
 INSERT INTO iRow SELECT * FROM rows_reversed;
 SQL
@@ -926,7 +927,7 @@ perturb_instance_query_order() {
 
     sqlite3 "$edadb_db" <<'SQL'
 CREATE TEMP TABLE instances_reversed AS
-SELECT * FROM iInstSD ORDER BY _order_sd DESC;
+SELECT * FROM iInstSD ORDER BY rowid DESC;
 DELETE FROM iInstSD;
 INSERT INTO iInstSD SELECT * FROM instances_reversed;
 SQL
@@ -1113,7 +1114,7 @@ INSERT INTO iNetSD__instance_pin_list_sd_iNetPinRef
 SELECT * FROM regular_instance_pins_reversed;
 
 CREATE TEMP TABLE regular_nets_reversed AS
-SELECT * FROM iNetSD ORDER BY _order_sd DESC;
+SELECT * FROM iNetSD ORDER BY rowid DESC;
 DELETE FROM iNetSD;
 INSERT INTO iNetSD SELECT * FROM regular_nets_reversed;
 SQL
@@ -1245,6 +1246,8 @@ run_case() {
                 "yes" "$name direct writer emits PORT for req_msg[0]"
             ;;
         pin_branches)
+            assert_eq "$(sql_value "$edadb_db" "select _pin_name_sd <> 'clk' from iPinSD order by rowid limit 1;")" \
+                "1" "$name pin root physical order was perturbed"
             assert_eq "$(sql_value "$edadb_db" "select group_concat(_vec_idx) from iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD where iPinSD__pin_name_sd='clk';")" \
                 "2,1,0" "$name perturbed unordered port fetch order"
             assert_eq "$(sql_value "$edadb_db" "select group_concat(_vec_idx || '|' || _placement_status_sd || '|' || _coordinate_sd__x_sd || ',' || _coordinate_sd__y_sd || '|' || _orient_sd, ';') from (select _vec_idx, _placement_status_sd, _coordinate_sd__x_sd, _coordinate_sd__y_sd, _orient_sd from iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD where iPinSD__pin_name_sd='clk' order by _vec_idx);")" \
@@ -1253,7 +1256,7 @@ run_case() {
                 "0:0:met5,0:1:met5,1:0:met3,2:0:met2" "$name explicit layer-shape order with duplicate layer names"
             assert_eq "$(sql_value "$edadb_db" "select count(*) || '|' || count(distinct l.primary_key) from iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD p join iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD__layer_shape_list_sd_iLayerShapeSD l on l.iPinSD__pin_name_sd=p.iPinSD__pin_name_sd and l.iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD_primary_key=p.primary_key where p.iPinSD__pin_name_sd='clk' and p._vec_idx=0 and l._layer_name_sd='met5';")" \
                 "2|2" "$name duplicate layer names retain distinct layer-shape identities"
-            assert_eq "$(sql_value "$edadb_db" "select group_concat(_no_port_placement_status_sd || ':' || _pin_name_sd, ',') from (select _pin_name_sd, _no_port_placement_status_sd from iPinSD where _pin_name_sd in ('req_msg[1]','req_msg[2]','req_msg[3]') order by _order_sd);")" \
+            assert_eq "$(sql_value "$edadb_db" "select group_concat(_no_port_placement_status_sd || ':' || _pin_name_sd, ',') from (select _pin_name_sd, _no_port_placement_status_sd from iPinSD where _pin_name_sd in ('req_msg[1]','req_msg[2]','req_msg[3]') order by _pin_name_sd);")" \
                 "1:req_msg[1],2:req_msg[2],0:req_msg[3]" "$name no-PORT fixed cover and no-placement branches"
             assert_eq "$(sql_value "$edadb_db" "select count(*) from pragma_table_info('iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD') where name='_vec_idx';")" \
                 "1" "$name port vector index column"

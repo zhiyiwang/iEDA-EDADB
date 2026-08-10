@@ -45,7 +45,11 @@ For each case the script runs:
 1. direct iDB `DEF -> DEF`;
 2. `DEF -> EDADB`;
 3. `EDADB -> DEF`;
-4. byte diff of direct output vs EDADB output.
+4. raw byte diff of direct output vs EDADB output；失败时使用 ABCD root normalizer 比较完整 root records。
+
+`edadb-idb-dev/no-sort-abcd` 只允许 Row/Component/Pin/Net root records 重新排序；
+record 内所有 nested vectors 仍保持原顺序。默认 normalizer 模式仍只处理 Level D，回归脚本
+显式传入 `--root-levels abcd`，避免其他分支无意放宽比较。
 
 For `default_ipl`, it also checks:
 
@@ -80,8 +84,9 @@ For `net_branches`, it repeats all `routed_irt` checks and additionally verifies
 - `FIXED`, `COVER`, and `NOSHIELD` enum values in `iRegWireSD`;
 - complete parser state for multiple Via tokens and multiple `VIRTUAL` points in one segment;
 - physical DB order perturbation for Net roots, pin references, wires, segments, points, Via references, and virtual-point indices;
+- root `iRow/iInstSD/iPinSD/iNetSD` tables must not contain `_order_sd`; nested `_vec_idx` and child `_order_sd` assertions remain mandatory;
 - native-writer canonicalization that emits only the first Via and its supported point subset;
-- raw direct-DEF vs EDADB-DEF equality for the routed and branch fixtures.
+- ABCD-normalized direct-DEF vs EDADB-DEF equality; nested route changes must still fail normalization.
 
 Regular `+ SHIELD <name>` is not generated: the current native writer has a `kShield` branch, but the native DEF parser rejects that regular-NETS syntax. This remains an original writer/parser limitation rather than a supported adapter roundtrip case.
 

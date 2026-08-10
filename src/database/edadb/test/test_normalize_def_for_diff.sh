@@ -11,6 +11,10 @@ normalize() {
     python3 "$NORMALIZER" "$1"
 }
 
+normalize_abcd() {
+    python3 "$NORMALIZER" --root-levels abcd "$1"
+}
+
 assert_norm_same() {
     local left="$1"
     local right="$2"
@@ -31,6 +35,33 @@ assert_norm_different() {
     local label="$3"
     normalize "$left" >"$TMP_DIR/left.norm"
     normalize "$right" >"$TMP_DIR/right.norm"
+    if diff -u "$TMP_DIR/left.norm" "$TMP_DIR/right.norm" >"$TMP_DIR/diff.out"; then
+        echo "FAIL: $label should remain different after normalization" >&2
+        exit 1
+    fi
+    echo "PASS: $label"
+}
+
+assert_norm_same_abcd() {
+    local left="$1"
+    local right="$2"
+    local label="$3"
+    normalize_abcd "$left" >"$TMP_DIR/left.norm"
+    normalize_abcd "$right" >"$TMP_DIR/right.norm"
+    if ! diff -u "$TMP_DIR/left.norm" "$TMP_DIR/right.norm" >"$TMP_DIR/diff.out"; then
+        echo "FAIL: $label should normalize to the same DEF" >&2
+        cat "$TMP_DIR/diff.out" >&2
+        exit 1
+    fi
+    echo "PASS: $label"
+}
+
+assert_norm_different_abcd() {
+    local left="$1"
+    local right="$2"
+    local label="$3"
+    normalize_abcd "$left" >"$TMP_DIR/left.norm"
+    normalize_abcd "$right" >"$TMP_DIR/right.norm"
     if diff -u "$TMP_DIR/left.norm" "$TMP_DIR/right.norm" >"$TMP_DIR/diff.out"; then
         echo "FAIL: $label should remain different after normalization" >&2
         exit 1
@@ -200,6 +231,69 @@ END VIAS
 END DESIGN
 DEF
 
+cat >"$TMP_DIR/abc_a.def" <<'DEF'
+VERSION 5.8 ;
+DESIGN demo ;
+COMPONENTS 2 ;
+    - inst_b cell_b + PLACED ( 20 0 ) N ;
+    - inst_a cell_a + PLACED ( 0 0 ) N ;
+END COMPONENTS
+PINS 2 ;
+    - pin_b + NET net_b + DIRECTION INPUT ;
+    - pin_a + NET net_a + DIRECTION INPUT ;
+END PINS
+NETS 2 ;
+    - net_b ( PIN pin_b )
+      + ROUTED met1 ( 0 0 ) ( 10 0 )
+      + ROUTED met2 ( 10 0 ) ( 10 10 )
+    ;
+    - net_a ( PIN pin_a ) ;
+END NETS
+END DESIGN
+DEF
+
+cat >"$TMP_DIR/abc_b.def" <<'DEF'
+VERSION 5.8 ;
+DESIGN demo ;
+COMPONENTS 2 ;
+    - inst_a cell_a + PLACED ( 0 0 ) N ;
+    - inst_b cell_b + PLACED ( 20 0 ) N ;
+END COMPONENTS
+PINS 2 ;
+    - pin_a + NET net_a + DIRECTION INPUT ;
+    - pin_b + NET net_b + DIRECTION INPUT ;
+END PINS
+NETS 2 ;
+    - net_a ( PIN pin_a ) ;
+    - net_b ( PIN pin_b )
+      + ROUTED met1 ( 0 0 ) ( 10 0 )
+      + ROUTED met2 ( 10 0 ) ( 10 10 )
+    ;
+END NETS
+END DESIGN
+DEF
+
+cat >"$TMP_DIR/abc_nested_changed.def" <<'DEF'
+VERSION 5.8 ;
+DESIGN demo ;
+COMPONENTS 2 ;
+    - inst_a cell_a + PLACED ( 0 0 ) N ;
+    - inst_b cell_b + PLACED ( 20 0 ) N ;
+END COMPONENTS
+PINS 2 ;
+    - pin_a + NET net_a + DIRECTION INPUT ;
+    - pin_b + NET net_b + DIRECTION INPUT ;
+END PINS
+NETS 2 ;
+    - net_a ( PIN pin_a ) ;
+    - net_b ( PIN pin_b )
+      + ROUTED met2 ( 10 0 ) ( 10 10 )
+      + ROUTED met1 ( 0 0 ) ( 10 0 )
+    ;
+END NETS
+END DESIGN
+DEF
+
 assert_norm_same "$TMP_DIR/regions_a.def" "$TMP_DIR/regions_b.def" "D REGIONS root order"
 assert_norm_different "$TMP_DIR/rows_a.def" "$TMP_DIR/rows_b.def" "B ROWS root order"
 assert_norm_same "$TMP_DIR/grids_a.def" "$TMP_DIR/grids_b.def" "D TRACKS and GCELLGRID root order"
@@ -208,5 +302,8 @@ assert_norm_same "$TMP_DIR/special_a.def" "$TMP_DIR/special_b.def" "D SPECIALNET
 assert_norm_different "$TMP_DIR/special_a.def" "$TMP_DIR/special_nested_changed.def" "SPECIALNETS nested order"
 assert_norm_same "$TMP_DIR/vias_a.def" "$TMP_DIR/vias_b.def" "D VIAS root block order"
 assert_norm_different "$TMP_DIR/vias_a.def" "$TMP_DIR/via_nested_changed.def" "VIAS nested geometry order"
+assert_norm_same_abcd "$TMP_DIR/rows_a.def" "$TMP_DIR/rows_b.def" "ABCD mode B ROW root order"
+assert_norm_same_abcd "$TMP_DIR/abc_a.def" "$TMP_DIR/abc_b.def" "ABCD mode COMPONENTS/PINS/NETS root order"
+assert_norm_different_abcd "$TMP_DIR/abc_a.def" "$TMP_DIR/abc_nested_changed.def" "ABCD mode NET nested route order"
 
 echo "All normalize_def_for_diff tests passed."
