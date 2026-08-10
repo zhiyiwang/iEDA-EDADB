@@ -55,7 +55,7 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbSpecialNet>, "iSpecNetSD", ...);
 | `USE SIGNAL/CLOCK` → `parse_net()` | Rebuilds the corresponding `IdbNet` through the same native dispatch as master iEDA. |
 | `NETS` callbacks → `parse_net()` | Rebuilds regular nets entirely from DEF text; no `iNetSD` table exists. |
 
-The retained `fromShadow()` methods are the standard EDADB shadow interfaces, but this demo does not call them. They remain with the SpecialNet definitions so the write schema is self-contained and can later regain EDADB read without redesigning the storage view.
+The SpecialNet `fromShadow()` chain is intentionally removed from this demo. Only schema fields, `toShadow()`, ownership cleanup, and EDADB write remain; the complete read implementation stays on the development branch.
 
 ## Test Coverage
 

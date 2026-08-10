@@ -8,6 +8,7 @@ This file keeps only the branch facts, EDADB layout, validation command, and cur
 - Baseline: `edadb-idb-dev/sort-abc-no-sort-d @ 77fbe5c67` (`milestone/edadb-idb-adapter-15class-20260810`).
 - EDADB read/write: Design, Die, Row, TrackGrid, GCellGrid, Via, Instance, Pin, Blockage, Region, Slot, Group, Fill.
 - SpecialNet: schema/shadows/init and EDADB write are retained; runtime read uses the original `SPECIALNETS` callbacks.
+- SpecialNet shadows are write-only in this demo: their `fromShadow()` chain and read-only rebuild helpers are removed.
 - Net: original DEF read/write only; EDADB Net schema, shadow, and builder methods are removed.
 - Regression must assert `iFillSD` and `iSpecNetSD` exist, `iNetSD` is absent, `writeIdbSpecialNet()` runs, and `readIdbSpecialNet()` does not run.
 - Validation on 2026-08-10: full `iEDA` build passed; canonical demo reported `Input def and output def are the same.`; all 15 regression cases passed with `EDADB_TEST_JOBS=8` under `/tmp/iedadb_demo_20260810_full`.
