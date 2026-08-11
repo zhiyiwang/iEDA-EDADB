@@ -19,6 +19,8 @@ STAGE_RUN_JOBS="${STAGE_RUN_JOBS:-auto}"
 IEDA_PROCESS_MEMORY_GIB="${IEDA_PROCESS_MEMORY_GIB:-16}"
 IEDA_MEMORY_RESERVE_GIB="${IEDA_MEMORY_RESERVE_GIB:-16}"
 IRT_INPUT_GATE_ONLY="${IRT_INPUT_GATE_ONLY:-0}"
+PARALLEL_FIRST_EDADB="${PARALLEL_FIRST_EDADB:-0}"
+EDADB_RUNS_UPFRONT="${EDADB_RUNS_UPFRONT:-1}"
 
 ALL_STAGES=(ipl icts ito_drv ito_hold ipl_lg irt)
 
@@ -228,31 +230,49 @@ validate_stage() {
         }
 
     if [[ "$stage" == "irt" ]]; then
-        echo "==> [irt] compare iRT-wrapped input environments"
+        echo "==> [irt] compare native iRT env_map outputs"
         RT_THREAD_NUMBER=1 RT_ENABLE_NOTIFICATION=1 RT_SNAPSHOT_ONLY=1 \
             run_ieda_process "$stage_root/precheck/irt-native" "$stage" native "$input_def" 1 "$edadb_db"
         RT_THREAD_NUMBER=1 RT_ENABLE_NOTIFICATION=1 RT_SNAPSHOT_ONLY=1 \
             run_ieda_process "$stage_root/precheck/irt-edadb" "$stage" edadb "$input_def" 1 "$edadb_db"
         python3 "$COMPARE_IRT_INPUT" \
-            "$stage_root/precheck/irt-native/rt/data_manager/input_snapshot.json" \
-            "$stage_root/precheck/irt-edadb/rt/data_manager/input_snapshot.json" \
+            "$stage_root/precheck/irt-native/rt/data_manager/env_map.json" \
+            "$stage_root/precheck/irt-edadb/rt/data_manager/env_map.json" \
             >"$stage_root/precheck/irt-input-compare.log" 2>&1 || {
-                echo "FAIL: iRT semantic input database differs; routing was not run" >&2
+                echo "FAIL: iRT wrapped env_map differs; routing was not run" >&2
                 cat "$stage_root/precheck/irt-input-compare.log" >&2
                 return 1
             }
         cat "$stage_root/precheck/irt-input-compare.log"
         if [[ "$IRT_INPUT_GATE_ONLY" == "1" ]]; then
-            echo "PASS: iRT native and EDADB semantic input databases match"
+            echo "PASS: iRT native and EDADB env_map outputs match"
             return 0
         fi
     fi
 
     local jobs
     jobs="$(stage_run_jobs "$stage")"
-    echo "==> [$stage] run $NATIVE_RUNS native controls with jobs=$jobs"
     local run
-    run_process_batch "$stage" native "$input_def" "$edadb_db" 1 "$NATIVE_RUNS" "$stage_root"
+    local edadb_controls_available=1
+    if [[ "$PARALLEL_FIRST_EDADB" == "1" ]]; then
+        [[ "$EDADB_RUNS_UPFRONT" =~ ^[1-3]$ ]] || die "EDADB_RUNS_UPFRONT must be 1, 2, or 3"
+        edadb_controls_available="$EDADB_RUNS_UPFRONT"
+        echo "==> [$stage] run $NATIVE_RUNS native controls and $edadb_controls_available EDADB controls concurrently with jobs=$jobs per mode"
+        local native_batch_pid edadb_batch_pid native_batch_status=0 edadb_batch_status=0
+        run_process_batch "$stage" native "$input_def" "$edadb_db" 1 "$NATIVE_RUNS" "$stage_root" &
+        native_batch_pid=$!
+        run_process_batch "$stage" edadb "$input_def" "$edadb_db" 1 "$edadb_controls_available" "$stage_root" &
+        edadb_batch_pid=$!
+        wait "$native_batch_pid" || native_batch_status=$?
+        wait "$edadb_batch_pid" || edadb_batch_status=$?
+        if [[ "$native_batch_status" -ne 0 || "$edadb_batch_status" -ne 0 ]]; then
+            echo "FAIL: concurrent controls failed: native_status=$native_batch_status edadb_status=$edadb_batch_status" >&2
+            return 1
+        fi
+    else
+        echo "==> [$stage] run $NATIVE_RUNS native controls with jobs=$jobs"
+        run_process_batch "$stage" native "$input_def" "$edadb_db" 1 "$NATIVE_RUNS" "$stage_root"
+    fi
 
     local native_stable=1
     for run in $(seq 2 "$NATIVE_RUNS"); do
@@ -262,25 +282,32 @@ validate_stage() {
         fi
     done
 
-    echo "==> [$stage] run first EDADB control"
-    run_ieda_process "$stage_root/edadb-1" "$stage" edadb "$input_def" 1 "$edadb_db"
-    local first_edadb_matches=1
-    if ! compare_runs "$stage_root/native-1" "$stage_root/edadb-1" \
-        >"$stage_root/edadb-1/compare-to-native-1.log" 2>&1; then
-        first_edadb_matches=0
+    if [[ "$PARALLEL_FIRST_EDADB" != "1" ]]; then
+        echo "==> [$stage] run first EDADB control"
+        run_ieda_process "$stage_root/edadb-1" "$stage" edadb "$input_def" 1 "$edadb_db"
     fi
+    local edadb_matches=1
+    for run in $(seq 1 "$edadb_controls_available"); do
+        if ! compare_runs "$stage_root/native-1" "$stage_root/edadb-$run" \
+            >"$stage_root/edadb-$run/compare-to-native-1.log" 2>&1; then
+            edadb_matches=0
+        fi
+    done
 
-    if [[ "$native_stable" -eq 1 && "$first_edadb_matches" -eq 1 ]]; then
+    if [[ "$native_stable" -eq 1 && "$edadb_matches" -eq 1 ]]; then
         echo "PASS: $stage native controls are stable and EDADB matches"
         return 0
     fi
 
-    echo "==> [$stage] variability or mismatch detected; run two additional EDADB controls"
-    run_process_batch "$stage" edadb "$input_def" "$edadb_db" 2 3 "$stage_root"
-    for run in 2 3; do
-        compare_runs "$stage_root/native-1" "$stage_root/edadb-$run" \
-            >"$stage_root/edadb-$run/compare-to-native-1.log" 2>&1 || true
-    done
+    if [[ "$edadb_controls_available" -lt 3 ]]; then
+        local first_missing_edadb=$((edadb_controls_available + 1))
+        echo "==> [$stage] variability or mismatch detected; run EDADB controls $first_missing_edadb through 3"
+        run_process_batch "$stage" edadb "$input_def" "$edadb_db" "$first_missing_edadb" 3 "$stage_root"
+        for run in $(seq "$first_missing_edadb" 3); do
+            compare_runs "$stage_root/native-1" "$stage_root/edadb-$run" \
+                >"$stage_root/edadb-$run/compare-to-native-1.log" 2>&1 || true
+        done
+    fi
 
     if [[ "$native_stable" -eq 0 ]]; then
         if [[ "$stage" == "irt" ]]; then

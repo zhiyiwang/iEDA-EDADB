@@ -27,6 +27,11 @@ def git_output(repo: Path, *args: str) -> str:
     return subprocess.check_output(["git", *args], cwd=repo, text=True).strip()
 
 
+def git_diff_sha256(repo: Path) -> str:
+    diff = subprocess.check_output(["git", "diff", "--binary", "HEAD"], cwd=repo)
+    return hashlib.sha256(diff).hexdigest()
+
+
 def main(argv: Iterable[str]) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--repo", type=Path, required=True)
@@ -40,11 +45,14 @@ def main(argv: Iterable[str]) -> int:
     parser.add_argument("--config", type=Path, action="append", default=[])
     args = parser.parse_args(list(argv))
 
+    git_status = git_output(args.repo, "status", "--short")
     manifest = {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
         "git_branch": git_output(args.repo, "branch", "--show-current"),
         "git_commit": git_output(args.repo, "rev-parse", "HEAD"),
-        "git_dirty": bool(git_output(args.repo, "status", "--short")),
+        "git_dirty": bool(git_status),
+        "git_status_short": git_status.splitlines(),
+        "git_diff_sha256": git_diff_sha256(args.repo),
         "dataset": args.dataset,
         "stage": args.stage,
         "mode": args.mode,
@@ -63,6 +71,8 @@ def main(argv: Iterable[str]) -> int:
         ),
         "rt_thread_number": os.environ.get("RT_THREAD_NUMBER", "64"),
         "stage_run_jobs": os.environ.get("STAGE_RUN_JOBS", "auto"),
+        "parallel_first_edadb": os.environ.get("PARALLEL_FIRST_EDADB", "0"),
+        "edadb_runs_upfront": os.environ.get("EDADB_RUNS_UPFRONT", "1"),
         "fixture_run_jobs": os.environ.get("FIXTURE_RUN_JOBS", "unset"),
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)

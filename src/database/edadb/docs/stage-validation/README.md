@@ -1,8 +1,21 @@
 # EDADB Point-Tool Stage Validation
 
+## Reports
+
+- [2026-08-11 independent validation report](test-report-20260811.md): executed tests,
+  first-principles rationale, discovered defects, code fixes, commits, and remaining review
+  boundaries.
+- [Known native iEDA defects](known-native-defects.md): reproducible cases retained as text/tests
+  while original point-tool and Verilog-builder source remains unchanged.
+
 ## Goal
 
 Prove that loading a physical design through EDADB produces an iDB that iPL, iCTS/iTO, and iRT consume equivalently to the native DEF-loaded iDB. DEF roundtrip alone is necessary but insufficient: point tools exercise name references, backlinks, derived geometry, connectivity, IDs, and mutable state.
+
+Final milestone policy: fix confirmed EDADB adapter defects, but do not modify original iEDA
+point-tool, Verilog-builder, or diagnostic production source. Native defects found during this
+campaign are preserved as reproducible evidence in `known-native-defects.md`. Result sections
+that used temporary native diagnostic patches are explicitly historical.
 
 ## First-Principles Model
 
@@ -21,15 +34,19 @@ The adapter is correct for tool `T` only when the restored pre-tool state is equ
 1. Uses identical LEF, DEF, liberty, SDC, tool configuration, thread count, and fixed code revision.
 2. Creates native and EDADB pre-tool snapshots in separate processes.
 3. Compares canonical DEF and stable `report_db` content before invoking the point tool.
-4. For iRT, compares the semantic DataManager source database: layers, axes, vias, obstacles, ordered nets/pins/shapes, derived geometry, and scalar database values. Pointer-ordered fixed-rectangle iteration is reported separately.
+4. For iRT, compares original iEDA's wrapped die, obstacle and pin-shape `env_map.json` before routing.
 5. Runs three native controls to measure native determinism.
 6. Runs one EDADB control when native output is stable; expands to three after variability or mismatch.
 7. Compares structure, connectivity-facing outputs, geometry, reports, feature metrics, and final DEF.
 8. Preserves every command, hash, log, database, and output under an isolated run directory.
 
-Process concurrency is resource-aware rather than uniform. On the current 40-logical-CPU, 125-GiB host, iPL controls have a CPU cap of three, but the scheduler also reserves 16 GiB for the host and budgets 16 GiB per iEDA process from current `MemAvailable`. iCTS/iTO/iRT already use large internal thread pools, so their controls run serially to avoid CPU oversubscription and a distorted repeatability baseline. Interrupted fixture tests terminate child processes so an orphaned iEDA process cannot silently invalidate later measurements.
+Process concurrency is resource-aware rather than uniform. On the current 40-logical-CPU, 125-GiB host, the scheduler reserves 16 GiB for the host and budgets 16 GiB per iEDA process from current `MemAvailable`. Expensive controls may run concurrently only when native and EDADB paths use the same internal thread count, fixed input/configuration, and independent output directories. For iRT, `PARALLEL_FIRST_EDADB=1 EDADB_RUNS_UPFRONT=3 STAGE_RUN_JOBS=3 RT_THREAD_NUMBER=12` runs three native and three EDADB controls in one batch. The modest thread oversubscription compensates for observed OpenMP barrier tail imbalance; it does not change the equal-thread comparison contract. Interrupted fixture tests terminate child processes so an orphaned iEDA process cannot silently invalidate later measurements.
 
-`RT_ENABLE_NOTIFICATION=1 RT_SNAPSHOT_ONLY=1` is a diagnostic-only mode that emits iRT's semantic database and pointer-order views in `input_snapshot.json`, then stops before routing. It is disabled by default and does not modify the production adapter.
+The PicoRV32A six-control run reached a peak load above 60 while using about 32 GiB and no swap. Later DetailedRouter tails use fewer cores because `routeDRBoxMap()` has a static OpenMP loop at `src/operation/iRT/source/module/detailed_router/DetailedRouter.cpp:369`; adding threads during a run cannot rebalance already assigned boxes. Changing that schedule is a separate iRT performance experiment and must not be mixed into an adapter-correctness baseline.
+
+`RT_ENABLE_NOTIFICATION=1 RT_SNAPSHOT_ONLY=1` asks original iEDA to emit `env_map.json` and stop
+before routing. The deeper semantic/pointer-order snapshot used during diagnosis required a
+temporary `DataManager` patch and is not retained in the final milestone.
 
 ### Why Independent Stages Come First
 
@@ -98,9 +115,14 @@ Before changing production code, the validation uses the grilling workflow:
 2. Require native and EDADB pre-tool state to match before attributing any post-tool difference to the adapter.
 3. Locate the first divergent consumer or derived state, then reduce it to a legal minimal fixture when possible.
 4. Trace the full object lifecycle and derive the expected count/value change from source instead of guessing from the final DEF.
-5. Commit only a complete local fix with a failing-before/passing-after oracle. Cross-module point-tool defects remain documented review boundaries until an end-to-end fix is designed and tested.
+5. Commit only a complete local adapter fix with a failing-before/passing-after oracle. Native
+   iEDA defects remain documented/reproducible boundaries and are fixed upstream, not here.
 
-## Sky130 Isolated Results
+## Historical Sky130 Diagnostic Results
+
+These results describe the diagnostic campaign, including temporary native fixes. The final
+milestone retains only adapter changes; current native-defect expectations are documented in
+`known-native-defects.md`.
 
 | Stage | Result | Evidence |
 |---|---|---|
@@ -112,7 +134,7 @@ Before changing production code, the validation uses the grilling workflow:
 | iRT input gate | Pass after generated-via fix | Canonical DEF/report and the semantic DataManager source database match; pointer-order differences are reported separately. |
 | iRT full routing | Review | Three native controls produce different legal routing geometries and QoR values. EDADB attribution therefore requires a native variability envelope rather than pairwise exact DEF equality. |
 
-## IHP130 AES Results
+## Historical IHP130 AES Diagnostic Results
 
 | Stage | Result | Evidence |
 |---|---|---|
@@ -125,7 +147,7 @@ Before changing production code, the validation uses the grilling workflow:
 | iRT semantic input gate | Pass | Native and EDADB `semantic_database` snapshots are exactly equal; pointer-ordered fixed-rectangle iteration differs with an identical value multiset. |
 | iRT full routing | Review | Three native and three EDADB runs complete, but native routing is not deterministic; observed QoR ranges are retained as evidence, not promoted to a tolerance. |
 
-## IHP130 PicoRV32A Results
+## Historical IHP130 PicoRV32A Diagnostic Results
 
 | Stage | Result | Evidence |
 |---|---|---|
@@ -133,10 +155,35 @@ Before changing production code, the validation uses the grilling workflow:
 | iPL | Pass | Native/EDADB pre-tool state matches; three native controls are stable; EDADB matches. |
 | iCTS | Pass with stable algorithm profile | Three native controls are stable and EDADB matches under the documented no-skew-tree profile. |
 | iTO DRV | Pass after native Verilog alias fix | Pre-tool state matches; three native controls are stable; EDADB matches the native result. |
-| iTO Hold / downstream legalization | Not run on refreshed input | Canonical refreshed inputs now exist through iTO DRV; these remain the next Pico stages. |
-| iRT semantic input gate | Pass on isolated iPL input | Native and EDADB semantic DataManager snapshots match; only pointer iteration order differs. Full routing is deferred. |
+| iTO Hold | Pass | Three native controls are stable and EDADB matches. |
+| Incremental legalization | Pass | Three native controls are stable and EDADB matches. |
+| iRT semantic input gate | Pass | Native and EDADB semantic DataManager snapshots match; only the pointer-ordered fixed-rectangle view differs while its content is equal. |
+| iRT full routing | Review | Three native and three EDADB runs all exit zero and preserve fixed structure. Both groups produce different legal routing results, so the report retains raw samples and exploratory statistics rather than inventing a pass tolerance. |
 
-### Resolved PicoRV32A Net-Alias / RC-Tree Defect
+### PicoRV32A Six-Control iRT Evidence
+
+The completed run uses iEDA commit `ef07f23df`, input SHA-256
+`77ca164086e2fddc030714edf91a02e83ba1751c6e3b5efc5121bf82790cd9fd`, six concurrent
+processes, and 12 iRT threads per process. Artifacts are under
+`/tmp/iedadb_stage_validation_pico_irt_6way_retry_20260811/ihp130_picorv32a/irt`.
+
+- All six processes exit zero and retain `18,157` instances, `411` IO pins, `19,920` nets,
+  `2` PDNs, and the same layer counts.
+- Native and EDADB pre-tool DEFs are byte-identical. The iRT semantic input database is equal;
+  only an allocator-dependent pointer iteration view differs.
+- Mean EDADB-minus-native changes are `-0.0233%` wire length, `+0.1884%` wires,
+  `+0.1592%` segments, `+0.0921%` vias, `+0.3195%` patches, and `+3.6051%` final DRC
+  violations. Mean iRT runtime changes by `+0.5087%`; native and EDADB runtime ranges overlap.
+- With three runs per group, the exact two-sided permutation test has only 20 partitions and
+  cannot produce `p < 0.1`. No metric proves a group difference. Metal4 wire count has the
+  largest unresolved separation (`+0.8442%`, `p=0.1`) and remains a targeted repeatability
+  question, not a demonstrated adapter defect.
+- `variability_summary.json` stores every raw sample, mean, sample standard deviation,
+  standardized mean difference, exact permutation value, and descriptive native range. None of
+  these values is used as an automatic acceptance tolerance; strict wrapped-input equality is
+  still the adapter gate.
+
+### Diagnosed PicoRV32A Net-Alias / RC-Tree Defect
 
 The Pico failure was upstream of EDADB and stable across three native runs. The bug-proof audit
 reduced it to two native Verilog builder defects:
@@ -148,20 +195,18 @@ reduced it to two native Verilog builder defects:
 2. `VerilogWriter::writeAssign()` emitted both input and output aliases as `assign net = port`.
    For an output port this reverses Verilog semantics; it must emit `assign output_port = net`.
 
-The local correction enforces one invariant: moving an IO pin to a new logical net removes it
+The temporary diagnostic correction enforced one invariant: moving an IO pin to a new logical net removes it
 from the previous net, inserts it only once in the target net, and then synchronizes its `_net`
-and `_net_name` back-references. This is centralized in `connect_io_pin()` at
-`src/database/manager/builder/verilog_builder/verilog_read.cpp:417-433` and used by all existing
-one-to-one assign branches at `src/database/manager/builder/verilog_builder/verilog_read.cpp:477-535`.
-Output assignment direction is corrected at
-`src/database/manager/builder/verilog_builder/verilog_write.cpp:309-313`.
+and `_net_name` back-references. Commit `ef07f23df` proved the cause, but those native Verilog
+builder changes are not retained in the final adapter milestone.
 
 The minimal fixture `test/stage_validation/fixtures/verilog/io_port_alias.v` covers input-to-net,
-net-to-output, and output-to-output assignments. Its regression checks direction-correct Verilog
-and exactly one DEF root-net membership per IO pin. On the real Pico design, `trace_data[5]` now occurs
-only under `_17496_` in the iFP DEF, iNO emits `assign trace_data[5] = fanout_net_56`, native iTO
-DRV completes, three native controls are stable, and the EDADB-restored control matches. This
-proves the fix at the original failing consumer instead of weakening the RC-tree invariant.
+net-to-output, and output-to-output assignments. On the final unchanged-native tree,
+`EXPECT_KNOWN_NATIVE_DEFECT=1` requires the exact reversed-assignment and duplicate-root-membership
+signature. Strict mode describes the desired upstream behavior and intentionally fails. During
+diagnosis, the temporary patch made `trace_data[5]` occur only under `_17496_`, made iNO emit
+`assign trace_data[5] = fanout_net_56`, and allowed native iTO DRV to complete; this proved the
+cause without retaining the native patch.
 
 ### IHP130 CTS Native Boundary
 
@@ -173,7 +218,7 @@ therefore keeps the default failure as native evidence and uses
 `test/stage_validation/config/ihp130_cts_no_skew_tree.json` for the stable comparison profile.
 That profile selects the existing non-skew-tree implementation; it does not patch CTS geometry.
 
-### Resolved iPL Pointer-Ordered Connectivity
+### Diagnosed iPL Pointer-Ordered Connectivity
 
 The initial AES iPL comparison satisfied the strict adapter gate but failed after placement:
 
@@ -196,10 +241,9 @@ The source path identifies a native iPL determinism defect rather than a missing
 3. The old `completeConnection()` iterated `std::map<Pin*, NesPin*>`, so allocation addresses
    selected the append order of `NesInstance::_nPin_list` and `NesNet::_loader_list`. Those vectors
    feed placement calculations, including per-instance wirelength preconditioning.
-4. The correction at
-   `src/operation/iPL/source/module/global_placer/electrostatic_placer/NesterovPlace.cc:252-282`
-   traverses `_nPin_list` and uses `_pin_map` only for reverse lookup. It changes no identity,
-   connectivity, or numerical formula.
+4. The temporary correction in commit `eaba42801` traversed `_nPin_list` and used `_pin_map` only
+   for reverse lookup, proving the cause without changing identity, connectivity or formulas.
+   The final adapter milestone restores original `NesterovPlace.cc`.
 5. `initNodes()` still uses a pointer-keyed lookup map because it immediately sorts the resulting
    node vector by stable `pin_id` at
    `src/operation/iPL/source/module/global_placer/electrostatic_placer/NesterovPlace.cc:326-353`;
@@ -278,6 +322,11 @@ accepted by all required checks:
 - full sky130 iRT wrapper gate: native and EDADB both contain `27,299` obstacle shapes;
 - fixed/generated Via regression and the complete object-level regression remain green.
 
+Final unchanged-native milestone reruns additionally passed the six script unit tests, the full
+object-level regression, the exact native Verilog-alias known-defect oracle and the original
+Sky130 `env_map.json` gate. Exact commands and artifact roots are recorded in
+`test-report-20260811.md`.
+
 ### Current Full-Routing Review Boundary
 
 After the input gate passed, three single-process native iRT controls produced different routed
@@ -323,6 +372,18 @@ Test-framework defects may be fixed directly with a self-test. Native iEDA behav
 
 `ToApi::outputSummary()` returns a local `TimingOptSummary` without assigning its `HPWL` or `STWL` members (`src/operation/iTO/api/ToApi.cpp:114-163`). `feature_tool` therefore emits subnormal process-memory values such as `3.7e-322`; native and EDADB processes can differ even when DEF, Verilog, timing fields, DB reports, and feature summary are identical. The harness retains the raw values but excludes only `optDrv/optHold/optSetup.HPWL` and `.STWL` from semantic comparison. This is a documented native iEDA defect, not an adapter field or a valid QoR tolerance.
 
+## Final Milestone Acceptance
+
+- Original iEDA production files match
+  `milestone/edadb-idb-15class-sort-abc-no-sort-d-20260810`.
+- `Shadow<IdbViaMasterGenerate>` and `Shadow<IdbViaMaster>` retain the generated-via
+  idempotence fix from `e63ebd001`.
+- Object-level EDADB regression, strict generated-via `27 == 27`, original iRT `env_map.json`,
+  and test-script unit checks are the adapter acceptance gates.
+- iPL pointer-order, Verilog IO alias, default IHP130 bound-skew-tree, iTO undefined metrics and
+  iRT pointer-order remain documented native boundaries; post-tool differences caused by them
+  are not adapter regressions.
+
 ## Artifact Layout
 
 Tests and documentation remain in the repository. Generated data defaults to:
@@ -340,4 +401,4 @@ Tests and documentation remain in the repository. Generated data defaults to:
   edadb-3/
 ```
 
-Each process directory contains its log, inputs/outputs, reports, feature JSON, and `manifest.json`. Existing files under `scripts/design/*/result/` are read-only test inputs and are never overwritten.
+Each process directory contains its log, inputs/outputs, reports, feature JSON, and `manifest.json`. A dirty worktree records both `git_status_short` and `git_diff_sha256`, rather than only an ambiguous dirty flag. Existing files under `scripts/design/*/result/` are read-only test inputs and are never overwritten.

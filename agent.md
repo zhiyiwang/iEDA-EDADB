@@ -255,27 +255,24 @@ Current uncovered or weakly covered areas:
 - During development run only affected cases; before handoff run the full case set with
   the selected concurrency. Parallel execution must not weaken per-case SQL, DEF diff,
   or nested-order perturbation assertions.
-- Before fixing a reported defect, use the grilling workflow to prove the failure boundary:
+- Before changing adapter code, use the grilling workflow to prove the failure boundary:
   compare native controls, require identical pre-tool state, isolate the first divergent
   consumer, derive a minimal causal fixture, and trace the object lifecycle in source. Fix
-  and commit only when the evidence identifies a complete, local correction. If the cause is
-  a cross-module point-tool property, record it and reject partial patches that merely move
-  the divergence downstream.
+  and commit only when the evidence identifies a complete, local adapter correction. Native
+  iEDA defects are recorded with a reproducer and evidence, but the EDADB adapter branch must
+  not modify original point-tool, Verilog-builder, or diagnostic production source.
 - Pointer-keyed maps and sets are lookup structures, not semantic iteration orders. When their
-  iteration feeds an order-sensitive vector or floating-point reduction, traverse an existing
-  stable source vector or sort by a stable logical key; verify the change with native-repeatability,
-  strict pre-tool equality, and native-vs-EDADB post-tool tests before committing.
-- iRT input diagnostics must separate the ordered semantic DataManager database from
-  pointer-ordered consumer views. A semantic field/order difference fails the adapter gate;
-  an equal value multiset with different pointer iteration is a native determinism review.
-  Do not hide either case by globally sorting the complete snapshot.
-- 2026-08-11 PicoRV32A stage status: iPL, stable-profile iCTS, and iTO DRV pass strict
-  native/EDADB validation; the isolated iRT semantic input gate also passes. The prior native
-  iTO failure was proven to be a Verilog builder bug: assign processing left one IO pin in two
-  root-net containers and the writer reversed output-port assignments. The fix centralizes
-  single-owner IO-pin rebinding and emits `assign output_port = net`; the minimal alias fixture,
-  full object regression, refreshed Pico chain, three native iTO controls, and one EDADB iTO
-  control all pass.
+  iteration feeds an order-sensitive vector or floating-point reduction, record the exact source
+  path, stable input, and observed divergence as a native defect. Do not patch original iEDA on
+  this branch; any diagnostic patch result is historical evidence only.
+- The active iRT adapter gate uses original iEDA's `env_map.json`. Deeper semantic/pointer-order
+  snapshots were useful during diagnosis but required modifying `DataManager`; that diagnostic
+  code is not retained in the final adapter milestone.
+- 2026-08-11 final stage-validation policy: original iEDA production files match the adapter
+  milestone. The generated-via `fromShadow()` idempotence defect is fixed in the adapter and its
+  strict `27 == 27` fixture passes. iPL pointer-order, Verilog IO-alias ownership/direction,
+  IHP130 bound-skew-tree, iTO uninitialized metrics, and iRT pointer-order behavior remain native
+  defects/boundaries documented by test cases; temporary native fixes are not retained.
 - Stage-input preparation must pass every output path explicitly and assert that each expected
   DEF is non-empty and no save-failure message appears. A zero iEDA exit status alone does not
   prove that a Tcl stage produced its output.
@@ -843,6 +840,36 @@ Latest repeatable regression:
   wire/segment/point counts, segment type counters, ordered `clk_0` pin refs, and largest routed
   segment nets.
 
+Historical stage-validation diagnostic run (2026-08-11):
+
+- Temporary native diagnostic patches made PicoRV32A iPL, iCTS, iTO DRV, iTO Hold, and
+  incremental legalization native/EDADB checks pass. Those point-tool/Verilog changes are not
+  retained in the final adapter milestone.
+- A temporary DataManager diagnostic patch showed equal semantic content and a different known
+  pointer-order view. Final source uses original iEDA `env_map.json` instead.
+- The completed full iRT run uses three native plus three EDADB controls concurrently, 12 threads
+  per process, commit `ef07f23df`, and input SHA-256
+  `77ca164086e2fddc030714edf91a02e83ba1751c6e3b5efc5121bf82790cd9fd`.
+- All six runs exit zero and preserve `18,157` instances, `411` IO pins, `19,920` nets, `2` PDNs,
+  and identical layer counts. Both groups vary in routed DEF/QoR, so the result is `REVIEW`, not
+  an adapter failure and not a statistical-equivalence proof.
+- Mean EDADB-minus-native changes: wire length `-0.0233%`, wires `+0.1884%`, segments
+  `+0.1592%`, vias `+0.0921%`, patches `+0.3195%`, final DRC violations `+3.6051%`, and iRT
+  runtime `+0.5087%`. The 3+3 exact permutation test cannot produce `p < 0.1`; Metal4 wire
+  count (`+0.8442%`, `p=0.1`) remains an unresolved targeted repeatability question.
+- Acceptance artifacts:
+  `/tmp/iedadb_stage_validation_pico_irt_6way_retry_20260811/ihp130_picorv32a/irt`.
+- Earlier interrupted roots are historical diagnostics only and are not acceptance evidence.
+
+Final adapter milestone policy (2026-08-11):
+
+- Original iPL, Verilog builder, and iRT DataManager source matches
+  `milestone/edadb-idb-15class-sort-abc-no-sort-d-20260810`.
+- Generated-via reconstruction remains the only retained production fix from this campaign.
+- Native defects are recorded in
+  `src/database/edadb/docs/stage-validation/known-native-defects.md` and reproduced by tests;
+  they are not fixed on the adapter branch.
+
 ## Objective Completion Audit
 
 Current audit target: EDADB core `3077132` with iEDA branch `edadb-idb`.
@@ -855,4 +882,4 @@ Current audit target: EDADB core `3077132` with iEDA branch `edadb-idb`.
 | Commit by object-family increments | Git history on `edadb-idb` contains per-family commits from Design/Die/Row through Net, plus follow-up hardening commits for optional net fields, fill variants, primitive vectors, and documentation audits. | done |
 | Verify each migrated family | `default_ipl` covers baseline families; `aux_optional` covers non-empty Blockage/Region/Slot/Group/Fill, optional net fields, special-net explicit refs and rect branch with SQLite assertions; `routed_irt` covers non-empty regular routed NETS with SQLite assertions. | done |
 | Compare against original master and prove logic | `edadb_readme.md` section “对照 master 的正确性结论” defines the proof strategy: compare direct iDB DEF roundtrip with EDADB DEF roundtrip, preserving master DEF writer/parser semantics while replacing the persistence middle step. | done |
-| Use server resources efficiently | Build/test commands use `-j40` where applicable; regression script runs focused EDADB adapter cases instead of unrelated full design flow. | done |
+| Use server resources efficiently | Builds use `-j40`; focused regressions avoid unrelated flows; known-variable iRT validation runs three native plus three EDADB controls together with equal per-process threads (`PARALLEL_FIRST_EDADB=1`, `EDADB_RUNS_UPFRONT=3`, `STAGE_RUN_JOBS=3`, `RT_THREAD_NUMBER=12`). | done |

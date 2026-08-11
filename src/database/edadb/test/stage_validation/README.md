@@ -9,8 +9,9 @@ This directory validates that a point tool consumes an EDADB-restored iDB in the
 - Isolated stages: `ipl`, `icts`, `ito_drv`, `ito_hold`, `ipl_lg`, `irt`.
 - Native controls: three runs by default.
 - EDADB controls: one run when native results are stable and equal; three runs after variability or mismatch.
-- Resource-aware scheduling: process concurrency is bounded by both CPU capacity and `MemAvailable`; iCTS, iTO, and iRT remain serial because each tool already uses many worker threads.
-- iRT wrapper gate: native and EDADB paths must produce identical semantic DataManager inputs before routing starts. A separate pointer-order view reports allocator-dependent iteration without confusing it with missing adapter data.
+- Resource-aware scheduling: process concurrency is bounded by CPU capacity and `MemAvailable`; long controls may run concurrently only when every native/EDADB process receives the same internal thread count and writes to an independent output directory.
+- Native iEDA source remains identical to the adapter milestone; known point-tool/Verilog defects are reproduced and documented, not fixed on this branch.
+- iRT wrapper gate: native and EDADB paths compare original iEDA's `env_map.json` before routing starts.
 
 ## Run
 
@@ -67,7 +68,16 @@ Override process-level concurrency when the machine is shared or has different r
 STAGE_RUN_JOBS=1 bash src/database/edadb/test/stage_validation/run_stage_validation.sh ipl
 ```
 
-On the current 40-logical-CPU, 125-GiB host, the CPU cap is three concurrent iPL controls. The actual count is reduced when available memory cannot preserve the default 16-GiB host reserve plus 16 GiB per iEDA process. CTS/TO/RT controls stay at one process to avoid oversubscribing their internal 50-80/64-thread execution. Override the estimates with `IEDA_PROCESS_MEMORY_GIB` and `IEDA_MEMORY_RESERVE_GIB` only after measuring the dataset.
+On the current 40-logical-CPU, 125-GiB host, the CPU cap is three concurrent iPL controls. The actual count is reduced when available memory cannot preserve the default 16-GiB host reserve plus 16 GiB per iEDA process. Override the estimates with `IEDA_PROCESS_MEMORY_GIB` and `IEDA_MEMORY_RESERVE_GIB` only after measuring the dataset.
+
+For an expensive iRT repeatability run, EDADB controls can run with the native controls. The EDADB file is complete before this batch begins; all controls read the same fixed input and write separate result directories. When native routing is already known to vary, run all three EDADB controls up front so a second routing batch is unnecessary:
+
+```bash
+NATIVE_RUNS=3 STAGE_RUN_JOBS=3 PARALLEL_FIRST_EDADB=1 EDADB_RUNS_UPFRONT=3 RT_THREAD_NUMBER=12 \
+bash src/database/edadb/test/stage_validation/run_stage_validation.sh irt
+```
+
+Do not combine process concurrency with the former 64-thread default: `6 x 64` oversubscribes this host. The 12-thread setting intentionally allows modest oversubscription because static DR-box scheduling leaves many workers at an OpenMP barrier near each batch tail. Measure wall time and CPU time before changing the per-process partition because some iRT phases remain only partially parallel.
 
 The [generated-via fixture](fixtures/sky130_generated_via/README.md) provides a separate,
 first-principles iRT input test:
@@ -76,20 +86,22 @@ first-principles iRT input test:
 bash src/database/edadb/test/stage_validation/run_generated_via_fixture.sh
 ```
 
-The minimal Verilog alias fixture checks both sides of IO-port connectivity:
+This strict mode requires native/EDADB equality. Set `EXPECT_KNOWN_DEFECT=1` only with a pre-fix
+binary to reproduce the historical `27 -> 65` signature; that mode must fail for the fixed
+implementation.
+
+The minimal Verilog alias fixture records the original iEDA defect without patching it:
 
 ```bash
+EXPECT_KNOWN_NATIVE_DEFECT=1 \
 bash src/database/edadb/test/stage_validation/test_verilog_alias_roundtrip.sh
 ```
 
-It requires input aliases to be emitted as `assign net = input_port`, output aliases as
-`assign output_port = net`, and every IO pin to occur in exactly one DEF root-net membership.
+The known-defect mode requires the stable baseline signature: reversed output assignments and
+root-net membership counts `in=2`, `out0=2`, `out1=3`, `out2=1`. Strict mode omits the variable
+and fails until the native Verilog builder is fixed upstream.
 
-Strict mode is the current regression and requires native/EDADB equality. Set
-`EXPECT_KNOWN_DEFECT=1` only with a pre-fix binary to reproduce the historical `27 -> 65`
-signature; that mode must fail for the fixed implementation.
-
-For iRT input-state diagnosis, set `RT_ENABLE_NOTIFICATION=1 RT_SNAPSHOT_ONLY=1`. Normal runs leave both disabled. The options ask iRT to emit `input_snapshot.json` under each run's `rt/data_manager/` directory and stop before routing. The snapshot separates the ordered semantic database from pointer-ordered consumer views; notification delivery itself may remain disabled.
+For iRT input-state diagnosis, set `RT_ENABLE_NOTIFICATION=1 RT_SNAPSHOT_ONLY=1`. Normal runs leave both disabled. Original iEDA emits `env_map.json` under each run's `rt/data_manager/` directory and stops before routing; notification delivery itself may remain disabled.
 
 Run only the strict native-vs-EDADB iRT wrapper gate without starting full routing:
 
@@ -98,12 +110,11 @@ IRT_INPUT_GATE_ONLY=1 \
 bash src/database/edadb/test/stage_validation/run_stage_validation.sh irt
 ```
 
-The gate fails on any semantic field or ordered-vector difference. If only the
-`std::set<EXTLayerRect*>` iteration view differs while its rectangle multiset is equal, the
-comparator reports `REVIEW` and keeps the semantic adapter gate passing. This distinguishes a
-native pointer-order determinism defect from missing EDADB data.
+The gate strictly compares die, obstacle and pin-shape records in `env_map.json`. The deeper
+semantic/pointer-order snapshot used during diagnosis required temporary `DataManager` changes
+and is intentionally not retained in this milestone.
 
-Generated artifacts stay outside the repository by default. Every process writes a `manifest.json` containing the commit, branch, input/config hashes, command, host, thread setting, and exit status.
+Generated artifacts stay outside the repository by default. Every process writes a `manifest.json` containing the commit, branch, input/config hashes, command, host, thread setting, and exit status. A dirty worktree also records `git_status_short` and `git_diff_sha256`.
 
 ## Gate Order
 
@@ -117,8 +128,8 @@ Generated artifacts stay outside the repository by default. Every process writes
 
 Before a mismatch is called an adapter bug, require a stable native control, identical pre-tool
 state, a localized first divergence, and a source-derived causal explanation. Only complete local
-fixes with failing-before/passing-after evidence are committed; partial point-tool determinism
-patches are not accepted merely because they change the final diff.
+adapter fixes with failing-before/passing-after evidence are committed here. Native point-tool
+defects are retained as reproducible evidence and must be fixed upstream, not in this branch.
 
 `feature_tool` fields `optDrv/optHold/optSetup.HPWL` and `.STWL` are excluded from semantic comparison. `ToApi::outputSummary()` declares these fields in `TimingOptSummary` but does not initialize or assign them (`src/operation/iTO/api/ToApi.cpp:114-163`), so emitted subnormal values depend on process memory rather than design state. The raw JSON remains in every run directory as evidence.
 
@@ -126,30 +137,28 @@ Raw DEF differences remain available in the artifacts. The existing normalizer m
 
 ## Current iPL Status
 
-Sky130 GCD and IHP130 AES both pass strict native-vs-EDADB iPL validation. The AES test
-exposed a native iPL defect in which `NesterovPlace::completeConnection()` iterated a
-pointer-keyed map while constructing order-sensitive instance-pin and net-loader vectors.
-The implementation now traverses the existing logical `_nPin_list` and uses the map only
-for lookup. Three native controls and the EDADB result are identical on both datasets; the
-full causal chain and hashes are recorded in `../../docs/stage-validation/README.md`.
+The pre-tool native/EDADB gate passes. Post-tool AES and Sky130 comparisons expose the original
+iPL pointer-map iteration defect. The experimental correction proved the cause, but the final
+adapter milestone restores original `NesterovPlace.cc`; the stage remains a known-native-defect
+reproducer rather than an adapter acceptance pass.
 
 ## Current iRT Status
 
-The generated-via defect is fixed. The strict minimal fixture reports `27 == 27`, and the full
-sky130 wrapper gate reports identical native/EDADB iRT input environments with `27,299`
-obstacles. Full routing reaches the repeatability review gate because three native controls
-produce different routed DEFs and QoR values. Detailed evidence and the next comparison boundary
-are recorded in `../../docs/stage-validation/README.md`. A single-thread diagnostic further proves
-that pointer-address iteration inside iRT can produce different legal routes from semantically
-identical native and EDADB inputs; this is classified separately from adapter restoration.
+The generated-via adapter defect is fixed. The strict minimal fixture reports `27 == 27`, and the
+original `env_map.json` gate compares native/EDADB iRT obstacle and pin-shape environments. Full
+routing remains `REVIEW` because original iRT uses pointer-address iteration and native controls
+produce different legal routes.
 
 When native iRT controls vary, the harness writes `variability_summary.json`. It records exact
 fixed-structure equality plus native and EDADB samples for total/per-layer wire length, wire,
-segment, via, patch, and final DRC-violation counts. Native observed min/max values are descriptive
-evidence only; three samples are not promoted into an arbitrary acceptance tolerance.
+segment, via, patch, final DRC-violation counts, and iRT runtime. Each metric includes means,
+sample standard deviations, standardized mean difference, and an exact two-sided permutation
+value. Native observed min/max values and exploratory statistics are descriptive evidence only;
+three samples are not promoted into an arbitrary acceptance tolerance and cannot yield
+`p < 0.1` in the 3+3 exact test.
 
-PicoRV32A currently passes strict iPL, stable-profile iCTS, iTO DRV, and the isolated iRT
-semantic input gate. The earlier iTO failure was reduced to native Verilog reader/writer alias
-bugs, fixed with single-root-net IO-pin rebinding and direction-correct output assignments, then
-validated by the minimal fixture and the full Pico stage gate. Detailed evidence is recorded in
-`../../docs/stage-validation/README.md`.
+PicoRV32A historical diagnostic runs established the iPL, Verilog alias and iRT causes. The final
+adapter milestone does not retain those native fixes: iPL and iTO DRV are known-native-defect
+reproducers, stable-profile iCTS remains usable, and iRT `env_map` plus generated-via checks remain
+the current adapter-facing gates. Detailed evidence is recorded in
+`../../docs/stage-validation/README.md` and `../../docs/stage-validation/known-native-defects.md`.

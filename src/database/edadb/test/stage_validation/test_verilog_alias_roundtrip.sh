@@ -10,6 +10,12 @@ OUT_DIR="${OUT_DIR:-/tmp/ieda_verilog_alias_roundtrip}"
 INPUT_VERILOG="$SCRIPT_DIR/fixtures/verilog/io_port_alias.v"
 OUTPUT_VERILOG="$OUT_DIR/io_port_alias_roundtrip.v"
 OUTPUT_DEF="$OUT_DIR/io_port_alias.def"
+EXPECT_KNOWN_NATIVE_DEFECT="${EXPECT_KNOWN_NATIVE_DEFECT:-0}"
+
+if [[ "$EXPECT_KNOWN_NATIVE_DEFECT" != "0" && "$EXPECT_KNOWN_NATIVE_DEFECT" != "1" ]]; then
+  echo "ERROR: EXPECT_KNOWN_NATIVE_DEFECT must be 0 or 1" >&2
+  exit 1
+fi
 
 rm -rf "$OUT_DIR"
 mkdir -p "$OUT_DIR"
@@ -23,6 +29,30 @@ INPUT_VERILOG="$INPUT_VERILOG" \
 OUTPUT_VERILOG="$OUTPUT_VERILOG" \
 OUTPUT_DEF="$OUTPUT_DEF" \
   "$IEDA_BIN" -script "$SCRIPT_DIR/tcl/run_verilog_alias_roundtrip.tcl" >"$OUT_DIR/run.log" 2>&1
+
+if [[ "$EXPECT_KNOWN_NATIVE_DEFECT" == "1" ]]; then
+  grep -Fxq 'assign shared = in ;' "$OUTPUT_VERILOG"
+  grep -Fxq 'assign out2 = out1 ;' "$OUTPUT_VERILOG"
+  grep -Fxq 'assign shared = out0 ;' "$OUTPUT_VERILOG"
+  grep -Fxq 'assign shared = out1 ;' "$OUTPUT_VERILOG"
+
+  declare -A expected_memberships=(
+    [in]=2
+    [out0]=2
+    [out1]=3
+    [out2]=1
+  )
+  for pin in in out0 out1 out2; do
+    membership_count="$(grep -o "( PIN $pin )" "$OUTPUT_DEF" | wc -l)"
+    if [[ "$membership_count" -ne "${expected_memberships[$pin]}" ]]; then
+      echo "FAIL: native defect signature changed for $pin: actual=$membership_count expected=${expected_memberships[$pin]}" >&2
+      exit 1
+    fi
+  done
+
+  echo "PASS: reproduced native Verilog alias direction/root-membership defect"
+  exit 0
+fi
 
 grep -Fxq 'assign shared = in ;' "$OUTPUT_VERILOG"
 grep -Fxq 'assign out0 = shared ;' "$OUTPUT_VERILOG"

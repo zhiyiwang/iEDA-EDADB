@@ -128,7 +128,6 @@ class DataManager
   void outputScript();
   void outputJson();
   std::string outputEnvJson();
-  std::string outputInputSnapshotJson();
 #endif
 
 #if 1  // destroy

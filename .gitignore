@@ -18,6 +18,7 @@ catboost_info
 *.dot
 *.gds
 *.def
+!src/database/edadb/test/stage_validation/fixtures/sky130_generated_via/generated_via.def
 *.log
 *.pwr
 
