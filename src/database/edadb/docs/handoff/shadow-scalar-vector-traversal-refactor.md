@@ -1,5 +1,15 @@
 # Handoff: Shadow Scalar/Vector Traversal Refactor
 
+> Canonical EDADB-core implementation handoff:
+> `src/database/edadb/core/md/shadow_scalar_vector_traversal_refactor_handoff.md`.
+> This integration-side document records the iEDA adapter diagnosis and migration boundary; the
+> core document is the source of truth for the refactor steps and test gates.
+
+Paired deliverable checkpoint:
+
+- iEDA adapter: `milestone/iedadb-adapter-deliverable-checkpoint-20260812`
+- EDADB core: `milestone/iedadb-core-deliverable-checkpoint-20260812`
+
 ## Status
 
 - The generated-via duplication defect is fixed in the adapter by commit `e63ebd001`.

@@ -872,10 +872,18 @@ Final adapter milestone policy (2026-08-11):
 
 Pending EDADB core refactor handoff (2026-08-12):
 
-- Read `src/database/edadb/docs/handoff/shadow-scalar-vector-traversal-refactor.md` before
-  changing `DbObjectTraverser`, SQLite SELECT shadow hooks, or `TABLE4SHADOW_WVEC` adapters.
+- Canonical handoff: read
+  `src/database/edadb/core/md/shadow_scalar_vector_traversal_refactor_handoff.md` before changing
+  `DbObjectTraverser`, SQLite SELECT shadow hooks, or `TABLE4SHADOW_WVEC` adapters.
+- Adapter-side companion:
+  `src/database/edadb/docs/handoff/shadow-scalar-vector-traversal-refactor.md`.
 - The current generated-via adapter mitigation is correct and must remain until the proposed
   scalar/vector shadow protocol passes replacement, failure, core, adapter, and stage tests.
+- Paired deliverable checkpoint:
+  `milestone/iedadb-adapter-deliverable-checkpoint-20260812` in iEDA-EDADB and
+  `milestone/iedadb-core-deliverable-checkpoint-20260812` in EDADB. The adapter tag is the common
+  commit of `edadb-idb` and `edadb-idb-dev/sort-abc-no-sort-d`; one tag records that shared commit
+  rather than duplicating branch-specific tags.
 - Confirmed direction: child vectors are fully staged and applied once; whole-object failure
   atomicity remains the next unresolved design decision.
 
