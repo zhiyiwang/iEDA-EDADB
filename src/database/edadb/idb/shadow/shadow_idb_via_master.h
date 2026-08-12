@@ -104,7 +104,20 @@ public:
         // use pattern name string to create and set pattern instance 
         obj->set_patttern(_pattern_name_sd);
 
-        // build core cut shape for via master generate if pattern exist, since cut array must follow the pattern rule
+        // DefRead::parse_via() expands ROWCOL on a newly-created via master and calls
+        // set_via_shape() once. TABLE4SHADOW_WVEC SELECT instead creates two temporary
+        // Shadow<IdbViaMaster> instances that both restore the same IdbViaMaster target.
+        // The scalar-phase shadow is populated from parent-row columns and calls
+        // fromShadow(). The vector-phase shadow is first populated by toShadow(target),
+        // then receives child-table rows and calls fromShadow(target) again. This does
+        // not read the parent row twice; it is a two-phase object reconstruction.
+        // Generated vias have no fixed-via child rows, but the second application still
+        // replays their inline generate fields copied by toShadow().
+        // add_cut_rect() owns and appends heap rectangles, so retaining the first
+        // pass makes N source cuts become 2N. The next set_via_shape() would append
+        // all 2N cuts after the N derived cuts from the first pass, producing 3N.
+        // The generated-via fixture exposed this as 19 native cuts versus 57 EDADB
+        // cuts (27 versus 65 total iRT obstacles). Rebuild the cut array by replacement.
         std::vector<idb::IdbRect*>& cut_rect_list = obj->get_cut_rect_list();
         for (idb::IdbRect*& cut_rect : cut_rect_list) {
             delete cut_rect;
@@ -205,6 +218,13 @@ public:
             if (!_master_generate_sd.fromShadow(obj->get_master_generate())) {
                 return false;
             }
+            // Both EDADB restore phases reach this branch on the same target object.
+            // IdbViaMaster::set_via_shape() uses IdbLayerShape::add_rect(), so it
+            // appends rather than replaces bottom, cut, and top geometry. Clear all
+            // derived shapes before recomputing them to make every fromShadow()
+            // application equivalent to the single call in DefRead::parse_via().
+            // iRT later merges duplicate routing enclosures but preserves duplicate
+            // cut obstacles; downstream merging must not be used to hide stale iDB state.
             obj->get_bottom_layer_shape()->clear();
             obj->get_cut_layer_shape()->clear();
             obj->get_top_layer_shape()->clear();

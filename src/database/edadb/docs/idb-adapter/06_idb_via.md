@@ -78,8 +78,11 @@ Primary-key audit：
 
 ### Two-phase restoration idempotence
 
-- `TABLE4SHADOW_WVEC(IdbViaMaster)` 的 SELECT lifecycle 会在 scalar restore 后和 vector-child restore 后各调用一次 `fromShadow()`；因此恢复函数必须满足 `restore(restore(obj)) == restore(obj)`。
-- generated-via 的 cut list 和公共 bottom/cut/top shapes 都是派生且由目标对象拥有。每次恢复先删除并清空旧 cut rect，见 `shadow_idb_via_master.h:107-113`；parent 再清空三个公共 layer shape，见 `shadow_idb_via_master.h:204-211`，随后确定性重建。
+- `TABLE4SHADOW_WVEC(IdbViaMaster)` 的 SELECT lifecycle 分为 scalar 和 vector-child 两阶段，入口分别是 `DbObjectTraverser.h:50`、`DbObjectTraverser.h:60`。
+- 两阶段使用两个不同的局部 `Shadow<IdbViaMaster>` 实例，但操作同一个 `IdbViaMaster*` target。scalar shadow 从 parent-row columns 填充后调用 `fromShadow(target)`，见 `DbTableOpSelect4Sqlite.h:165`；vector shadow 先执行 `toShadow(target)`，再读取 child rows，最后调用 `fromShadow(target)`，见 `DbTableOpSelect4Sqlite.h:196`、`DbTableOpSelect4Sqlite.h:201`、`DbTableOpSelect4Sqlite.h:230`。
+- `toShadow(target)` 本身不是错误：它用于把第一阶段已恢复的 scalar 状态带入新的 vector shadow。触发 bug 的组合是“同一 target 被完整恢复两次”与旧 `fromShadow()` 的 append-only、非幂等重建语义。
+- generated via 没有 fixed child rows，但 vector phase 仍会把 inline generate fields 从 target 复制到第二个 shadow，并再次重建 geometry。因此恢复函数必须满足 `restore(restore(obj)) == restore(obj)`。
+- generated-via 的 cut list 和公共 bottom/cut/top shapes 都是派生且由目标对象拥有。每次恢复先删除并清空旧 cut rect，见 `shadow_idb_via_master.h:107-126`；parent 再清空三个公共 layer shape，见 `shadow_idb_via_master.h:221-231`，随后确定性重建。
 - 修复前两次 append 会把 `N` 个 source cuts 变成 `3N` 个公共 cut shapes；修复后两次调用都得到同一对象状态。fixed-via child 只在 vector phase 恢复，分支逻辑未修改。
 - 该规则不是文本 canonicalization：iRT 会把公共 via shapes 转成 routing obstacles，因此重复派生几何会改变点工具实际输入。
 

@@ -9,6 +9,7 @@ This directory is the canonical documentation home for the iEDA + EDADB integrat
 3. `idb-adapter/README.md`: canonical adapter implementation, review, test, and documentation rules.
 4. `../test/README.md`: current executable roundtrip tests, cases, commands, and assertions.
 5. `stage-validation/README.md`: first-principles validation of native versus EDADB-restored iDB through iPL, iCTS/iTO, and iRT.
+6. `handoff/shadow-scalar-vector-traversal-refactor.md`: confirmed generated-via defect mechanism and the pending EDADB shadow scalar/vector traversal redesign.
 
 ## Per-Class Adapter Notes
 
