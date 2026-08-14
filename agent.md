@@ -887,6 +887,14 @@ Pending EDADB core refactor handoff (2026-08-12):
 - Confirmed direction: child vectors are fully staged and applied once; whole-object failure
   atomicity remains the next unresolved design decision.
 
+## Demo 20260814
+
+- Baseline: `5fcb67bc7`.
+- EDADB read/write is enabled through `IdbSpecialNet` (`01`-`14`).
+- `IdbNet` adapter schema/shadow/builder methods and `15_idb_net.md` are removed.
+- Original DEF callbacks restore `NETS`; a selective SPECIALNETS callback forwards only SIGNAL/CLOCK to `parse_net()`, while POWER/GROUND comes from EDADB.
+- Acceptance requires SpecialNet DB/read/write evidence, absence of `iNetSD` and Net adapter logs, canonical demo success, and full mixed-path regression success.
+
 ## Objective Completion Audit
 
 Current audit target: EDADB core `3077132` with iEDA branch `edadb-idb`.

@@ -19,12 +19,14 @@ Paired deliverable checkpoint:
 
 ## Per-Class Adapter Notes
 
-Read `idb-adapter/01_idb_design.md` through `idb-adapter/15_idb_net.md` in DEF write order. Each file records:
+Read `idb-adapter/01_idb_design.md` through `idb-adapter/14_idb_special_net.md` in DEF write order. Each file records:
 
 - original `DefWrite` / `DefRead` semantics;
 - EDADB schema and primary-key choices;
 - root/nested vector order policy;
 - test coverage and class-specific risks.
+
+On `demo/20260814`, this range matches the enabled adapter set: SpecialNet uses EDADB write/read, while Net stays on the original DEF path and has no demo adapter document.
 
 Root-order status and future order experiments belong only in `def-ieda-mapping-and-order.md`; they are not duplicated in a separate TODO document.
 

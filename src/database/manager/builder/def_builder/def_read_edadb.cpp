@@ -71,7 +71,11 @@ bool DefReadEdadb::createDbByDef(const char* path) {
 
     defrInitSession();
 
-    // DEF callbacks for EDADB-restored object families are intentionally not registered.
+    defrSetNetStartCbk(netBeginCallback);
+    defrSetNetCbk(netCallback);
+    defrSetNetEndCbk(netEndCallback);
+    defrSetSNetCbk(netFallbackSpecialNetCallback);
+    defrSetAddPathToNet();
 
     int res = defrRead(f, path, (defiUserData) this, /* case sensitive */ 1);
 
@@ -206,7 +210,7 @@ bool DefReadEdadb::createDbByDef(const char* path) {
 
 
 bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
-    EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] createDbByEdadb Design/Die/Row/TrackGrid/GCell/Via/Region/Instance/Pin/Blockage/Slot/Group/Fill/SpecialNet/Net enabled path="
+    EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] createDbByEdadb Design/Die/Row/TrackGrid/GCell/Via/Region/Instance/Pin/Blockage/Slot/Group/Fill/SpecialNet enabled; Net uses DEF fallback path="
               << edadb_path << std::endl;
 
     CHECK_READ(readIdbDesign(), "DefReadEdadb::createDbByEdadb failed to read IdbDesign!");
@@ -223,7 +227,6 @@ bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
     CHECK_READ(readIdbGroup(), "DefReadEdadb::createDbByEdadb failed to read IdbGroup!");
     CHECK_READ(readIdbFill(), "DefReadEdadb::createDbByEdadb failed to read IdbFill!");
     CHECK_READ(readIdbSpecialNet(), "DefReadEdadb::createDbByEdadb failed to read IdbSpecialNet!");
-    CHECK_READ(readIdbNet(), "DefReadEdadb::createDbByEdadb failed to read IdbNet!");
 
 
 
@@ -939,93 +942,19 @@ bool DefReadEdadb::readIdbSpecialNet(void) {
     return true;
 } // readIdbSpecialNet
 
-bool DefReadEdadb::readIdbNet(void) {
-    IdbDesign* design = _def_service->get_design();  // Def
-    if (design == nullptr) {
-        std::cerr << "DefReadEdadb::readIdbNet failed, design is nullptr!" << std::endl;
-        return false;
+int32_t DefReadEdadb::netFallbackSpecialNetCallback(defrCallbackType_e type, defiNet* def_net, defiUserData data) {
+    if (def_net == nullptr) {
+        return kDbFail;
     }
 
-    IdbNetList* net_list = design->get_net_list();
-    if (net_list == nullptr) {
-        std::cerr << "DefReadEdadb::readIdbNet failed, net_list is nullptr!" << std::endl;
-        return false;
+    auto* def_reader = static_cast<DefReadEdadb*>(data);
+    if (!def_reader->check_type(type) || !def_net->hasUse()) {
+        return kDbFail;
     }
 
-    net_list->reset();
-
-    auto net_reader = edadb::makeGenericQueryOp<edadb::Shadow<idb::IdbNet>>();
-    if (net_reader.preparePredicate("ORDER BY \"_order_sd\"") < 0) {
-        std::cerr << "DefReadEdadb::readIdbNet failed to prepare ordered query!" << std::endl;
-        return false;
-    }
-#if EDADB_OUTPUT_DEBUG
-    int32_t net_count = 0;
-    int32_t segment_count = 0;
-    int32_t via_count = 0;
-    int32_t virtual_point_count = 0;
-    int32_t multi_via_segment_count = 0;
-#endif
-    while (true) {
-        auto* net_sd = new edadb::Shadow<idb::IdbNet>();
-        const int read_count = edadb::readNext<edadb::Shadow<idb::IdbNet>>(net_reader, net_sd);
-        if (read_count == 0) {
-            delete net_sd;
-            break;
-        }
-        if (read_count < 0) {
-            delete net_sd;
-            net_list->reset();
-            std::cout << "DefReadEdadb::readIdbNet failed to read!" << std::endl;
-            return false;
-        }
-
-        IdbNet* net = net_list->add_net(net_sd->_net_name_sd);
-        if (net == nullptr) {
-            std::cout << "Create Net Error..." << std::endl;
-            delete net_sd;
-            net_list->reset();
-            return false;
-        }
-
-        if (!net_sd->fromShadow(net)) {
-            delete net_sd;
-            net_list->reset();
-            return false;
-        }
-#if EDADB_OUTPUT_DEBUG
-        segment_count += net_sd->getSegmentCount();
-        for (IdbRegularWire* wire : net->get_wire_list()->get_wire_list()) {
-            for (IdbRegularWireSegment* segment : wire->get_segment_list()) {
-                std::vector<IdbVia*> via_list = segment->get_via_list();
-                via_count += via_list.size();
-                if (via_list.size() > 1) {
-                    ++multi_via_segment_count;
-                }
-                for (IdbCoordinate<int32_t>* point : segment->get_point_list()) {
-                    if (segment->is_virtual(point)) {
-                        ++virtual_point_count;
-                    }
-                }
-            }
-        }
-#endif
-
-        delete net_sd;
-#if EDADB_OUTPUT_DEBUG
-        ++net_count;
-#endif
-    }
-
-#if EDADB_OUTPUT_DEBUG
-    EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] readIdbNet restored net_count="
-              << net_count << " segment_count=" << segment_count
-              << " via_count=" << via_count
-              << " virtual_point_count=" << virtual_point_count
-              << " multi_via_segment_count=" << multi_via_segment_count << std::endl;
-#endif
-    return true;
-} // readIdbNet
+    auto* connect_property = IdbEnum::GetInstance()->get_connect_property();
+    return connect_property->is_net(def_net->use()) ? def_reader->parse_net(def_net) : kDbSuccess;
+}
 
 #undef EDADB_IDB_DEBUG_STREAM
 

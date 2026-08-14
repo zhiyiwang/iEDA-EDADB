@@ -2,7 +2,7 @@
 
 ## Scope And Constraint Check
 
-`IdbSpecialNet` 只对应 DEF `SPECIALNETS` 中被 `DefRead::parse_special_net()` 判定为 POWER/GROUND 的 PDN records。SIGNAL/CLOCK records 虽然来自 `SPECIALNETS` section，但会进入 `parse_net()` 并加入 `IdbNetList`，由 `IdbNet` adapter 处理。
+`IdbSpecialNet` 只对应 DEF `SPECIALNETS` 中被 `DefRead::parse_special_net()` 判定为 POWER/GROUND 的 PDN records。SIGNAL/CLOCK records 虽然来自 `SPECIALNETS` section，但会进入 `parse_net()` 并加入 `IdbNetList`；demo 使用 selective DEF callback 保留这条原始 Net 路径。
 
 - 原始 write：`DefWrite::write_special_net()`，`src/database/manager/builder/def_builder/def_write.cpp:767-825`。
 - 原始 callback：`DefRead::specialNetCallback()`，`src/database/manager/builder/def_builder/def_read.cpp:1268-1284`。
@@ -11,8 +11,8 @@
 - 原始 PDN routed-wire read：`DefRead::parse_pdn_wire()`，`src/database/manager/builder/def_builder/def_read.cpp:1388-1478`。
 - 原始 PDN standalone-rect read：`DefRead::parse_pdn_rects()`，`src/database/manager/builder/def_builder/def_read.cpp:1480-1512`。
 - 原始 regular-net branch：`DefRead::parse_net()`，`src/database/manager/builder/def_builder/def_read.cpp:1028-1240`。
-- EDADB write：`DefWriteEdadb::writeIdbSpecialNet()`，`src/database/manager/builder/def_builder/def_write_edadb.cpp:659-708`。
-- EDADB read：`DefReadEdadb::readIdbSpecialNet()`，`src/database/manager/builder/def_builder/def_read_edadb.cpp:864-940`。
+- EDADB write：`DefWriteEdadb::writeIdbSpecialNet()`，`src/database/manager/builder/def_builder/def_write_edadb.cpp:656-705`。
+- EDADB read：`DefReadEdadb::readIdbSpecialNet()`，`src/database/manager/builder/def_builder/def_read_edadb.cpp:867-943`。
 
 按 `src/database/edadb/docs/def-ieda-mapping-and-order.md` 检查：
 
@@ -31,7 +31,7 @@
    - `USE SIGNAL/CLOCK`：`is_net()` 为 true，调用已有的 `parse_net()`，创建 `IdbNet` 并加入 `IdbNetList`，见 `src/database/manager/builder/def_builder/def_read.cpp:1299-1301`。
 4. 无 `USE` 或 `USE` 不属于上述四类时，函数直接返回成功，不创建 `IdbSpecialNet` 或 `IdbNet`，见 `src/database/manager/builder/def_builder/def_read.cpp:1302-1303`。
 
-分类规则定义在 `src/database/data/design/IdbEnum.cpp:307-316`：SIGNAL/CLOCK 属于 regular net，POWER/GROUND 属于 PDN。本文后续 read mapping 只描述 `parse_pdn()` 分支；`parse_net()` 分支属于 `15_idb_net.md`。
+分类规则定义在 `src/database/data/design/IdbEnum.cpp:307-316`：SIGNAL/CLOCK 属于 regular net，POWER/GROUND 属于 PDN。本文后续 read mapping 只描述 `parse_pdn()` 分支；demo 中 SIGNAL/CLOCK 由 `DefReadEdadb::netFallbackSpecialNetCallback()` 转回原始 `parse_net()`。
 
 原始 `specialNetCallback()` 在 `src/database/manager/builder/def_builder/def_read.cpp:1281-1283` 调用 `parse_special_net()` 后固定返回 `kDbSuccess`，没有继续传播 `parse_pdn()` / `parse_net()` 的失败状态；这是当前原始 iEDA 的 callback 行为，adapter 不在本阶段修改。
 
@@ -96,7 +96,7 @@ read 时重新计算或 lookup：
 
 | Original `DefWrite` execution order | DEF field / iDB member | EDADB correspondence |
 | --- | --- | --- |
-| 获取 list、检查为空并输出 count，`def_write.cpp:769-775` | `IdbSpecialNetList::_net_list` / `SPECIALNETS <N>` | `writeIdbSpecialNet()` 获取同一 list，逐 root 转 shadow 后 batch insert，`def_write_edadb.cpp:660-707` |
+| 获取 list、检查为空并输出 count，`def_write.cpp:769-775` | `IdbSpecialNetList::_net_list` / `SPECIALNETS <N>` | `writeIdbSpecialNet()` 获取同一 list，逐 root 转 shadow 后 batch insert，`def_write_edadb.cpp:657-704` |
 | root loop 和 name，`def_write.cpp:777-778` | `- <net_name>` / `IdbSpecialNet::_net_name` | `_net_name_sd`，`shadow_idb_special_net.h:311-312` |
 | `pin_string_list` 非空分支，`def_write.cpp:780-783` | repeated `(* pin)` | 只保存 `_pin_string_list_sd`，`shadow_idb_special_net.h:318-320` |
 | 否则先 IO pin、后 instance pin，`def_write.cpp:784-792` | `(PIN pin)`；`(instance pin)` | 保存有序 IO names 和 `SpecialNetPinRef`，`shadow_idb_special_net.h:322-340` |
@@ -118,8 +118,8 @@ read 时重新计算或 lookup：
 | Original `DefRead` execution order | DEF field / rebuilt member | EDADB correspondence |
 | --- | --- | --- |
 | callback 转入 dispatch，`def_read.cpp:1268-1283` | 一条 `SPECIALNETS` `defiNet` record | EDADB 读 DB 时不经过 DEF callback；`readIdbSpecialNet()` 直接读取 PDN rows |
-| `USE POWER/GROUND` dispatch，`def_read.cpp:1293-1297` | 选择 `IdbSpecialNet` / `IdbSpecialNetList` | `readIdbSpecialNet()` 只恢复该 PDN branch；SIGNAL/CLOCK branch 由 `readIdbNet()` 负责 |
-| 获取 design/list 并 `add_net(name)`，`def_read.cpp:1308-1315` | root name，创建 `IdbSpecialNetList` member | builder 从 `_net_name_sd` 创建 root，`def_read_edadb.cpp:900-907` |
+| `USE POWER/GROUND` dispatch，`def_read.cpp:1293-1297` | 选择 `IdbSpecialNet` / `IdbSpecialNetList` | `readIdbSpecialNet()` 只恢复该 PDN branch；SIGNAL/CLOCK 由 selective DEF callback 调用原始 `parse_net()` |
+| 获取 design/list 并 `add_net(name)`，`def_read.cpp:1308-1315` | root name，创建 `IdbSpecialNetList` member | builder 从 `_net_name_sd` 创建 root，`def_read_edadb.cpp:903-910` |
 | USE/SOURCE/WEIGHT/ORIGINAL，`def_read.cpp:1322-1336` | root scalar state | `fromShadow()` 按 parser state 恢复，`shadow_idb_special_net.h:362-366` |
 | `instance == "*"`，`def_read.cpp:1338-1342` | `add_pin_string()` | 恢复 pin strings，`shadow_idb_special_net.h:368-371`、`shadow_idb_special_net.h:443-445` |
 | `instance == "PIN"`，`def_read.cpp:1343-1350` | IO pin lookup、append、back-reference | helper lookup 后 `add_io_pin()` + `set_special_net()`，`shadow_idb_special_net.h:382-387`、`shadow_idb_special_net.h:447-460` |
@@ -148,10 +148,11 @@ read 时重新计算或 lookup：
 
 ## EDADB Write Read Path
 
-- Write：list validation `def_write_edadb.cpp:660-679` → standard `toShadow()` `def_write_edadb.cpp:681-694` → batch insert/cleanup `def_write_edadb.cpp:696-707`。
-- Read：reset list `def_read_edadb.cpp:871-879` → cursor read `def_read_edadb.cpp:886-898` → add root `def_read_edadb.cpp:900-907` → standard `fromShadow()` `def_read_edadb.cpp:908-912`。
+- Write：list validation `def_write_edadb.cpp:657-676` → standard `toShadow()` `def_write_edadb.cpp:678-691` → batch insert/cleanup `def_write_edadb.cpp:693-704`。
+- Read：reset list `def_read_edadb.cpp:874-880` → cursor read `def_read_edadb.cpp:882-900` → add root `def_read_edadb.cpp:903-910` → standard `fromShadow()` `def_read_edadb.cpp:911-915`。
+- Mixed fallback：`createDbByDef()` 在 `def_read_edadb.cpp:74-78` 注册普通 Net callbacks，并用 `netFallbackSpecialNetCallback()`（`def_read_edadb.cpp:945-956`）只转发 SIGNAL/CLOCK；POWER/GROUND 不再进入 DEF parser，避免与 EDADB-restored SpecialNet 重复。
 - Root `fromShadow()`：header/connections `shadow_idb_special_net.h:356-397` → ordered wires `shadow_idb_special_net.h:399-413`。
-- Cursor read failure resets the active list，`def_read_edadb.cpp:893-898`；root create/restore failure resets it at `def_read_edadb.cpp:900-911`。
+- Cursor read failure resets the active list，`def_read_edadb.cpp:896-900`；root create/restore failure resets it at `def_read_edadb.cpp:903-914`。
 
 ## Test Coverage
 

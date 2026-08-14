@@ -126,7 +126,7 @@ This table is the single root-order implementation status for the current `sort-
 | `IdbSlotList::_slot_list` | D exception | Anonymous roots retain synthetic identity and `_order_sd` for stable raw DEF emission. Nested rectangles use `_vec_idx`. |
 | `TRACKS`, `GCELLGRID`, `VIAS`, `BLOCKAGES`, `REGIONS`, `GROUPS`, `FILLS`, `SPECIALNETS` roots | D | No semantic root order is stored. Raw root-order-only differences may use normalized diff. Natural or synthetic identity remains independent of order. |
 
-All deeper nested vectors remain order-sensitive unless a class document proves otherwise. Their owner association and order are implemented by EDADB child-vector metadata or explicit `_vec_idx`/`_order_sd` fields described in `idb-adapter/01_idb_design.md` through `15_idb_net.md`.
+All deeper nested vectors remain order-sensitive unless a class document proves otherwise. Their owner association and order are implemented by EDADB child-vector metadata or explicit `_vec_idx`/`_order_sd` fields described in the enabled adapter documents. On `demo/20260814`, that range is `idb-adapter/01_idb_design.md` through `14_idb_special_net.md`; Net uses the original DEF path.
 
 ## Planned Dynamic Order Tests
 

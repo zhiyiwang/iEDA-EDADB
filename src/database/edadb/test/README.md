@@ -44,9 +44,9 @@ The script runs independent cases with detailed DEF-diff, SQLite, and selected l
 - `default_ipl`: normal sky130_gcd `iPL_result.def`, using direct iDB `DEF -> DEF` as the baseline.
 - `aux_optional`: generated from `iPL_result.def`, adding seven routing/placement `BLOCKAGES` records, `REGIONS`, `SLOTS`, a two-member `GROUPS` entry, repeated same-name layer/via `FILLS`, special-net optional fields, and regular-net optional fields.
 - `group_branches`: replaces the Group member list with a regex plus a duplicate exact member, then checks parser expansion/deduplication, primitive-vector order recovery, and EDADB output reparsing.
-- `special_net_branches`: adds explicit IO/instance connections, STYLE, SHIELD, two-point Via, and three-point route branches; checks complete DB/read-state restoration and native-writer canonical output.
-- `routed_irt`: sky130_gcd `iRT_result.def`, covering non-empty regular NETS routed wires, segments, point rows, and ordered pin refs.
-- `net_branches`: generated from `iRT_result.def`, covering legal regular-wire states `FIXED`, `COVER`, and `NOSHIELD`, `SPECIALNETS USE SIGNAL` dispatch into `IdbNet`, multiple Via tokens, and multiple `VIRTUAL` points while retaining the full routed-net fixture.
+- `special_net_branches`: adds explicit IO/instance connections, STYLE, SHIELD, two-point Via, and three-point route branches; checks complete SpecialNet EDADB write/read restoration and native-writer canonical output.
+- `routed_irt`: verifies non-empty routed NETS through the original DEF fallback while the enabled object families use EDADB.
+- `net_branches`: exercises complex regular-wire syntax and `SPECIALNETS USE SIGNAL` through the original Net parser; asserts that no Net EDADB table or read/write call exists.
 
 For each case the script runs:
 
@@ -58,10 +58,11 @@ For each case the script runs:
 For `default_ipl`, it also checks:
 
 - design/version/units/bus-bit fields;
-- object-family counts for Design, Die, Row, TrackGrid, GCellGrid, Via, Instance, Pin, SpecialNet, and Net;
+- object-family counts for Design, Die, Row, TrackGrid, GCellGrid, Via, Instance, Pin, and SpecialNet;
 - die point rows, row fields, track-grid fields and primitive vector layer names;
 - via generate fields, instance fields, pin fields and pin port/layer/rect child rows;
-- special-net default fields and child rows, regular-net default fields;
+- special-net default fields and child rows;
+- SpecialNet table/write/read presence and Net table/write/read absence;
 - write/read logs for instance and pin restoration counts.
 
 For `aux_optional`, it also checks SQLite content for key EDADB tables and fields:
@@ -70,26 +71,9 @@ For `aux_optional`, it also checks SQLite content for key EDADB tables and field
 - blockage writer fields plus parser-only slots/fills/spacing/width/soft/density, readback state, ordered rectangles, region/slot rectangles, group region and ordered member child rows;
 - fill synthetic root identity, layer/via branch isolation, repeated same-name roots, ordered child rows, and root/child physical-order perturbation;
 - special-net `ORIGINAL`, `SOURCE`, and `WEIGHT`;
-- regular-net `ORIGINAL`, `SOURCE`, `WEIGHT`, `XTALK`, `FIXEDBUMP`, and `FREQUENCY`.
+- Net optional fields remain covered by direct DEF fallback equivalence rather than EDADB SQL.
 
-For `routed_irt`, it also checks SQLite content for routed regular-net tables:
-
-- `iNetSD = 677`;
-- `iNetSD__wire_list_sd_iRegWireSD = 677`;
-- `iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD = 8997`;
-- `iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__point_list_sd_iCoordSD = 14256`.
-- routed segment type counters cover via segments, rect segments, virtual-point indices, and ordered Via-reference rows;
-- `clk_0` ordered instance-pin refs preserve `_order_sd = 0..18`;
-- largest routed segment nets remain `clk_0`, `clk_1`, and `dpath/a_mux/_066_`;
-- write/read logs report `net_count=677`.
-
-For `net_branches`, it repeats all `routed_irt` checks and additionally verifies:
-
-- `FIXED`, `COVER`, and `NOSHIELD` enum values in `iRegWireSD`;
-- complete parser state for multiple Via tokens and multiple `VIRTUAL` points in one segment;
-- physical DB order perturbation for Net roots, pin references, wires, segments, points, Via references, and virtual-point indices;
-- native-writer canonicalization that emits only the first Via and its supported point subset;
-- raw direct-DEF vs EDADB-DEF equality for the routed and branch fixtures.
+For `routed_irt` and `net_branches`, the test compares direct DEF roundtrip with the mixed EDADB/DEF flow and asserts `iNetSD` is absent. These cases validate Net fallback compatibility, not Net persistence.
 
 Regular `+ SHIELD <name>` is not generated: the current native writer has a `kShield` branch, but the native DEF parser rejects that regular-NETS syntax. This remains an original writer/parser limitation rather than a supported adapter roundtrip case.
 
@@ -111,7 +95,8 @@ Current class coverage:
 | Design / Die / Row / TrackGrid / GCellGrid / Via | direct or minimal shadow | scalar fields, point/vector rows, empty and non-empty GCell |
 | Instance / Pin | shadow | master/placement/halo fields, port/layer/rect child rows |
 | Blockage / Region / Slot / Group / Fill | direct or shadow | routing/placement source fields, parser-only blockage state, region type, ordered group members, layer-fill vs via-fill |
-| SpecialNet / Net | shadow | ordered pin refs, optional fields, routed wire/segment/point rows |
+| SpecialNet | shadow | ordered pin refs, optional fields, routed wire/segment/point rows |
+| Net | original DEF fallback | no EDADB schema, write, or read path in this demo |
 
 ## Future Test Plans
 

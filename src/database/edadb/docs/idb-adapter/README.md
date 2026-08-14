@@ -2,6 +2,10 @@
 
 本目录记录把 iEDA DEF read/write 迁移到 EDADB read/write 时的逐类 review 方法。
 
+## Demo 20260814 Scope
+
+`demo/20260814` 以 `5fcb67bc7` 为基线，保留 `01` 到 `14` 的 EDADB adapter。`IdbSpecialNet` 完整使用 EDADB write/read；`IdbNet` 不建表、不写入、不从 EDADB 读取，`NETS` 以及 `SPECIALNETS USE SIGNAL/CLOCK` 由原始 DEF parser 恢复。
+
 ## Goal
 
 EDADB adapter 文档的核心目标是：每个 root class 都必须按 `src/database/edadb/docs/def-ieda-mapping-and-order.md` 的约束检查，并把检查结论写进对应 `0X_idb_*.md`。
@@ -146,7 +150,7 @@ EDADB adapter 文档的核心目标是：每个 root class 都必须按 `src/dat
 | Group | Done | Level D root order; `_group_name_sd` identity, no `_order_sd`, member vector order preserved. |
 | Fill | Done | Level D root order; `primary_key` identity, no `_order_sd`, layer/via references rebuilt by name. |
 | SpecialNet | Done | Level D root order; `_net_name_sd` identity, no root `_order_sd`, pin-string/explicit pin refs plus via/rect/point segment branches covered. |
-| Net | Done | `_net_name_sd` identity, `_order_sd` root order, pin/wire/segment vectors preserved. |
+| Net | DEF fallback | Demo 不保留 Net schema/shadow/read/write；使用原始 DEF parser。 |
 
 ## Output Template
 
@@ -179,6 +183,5 @@ EDADB adapter 文档的核心目标是：每个 root class 都必须按 `src/dat
 - `12_idb_group.md`: `IdbGroup` for `GROUPS`, including region/member name references, Level D root-order policy, and member order.
 - `13_idb_fill.md`: `IdbFill` for `FILLS`, including layer/via typed storage, geometry vectors, and Level D root-order policy.
 - `14_idb_special_net.md`: `IdbSpecialNet` for `SPECIALNETS`, including pin refs, special wires, segments, geometry, and Level D root-order policy.
-- `15_idb_net.md`: `IdbNet` for `NETS`, including pin refs, regular wires, segments, geometry, and explicit root order.
 
 Root-order implementation status and planned order-stress experiments are maintained only in `../def-ieda-mapping-and-order.md`.

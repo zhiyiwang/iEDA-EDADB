@@ -44,6 +44,7 @@ protected:
     bool createDbByEdadb(const char* edadb_path);
 
 protected:
+    static int32_t netFallbackSpecialNetCallback(defrCallbackType_e type, defiNet* def_net, defiUserData data);
     bool readIdbDesign(void);
     bool readIdbDie(void);
     bool readIdbRow(void);
@@ -58,7 +59,6 @@ protected:
     bool readIdbGroup(void);
     bool readIdbFill(void);
     bool readIdbSpecialNet(void);
-    bool readIdbNet(void);
 
 }; // class DefReadEdadb
 
