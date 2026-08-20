@@ -170,16 +170,4 @@ read 时重新计算或 lookup：
 - parser-only STYLE 和 SHIELD 的 DB 值及 EDADB read 后 active iDB state。
 - 反转 root、connection、wire、segment、point tables 的物理 row order；root 只要求 normalized DEF 等价，nested vectors 必须按显式 index 恢复。
 
-定向测试：
-
-```bash
-OUT_DIR=/tmp/iedadb_special_net_convergence \
-EDADB_TEST_JOBS=1 \
-bash src/database/edadb/test/run_idb_roundtrip_regression.sh special_net_branches
-```
-
-完整回归使用多进程 case 并发：
-
-```bash
-EDADB_TEST_JOBS=8 bash src/database/edadb/test/run_idb_roundtrip_regression.sh
-```
+全局命令、并发策略和 suite 结果只维护在 `../adapter-testing.md`；本节只记录 SpecialNet 的 class-specific fixture 与 assertions。

@@ -88,15 +88,7 @@ Level-D normalized diff 按 direction/start/count/space stable key 比较。
 - normalizer 允许 `GCELLGRID` root reorder：`test_normalize_def_for_diff.sh:77-110`、`test_normalize_def_for_diff.sh:203-206`。
 - statement stable key 实现：`normalize_def_for_diff.py:55-60`。
 
-验证命令：
-
-- `cmake --build build -j40 --target db_edadb def_builder iEDA`
-- `bash src/database/edadb/test/test_normalize_def_for_diff.sh`
-- `OUT_DIR=/tmp/iedadb_grid_convergence bash src/database/edadb/test/run_idb_roundtrip_regression.sh`
-
-验证结果：目标编译、normalizer 单测和完整 regression 全部通过；`grid_branches`
-将六条 `iGCellGrid` 物理逆序后，direct 与 EDADB DEF 通过 Level-D normalized diff，
-四个 scalar 的 sorted semantic set 完全一致。
+本类 acceptance evidence：`grid_branches` 将六条 `iGCellGrid` 物理逆序后，direct 与 EDADB DEF 通过 Level-D normalized diff，四个 scalar 的 sorted semantic set 完全一致。全局命令和 suite 结果只维护在 `../adapter-testing.md`。
 
 ## Conclusion
 

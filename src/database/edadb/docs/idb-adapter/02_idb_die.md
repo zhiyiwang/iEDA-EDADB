@@ -89,11 +89,7 @@ Adapter 会检查 `toShadow()` 返回值并传播失败，随后插入一个 die
 - SQL assertions：固定 owner key、逆序物理 fetch、按 `_vec_idx` 的完整坐标序列，以及 `_vec_idx` 非 PK，`run_idb_roundtrip_regression.sh:283-295`。
 - 最终比较 direct DEF roundtrip 与 EDADB roundtrip，证明完整 parent block 随 nested points 正确重建。
 
-验证结果：
-
-- `cmake --build build -j40 --target db_edadb def_builder iEDA`：通过。
-- `OUT_DIR=/tmp/iedadb_die_converged bash src/database/edadb/test/run_idb_roundtrip_regression.sh`：全部 case 通过。
-- Polygon 输出保持：`(0,0) → (149960,0) → (149960,75064) → (75000,75064) → (75000,150128) → (0,150128)`。
+本类 acceptance evidence：Polygon 输出保持 `(0,0) → (149960,0) → (149960,75064) → (75000,75064) → (75000,150128) → (0,150128)`。全局命令和 suite 结果只维护在 `../adapter-testing.md`。
 
 ## Known Limitation
 

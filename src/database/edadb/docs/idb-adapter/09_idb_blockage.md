@@ -95,9 +95,4 @@ Persisted fields：
 - `readIdbBlockage()` debug state 证明 parser-only fields 已由 `fromShadow()` 写回 active iDB。
 - Direct DEF 与 EDADB DEF 完全一致；writer-omitted fields 的正确性由 SQL + read-state 日志证明。
 
-已验证命令：
-
-```bash
-OUT_DIR=/tmp/iedadb_blockage_fields EDADB_TEST_JOBS=1 \
-  bash src/database/edadb/test/run_idb_roundtrip_regression.sh aux_optional
-```
+全局命令和 suite 结果只维护在 `../adapter-testing.md`；本节只记录 Blockage 的 class-specific assertions。

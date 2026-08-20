@@ -88,12 +88,7 @@ DEF callback 的触发顺序由输入 tag 决定；表中按原始 writer 的 he
 - `design_fallback`：移除 VERSION/BUSBITCHARS/UNITS，验证 iDB 默认 `5.8`、`[]` 和 LEF DBU `1000` 被写入 EDADB，fixture 生成位于 `run_idb_roundtrip_regression.sh:295-301`。
 - 每个 case 均比较 direct DEF roundtrip 与 EDADB roundtrip；主流程位于 `run_idb_roundtrip_regression.sh:506-534`。
 
-验证结果：
-
-- `cmake --build build -j40 --target db_edadb def_builder iEDA`：通过。
-- `OUT_DIR=/tmp/iedadb_design_converged bash src/database/edadb/test/run_idb_roundtrip_regression.sh`：全部 case 通过。
-- `design_fields` DB 值：`gcd_design|5.7|2000|{|}`。
-- `design_fallback` DB 值：`gcd|5.8|1000|[|]`。
+本类 acceptance evidence：`design_fields` DB 值为 `gcd_design|5.7|2000|{|}`，`design_fallback` DB 值为 `gcd|5.8|1000|[|]`。全局命令和 suite 结果只维护在 `../adapter-testing.md`。
 
 ## Conclusion
 

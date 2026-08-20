@@ -104,15 +104,7 @@ TrackGrid root order 是 Level D：
 - SQL 检查无 `_order_sd`、root 逆序、child 物理 `1:met4,0:met5`，以及逻辑顺序 `0:met5,1:met4`：`run_idb_roundtrip_regression.sh:265-280`。
 - normalizer 明确允许 `TRACKS` root reorder，但拒绝 nested layer reorder：`test_normalize_def_for_diff.sh:77-110`、`test_normalize_def_for_diff.sh:203-206`。
 
-验证命令：
-
-- `cmake --build build -j40 --target db_edadb def_builder iEDA`
-- `bash src/database/edadb/test/test_normalize_def_for_diff.sh`
-- `OUT_DIR=/tmp/iedadb_grid_convergence bash src/database/edadb/test/run_idb_roundtrip_regression.sh`
-
-验证结果：目标编译、normalizer 单测和完整 regression 全部通过；`grid_branches`
-在 root/child 物理逆序后由 normalized diff 判定语义一致，nested layer names 仍恢复为
-`met5, met4`。
+本类 acceptance evidence：`grid_branches` 在 root/child 物理逆序后由 normalized diff 判定语义一致，nested layer names 仍恢复为 `met5, met4`。全局命令和 suite 结果只维护在 `../adapter-testing.md`。
 
 ## Conclusion
 

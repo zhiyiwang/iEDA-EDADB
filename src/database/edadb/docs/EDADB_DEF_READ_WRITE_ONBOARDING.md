@@ -178,9 +178,10 @@ Only then go deeper into EDADB core traversers and SQLite implementation.
 
 This onboarding guide owns only the architecture and reading path. Use the canonical documents for implementation decisions:
 
-- `idb-adapter/README.md`: adapter rules, per-class checklist, review order, and document template.
+- `adapter-development-rules.md`: adapter implementation, review, test and documentation rules.
+- `idb-adapter/README.md`: per-class review index.
 - `def-ieda-mapping-and-order.md`: root-order classification, current implementation status, and future order experiments.
-- `../test/README.md`: executable roundtrip cases, commands, assertions, and concurrency behavior.
+- `adapter-testing.md`: executable tests, datasets, commands, assertions, results and concurrency behavior.
 
 ## Useful Search Commands
 

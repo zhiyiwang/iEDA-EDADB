@@ -4,343 +4,23 @@ This file keeps only the branch facts, EDADB layout, validation command, and cur
 
 ## Validation Rule
 
-Use the iEDA superproject commit as the source of truth:
+Use the iEDA superproject commit and its EDADB gitlink as the version source of truth. Checkout the target commit, run `git submodule update --init --recursive`, then follow the canonical commands and acceptance gates in `src/database/edadb/docs/adapter-testing.md`.
 
-1. Checkout target iEDA branch/commit.
-2. Run `git submodule update --init --recursive`.
-3. Build only when validation is needed.
-4. Run only the EDADB DEF roundtrip demo unless explicitly asked otherwise.
+Do not copy test cases, commands, concurrency policy or results into `agent.md`. Do not run a full physical-design flow unless the user requests it or the canonical test document identifies it as the required acceptance gate.
 
-Canonical demo command:
+## EDADB Adapter Documentation Authority
 
-```bash
-cd bin/
-pwd
-bash /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/demo/demo.sh 2>&1 | tee run.out
-```
+Adapter 规则和测试结果不在 `agent.md` 重复维护。修改 adapter 前按以下唯一来源读取：
 
-Do not run the full physical-design flow unless requested.
+- `src/database/edadb/docs/README.md`: 文档总入口与主题所有权。
+- `src/database/edadb/docs/adapter-development-rules.md`: 实现、shadow、PK/order、测试和文档收敛规则。
+- `src/database/edadb/docs/def-ieda-mapping-and-order.md`: DEF/iDB 映射及 A/B/C/D 顺序策略。
+- `src/database/edadb/docs/idb-adapter/README.md`: 逐类审计索引。
+- `src/database/edadb/docs/adapter-testing.md`: 唯一测试方法、命令、结果、缺陷和产物记录。
+- `src/database/edadb/docs/stage-validation/known-native-defects.md`: 不在 adapter 分支修改的原生 iEDA 缺陷。
+- `src/database/edadb/docs/handoff/shadow-scalar-vector-traversal-refactor.md`: adapter 侧 shadow traversal 重构 handoff。
 
-Repeatable EDADB adapter regression command:
-
-```bash
-cd /home/zhiyiwang/cs/arch/eda/iEDA-EDADB
-bash src/database/edadb/test/run_idb_roundtrip_regression.sh
-```
-
-Regression cases run in independent processes and should run concurrently by default.
-The runner derives `EDADB_TEST_JOBS` from CPU count and current `MemAvailable`; on this
-20-physical-core / 40-logical-CPU / 125-GiB host it resolves to 8 under normal load. Run
-serially only for one selected case or failure diagnosis, and lower concurrency for shared
-or smaller machines.
-
-The regression definition is stored in `src/database/edadb/test/`.
-By default it writes generated fixtures, logs, EDADB SQLite databases, direct iDB
-DEF baselines, EDADB DEF outputs, and diffs to `/tmp/iedadb_regression`.
-Override paths with:
-
-```bash
-IEDA_BIN=/path/to/iEDA OUT_DIR=/tmp/my_edadb_run bash src/database/edadb/test/run_idb_roundtrip_regression.sh
-```
-
-Current cases:
-
-- `default_ipl`: sky130_gcd `iPL_result.def`, direct iDB DEF output compared with EDADB output.
-- `aux_optional`: generated from `iPL_result.def`; adds non-empty `BLOCKAGES`, `REGIONS`,
-  `SLOTS`, `GROUPS`, `FILLS`, plus special-net explicit pin refs, special-net `RECT`,
-  and regular/special-net optional fields.
-- `routed_irt`: sky130_gcd `iRT_result.def`; covers non-empty regular NETS routed wires
-  and segments.
-
-The `aux_optional` case also checks SQLite table content for blockage/region/slot/group/fill
-counts, group region/member rows, fill child rows, special-net optional fields, explicit IO/instance
-pin refs, special-net rect segments, and regular-net optional fields.
-The `routed_irt` case checks SQLite counts for `iNetSD`, regular wire child rows, regular
-wire segment child rows, and regular wire point child rows.
-
-Latest run on 2026-07-09:
-
-- Command: `OUT_DIR=/tmp/iedadb_specialnet_verify_now bash src/database/edadb/test/run_idb_roundtrip_regression.sh`
-- Output directory: `/tmp/iedadb_specialnet_verify_now`
-- Result: passed.
-- `default_ipl`: direct iDB DEF output matched EDADB DEF output.
-- `aux_optional`: direct iDB DEF output matched EDADB DEF output; SQLite checks passed for
-  non-empty Blockage/Region/Slot/Group/Fill tables, optional regular/special net fields,
-  special-net explicit IO/instance pin refs, and special-net rect segment geometry.
-- `routed_irt`: direct iDB DEF output matched EDADB DEF output; SQLite checks passed for
-  `iNetSD=677`, regular wire rows `677`, regular wire segment rows `8997`, and point rows `14256`.
-- Previous EDADB/core check at `src/database/edadb/core @ 3077132`: `cd build && ctest --output-on-failure`
-  passed `13/13` tests on 2026-06-24.
-
-When the request is about EDADB internal support or adapter correctness, also run:
-
-```bash
-cd /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/build
-ctest --output-on-failure
-```
-
-When validating routed NETS, do not rely only on raw input DEF vs EDADB-output DEF byte diff.
-The normal iDB `def_init -> def_save` path can canonicalize routed segment endpoint order.
-Use direct DEF roundtrip output as the baseline:
-
-1. Run normal `def_init -> def_save` for the same input DEF.
-2. Run `DEF -> EDADB -> DEF`.
-3. Compare the two generated DEF files.
-4. Treat differences between these generated files as EDADB adapter differences.
-
-The raw input DEF byte diff is still useful for simpler cases such as default `iPL_result.def`
-and `iPL_filler_result.def`, where the demo script currently passes byte-for-byte.
-
-## 2026-06-16 Adapter Audit Notes
-
-Recent issue found after the first green demo/CTest pass:
-
-- `Shadow<IdbNet>` and `Shadow<IdbSpecialNet>` persisted `_source_type_sd`, but
-  `DefReadEdadb` did not restore it.
-- Fix: add enum setters `IdbNet::set_source_type(IdbInstanceType)` and
-  `IdbSpecialNet::set_source_type(IdbInstanceType)`, then restore `_source_type_sd`
-  in `readIdbNet()` and `readIdbSpecialNet()`.
-- Follow-up fix: `DefWrite::write_net()` and `DefWrite::write_special_net()` now emit
-  `+ SOURCE <type>` when source type is not `kNone`.
-- Validation: a routed `iRT_result.def` fixture with `+ SOURCE USER` on
-  `ctrl$a_mux_sel[0]` writes `_source_type_sd=3`, reads back through EDADB, emits
-  `+ SOURCE USER`, and matches the direct iDB DEF baseline exactly.
-
-Additional issue found by focused optional-field testing:
-
-- `DefRead::read_net()` did not copy regular-net `+ FIXEDBUMP` into `IdbNet`, even
-  though EDADB already stored `_fix_bump_sd`.
-- `DefWrite::write_net()` did not emit regular-net `ORIGINAL`, `WEIGHT`, `XTALK`,
-  `FIXEDBUMP`, or `FREQUENCY`; `DefWrite::write_special_net()` did not emit
-  special-net `ORIGINAL` or `WEIGHT`.
-- Fix: restore `FIXEDBUMP` in normal DEF read, and emit these existing iDB fields from
-  the DEF writer. Only emit regular-net `FREQUENCY` when it is positive, because the
-  iDB default is `-1`.
-- Validation: a routed fixture with special-net `VDD + SOURCE NETLIST + ORIGINAL
-  orig_vdd_net + WEIGHT 5` and regular net `ctrl$a_mux_sel[0] + SOURCE USER +
-  ORIGINAL orig_ctrl_net + WEIGHT 7 + XTALK 11 + FIXEDBUMP + FREQUENCY 250` writes the
-  expected SQLite values and the EDADB DEF matches the direct iDB baseline exactly.
-
-Recent issue found by routed-net testing:
-
-- EDADB child rows for `NetPinRef` / `SpecialNetPinRef` previously used
-  `instance_name` as the local key and did not preserve original instance-pin order.
-- On clock nets such as `clk_0` / `clk_1`, SQLite readback sorted by key and changed
-  DEF connection order relative to normal iDB output.
-- Fix: add `_order_sd` to `NetPinRef` and `SpecialNetPinRef`, make it the local key,
-  store vector order on write, and sort by `_order_sd` before readback reconstruction.
-
-Current uncovered or weakly covered areas:
-
-- Net `source_type`, `original_net_name`, `weight`, `xtalk`, `frequency`, and
-  `fix_bump` now have repeatable fixture coverage in
-  `src/database/edadb/test/run_idb_roundtrip_regression.sh` through direct iDB baseline
-  comparison and SQLite value checks. A future adapter-level C++ test would still be useful
-  for faster direct object assertions.
-- New EDADB primitive vector support stores scalar vector children, such as group
-  instance names and IO-pin name lists, directly as `std::vector<std::string>` using
-  `___edadb_primitive_vector` child tables with `__edadb_vec_idx` and `value`.
-- Empty object-family paths are validated for Blockage, Region, Slot, Group, and Fill
-  on sky130_gcd. Non-empty Blockage, Region, Slot, Group, and Fill paths are now covered by
-  the generated `aux_optional` regression fixture.
-- Non-empty regular routed NETS are now covered by the `routed_irt` regression fixture.
-- Repeated instance references with different pins on the same net should be covered
-  by a small targeted fixture; `_order_sd` avoids the previous instance-key collision
-  risk for net pin refs.
-
-## EDADB Adapter Current Rules
-
-- Core documentation goal: every `src/database/edadb/docs/idb-adapter/0X_*.md`
-  file must explicitly check the constraints from
-  `src/database/edadb/docs/def-ieda-mapping-and-order.md`: DEF section mapping,
-  iEDA root class/list, root order level A/B/C/D, and whether EDADB preserves or
-  intentionally normalizes that order. Nested `TABLE4CLASS*` details are useful
-  supporting evidence, not the primary goal.
-- Match original DEF semantics first: compare `DefWrite::write_xxx()` and
-  `DefRead::parse_xxx()` before changing `writeIdbXXX/readIdbXXX`.
-- Semantic sources of truth are the current branch's `DefWrite`, `DefRead`, relevant
-  iDB class/setter implementations, and LEF/DEF grammar. Old adapter code/docs are
-  hints only; never infer a field or branch from naming or assumed symmetry.
-- Review writer and parser independently, brace by brace. Writer predicates describe
-  output selection; parser state describes source fields, allocation, lookup, cross-level
-  synchronization, and derived calculations. Persist the writer's canonical DEF form,
-  then rebuild it with parser-equivalent control flow.
-- When EDADB read replaces the parser, preserve every DEF source field that the parser
-  actually writes into active iDB state, including writer-omitted `parser-only` fields.
-  Verify them through SQLite/read-state tests because final DEF diff cannot cover fields
-  the native writer omits. If the parser itself drops a DEF token, document the native gap
-  instead of inferring state in the adapter.
-- Adapter class documents use separate `Original DEF Write Mapping` and
-  `Original DEF Read Mapping` tables. Rows follow the original source `{}` / branch /
-  loop order, not shadow-class order, database-column order, or broad artificial stages.
-- Write rows record original brace, DEF output, `write/toShadow` correspondence, and
-  stored source. Read rows record original brace, `read/fromShadow` correspondence,
-  and whether the value is a DEF source, cross-level copy/synchronization, lookup, or
-  recomputation.
-- Persist the DEF storage view, not the whole C++ object graph. Store only parser-read
-  source fields plus required identity/order/references; rebuild computed/cache fields
-  in `fromShadow()` following the original parser sequence.
-- Classify every field as DEF source, branch/reference, cross-level synchronization, or
-  derived/cache. Persist the first two only when required; rebuild the latter two through
-  the same setters and in the same order as the original parser.
-- Persist both the canonical DEF branch selected by the original writer and the DEF source
-  state actually retained by the parser. A stored branch discriminator must rebuild the
-  same subtype and setter path; writer-omitted parser fields remain explicit `parser-only`
-  columns and require SQLite/read-state verification.
-- Cross-level parser behavior must be explicit: document and implement which parent/child
-  supplies a value, where it is copied, and which brace triggers derived geometry/state.
-- When the original parser groups repeated DEF records by name/type into nested objects or
-  vectors, persist the parser-built iDB storage view. Document the record-to-group-to-child
-  mapping, the order retained, and any text interleaving already discarded by the parser;
-  `fromShadow()` rebuilds the parser-equivalent object structure rather than inventing an
-  order the active iDB never retained.
-- Keep parser setter dependencies in `fromShadow()`: restore identity/master/reference
-  and basic state first, then call coordinate/geometry setters that rebuild bbox, pins,
-  halo, or obstruction state. Do not persist those derived results as replacement columns.
-- Store non-owning references as stable names/IDs, look them up in the active LEF/design,
-  and restore required backlinks. Disable PK for optional inline scalar children; retain
-  owner PK only when a child storage view owns nested rows.
-- Prefer direct mapping; use `Shadow<T>` only when direct mapping cannot express
-  polymorphism, anonymous root identity, non-owning pointer/name-reference rebuild,
-  nested vector owner/order, or a reduced DEF storage view.
-- EDADB automatically uses `Shadow<T>` for a member of type `T` or `T*` once `T` is
-  registered with `TABLE4SHADOW(T)` or `TABLE4SHADOW_WVEC(T)`. The root object can
-  stay direct-mapped while the member is stored through `edadb::Shadow<T>`. Example:
-  `IdbVia` uses direct `TABLE4CLASS(idb::IdbVia, ..., (_name, _master_instance))`,
-  and `_master_instance: IdbViaMaster*` is stored/restored through
-  `Shadow<IdbViaMaster>`.
-- Shadow conversion path: write calls `toShadow(cpp_ptr)` before traversing the
-  shadow store fields; read fills the shadow store fields, calls
-  `fromShadow(cpp_ptr)`, then writes the rebuilt pointer/value back to the original
-  member.
-- Every `Shadow<T>` specialization must keep the EDADB template signatures exactly:
-  `bool toShadow(T*, const uint32_t* idx_ptr = nullptr)` and
-  `bool fromShadow(T*, uint32_t* idx_ptr = nullptr)`. Do not add context parameters,
-  overloads, or alternate conversion entry points.
-- Pass extra conversion context only through ordinary getters/setters, adapter helpers,
-  or initialized lookup context. Such transient state is not mapped into the schema;
-  conversion failures must propagate through the bool return value.
-- For a shadow-owned `vector<Shadow<T>*>`, the owner shadow must pass each index
-  into the child `toShadow()`, persist `_vec_idx`, and restore/sort by that field
-  before rebuilding the logical vector. EDADB cannot infer order from SQLite fetch order.
-- Keep nested owner identity and order separate: synthetic `primary_key` links child
-  tables, while `_vec_idx` restores vector position. Never use `_vec_idx` as PK.
-- Do not add a synthetic PK when a natural name/ID is unique and stable in the actual
-  table/parent scope and can safely own child rows. Conversely, never assume a name is
-  unique: DEF allows repeated layer records under one Port/fixed Via, so layer name is a
-  reference, not `IdbLayerShape` identity; its synthetic PK remains necessary.
-- Keep builder methods thin: root query/insert, allocation/append, and error handling stay
-  in `readIdbT/writeIdbT`; nested conversion belongs in `toShadow/fromShadow`.
-- Use one batch transaction/prepared operation for root vectors. Move to streaming batch
-  only after measured shadow-vector memory pressure; never regress to one transaction per
-  object.
-- Never use vector order index as PK. Keep identity and order separate:
-  `primary_key` or name for identity, `_order_sd` for root list order.
-- Primary-key rule: enable PK only for root identity or nested vector-owner storage
-  views that need a stable owner row. Disable PK for pure inline/nested scalar value
-  views. Example: `Shadow<IdbViaMasterGenerate>` is only
-  `Shadow<IdbViaMaster>::_master_generate_sd`, so its PK is disabled in
-  `initPrimKeys()`; `Shadow<IdbViaMaster>` owns `fixed_layer_shape_list_sd`, so it
-  keeps EDADB's default PK.
-- For root lists that affect iEDA semantics or an explicitly documented raw-roundtrip
-  requirement, read back with `ORDER BY "_order_sd"`. Level D root lists default to
-  no `_order_sd` and rely on normalized diff for root-order-only differences.
-- Current reviewed-class exception: `IdbSlotList` is Level D but keeps `primary_key +
-  _order_sd` because DEF `SLOTS` records are anonymous and raw roundtrip needs stable
-  anonymous record output.
-- Run independent regression cases concurrently. Choose concurrency from CPU capacity,
-  current `MemAvailable`, and per-case iEDA cost rather than logical CPUs alone. The object
-  regression reserves 16 GiB and budgets 8 GiB per case; stage validation reserves 16 GiB
-  and budgets 16 GiB per iEDA process. Every case must own separate output, DB, and log paths.
-- During development run only affected cases; before handoff run the full case set with
-  the selected concurrency. Parallel execution must not weaken per-case SQL, DEF diff,
-  or nested-order perturbation assertions.
-- Before changing adapter code, use the grilling workflow to prove the failure boundary:
-  compare native controls, require identical pre-tool state, isolate the first divergent
-  consumer, derive a minimal causal fixture, and trace the object lifecycle in source. Fix
-  and commit only when the evidence identifies a complete, local adapter correction. Native
-  iEDA defects are recorded with a reproducer and evidence, but the EDADB adapter branch must
-  not modify original point-tool, Verilog-builder, or diagnostic production source.
-- Pointer-keyed maps and sets are lookup structures, not semantic iteration orders. When their
-  iteration feeds an order-sensitive vector or floating-point reduction, record the exact source
-  path, stable input, and observed divergence as a native defect. Do not patch original iEDA on
-  this branch; any diagnostic patch result is historical evidence only.
-- The active iRT adapter gate uses original iEDA's `env_map.json`. Deeper semantic/pointer-order
-  snapshots were useful during diagnosis but required modifying `DataManager`; that diagnostic
-  code is not retained in the final adapter milestone.
-- 2026-08-11 final stage-validation policy: original iEDA production files match the adapter
-  milestone. The generated-via `fromShadow()` idempotence defect is fixed in the adapter and its
-  strict `27 == 27` fixture passes. iPL pointer-order, Verilog IO-alias ownership/direction,
-  IHP130 bound-skew-tree, iTO uninitialized metrics, and iRT pointer-order behavior remain native
-  defects/boundaries documented by test cases; temporary native fixes are not retained.
-- Stage-input preparation must pass every output path explicitly and assert that each expected
-  DEF is non-empty and no save-failure message appears. A zero iEDA exit status alone does not
-  prove that a Tcl stage produced its output.
-- Update schema/init, builder read/write, DEF callbacks, regression SQL, and docs together.
-- Re-read current source and recheck every documented line number after code changes.
-  Line ranges must identify a real function or brace body, not a vague phase.
-- In Markdown tables, encode source `|` / `||` as `&#124;` / `&#124;&#124;`; otherwise
-  GitHub splits the code expression into table columns. Check table column counts and
-  run `git diff --check` before handoff.
-- Keep each class document concise and non-duplicative: constraints, schema and field
-  classification, write mapping, read mapping, PK/order, tests/risks.
-- Document native writer/parser asymmetry in `Known Native Writer Differences`; use
-  targeted SQL/read-state fixtures for parser-only fields rather than claiming final DEF
-  diff coverage.
-- Correctness evidence needs both direct-iDB-vs-EDADB DEF comparison and SQLite field/
-  child-row assertions; add targeted fixtures for branches and recomputed fields.
-- Targeted fixtures must be legal under the current LEF/DEF grammar and cover each
-  reachable branch. Reparse EDADB-generated DEF through the original reader/writer,
-  assert derived columns are absent, and perturb unordered DB child fetches when order
-  restoration is part of the contract.
-- Null child, lookup, and conversion failures must propagate; never append or insert a
-  partially rebuilt object after `toShadow/fromShadow` returns false.
-- Planned order-stress tests are documented but not implemented yet: SQLite
-  `PRAGMA reverse_unordered_selects=ON`, real DEF perturbations for `PINS`/iFP,
-  `ROWS`/iPDN, `COMPONENTS`/iPL, and a targeted `NETS` ID/list consistency harness.
-
-## Documentation Layout Rules
-
-- Canonical EDADB adapter documentation lives under `src/database/edadb/docs/`.
-- `src/database/edadb/idb/` should contain adapter code only: headers, source files,
-  schema, init, helper, and `shadow/*`.
-- Early scratch notes under `src/database/edadb/idb/docs/*.mk` were removed; useful
-  read/write flow information is now covered by `src/database/edadb/docs/` and
-  `md/ieda_architecture_learning/`.
-- Personal research and learning notes live under `md/`, especially `md/paper/` and
-  `md/ieda_architecture_learning/`.
-- To sync only documentation on another machine after pushing to GitHub, use sparse
-  checkout:
-
-```bash
-git clone --filter=blob:none --no-checkout git@github.com:<user>/<repo>.git
-cd <repo>
-git sparse-checkout init --cone
-git sparse-checkout set md src/database/edadb/docs
-git checkout edadb-idb
-```
-
-- `--filter=blob:none` avoids downloading file contents until needed; `--no-checkout`
-  prevents full workspace materialization; `sparse-checkout set` chooses only the
-  documentation directories to expand locally.
-
-Recent root-order milestones:
-
-- `IdbRowList`: `_name_sd` identity, `_order_sd` order; committed `74420696a`.
-- `IdbTrackGridList`: Level D; `primary_key` identity, no `_order_sd`; nested layer-name vector order remains preserved.
-- `IdbGCellGridList`: Level D; direct no-shadow/no-order.
-- `IdbRegionList`: Level D; direct no-shadow/no-order.
-- `IdbGroupList`: Level D; `_group_name_sd` identity, no `_order_sd`; member-name vector order remains preserved.
-- `IdbFillList`: Level D; `primary_key` identity, no `_order_sd`; rect/coordinate vector order remains preserved.
-- `IdbSpecialNetList`: Level D; `_net_name_sd` identity, no root `_order_sd`; pin/wire/segment/point vector order remains preserved.
-
-Recommended next work:
-
-1. Review/document `IdbBlockage`.
-2. Then continue in DEF write order: `IdbSlot`, `IdbGroup`, `IdbFill`,
-   `IdbSpecialNet`, `IdbNet`.
-3. For each class, verify root/child vector order, add `_order_sd` where needed,
-   extend regression SQL, run demo + `run_idb_roundtrip_regression.sh`, then commit.
+`agent.md` 只保留分支、milestone、目录/API 边界和当前状态。规则、测试命令或结果变化时更新对应权威文件，不向本文件复制正文。
 
 ## Branch Map
 
@@ -445,13 +125,11 @@ iEDA + EDADB wrapper/adapter code added by this branch:
   - `src/database/manager/builder/def_builder/def_write_edadb.cpp`
   - `src/database/manager/builder/def_builder/def_write_edadb.h`
   - `src/platform/data_manager/idm_edadb.cpp`
-- Adapter notes, demos, and repeatable regression tests:
-  - `agent.md`
-  - `cmds.md`
-  - `edadb_readme.md`
+- Adapter documentation, demos, and repeatable regression tests:
+  - `src/database/edadb/docs/README.md`: canonical documentation index.
+  - `edadb_readme.md`: compatibility pointer only; no independent content.
   - `scripts/edadb/demo/*`
-  - `src/database/edadb/docs/*`
-  - `src/database/edadb/test/*` (working tree addition on 2026-06-16)
+  - `src/database/edadb/test/*`
 
 EDADB core code:
 
@@ -632,7 +310,7 @@ Important rule:
 - Default sky130_gcd validates Net connectivity storage with regular net segment count `0`;
   `routed_irt` validates non-empty regular-wire NETS with `8997` segments.
 - Current requested DEF object-family migration is complete through Net.
-- After each migration, run the concise Adapter Correctness Audit in `edadb_readme.md`.
+- After each migration, follow `src/database/edadb/docs/adapter-development-rules.md` and the acceptance gates in `src/database/edadb/docs/adapter-testing.md`.
 
 ## C Namespace / API Boundary
 
@@ -895,16 +573,6 @@ Pending EDADB core refactor handoff (2026-08-12):
 - Original DEF callbacks restore `NETS`; a selective SPECIALNETS callback forwards only SIGNAL/CLOCK to `parse_net()`, while POWER/GROUND comes from EDADB.
 - Acceptance requires SpecialNet DB/read/write evidence, absence of `iNetSD` and Net adapter logs, canonical demo success, and full mixed-path regression success.
 
-## Objective Completion Audit
+## Current Acceptance
 
-Current audit target: EDADB core `3077132` with iEDA branch `edadb-idb`.
-
-| Objective item | Current evidence | Status |
-| --- | --- | --- |
-| Update EDADB adapter implementation for the new core | `src/database/edadb/idb/edadb_idb_init.*` uses `idb::edadb_adapter`; active code uses current `edadb::initDatabase`, `createTable`, `insertObject`, `insertVector`, `makeReadAllOp`, and `readNext`; scalar vectors now use EDADB primitive vector tables instead of active `CppStrings`. | done |
-| Decide direct vs shadow per iEDA class and update shadows | `src/database/edadb/idb/edadb_idb_schema.h` maps direct roots and shadows; `src/database/edadb/idb/shadow/*` implements reduced storage views for classes that need names, synthetic keys, vector child ownership, or DEF-only views. | done |
-| Migrate DEF read/write by object family | `DefWriteEdadb::writeChip2Edadb()` writes Design, Die, Row, TrackGrid, GCell, Via, Instance, Pin, Blockage, Region, Slot, Group, Fill, SpecialNet, Net; `DefReadEdadb::createDbByEdadb()` reads the matching families and `createDbByDef()` disables matching DEF callbacks. | done |
-| Commit by object-family increments | Git history on `edadb-idb` contains per-family commits from Design/Die/Row through Net, plus follow-up hardening commits for optional net fields, fill variants, primitive vectors, and documentation audits. | done |
-| Verify each migrated family | `default_ipl` covers baseline families; `aux_optional` covers non-empty Blockage/Region/Slot/Group/Fill, optional net fields, special-net explicit refs and rect branch with SQLite assertions; `routed_irt` covers non-empty regular routed NETS with SQLite assertions. | done |
-| Compare against original master and prove logic | `edadb_readme.md` section “对照 master 的正确性结论” defines the proof strategy: compare direct iDB DEF roundtrip with EDADB DEF roundtrip, preserving master DEF writer/parser semantics while replacing the persistence middle step. | done |
-| Use server resources efficiently | Builds use `-j40`; focused regressions avoid unrelated flows; known-variable iRT validation runs three native plus three EDADB controls together with equal per-process threads (`PARALLEL_FIRST_EDADB=1`, `EDADB_RUNS_UPFRONT=3`, `STAGE_RUN_JOBS=3`, `RT_THREAD_NUMBER=12`). | done |
+The current demo scope is recorded above. Its build, canonical demo, 15-case object regression, stage-validation evidence and remaining native boundaries are maintained only in `src/database/edadb/docs/adapter-testing.md`.

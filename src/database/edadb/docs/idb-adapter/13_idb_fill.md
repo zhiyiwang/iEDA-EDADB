@@ -98,4 +98,4 @@ DEF grammar 中 Layer/Via 是互斥 record；`fromShadow()` 使用同样的 `if/
 - 检查 4 个 distinct synthetic root PK、重复 name 不合并、两种 branch 的 inactive fields/children 为空：`run_idb_roundtrip_regression.sh:194`、`run_idb_roundtrip_regression.sh:238-247`。
 - 每种 branch 分别覆盖一个 child 和两个 children，检查 owner 隔离及 `_vec_idx` 顺序：`run_idb_roundtrip_regression.sh:248-259`。
 - 测试主动反转 root table 和两个 child tables 的物理 row order：`run_idb_roundtrip_regression.sh:836-853`。最终 root 只要求 normalized DEF 等价，nested vectors 必须恢复原顺序。
-- 定向命令：`OUT_DIR=/tmp/iedadb_fill_convergence EDADB_TEST_JOBS=1 bash src/database/edadb/test/run_idb_roundtrip_regression.sh aux_optional`。
+- 全局命令和 suite 结果只维护在 `../adapter-testing.md`；本节只记录 Fill 的 class-specific assertions。

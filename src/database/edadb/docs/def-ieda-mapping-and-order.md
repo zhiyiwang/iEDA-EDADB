@@ -130,7 +130,7 @@ All deeper nested vectors remain order-sensitive unless a class document proves 
 
 ## Planned Dynamic Order Tests
 
-These tests are planned evidence for the static point-tool analysis above. This section is their canonical planning location; executable tests and commands belong in `../test/README.md` only after implementation.
+These tests are planned evidence for the static point-tool analysis above. This section is their canonical planning location; implemented tests, commands and results belong only in `adapter-testing.md`.
 
 - SQLite unordered-read stress: run EDADB read paths with `PRAGMA reverse_unordered_selects=ON` to expose any adapter query that depends on implicit SQLite row order. SQLite documents that `SELECT` without `ORDER BY` has undefined row order, so every order-sensitive EDADB read must use explicit `ORDER BY`.
 - `PINS` / iFP physical-order test: swap two top-level IO pin records in a real sky130 DEF, run `auto_place_pins`, and compare pin coordinates. Expected result: order changes physical pin placement because iFP consumes `pin_list[pin_index++]`.

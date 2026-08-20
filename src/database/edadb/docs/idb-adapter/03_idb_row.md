@@ -117,11 +117,7 @@ EDADB 保存的是 writer 的 canonical output view，因此 read 时无条件�
 - 断言物理前缀为 `38,37,36,35,34`，同时最终语义顺序仍为 `ROW_0...ROW_4`。
 - 每个 case 比较 direct DEF roundtrip 与 EDADB roundtrip。
 
-验证结果：
-
-- `cmake --build build -j40 --target db_edadb def_builder iEDA`：通过。
-- `OUT_DIR=/tmp/iedadb_row_convergence bash src/database/edadb/test/run_idb_roundtrip_regression.sh`：全部 case 通过。
-- sky130 fixture：39 rows，DB 物理顺序逆置后输出 DEF 仍与 direct roundtrip 完全一致。
+本类 acceptance evidence：sky130 fixture 包含 39 rows，DB 物理顺序逆置后输出 DEF 仍与 direct roundtrip 完全一致。全局命令和 suite 结果只维护在 `../adapter-testing.md`。
 
 ## Conclusion
 

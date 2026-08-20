@@ -1,11 +1,117 @@
-# iEDA-EDADB Point-Tool Stage Validation Report
+# iEDA-EDADB Adapter Testing And Validation
 
-Date: 2026-08-11  
-Status: final adapter acceptance passed; native-fix experiments are historical; full iRT remains `REVIEW`
+Last updated: 2026-08-17
+Status: object roundtrip and canonical demo pass; stage acceptance passes its retained gates; full iRT remains `REVIEW`
 
-This is the independent evidence report for the current point-tool validation campaign. The
-living methodology is maintained in [README.md](README.md), and executable usage is documented in
-[the test README](../../test/stage_validation/README.md).
+本文是 iEDA+EDADB adapter 测试的唯一权威说明，统一记录测试模型、数据集、命令、断言、结果、缺陷分类、提交和运行产物。`test/` 下的 README 只索引本文与可执行脚本，不再复制测试规则或结果。
+
+## Global Test Rules
+
+- Regression cases are process-isolated and concurrent by default. Select jobs from logical CPUs, available RAM and measured per-case load; use serial execution only for one selected case or failure diagnosis.
+- Each case owns its output directory, SQLite DB and logs. Parallel execution must retain SQL checks, raw/normalized DEF diff and order-perturbation assertions.
+- Fixtures must be legal under the current LEF/DEF grammar. Record grammar-unreachable source branches as unreachable instead of fabricating coverage.
+- Cover each reachable original `if/else`, optional field and nested loop with an input that distinguishes the branch; the default Sky130 sample alone is insufficient.
+- Validate three layers: direct `DefRead/DefWrite` baseline, EDADB source/identity/order fields, and the DEF rebuilt from EDADB. Assert that derived/cache columns are absent when they should be recomputed.
+- Reparse EDADB-generated DEF through the original reader/writer for branch fixtures; textual equality alone does not prove that stored source fields or rebuilt references are correct.
+- Perturb unordered database fetches for order-sensitive root/nested vectors, then verify `_order_sd` / `_vec_idx`; never treat SQLite's current physical return order as a guarantee.
+- Propagate null-child, lookup and `toShadow/fromShadow` failures. Never append or insert a partially rebuilt object.
+- Verify parser-only fields through SQL and active read-state assertions when the native writer cannot emit them.
+- Before adapter acceptance, run affected focused cases, then the complete object regression. Stage validation is additionally required only when the change can affect point-tool-consumed state.
+
+## Test Portfolio
+
+| Layer | Purpose | Executable entry | Current conclusion |
+|---|---|---|---|
+| Build | Verify adapter/schema/shadow compatibility with the selected EDADB core. | `build.sh` | `demo/20260814` clean build passed with `-j40`. |
+| Canonical demo | Verify the supported mixed path on the maintained Sky130 GCD design. | `scripts/edadb/demo/demo.sh` | Raw input/output DEF diff passed. |
+| Object regression | Verify schema, source fields, computed-state rebuild, identity/order and legal DEF roundtrip. | `test/run_idb_roundtrip_regression.sh` | All 15 cases passed with eight concurrent jobs. |
+| Minimal causal fixtures | Prove one defect or branch independently from full-flow noise. | `test/stage_validation/run_*_fixture.sh` | Generated-via strict oracle passed; native alias fixture records the original iEDA boundary. |
+| Point-tool stages | Verify native and EDADB-restored iDB before and after iPL/iCTS/iTO/iRT transitions. | `test/stage_validation/run_stage_validation.sh` | Retained pre-tool and stage gates passed; full iRT remains `REVIEW`. |
+
+## Current Demo Object Regression
+
+### Baseline And Scope
+
+| Item | Value |
+|---|---|
+| Branch | `demo/20260814` |
+| Demo commit | `4c6aa63c4` |
+| Codebase commit | `5fcb67bc7` |
+| EDADB core gitlink | `27ecbd2a6dd24d43f05fc7fdda0cf68ece732557` |
+| Enabled EDADB roots | Design, Die, Row, TrackGrid, GCellGrid, Via, Instance, Pin, Blockage, Region, Slot, Group, Fill, SpecialNet |
+| DEF fallback | regular `NETS` and `SPECIALNETS USE SIGNAL/CLOCK` |
+| Host scheduling | 40 logical CPUs, approximately 125 GiB RAM; eight process-isolated regression jobs |
+| Run output | `/tmp/iedadb_demo_20260814_roundtrip` |
+
+The demo deliberately has no regular-Net EDADB schema, `writeIdbNet()` or `readIdbNet()`. POWER/GROUND special nets are restored from EDADB; SIGNAL/CLOCK records use the original regular-net parser. This split is asserted in SQL and logs, not inferred only from the final DEF.
+
+### Commands
+
+Run from the repository root:
+
+```bash
+bash build.sh -d -n -y
+rm -rf bin lib build.out
+bash build.sh -j40
+
+cd bin
+bash /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/demo/demo.sh \
+  2>&1 | tee run.out
+
+cd ..
+OUT_DIR=/tmp/iedadb_demo_20260814_roundtrip \
+EDADB_TEST_JOBS=auto \
+bash src/database/edadb/test/run_idb_roundtrip_regression.sh
+```
+
+Automatic object-regression concurrency is bounded by logical CPUs and current `MemAvailable`. The current host reserves 16 GiB and budgets 8 GiB per active case, producing a cap of eight. Override `EDADB_TEST_JOBS`, `EDADB_TEST_PROCESS_MEMORY_GIB` or `EDADB_TEST_MEMORY_RESERVE_GIB` only after measuring the selected dataset.
+
+### Per-Case Flow And Oracles
+
+Each case owns a separate directory, SQLite DB, iEDA processes and logs, then performs:
+
+1. direct iDB `DEF -> DEF` to establish the current branch's native baseline;
+2. `DEF -> EDADB`;
+3. a fresh `EDADB -> iDB -> DEF` process;
+4. raw DEF diff, followed only when needed by D-level root-record normalization;
+5. SQLite schema/value/child-row assertions and selected read/write log assertions;
+6. physical table-order perturbation where order recovery is part of the contract;
+7. original-parser reparse for generated DEFs used by branch fixtures.
+
+Deep nested vectors are never normalized. A D-level root record may move only as one complete block, carrying all nested content with it.
+
+### Cases And Coverage
+
+| Case | Main coverage | Result |
+|---|---|---|
+| `default_ipl` | Sky130 GCD baseline, all enabled roots, schema/count/log split. | PASS, raw DEF equal. |
+| `design_fields` | VERSION, DESIGN, UNITS and BUSBITCHARS non-default values. | PASS, raw DEF equal. |
+| `design_fallback` | canonical Design fallback values and absence of non-DEF Units columns. | PASS, raw DEF equal. |
+| `die_polygon` | polygon points, child-vector index and unordered physical fetch. | PASS, raw DEF equal. |
+| `grid_branches` | Track nested layer names and non-empty GCellGrid branches. | PASS, normalized D-root equivalent. |
+| `via_branches` | generated/fixed Via, offsets, layer grouping and ordered Rect children. | PASS, normalized D-root equivalent. |
+| `instance_branches` | weight, region, halo, route halo and reference lookup. | PASS, raw DEF equal. |
+| `pin_derived` | no-PORT derived placement/orient/geometry rebuild. | PASS, raw DEF equal. |
+| `pin_writer` | writer PORT canonicalization and special-pin branch. | PASS, raw DEF equal. |
+| `pin_branches` | multiple ports, placement statuses, duplicate layer names and ordered shapes. | PASS, raw DEF equal and reparsed. |
+| `aux_optional` | Blockage, Region, Slot, Group, Fill and SpecialNet optional/parser-only fields. | PASS, normalized D-root equivalent. |
+| `group_branches` | regex expansion, duplicate elimination and ordered member vector. | PASS, normalized D-root equivalent and reparsed. |
+| `special_net_branches` | explicit refs, STYLE, SHIELD, point/rect/via segment dispatch and nested order. | PASS, normalized D-root equivalent. |
+| `net_branches` | complex regular routes and `SPECIALNETS USE SIGNAL` through native fallback. | PASS, raw DEF equal; `iNetSD` absent. |
+| `routed_irt` | non-empty routed NETS through native fallback with EDADB-restored supporting roots. | PASS, raw DEF equal; `iNetSD` absent. |
+
+### Current Result
+
+- Clean build completed all `1142/1142` targets.
+- Canonical demo restored 2 SpecialNets and 639 SpecialNet segments from EDADB, restored 675 regular Nets from DEF, and reported `Input def and output def are the same.`
+- All 15 object-regression cases passed with eight concurrent workers.
+- Exact raw DEF equality passed where the native writer preserves root order.
+- Via, Grid, Group, SpecialNet and optional fixtures differed only by allowed D-level root order; normalized diff passed while nested-order assertions remained strict.
+- SQL confirmed `iSpecNetSD` exists and `iNetSD` does not; logs confirmed SpecialNet EDADB write/read and absence of Net EDADB write/read.
+
+## Point-Tool Stage Validation Record
+
+The following numbered sections preserve the independent 2026-08-11 point-tool campaign. They use a different recorded milestone from the current demo and must not be relabeled as `demo/20260814` evidence.
 
 ## 1. Scope And Baseline
 
@@ -270,7 +376,7 @@ Results:
 
 These tables record the completed diagnostic campaign. iPL and Pico iTO rows that passed after
 temporary native fixes are not current final-tree acceptance claims. Current known-native-defect
-oracles are specified in [known-native-defects.md](known-native-defects.md).
+oracles are specified in [known-native-defects.md](stage-validation/known-native-defects.md).
 
 ### 6.1 Sky130 GCD
 
@@ -381,93 +487,23 @@ appended generated cuts and derived shapes on each call.
 **Passing evidence.** Strict fixture reports `27 == 27`; historical defect mode rejects the
 fixed output; full GCD semantic input returns to `27,299` obstacles on both paths.
 
-### 8.2 iEDA: iPL Pointer-Ordered Connectivity
+### 8.2 Native iEDA Diagnostic Fixes
 
-**Trigger.** IHP130 AES had byte-identical native/EDADB pre-tool DEFs, but three native iPL runs
-converged to one stable result and three EDADB runs to another. One-thread execution preserved
-the split. The first numerical divergence was a two-DBU HPWL difference at Nesterov iteration 320.
+Temporary iPL and Verilog-builder changes proved native causes but are not retained in the adapter milestone. Their source evidence, minimal cases and historical diagnostic results are maintained only in `stage-validation/known-native-defects.md`.
 
-**Root cause.** `wrapNesPinList()` creates a logical `_nPin_list` and pointer-key lookup maps at
-`src/operation/iPL/source/module/global_placer/electrostatic_placer/NesterovPlace.cc:192`.
-`completeConnection()` then iterated a `std::map<Pin*, NesPin*>`, allowing allocation addresses to
-choose append order for instance-pin and net-loader vectors used by placement calculations.
+## 9. Native iEDA Boundaries
 
-**Diagnostic change.** Commit `eaba42801` temporarily changed
-`NesterovPlace::completeConnection()` to traverse `_nPin_list` and use `_pin_map` only for reverse
-lookup, proving the cause. The final adapter milestone restores original `NesterovPlace.cc`.
+The validation campaign identified native iEDA behavior that is not fixed on the adapter branch:
 
-**Historical diagnostic evidence.** With the temporary native patch, three native runs and EDADB
-produced one DEF hash on both designs:
+| Boundary | Adapter conclusion |
+|---|---|
+| iPL pointer-ordered connectivity | Native determinism defect; not an EDADB field-loss result. |
+| Verilog IO alias ownership/direction | Native reader/writer ownership defect; retained as a causal fixture. |
+| IHP130 bound-skew-tree | Native iCTS/configuration boundary before EDADB restoration. |
+| iTO undefined HPWL/STWL summary fields | Uninitialized report fields are excluded from semantic comparison, while raw output remains. |
+| iRT pointer-order nondeterminism | Strict pre-tool adapter gate passes; full routed equivalence remains `REVIEW`. |
 
-- AES: `c8458e6342d2e8c041c63ad05df24f76fb9f47c26a3990a536100eb66802e336`;
-- Sky130 GCD: `26fc1e9ff16bf660c403cb9d3f0a8714be0ffd7a945d20fae76027e6c6d5dd85`.
-
-### 8.3 iEDA: Verilog IO Alias Ownership
-
-**Trigger.** PicoRV32A native iTO repeatedly aborted because `trace_data[5]` was logically owned by
-`fanout_net_56` but absent from that net's RC tree. The pre-tool native/EDADB gate already passed,
-so the adapter was not the first divergence.
-
-**Root cause.** The Verilog reader initially attached an IO pin to its same-name net, then alias
-processing added it to the assigned net without consistently removing it from the old root-net
-container. The writer also emitted output aliases as `assign net = output_port`, reversing Verilog
-output assignment semantics.
-
-**Diagnostic change.** Commit `ef07f23df` temporarily:
-
-- added `connect_io_pin()` to remove old membership, prevent duplicate target membership, and
-  synchronize `_net`/`_net_name`;
-- routes all one-to-one assignment branches through that helper;
-- emits `assign output_port = net` at
-  the Verilog writer.
-
-The final adapter milestone restores both native Verilog-builder files. The fixture now runs in
-`EXPECT_KNOWN_NATIVE_DEFECT=1` mode and checks the exact original failure signature.
-
-**Historical diagnostic evidence.** The temporary patch made the fixture and Pico iTO pass.
-Current milestone evidence instead requires the unchanged native signature:
-`assign shared = out0/out1` and DEF memberships `in=2`, `out0=2`, `out1=3`, `out2=1`.
-
-## 9. Native Boundaries Without A Production Fix
-
-### 9.1 IHP130 Bound-Skew-Tree
-
-Three native AES iCTS runs fail before any EDADB read. At
-`src/operation/iCTS/source/solver/tools/tree_builder/bound_skew_tree/BoundSkewTree.cc:1600`, a
-stored edge length is zero while endpoint Manhattan distance is `55.239`. This is not an adapter
-failure and is not hidden by a tolerance.
-
-The validation uses
-`src/database/edadb/test/stage_validation/config/ihp130_cts_no_skew_tree.json`, added in
-`1e00b5940`, to select the existing non-skew-tree implementation. The original failure remains a
-native/config boundary requiring a separate iCTS investigation.
-
-### 9.2 iTO Undefined Summary Fields
-
-`ToApi::outputSummary()` creates `TimingOptSummary` at
-`src/operation/iTO/api/ToApi.cpp:114` but never assigns its `HPWL` or `STWL` fields before returning
-at line 163. Their process-memory values are not design semantics.
-
-The comparator introduced in `621ae3df6` excludes only
-`optDrv/optHold/optSetup.HPWL` and `.STWL` from semantic equality. Raw JSON is retained. No iTO
-production fix was made in this campaign.
-
-### 9.3 iRT Pointer-Order Nondeterminism
-
-After strict semantic equality, iRT can still choose different legal routes. The first observed
-difference is the order of equal-content rectangle pointers returned by
-`DataManager::getTypeLayerNetFixedRectMap()` at
-`src/operation/iRT/source/data_manager/DataManager.cpp:345`. Pointer-address sets are stored in
-`src/operation/iRT/source/data_manager/advance/GCell.hpp:85`, and consumers iterate them, for
-example `PinAccessor.cpp:287`.
-
-This is a native determinism issue, not evidence of a missing EDADB field. A local sort in one
-consumer is insufficient because pointer-keyed sets also hold access points, segments, patches
-and violations. A value-only comparator could also collapse distinct objects with equal geometry.
-
-Commits `df6cae124` and `1e00b5940` therefore add diagnosis and evidence, not a partial production
-fix. Full iRT remains `REVIEW`; strict pre-tool equality and the original `env_map.json` comparison
-remain the retained adapter gates. Historical deep semantic evidence is documented separately.
+The sole detailed owner for reproduction commands, code evidence and historical diagnostic fixes is `stage-validation/known-native-defects.md`.
 
 ## 10. EDADB Core Conclusion
 
@@ -521,7 +557,7 @@ Two research questions remain outside adapter acceptance:
 | Final generated-via fixture | `/tmp/iedadb_generated_via_native_milestone_20260811` | Host-local, ephemeral |
 | Final native-alias oracle | `/tmp/iedadb_alias_native_milestone_20260811` | Host-local, ephemeral |
 | Final Sky130 iRT input gate | `/tmp/iedadb_sky130_env_gate_milestone_20260811` | Host-local, ephemeral |
-| Methodology | `src/database/edadb/docs/stage-validation/README.md` | Repository |
+| Methodology and report | `src/database/edadb/docs/adapter-testing.md` | Repository |
 | Executable harness | `src/database/edadb/test/stage_validation` | Repository |
 
 ## 14. Final Assessment
