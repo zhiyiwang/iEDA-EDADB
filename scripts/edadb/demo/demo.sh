@@ -1,85 +1,127 @@
 #!/usr/bin/env bash
 
-## only read lef/edadb/def and save def 
-## run this script in bin dir, such as:
-## `bash /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/demo/write_def.sh`
+set -euo pipefail
 
-set -e
+# Run the widest existing Sky130 GCD roundtrip coverage (default: filler):
+#   cd /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/bin
+#   bash /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/demo/demo.sh \
+#     2>&1 | tee run.out
+#
+# Run one named physical-design stage or list all available stages:
+#   bash scripts/edadb/demo/demo.sh irt
+#   bash scripts/edadb/demo/demo.sh --list
+#
+# Override the generated-artifact directory when needed:
+#   RUN_DIR=/tmp/iedadb_filler bash scripts/edadb/demo/demo.sh filler
+#
+# The demo performs native DEF roundtrip, EDADB write, EDADB read, and then
+# compares the native and EDADB-restored DEF outputs.
 
-
-# get script dir, using absolute path
-# SCRIPT_DIR=scripts/edadb/demo
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-EDADB_TCL_SCRIPT_DIR="${SCRIPT_DIR}/tcl"
-DESIGN_TCL_SCRIPT_DIR="${SCRIPT_DIR}/../../design/sky130_gcd/script"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+RESULT_ROOT="$REPO_ROOT/scripts/design/sky130_gcd/result"
 
-# make it visible to Tcl as ::env(TCL_SCRIPT_DIR)
-export EDADB_TCL_SCRIPT_DIR
-export DESIGN_TCL_SCRIPT_DIR
-echo "EDADB_TCL_SCRIPT_DIR: $EDADB_TCL_SCRIPT_DIR"
-echo "DESIGN_TCL_SCRIPT_DIR: $DESIGN_TCL_SCRIPT_DIR"
-
-# (fixed) iEDA setting
-# WORKSPACE=scripts/design/sky130_gcd
-export WORKSPACE="$SCRIPT_DIR/../../design/sky130_gcd"
-export CONFIG_DIR=$WORKSPACE/iEDA_config
-export FOUNDRY_DIR=$WORKSPACE/../../foundry/sky130
-export RESULT_DIR=$SCRIPT_DIR/result
-export TCL_SCRIPT_DIR=$WORKSPACE/script
-mkdir -p "$RESULT_DIR"
-
-# design files
-export DESIGN_TOP=gcd
-export NETLIST_FILE=$WORKSPACE/result/verilog/gcd.v
-export SDC_FILE=$FOUNDRY_DIR/sdc/gcd.sdc
-export SPEF_FILE=$FOUNDRY_DIR/spef/gcd.spef
-
-
-
-# If the script has parameters, use the 1st as INPUT_DEF
-if [ $# -ge 1 ]; then
-    # output usage and exit
-    echo "Usage: $0 [input_def]"
-    echo "  input_def: input def file, default: scripts/edadb/demo/design.def"
-    export INPUT_DEF="$1"
-else
-    export INPUT_DEF="$DESIGN_TCL_SCRIPT_DIR/../result/iPL_result.def"
-    # export INPUT_DEF "$DESIGN_TCL_SCRIPT_DIR/../result/iFP_result.def"
-    # export INPUT_DEF "$DESIGN_TCL_SCRIPT_DIR/../result/iCTS_result.def"
+if [[ "$#" -gt 1 ]]; then
+    echo "Usage: $0 [stage|input_def]" >&2
+    exit 2
 fi
-echo "####[demo.sh] INPUT_DEF: $INPUT_DEF"
 
+list_stages() {
+    cat <<EOF
+Sky130 GCD stages:
+  ifp             iFP_result.def
+  fix-fanout      iTO_fix_fanout_result.def
+  ipl             iPL_result.def
+  icts            iCTS_result.def
+  ito-drv         iTO_drv_result.def
+  ito-hold        iTO_hold_result.def
+  ipl-lg          iPL_lg_result.def
+  irt             iRT_result.def
+  filler          iPL_filler_result.def (default; widest existing GCD coverage)
 
-# edadb for write/read def
-export EDADB_DB_PATH="$RESULT_DIR/edadb.db"
-rm -f $EDADB_DB_PATH
+An existing DEF path may be supplied instead of a stage name.
+EOF
+}
 
-# edadb def file postfix
-export EDADB_DEF_POST="_edadb"
+# No argument selects the largest existing Sky130 GCD DEF result so the default
+# command covers as many implemented adapter root families and DEF tags as possible.
+selector="${1:-filler}"
+case "${selector,,}" in
+    -h|--help)
+        echo "Usage: $0 [stage|input_def]"
+        list_stages
+        exit 0
+        ;;
+    -l|--list)
+        list_stages
+        exit 0
+        ;;
+    ifp)
+        stage_name=ifp
+        INPUT_DEF="$RESULT_ROOT/iFP_result.def"
+        ;;
+    fix-fanout|fix_fanout|ito-fix-fanout|ito_fix_fanout)
+        stage_name=fix-fanout
+        INPUT_DEF="$RESULT_ROOT/iTO_fix_fanout_result.def"
+        ;;
+    ipl)
+        stage_name=ipl
+        INPUT_DEF="$RESULT_ROOT/iPL_result.def"
+        ;;
+    icts|cts)
+        stage_name=icts
+        INPUT_DEF="$RESULT_ROOT/iCTS_result.def"
+        ;;
+    ito-drv|ito_drv)
+        stage_name=ito-drv
+        INPUT_DEF="$RESULT_ROOT/iTO_drv_result.def"
+        ;;
+    ito-hold|ito_hold)
+        stage_name=ito-hold
+        INPUT_DEF="$RESULT_ROOT/iTO_hold_result.def"
+        ;;
+    ipl-lg|ipl_lg)
+        stage_name=ipl-lg
+        INPUT_DEF="$RESULT_ROOT/iPL_lg_result.def"
+        ;;
+    irt|rt)
+        stage_name=irt
+        INPUT_DEF="$RESULT_ROOT/iRT_result.def"
+        ;;
+    filler|ipl-filler|ipl_filler)
+        stage_name=filler
+        INPUT_DEF="$RESULT_ROOT/iPL_filler_result.def"
+        ;;
+    *)
+        if [[ ! -f "$selector" ]]; then
+            echo "ERROR: unknown stage or missing DEF: $selector" >&2
+            list_stages >&2
+            exit 2
+        fi
+        INPUT_DEF="$(realpath "$selector")"
+        stage_name="$(basename "${INPUT_DEF%.def}")"
+        ;;
+esac
 
-# tcl run parameters
-export READ_DEF=1
-export WRITE_EDADB=1 # 0: write edadb; 1: write def
-export READ_EDADB=1 # 0: read edadb; 1: read def
-
-##gdb ./iEDA
-./iEDA -script $EDADB_TCL_SCRIPT_DIR/def2edadb.tcl
-
-##gdb ./iEDA
-./iEDA -script $EDADB_TCL_SCRIPT_DIR/edadb2def.tcl
-
-# compare input def and output def, output diff if different
-echo "[demo.sh] compare input def and output def:"
-echo "input def: $INPUT_DEF"
-echo "output def: ${INPUT_DEF%.*}_edadb.def"
-diff -q "$INPUT_DEF" "${INPUT_DEF%.*}${EDADB_DEF_POST}.def" > diff_output.txt || true
-if [ ! -s diff_output.txt ]; then
-    echo "Input def and output def are the same."
-    rm diff_output.txt
-else
-    echo "Input def and output def are different. See diff below:"
-    cat diff_output.txt
-    rm diff_output.txt
-    echo "vimdiff $INPUT_DEF ${INPUT_DEF%.*}${EDADB_DEF_POST}.def"
+if [[ ! -f "$INPUT_DEF" ]]; then
+    echo "ERROR: stage DEF is missing: $INPUT_DEF" >&2
     exit 1
-fi 
+fi
+
+if [[ -z "${RUN_DIR:-}" ]]; then
+    if [[ "$#" -eq 0 ]]; then
+        RUN_DIR="$SCRIPT_DIR/result"
+    else
+        RUN_DIR="$SCRIPT_DIR/result/$stage_name"
+    fi
+fi
+
+echo "Selected stage: $stage_name"
+echo "Input DEF:      $INPUT_DEF"
+
+# Keep the established demo command as a stable wrapper. The general runner uses
+# native DEF -> DEF as its executable baseline before comparing EDADB restoration.
+DESIGN_PROFILE_DIR="${DESIGN_PROFILE_DIR:-$REPO_ROOT/scripts/design/sky130_gcd}" \
+FOUNDRY_DIR="${FOUNDRY_DIR:-$REPO_ROOT/scripts/foundry/sky130}" \
+RUN_DIR="$RUN_DIR" \
+    bash "$SCRIPT_DIR/../roundtrip/run.sh" "$INPUT_DEF"
