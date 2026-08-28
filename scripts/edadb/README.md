@@ -32,7 +32,9 @@ scripts/edadb/
 │   ├── tcl/                    # original demo-specific Tcl kept for compatibility
 │   └── result/                 # fixed local output used by demo.sh
 ├── performance/
-│   └── TODO.md                 # planned phase-level timing and SQLite profiling
+│   ├── README.md               # benchmark flow, commands, metrics, and boundaries
+│   ├── run.sh                  # native DEF vs EDADB benchmark runner
+│   └── benchmark.tcl           # native/write/read command timing
 └── roundtrip/
     ├── run.sh                  # generic native-vs-EDADB three-process runner
     ├── tcl/
@@ -52,6 +54,10 @@ src/database/edadb/test/
 Generated test artifacts belong under `/tmp` or another external output directory. Generated
 Sky130 stage DEFs under `scripts/design/sky130_gcd/result/` are also ignored rather than committed;
 the reproducible build and flow commands are documented in `scripts/edadb/demo/README.md`.
+
+The minimal native-DEF-versus-EDADB performance benchmark is documented in
+`scripts/edadb/performance/README.md`. It runs cold and warm OS-page-cache groups, keeps read and
+write metrics separate, and accepts a sample only after an exact native/EDADB DEF comparison.
 
 ## Tcl Directory Roles
 
