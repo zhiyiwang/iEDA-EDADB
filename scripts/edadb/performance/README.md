@@ -503,7 +503,7 @@ and report read improvement, write-index maintenance cost and database-size grow
 `33.27%`. Core OFF/ON tests and the complete adapter regression passed. See
 `sky130_gcd_ipl_filler_p1_child_fk_index_20260829.md` for raw evidence and accounting.
 
-### P2 — N+1 recursive child queries — Deferred
+### P2 — N+1 recursive child queries — Decision Gate Passed
 
 **Evidence:** Net restore performs 29,699 child-FK queries, 59,807 Net fetch steps and only eight
 prepares. Prepared statements are reused; repeated query execution is the issue.
@@ -512,7 +512,7 @@ prepares. Prepared statements are reused; repeated query execution is the issue.
 executes one child query for each parent object. Indexes remove table scans but do not remove the
 29,699 bind/step/reset query cycles.
 
-**Implementation after P1 is measured:**
+**Implementation:**
 
 1. Read each large child table once, ordered/grouped by the complete ancestor FK chain and its
    stored vector index.
@@ -524,8 +524,13 @@ executes one child query for each parent object. Indexes remove table scans but 
 strict DEF and failure tests remain unchanged. If P1 already makes read sufficiently fast, defer P2
 because it is a larger traversal change.
 
-P1 reduced warm absolute EDADB read to `169.480 ms`, so P2 is deferred until a larger routed design
-shows that the unchanged N+1 count is again a material bottleneck.
+P1 reduced the small iPL-filler warm read to about `171 ms`, but the fresh 1,000-net routed fixture
+raises warm EDADB read to `1,966.411 ms` (`3.73x` native) and Net child-FK queries to `447,699`.
+Profiling-ON ranks SQLite fetch-step as the largest measured leaf cost, although its `38.34%`
+instrumentation overhead prevents treating the measured percentage as an unperturbed absolute
+fraction. The stable query count, profiling-OFF total and scaling evidence satisfy the P2 decision
+gate. Implement only a Net Point/ViaRef batch-read prototype first. See
+`sky130_gcd_p2_reassessment_20260829.md`.
 
 ### P3 — Schema creation uses many committed operations — Complete
 
@@ -593,22 +598,29 @@ the complete measured excess. The stress write elapsed median changed from `13.6
 
 ### P6 — Adapter/object rebuild residual
 
-**Evidence:** warm phase residual is `113.637 ms` for read and `54.104 ms` for write, below `3%` of
-either command. It contains adapter root Shadow conversion, allocation, metadata traversal, LEF
-lookup and iDB rebuilding; the current profiler does not split those components.
+**Evidence:** the original pre-P1 profile measured `113.637 ms` read and `54.104 ms` write residual,
+but those percentages were relative to the obsolete 19-second scan baseline. In the new routed run,
+profiling overhead is `38.34%` for read, so the current non-SQLite residual cannot be converted into
+a trustworthy production absolute time. Shadow callbacks themselves remain small (`10.563 ms` in
+the instrumented routed warm read).
 
 **Implementation only if later needed:** add coarse adapter subphase timers first, then optimize the
 largest measured subphase through vector `reserve`, reusable temporary objects or batched name
-lookup. Do not optimize based on guesses.
+lookup. Reassess after P2 removes the known high-frequency query path; do not optimize residuals
+based on perturbed measurements.
 
 ### Deferred/non-problems in the current profile
 
-- `sqlite_prepare`: `1.331 ms` read and `0.900 ms` write; statement preparation is not the bottleneck.
-- core-managed nested Shadow callbacks: `0.762 ms` read and `1.139 ms` write.
-- reference DEF scan: `30.546 ms`, only `0.16%` of read.
-- cold and warm read times are nearly equal; OS page-cache misses do not explain the 19-second read.
-- adding EDADB/iDB multithreading before fixing scans/N+1 would add synchronization and SQLite
-  contention around an inefficient algorithm. Revisit parallelism only after P1–P4.
+- Routed warm `sqlite_prepare` is only `1.386 ms` in the instrumented run; statement preparation is
+  not the bottleneck because reusable operators prepare only 35 statements.
+- Core-managed Shadow callbacks total `10.563 ms` across `252,609` routed read callbacks; callback
+  bodies are not the primary bottleneck.
+- The routed reference DEF scan is `309.953 ms` in the instrumented run. It is material but still far
+  below the `2,369.287 ms` Net phase and independent of the N+1 child-query issue.
+- Routed cold read is `2,304.850 ms` versus warm `1,966.411 ms`; page-cache state contributes but does
+  not explain the remaining `3.73x` warm EDADB/native ratio.
+- Adding EDADB/iDB multithreading before P2 would add synchronization and SQLite contention around a
+  high-query-count algorithm. Revisit parallelism only after the batch-read decision is measured.
 
 Do not change SQLite durability pragmas merely to obtain a faster number. Journal/synchronous mode
 is a separate durability contract and must be compared under explicitly documented guarantees.

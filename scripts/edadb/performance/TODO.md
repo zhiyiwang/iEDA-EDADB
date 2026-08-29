@@ -32,19 +32,19 @@ unresolved questions stay only in this file.
 
 Do not implement an optimization until its design and acceptance criteria are agreed. Apply one
 optimization per commit and remeasure before starting the next one. P1, P3, P4 and P5 are complete;
-P2 is deferred and P6 remains conditional.
+the large routed decision gate now justifies a Net-only P2 prototype, and P6 remains conditional.
 
 ## Confirmed Bottlenecks
 
 | Priority | Status | Confirmed observation | Baseline/result |
 | --- | --- | --- | ---: |
 | P1 | complete | Net Point/ViaRef child-FK queries used full-table `SCAN` | warm read `19,164.606 -> 169.480 ms` |
-| P2 | deferred | Recursive restore executes one child query per parent | Net child-FK queries `29,699` |
+| P2 | ready | Recursive restore executes one child query per parent | routed Net child-FK queries `447,699`; warm read `3.73x` native |
 | P3 | complete | Schema creation used one self-managed transaction per root tree | warm init `1,328.322 -> 93.294 ms` |
 | P4 | complete | One atomic transaction now covers all design root families | warm write `1,131.619 -> 378.269 ms` |
 | P5 | complete | Full root-Shadow vectors amplified routed-write memory | peak RSS `302,184 -> 273,356 KiB` |
 
-P6 adapter/object rebuild is currently below 3% and is not an immediate optimization target.
+P6 adapter/object rebuild remains deferred until P2 removes the known query-granularity bottleneck.
 
 ## Proposed Execution Order
 
@@ -285,8 +285,12 @@ Acceptance:
 - Sparse/duplicate vector-index validation and failure-atomic staging remain covered by core tests.
 - Strict DEF comparisons pass and P1 indexes remain used where applicable.
 
-Decision after P1: defer P2. P1 reduced the warm absolute read median to `169.480 ms`; use a larger
-routed design to prove N+1 is again material before accepting the higher-risk traversal rewrite.
+Decision after routed reassessment: proceed with a Net-only prototype. The 1,000-net fixture raises
+warm EDADB read to `1,966.411 ms` (`3.73x` native), Net child-FK queries to `447,699`, and the
+EDADB-minus-native read excess by `14.37x` relative to iPL filler. Profiling-ON identifies SQLite
+fetch-step as the largest leaf category, but its `38.34%` read overhead means only call counts and
+bottleneck ordering—not exact profiled percentages—are acceptance evidence. Full measurements and
+the narrowed scope are in `sky130_gcd_p2_reassessment_20260829.md`.
 
 ### P3: Batch Schema Creation — Complete
 
