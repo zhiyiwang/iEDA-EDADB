@@ -6,7 +6,7 @@
 
 - 原始 write：`DefWrite::write_region()`，`src/database/manager/builder/def_builder/def_write.cpp:1040`
 - 原始 read：`DefRead::parse_region()`，`src/database/manager/builder/def_builder/def_read.cpp:2093`
-- EDADB write：`DefWriteEdadb::writeIdbRegion()`，`src/database/manager/builder/def_builder/def_write_edadb.cpp:480`
+- EDADB write：`DefWriteEdadb::writeIdbRegion()`，`src/database/manager/builder/def_builder/def_write_edadb.cpp:515`
 - EDADB read：`DefReadEdadb::readIdbRegion()`，`src/database/manager/builder/def_builder/def_read_edadb.cpp:502`
 
 按 `src/database/edadb/docs/def-ieda-mapping-and-order.md` 检查：
@@ -47,7 +47,7 @@ Primary-key audit：
 
 | Original writer brace/order | DEF output | EDADB correspondence | Stored source |
 | --- | --- | --- | --- |
-| list/null/empty checks and section count, `def_write.cpp:1042-1053` | `REGIONS <N>` | `writeIdbRegion()` reads active root vector, `def_write_edadb.cpp:480-499` | `iRegion` row count |
+| list/null/empty checks and section count, `def_write.cpp:1042-1053` | `REGIONS <N>` | `writeIdbRegion()` reads active root vector, `def_write_edadb.cpp:515-535` | `iRegion` row count |
 | root loop and name, `def_write.cpp:1055-1056` | `- <name>` | direct mapping stores `_name`; no root order column | `IdbRegion::_name` → `iRegion._name` |
 | boundary loop, `def_write.cpp:1058-1060` | repeated rectangle pairs | `TABLE4CLASS_WVEC` stores the complete `_boudary_list` | child `IdbRectSD` rows + `_vec_idx` |
 | type conversion/output, `def_write.cpp:1062-1063` | `+ TYPE FENCE/GUIDE` | direct mapping stores `_type` enum | `IdbRegion::_type` → `iRegion._type` |
@@ -66,9 +66,9 @@ Primary-key audit：
 
 Write：
 
-- `writeIdbRegion()`：`def_write_edadb.cpp:480-507`
-- vector access：`def_write_edadb.cpp:493`
-- direct insert：`def_write_edadb.cpp:501`
+- `writeIdbRegion()`：`def_write_edadb.cpp:515-542`
+- vector access：`def_write_edadb.cpp:528`
+- direct insert：`def_write_edadb.cpp:536`
 - Empty list is accepted by the EDADB dispatcher so other families can continue.
 
 Read：

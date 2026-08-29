@@ -64,6 +64,8 @@ bool DefWriteEdadb::writeDb2Edadb(const char* edadb_path) {
     } 
 
 
+    // Persist one design atomically.  Root writers disable their own
+    // transactions, so any later root failure rolls back every earlier root.
     const bool begin_status = profileAdapterPhase("adapter.transaction.begin", [&]() {
         return edadb::beginTransaction();
     });
@@ -404,30 +406,19 @@ int32_t DefWriteEdadb::writeIdbInstance(void) {
       return kDbSuccess;
     }
 
-    vector<edadb::Shadow<idb::IdbInstance>*> inst_sd_vec;
-    inst_sd_vec.reserve(inst_vec.size());
+    // Reuse prepared SQL but keep only one root Shadow alive.  This preserves
+    // nested-vector order while avoiding a complete temporary Shadow graph.
+    auto insert_op = edadb::makeInsertOp<edadb::Shadow<idb::IdbInstance>>();
     for (uint32_t inst_idx = 0; inst_idx < inst_vec.size(); ++inst_idx) {
-        auto* inst_sd = new edadb::Shadow<idb::IdbInstance>();
-        if (!inst_sd->toShadow(inst_vec[inst_idx], &inst_idx)) {
-            delete inst_sd;
-            for (auto* converted_inst_sd : inst_sd_vec) {
-                delete converted_inst_sd;
-            }
+        edadb::Shadow<idb::IdbInstance> inst_sd;
+        if (!inst_sd.toShadow(inst_vec[inst_idx], &inst_idx)) {
             std::cerr << "DefWriteEdadb::writeIdbInstance failed to convert instance shadow" << std::endl;
             return kDbFail;
         }
-        inst_sd_vec.emplace_back(inst_sd);
-    }
-
-    bool ok = edadb::insertVector<edadb::Shadow<idb::IdbInstance>>(inst_sd_vec, false);
-    for (auto& inst_sd : inst_sd_vec) {
-        delete inst_sd;
-        inst_sd = nullptr;
-    }
-
-    if (!ok) {
-        std::cerr << "DefWriteEdadb::writeIdbInstance failed to insertVector" << std::endl;
-        return kDbFail;
+        if (insert_op.insert(&inst_sd) < 0) {
+            std::cerr << "DefWriteEdadb::writeIdbInstance failed to insert shadow" << std::endl;
+            return kDbFail;
+        }
     }
 
     return kDbSuccess;
@@ -454,30 +445,18 @@ int32_t DefWriteEdadb::writeIdbPin(void) {
       return kDbSuccess;
     }
 
-    vector<edadb::Shadow<idb::IdbPin>*> pin_sd_vec;
-    pin_sd_vec.reserve(pin_vec.size());
+    // Reuse prepared SQL but release each root Shadow before converting the next.
+    auto insert_op = edadb::makeInsertOp<edadb::Shadow<idb::IdbPin>>();
     for (uint32_t pin_idx = 0; pin_idx < pin_vec.size(); ++pin_idx) {
-        auto* pin_sd = new edadb::Shadow<idb::IdbPin>();
-        if (!pin_sd->toShadow(pin_vec[pin_idx], &pin_idx)) {
-            delete pin_sd;
-            for (auto* stored_pin_sd : pin_sd_vec) {
-                delete stored_pin_sd;
-            }
+        edadb::Shadow<idb::IdbPin> pin_sd;
+        if (!pin_sd.toShadow(pin_vec[pin_idx], &pin_idx)) {
             std::cerr << "DefWriteEdadb::writeIdbPin failed to convert pin shadow" << std::endl;
             return kDbFail;
         }
-        pin_sd_vec.emplace_back(pin_sd);
-    }
-
-    bool ok = edadb::insertVector<edadb::Shadow<idb::IdbPin>>(pin_sd_vec, false);
-    for (auto& pin_sd : pin_sd_vec) {
-        delete pin_sd;
-        pin_sd = nullptr;
-    }
-
-    if (!ok) {
-        std::cerr << "DefWriteEdadb::writeIdbPin failed to insertVector" << std::endl;
-        return kDbFail;
+        if (insert_op.insert(&pin_sd) < 0) {
+            std::cerr << "DefWriteEdadb::writeIdbPin failed to insert shadow" << std::endl;
+            return kDbFail;
+        }
     }
 
     return kDbSuccess;
@@ -734,30 +713,18 @@ int32_t DefWriteEdadb::writeIdbSpecialNet(void) {
       return kDbSuccess;
     }
 
-    vector<edadb::Shadow<idb::IdbSpecialNet>*> special_net_sd_vec;
-    special_net_sd_vec.reserve(special_net_vec.size());
-    for (auto& special_net : special_net_vec) {
-        auto* special_net_sd = new edadb::Shadow<idb::IdbSpecialNet>();
-        if (!special_net_sd->toShadow(special_net)) {
-            delete special_net_sd;
-            for (auto* converted_special_net_sd : special_net_sd_vec) {
-                delete converted_special_net_sd;
-            }
+    // Routed child vectors stay inside one root Shadow and are released after insert.
+    auto insert_op = edadb::makeInsertOp<edadb::Shadow<idb::IdbSpecialNet>>();
+    for (auto* special_net : special_net_vec) {
+        edadb::Shadow<idb::IdbSpecialNet> special_net_sd;
+        if (!special_net_sd.toShadow(special_net)) {
             std::cerr << "DefWriteEdadb::writeIdbSpecialNet failed to convert special-net shadow" << std::endl;
             return kDbFail;
         }
-        special_net_sd_vec.emplace_back(special_net_sd);
-    }
-
-    bool ok = edadb::insertVector<edadb::Shadow<idb::IdbSpecialNet>>(special_net_sd_vec, false);
-    for (auto& special_net_sd : special_net_sd_vec) {
-        delete special_net_sd;
-        special_net_sd = nullptr;
-    }
-
-    if (!ok) {
-        std::cerr << "DefWriteEdadb::writeIdbSpecialNet failed to insertVector" << std::endl;
-        return kDbFail;
+        if (insert_op.insert(&special_net_sd) < 0) {
+            std::cerr << "DefWriteEdadb::writeIdbSpecialNet failed to insert shadow" << std::endl;
+            return kDbFail;
+        }
     }
 
     return kDbSuccess;
@@ -785,30 +752,18 @@ int32_t DefWriteEdadb::writeIdbNet(void) {
       return kDbSuccess;
     }
 
-    vector<edadb::Shadow<idb::IdbNet>*> net_sd_vec;
-    net_sd_vec.reserve(net_vec.size());
+    // Net routing graphs dominate temporary memory, so stream one root at a time.
+    auto insert_op = edadb::makeInsertOp<edadb::Shadow<idb::IdbNet>>();
     for (uint32_t net_idx = 0; net_idx < net_vec.size(); ++net_idx) {
-        auto* net_sd = new edadb::Shadow<idb::IdbNet>();
-        if (!net_sd->toShadow(net_vec[net_idx], &net_idx)) {
-            delete net_sd;
-            for (auto* converted_net_sd : net_sd_vec) {
-                delete converted_net_sd;
-            }
+        edadb::Shadow<idb::IdbNet> net_sd;
+        if (!net_sd.toShadow(net_vec[net_idx], &net_idx)) {
             std::cerr << "DefWriteEdadb::writeIdbNet failed to convert net shadow" << std::endl;
             return kDbFail;
         }
-        net_sd_vec.emplace_back(net_sd);
-    }
-
-    bool ok = edadb::insertVector<edadb::Shadow<idb::IdbNet>>(net_sd_vec, false);
-    for (auto& net_sd : net_sd_vec) {
-        delete net_sd;
-        net_sd = nullptr;
-    }
-
-    if (!ok) {
-        std::cerr << "DefWriteEdadb::writeIdbNet failed to insertVector" << std::endl;
-        return kDbFail;
+        if (insert_op.insert(&net_sd) < 0) {
+            std::cerr << "DefWriteEdadb::writeIdbNet failed to insert shadow" << std::endl;
+            return kDbFail;
+        }
     }
 
     return kDbSuccess;

@@ -126,6 +126,8 @@ int initWriteDb(const char* edadb_path) {
 
     initPrimKeys();
 
+    // Create every adapter table tree atomically.  Passing self_txn=false
+    // avoids one BEGIN/COMMIT pair per root while preserving the same DDL.
     if (!edadb::beginTransaction()) {
         std::cerr << "Error: failed to begin schema transaction" << std::endl;
         return -1;

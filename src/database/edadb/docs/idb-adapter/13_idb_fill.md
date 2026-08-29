@@ -6,7 +6,7 @@
 
 - 原始 write：`DefWrite::write_fill()`，`src/database/manager/builder/def_builder/def_write.cpp:1140-1188`。
 - 原始 read：`DefRead::parse_fill()`，`src/database/manager/builder/def_builder/def_read.cpp:2352-2396`。
-- EDADB write：`DefWriteEdadb::writeIdbFill()`，`src/database/manager/builder/def_builder/def_write_edadb.cpp:609-657`。
+- EDADB write：`DefWriteEdadb::writeIdbFill()`，`src/database/manager/builder/def_builder/def_write_edadb.cpp:644-692`。
 - EDADB read：`DefReadEdadb::readIdbFill()`，`src/database/manager/builder/def_builder/def_read_edadb.cpp:635-678`。
 
 按 `src/database/edadb/docs/def-ieda-mapping-and-order.md` 检查：
@@ -53,7 +53,7 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbFill>, "iFillSD",
 
 | Original `DefWrite` execution order | DEF field / iDB member | EDADB correspondence |
 | --- | --- | --- |
-| 获取 list 并检查空值，`def_write.cpp:1142-1152` | `IdbDesign::_fill_list` | `writeIdbFill()` 获取同一 list；空 list 直接成功，`def_write_edadb.cpp:610-628` |
+| 获取 list 并检查空值，`def_write.cpp:1142-1152` | `IdbDesign::_fill_list` | `writeIdbFill()` 获取同一 list；空 list 直接成功，`def_write_edadb.cpp:645-663` |
 | 输出 section count，`def_write.cpp:1154` | `FILLS <N>` / list size | 每个 valid root 写一行 `iFillSD`；count 由 table rows 得到 |
 | 进入 Layer 分支并检查 layer，`def_write.cpp:1156-1162` | `LAYER <name>` / `IdbFill::_type`, `IdbFillLayer::_layer` | `toShadow()` 保存 `_type_sd`、`_layer_name_sd`，`shadow_idb_fill.h:30-36` |
 | 顺序输出 Layer rectangles，`def_write.cpp:1164-1166` | repeated `RECT` / `IdbFillLayer::_rect_list` | 顺序复制 `_rect_list_sd`，`shadow_idb_fill.h:37-43` |
@@ -80,7 +80,7 @@ DEF grammar 中 Layer/Via 是互斥 record；`fromShadow()` 使用同样的 `if/
 
 ## EDADB Write Read Path
 
-- Write：获取 list `def_write_edadb.cpp:610-628` → 每个 root 调用标准 `toShadow()` `def_write_edadb.cpp:630-643` → batch insert `def_write_edadb.cpp:645-654`。
+- Write：获取 list `def_write_edadb.cpp:645-663` → 每个 root 调用标准 `toShadow()` `def_write_edadb.cpp:665-678` → batch insert `def_write_edadb.cpp:680-689`。
 - Read 调用顺序：Via 已恢复后再读 Fill，`def_read_edadb.cpp:217-224`。
 - Read：reset list `def_read_edadb.cpp:642-650` → cursor 读取 shadow `def_read_edadb.cpp:652-662` → standard `fromShadow()` `def_read_edadb.cpp:664-670` → 成功后 append root `def_read_edadb.cpp:671-672`。
 - Root query 不使用 `ORDER BY`；Level D root 可改变顺序。Rect/Coordinate child rows 由 EDADB 根据 `_vec_idx` 恢复。

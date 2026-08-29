@@ -11,7 +11,7 @@
 - 原始 PDN routed-wire read：`DefRead::parse_pdn_wire()`，`src/database/manager/builder/def_builder/def_read.cpp:1388-1478`。
 - 原始 PDN standalone-rect read：`DefRead::parse_pdn_rects()`，`src/database/manager/builder/def_builder/def_read.cpp:1480-1512`。
 - 原始 regular-net branch：`DefRead::parse_net()`，`src/database/manager/builder/def_builder/def_read.cpp:1028-1240`。
-- EDADB write：`DefWriteEdadb::writeIdbSpecialNet()`，`src/database/manager/builder/def_builder/def_write_edadb.cpp:659-708`。
+- EDADB write：`DefWriteEdadb::writeIdbSpecialNet()`，`src/database/manager/builder/def_builder/def_write_edadb.cpp:694-731`。
 - EDADB read：`DefReadEdadb::readIdbSpecialNet()`，`src/database/manager/builder/def_builder/def_read_edadb.cpp:864-940`。
 
 按 `src/database/edadb/docs/def-ieda-mapping-and-order.md` 检查：
@@ -96,7 +96,7 @@ read 时重新计算或 lookup：
 
 | Original `DefWrite` execution order | DEF field / iDB member | EDADB correspondence |
 | --- | --- | --- |
-| 获取 list、检查为空并输出 count，`def_write.cpp:769-775` | `IdbSpecialNetList::_net_list` / `SPECIALNETS <N>` | `writeIdbSpecialNet()` 获取同一 list，逐 root 转 shadow 后 batch insert，`def_write_edadb.cpp:660-707` |
+| 获取 list、检查为空并输出 count，`def_write.cpp:769-775` | `IdbSpecialNetList::_net_list` / `SPECIALNETS <N>` | `writeIdbSpecialNet()` 获取同一 list，逐 root 转 shadow 后立即 insert，`def_write_edadb.cpp:695-730` |
 | root loop 和 name，`def_write.cpp:777-778` | `- <net_name>` / `IdbSpecialNet::_net_name` | `_net_name_sd`，`shadow_idb_special_net.h:311-312` |
 | `pin_string_list` 非空分支，`def_write.cpp:780-783` | repeated `(* pin)` | 只保存 `_pin_string_list_sd`，`shadow_idb_special_net.h:318-320` |
 | 否则先 IO pin、后 instance pin，`def_write.cpp:784-792` | `(PIN pin)`；`(instance pin)` | 保存有序 IO names 和 `SpecialNetPinRef`，`shadow_idb_special_net.h:322-340` |
@@ -148,7 +148,7 @@ read 时重新计算或 lookup：
 
 ## EDADB Write Read Path
 
-- Write：list validation `def_write_edadb.cpp:660-679` → standard `toShadow()` `def_write_edadb.cpp:681-694` → batch insert/cleanup `def_write_edadb.cpp:696-707`。
+- Write：list validation `def_write_edadb.cpp:695-715` → standard `toShadow()` `def_write_edadb.cpp:718-723` → reusable-op insert and per-root cleanup `def_write_edadb.cpp:724-728`。
 - Read：reset list `def_read_edadb.cpp:871-879` → cursor read `def_read_edadb.cpp:886-898` → add root `def_read_edadb.cpp:900-907` → standard `fromShadow()` `def_read_edadb.cpp:908-912`。
 - Root `fromShadow()`：header/connections `shadow_idb_special_net.h:356-397` → ordered wires `shadow_idb_special_net.h:399-413`。
 - Cursor read failure resets the active list，`def_read_edadb.cpp:893-898`；root create/restore failure resets it at `def_read_edadb.cpp:900-911`。

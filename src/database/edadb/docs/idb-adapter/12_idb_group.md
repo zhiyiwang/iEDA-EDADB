@@ -6,7 +6,7 @@
 
 - 原始 write：`DefWrite::write_group()`，`src/database/manager/builder/def_builder/def_write.cpp:1106-1138`
 - 原始 read：`DefRead::parse_group_name/member/group()`，`src/database/manager/builder/def_builder/def_read.cpp:2238-2310`
-- EDADB write：`DefWriteEdadb::writeIdbGroup()`，`src/database/manager/builder/def_builder/def_write_edadb.cpp:559-607`
+- EDADB write：`DefWriteEdadb::writeIdbGroup()`，`src/database/manager/builder/def_builder/def_write_edadb.cpp:594-642`
 - EDADB read：`DefReadEdadb::readIdbGroup()`，`src/database/manager/builder/def_builder/def_read_edadb.cpp:591-633`
 
 按 `src/database/edadb/docs/def-ieda-mapping-and-order.md` 检查：
@@ -48,8 +48,8 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbGroup>, "iGroupSD",
 
 | Original writer brace/order | DEF output | EDADB correspondence | Stored source |
 | --- | --- | --- | --- |
-| list/null/count checks，`def_write.cpp:1108-1120` | `GROUPS <N> ;` | `writeIdbGroup()` 获取完整 root vector，空 vector 直接成功，`def_write_edadb.cpp:560-578` | root row count |
-| root loop/name，`def_write.cpp:1122-1123` | `- <group_name>` | builder 逐 root 调用 `toShadow()`，`def_write_edadb.cpp:580-595`；shadow 写 `_group_name_sd`，`shadow_idb_group.h:22-28` | `IdbGroup::_group_name` |
+| list/null/count checks，`def_write.cpp:1108-1120` | `GROUPS <N> ;` | `writeIdbGroup()` 获取完整 root vector，空 vector 直接成功，`def_write_edadb.cpp:595-613` | root row count |
+| root loop/name，`def_write.cpp:1122-1123` | `- <group_name>` | builder 逐 root 调用 `toShadow()`，`def_write_edadb.cpp:615-628`；shadow 写 `_group_name_sd`，`shadow_idb_group.h:22-28` | `IdbGroup::_group_name` |
 | member loop，`def_write.cpp:1125-1127` | ordered instance names | `toShadow()` 按 active member vector 顺序写 names，`shadow_idb_group.h:29-35` | `IdbGroup::_instance_list` 的 names |
 | Region，`def_write.cpp:1129` | `+ REGION <name>` | `toShadow()` 要求 non-null Region 并写 `_region_name_sd`，`shadow_idb_group.h:23-28` | `IdbGroup::_region->get_name()` |
 | record/section terminators，`def_write.cpp:1131-1134` | `;` / `END GROUPS` | 输出时由 `DefWrite` 结构化生成 | 不入库 |

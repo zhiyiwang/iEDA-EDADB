@@ -8,7 +8,7 @@
 - 原始 wire write：`DefWrite::write_net_wire()` / `write_net_wire_segment*()`，`src/database/manager/builder/def_builder/def_write.cpp:905-1006`。
 - 原始 read：`DefRead::parse_net()`，`src/database/manager/builder/def_builder/def_read.cpp:1028-1240`。
 - `SPECIALNETS` dispatch：`DefRead::parse_special_net()`，`src/database/manager/builder/def_builder/def_read.cpp:1286-1304`。
-- EDADB write：`DefWriteEdadb::writeIdbNet()`，`src/database/manager/builder/def_builder/def_write_edadb.cpp:710-759`。
+- EDADB write：`DefWriteEdadb::writeIdbNet()`，`src/database/manager/builder/def_builder/def_write_edadb.cpp:733-770`。
 - EDADB read：`DefReadEdadb::readIdbNet()`，`src/database/manager/builder/def_builder/def_read_edadb.cpp:942-1028`。
 
 按 `src/database/edadb/docs/def-ieda-mapping-and-order.md` 检查：
@@ -82,7 +82,7 @@ read 时重新 lookup 或计算：
 
 | Original `DefWrite` execution order | DEF field / iDB member | EDADB correspondence |
 | --- | --- | --- |
-| 获取 list、检查为空并输出 count，`def_write.cpp:829-841` | `IdbNetList::_net_list` / `NETS <N>` | `writeIdbNet()` 获取同一 list，逐 root 转 shadow 后 batch insert，`def_write_edadb.cpp:711-758` |
+| 获取 list、检查为空并输出 count，`def_write.cpp:829-841` | `IdbNetList::_net_list` / `NETS <N>` | `writeIdbNet()` 获取同一 list，逐 root 转 shadow 后立即 insert，`def_write_edadb.cpp:734-769` |
 | root vector loop 和 name，`def_write.cpp:843-846` | `- <net_name>` / `IdbNet::_net_name` | `_net_name_sd` + supplied root `_order_sd`，`shadow_idb_net.h:362-371` |
 | IO connection loop，`def_write.cpp:848-851` | `( PIN <pin> )` | ordered `_io_pin_name_list_sd`，`shadow_idb_net.h:373-379` |
 | instance-pin loop，`def_write.cpp:853-855` | `(<instance> <pin>)` | ordered `NetPinRef`，`shadow_idb_net.h:381-391` |
@@ -131,8 +131,8 @@ Segment `fromShadow()` 不尝试恢复原始 token interleaving；它恢复 pars
 
 ## EDADB Write Read Path
 
-- Write call：`writeChip2Edadb()` 调用 `writeIdbNet()`，`src/database/manager/builder/def_builder/def_write_edadb.cpp:118-119`。
-- Write conversion：root validation `def_write_edadb.cpp:711-730` → standard `toShadow()` `def_write_edadb.cpp:732-745` → batch insert/cleanup `def_write_edadb.cpp:747-758`。
+- Write call：`writeChip2Edadb()` 调用 `writeIdbNet()`，`src/database/manager/builder/def_builder/def_write_edadb.cpp:176`。
+- Write conversion：root validation `def_write_edadb.cpp:734-754` → standard `toShadow()` `def_write_edadb.cpp:757-762` → reusable-op insert and per-root cleanup `def_write_edadb.cpp:763-767`。
 - Read call：`createDbByEdadb()` 在前置 Design/Via/Instance/Pin 等引用对象恢复后调用 `readIdbNet()`，`src/database/manager/builder/def_builder/def_read_edadb.cpp:212-226`。
 - Read path：reset + ordered query `def_read_edadb.cpp:943-961` → cursor read `def_read_edadb.cpp:969-981` → `add_net()` `def_read_edadb.cpp:983-989` → standard `fromShadow()` `def_read_edadb.cpp:991-995`。
 - `createDbByDef()` 不注册已由 EDADB 恢复的 callbacks，避免 DEF text 再次创建 Net，`src/database/manager/builder/def_builder/def_read_edadb.cpp:60-76`。

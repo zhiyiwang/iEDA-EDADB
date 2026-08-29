@@ -937,3 +937,13 @@ Current audit target: EDADB core `3077132` with iEDA branch `edadb-idb`.
 - P4 changed warm write from `1,131.619 ms` to `378.269 ms` (`66.57%` faster), reduced write
   `sqlite_exec` calls from `77` to `59`, preserved the `2,936,832`-byte database, and passed the
   26-test EDADB core suite plus the complete 8-way adapter regression.
+- P5 root-Shadow streaming is complete. A reproducible 1,000-net routed stress fixture proved a
+  `28,656 KiB` EDADB-specific RSS excess when complete Instance/Pin/SpecialNet/Net Shadow vectors
+  were retained. Reusing one insert op and releasing each stack Shadow after insertion reduced the
+  EDADB-write median from `302,184` to `273,356 KiB` (`28.15 MiB`) while the stress write elapsed
+  changed by `+0.59%`; the 42,295,296-byte database is byte-identical. Canonical report:
+  `scripts/edadb/performance/sky130_gcd_routed_p5_stream_shadow_20260829.md`.
+- P1-P5 production code carries short rationale comments at the actual mechanism: child-FK index
+  generation, schema transaction, design transaction and per-root Shadow streaming. Dated reports
+  remain the canonical detailed evidence; comments explain intent and do not duplicate benchmark
+  tables.

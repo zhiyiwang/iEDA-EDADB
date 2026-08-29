@@ -6,7 +6,7 @@
 
 - Original write: `DefWrite::write_pin()`，`src/database/manager/builder/def_builder/def_write.cpp:517`
 - Original read: `DefRead::parse_pin()`，`src/database/manager/builder/def_builder/def_read.cpp:1573`
-- EDADB write: `DefWriteEdadb::writeIdbPin()`，`src/database/manager/builder/def_builder/def_write_edadb.cpp:380`
+- EDADB write: `DefWriteEdadb::writeIdbPin()`，`src/database/manager/builder/def_builder/def_write_edadb.cpp:427`
 - EDADB read: `DefReadEdadb::readIdbPin()`，`src/database/manager/builder/def_builder/def_read_edadb.cpp:739`
 
 本文件按 `src/database/edadb/docs/def-ieda-mapping-and-order.md` 检查：
@@ -75,13 +75,13 @@ TABLE4CLASS(edadb::Shadow<idb::IdbPin>, "iPinSD",
 
 ## Original DEF Write Mapping
 
-The table follows the brace order of `DefWrite::write_pin()`; `writeIdbPin()` only performs root traversal and batch insertion at `def_write_edadb.cpp:380-428`, while the field mapping is implemented by `toShadow()`.
+The table follows the brace order of `DefWrite::write_pin()`; `writeIdbPin()` only performs root traversal and streaming insertion at `def_write_edadb.cpp:427-463`, while the field mapping is implemented by `toShadow()`.
 
 | Original `DefWrite::write_pin()` brace | DEF output | EDADB `toShadow()` correspondence | Stored source |
 | --- | --- | --- | --- |
-| function body `{}` at `def_write.cpp:518-586` | obtain `IdbDesign::get_io_pin_list()` and reject null | `writeIdbPin()` performs the same lookup/null check at `def_write_edadb.cpp:381-391` | no column |
+| function body `{}` at `def_write.cpp:518-586` | obtain `IdbDesign::get_io_pin_list()` and reject null | `writeIdbPin()` performs the same lookup/null check at `def_write_edadb.cpp:428-438` | no column |
 | section header at `def_write.cpp:526` | `PINS <count> ;` | root table row count is produced by inserting the complete `IdbPins::_pin_list` | no duplicated count column |
-| `for (IdbPin* pin...) {}` at `def_write.cpp:528-579` | one PINS record per root object, in vector order | `writeIdbPin()` passes `pin_idx` to `Shadow<IdbPin>::toShadow()` at `def_write_edadb.cpp:403-413`; Pin shadow stores name/order/net at `shadow_idb_pin.h:31-37` | pin name, net name, root order |
+| `for (IdbPin* pin...) {}` at `def_write.cpp:528-579` | one PINS record per root object, in vector order | `writeIdbPin()` passes `pin_idx` to `Shadow<IdbPin>::toShadow()` at `def_write_edadb.cpp:450-460`; Pin shadow stores name/order/net at `shadow_idb_pin.h:31-37` | pin name, net name, root order |
 | root record setup at `def_write.cpp:529-534` | `SPECIAL`, `DIRECTION` and `NET` | Pin shadow computes the same merged SPECIAL predicate at `shadow_idb_pin.h:44-51`; Term shadow stores canonical special and direction at `shadow_idb_term.h:35-38` | net, direction and canonical SPECIAL; the SpecialNet adapter later restores the runtime pin pointer |
 | `if (use.empty()) {} else {}` at `def_write.cpp:536-540` | optional `+ USE` | Term shadow stores `_type_sd` at `shadow_idb_term.h:35-38`; `kNone` reproduces the empty branch | use/type enum |
 | <code>if (term-&gt;is_port_exist() &#124;&#124; pin-&gt;is_special_net_pin()) {}</code> at `def_write.cpp:542-559` | select PORT-form writer branch | Pin `toShadow()` computes the identical predicate at `shadow_idb_pin.h:44-50`; Term records `_has_port_sd=true` only when that branch has at least one Port and therefore emits an actual `+ PORT` record at `shadow_idb_term.h:35-38` | canonical emitted-record discriminator |
@@ -151,7 +151,7 @@ Therefore EDADB stores only no-PORT placement status/location and relative rect 
 
 ## Read/Write Paths
 
-- `writeIdbPin()` only obtains the root vector, creates Pin shadows, propagates conversion failure, and batch inserts them: `def_write_edadb.cpp:380-428`.
+- `writeIdbPin()` only obtains the root vector, reuses one insert op, converts/inserts one stack Shadow at a time, and propagates failures: `def_write_edadb.cpp:427-463`.
 - `readIdbPin()` only owns root query/allocation/append/error handling: `def_read_edadb.cpp:739-788`.
 - Nested reconstruction remains in the matching shadow: Pin → Term → Port → LayerShape.
 - `createDbByDef()` disables the PINS callback at `def_read_edadb.cpp:147`; `createDbByEdadb()` invokes `readIdbPin()` at `def_read_edadb.cpp:220`, so Pin roots are restored exactly once.

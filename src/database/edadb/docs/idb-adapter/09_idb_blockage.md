@@ -6,7 +6,7 @@
 
 - 原始 write：`DefWrite::write_blockage()`，`src/database/manager/builder/def_builder/def_write.cpp:588`
 - 原始 read：`DefRead::parse_blockage()`，`src/database/manager/builder/def_builder/def_read.cpp:1955`
-- EDADB write：`DefWriteEdadb::writeIdbBlockage()`，`src/database/manager/builder/def_builder/def_write_edadb.cpp:430`
+- EDADB write：`DefWriteEdadb::writeIdbBlockage()`，`src/database/manager/builder/def_builder/def_write_edadb.cpp:465`
 - EDADB read：`DefReadEdadb::readIdbBlockage()`，`src/database/manager/builder/def_builder/def_read_edadb.cpp:790`
 
 按 `src/database/edadb/docs/def-ieda-mapping-and-order.md` 检查：
@@ -51,7 +51,7 @@ Persisted fields：
 
 | Original writer brace/order | DEF output | EDADB correspondence | Stored source |
 | --- | --- | --- | --- |
-| list checks/root loop，`def_write.cpp:590-603` | `BLOCKAGES <N>` | `writeIdbBlockage()` batch-converts/inserts shadows，`def_write_edadb.cpp:430-477` | root rows，无 root order |
+| list checks/root loop，`def_write.cpp:590-603` | `BLOCKAGES <N>` | `writeIdbBlockage()` batch-converts/inserts shadows，`def_write_edadb.cpp:465-513` | root rows，无 root order |
 | routing branch，`def_write.cpp:604-619` | `LAYER`，optional `PUSHDOWN/EXCEPTPGNET/COMPONENT` | `toShadow()` routing branch，`shadow_idb_blockage.h:62-72` | type、layer、pushdown、except-pg-net、instance name |
 | routing rect loop，`def_write.cpp:621-623` | repeated `RECT` | common rect copy，`shadow_idb_blockage.h:54-59` | `_rect_list_sd` + `_vec_idx` |
 | placement branch，`def_write.cpp:624-635` | `PLACEMENT`，optional `PUSHDOWN/COMPONENT` | common fields plus placement branch，`shadow_idb_blockage.h:73-79` | type、pushdown、instance name |

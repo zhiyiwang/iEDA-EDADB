@@ -31,8 +31,8 @@ unresolved questions stay only in this file.
   controls explicit `--remote` updates.
 
 Do not implement an optimization until its design and acceptance criteria are agreed. Apply one
-optimization per commit and remeasure before starting the next one. P1, P3 and P4 are complete; P2
-is deferred and P5-P6 remain pending.
+optimization per commit and remeasure before starting the next one. P1, P3, P4 and P5 are complete;
+P2 is deferred and P6 remains conditional.
 
 ## Confirmed Bottlenecks
 
@@ -42,8 +42,8 @@ is deferred and P5-P6 remain pending.
 | P2 | deferred | Recursive restore executes one child query per parent | Net child-FK queries `29,699` |
 | P3 | complete | Schema creation used one self-managed transaction per root tree | warm init `1,328.322 -> 93.294 ms` |
 | P4 | complete | One atomic transaction now covers all design root families | warm write `1,131.619 -> 378.269 ms` |
+| P5 | complete | Full root-Shadow vectors amplified routed-write memory | peak RSS `302,184 -> 273,356 KiB` |
 
-P5 root-Shadow memory amplification is a scalability risk that still requires peak-RSS evidence.
 P6 adapter/object rebuild is currently below 3% and is not an immediate optimization target.
 
 ## Proposed Execution Order
@@ -311,7 +311,7 @@ Measured result: warm schema init changed from `1,328.322 ms` to `93.294 ms` (`1
 `2,224.625 ms` to `1,131.619 ms` (`49.13%` faster). Read and database size did not regress. Full
 evidence is in `sky130_gcd_ipl_filler_p3_schema_transaction_20260829.md`.
 
-### P4: Batch Design Writes
+### P4: Batch Design Writes — Complete
 
 Goal: replace one transaction per non-empty root family with one atomic design transaction, unless a
 measured lock/journal limit requires a small documented number of stage transactions.
@@ -329,11 +329,19 @@ Acceptance:
 - Duplicate-PK and injected mid-family failures rollback the complete design.
 - Lock duration, journal/WAL growth and five-sample write median are reported.
 
-### P5: Stream Root Shadow Writes
+Measured result: one outer design transaction changed warm write from `1,131.619 ms` to
+`378.269 ms`, reduced write `sqlite_exec` calls from `77` to `59`, preserved database content, and
+passed whole-design rollback, all 26 core tests and the complete adapter regression. See
+`sky130_gcd_ipl_filler_p4_design_transaction_20260829.md`.
 
-First measure peak RSS with a routed iRT/PicoRV32A-sized DEF. If root Shadow materialization is
-material, reuse one insert operator and convert/insert/release one root Shadow at a time inside the P4
-transaction. Preserve every stored nested-vector index and failure behavior.
+### P5: Stream Root Shadow Writes — Complete
+
+A reproducible 1,000-net routed stress fixture proved `28,656 KiB` of EDADB-specific peak RSS above
+the native path. Instance, Pin, SpecialNet and Net now reuse one insert operator and
+convert/insert/release one stack Shadow at a time inside the P4 transaction. Peak RSS fell by
+`28.15 MiB`; stress write elapsed changed by `+0.59%`; the SQLite database is byte-identical; strict
+DEF, all 26 core tests and the full adapter regression pass. See
+`sky130_gcd_routed_p5_stream_shadow_20260829.md`.
 
 ### P6: Split Adapter Residual Only If Needed
 

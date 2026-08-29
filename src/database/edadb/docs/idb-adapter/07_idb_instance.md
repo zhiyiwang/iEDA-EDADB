@@ -6,7 +6,7 @@
 
 - 原始 write：`src/database/manager/builder/def_builder/def_write.cpp:460`
 - 原始 read：`src/database/manager/builder/def_builder/def_read.cpp:857`、`src/database/manager/builder/def_builder/def_read.cpp:884`
-- EDADB write/read：`src/database/manager/builder/def_builder/def_write_edadb.cpp:330`、`src/database/manager/builder/def_builder/def_read_edadb.cpp:710`
+- EDADB write/read：`src/database/manager/builder/def_builder/def_write_edadb.cpp:388`、`src/database/manager/builder/def_builder/def_read_edadb.cpp:710`
 - Order level：按 `src/database/edadb/docs/def-ieda-mapping-and-order.md` 为 Level C。iPL 按 vector append order 分配 instance IDs，固定随机种子下重排会改变 placement 状态。
 - Root identity：instance name；`_name_sd` 是 PK，`_order_sd` 只保存 list order。
 
@@ -16,7 +16,7 @@
 
 | 原始 `DefWrite` 顺序 | EDADB write / `toShadow()` 对应 | DEF 域 / iDB 成员 |
 | --- | --- | --- |
-| 校验 list/count，输出 `COMPONENTS <N>` 并开始遍历 vector，见 `def_write.cpp:462-476` | `writeIdbInstance()` 取得同一 vector，并按 index 调用 `toShadow()`，见 `def_write_edadb.cpp:331-364` | section count / `IdbInstanceList::_instance_list` / `_order_sd` |
+| 校验 list/count，输出 `COMPONENTS <N>` 并开始遍历 vector，见 `def_write.cpp:462-476` | `writeIdbInstance()` 取得同一 vector，并按 index 调用 `toShadow()`，见 `def_write_edadb.cpp:389-422` | section count / `IdbInstanceList::_instance_list` / `_order_sd` |
 | escape name，并计算 `SOURCE/status/orient` 文本，见 `def_write.cpp:477-484`；name/master/source 实际在 placed/unplaced 两个输出分支写出，见 `def_write.cpp:486-491` | 保存 `_name_sd/_cell_master_name_sd/_type_sd`，见 `shadow_idb_instance.h:44-50` | component name/master/source |
 | placed 分支输出 status、coordinate、orient；unplaced 分支不输出 placement，见 `def_write.cpp:486-491` | 保存 `_status_sd/_orient_sd/_coordinate_sd`，见 `shadow_idb_instance.h:49-55` | placement statement |
 | 可选输出 `HALO [SOFT] left bottom right top`，见 `def_write.cpp:493-499` | `_halo_sd` 保存 `IdbHalo` scalar child，见 `shadow_idb_instance.h:57-59` | halo source fields |
@@ -69,8 +69,8 @@ Primary-key audit：
 
 Write：
 
-- `writeIdbInstance()` 检查每次 `toShadow()`，再使用一次 batch insert，见 `def_write_edadb.cpp:330-377`。
-- 当前实现先构造完整 shadow vector，DB 侧仍是 single transaction/prepared operation；百万级 instance 若临时内存成为问题，再改 streaming batch，不能退回逐个 transaction。
+- `writeIdbInstance()` 检查每次 `toShadow()`，复用一个 insert op，并逐 root 转换、写入、释放 stack Shadow，见 `def_write_edadb.cpp:388-425`。
+- 该 streaming 写法不保留完整 Shadow vector；P4 的外层 design transaction 仍保证整体回滚，不能退化为逐 root transaction。
 
 Read：
 

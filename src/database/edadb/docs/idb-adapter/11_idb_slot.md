@@ -6,7 +6,7 @@
 
 - 原始 write：`DefWrite::write_slot()`，`src/database/manager/builder/def_builder/def_write.cpp:1074`
 - 原始 read：`DefRead::parse_slot()`，`src/database/manager/builder/def_builder/def_read.cpp:2135`
-- EDADB write：`DefWriteEdadb::writeIdbSlot()`，`src/database/manager/builder/def_builder/def_write_edadb.cpp:509`
+- EDADB write：`DefWriteEdadb::writeIdbSlot()`，`src/database/manager/builder/def_builder/def_write_edadb.cpp:544`
 - EDADB read：`DefReadEdadb::readIdbSlot()`，`src/database/manager/builder/def_builder/def_read_edadb.cpp:543`
 
 按 `src/database/edadb/docs/def-ieda-mapping-and-order.md` 检查：
@@ -41,7 +41,7 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbSlot>, "iSlotSD",
 
 | Original writer brace/order | DEF output | EDADB correspondence | Stored source |
 | --- | --- | --- | --- |
-| list checks and section count, `def_write.cpp:1076-1088` | `SLOTS <N>` | `writeIdbSlot()` gets the active vector and converts every root, `def_write_edadb.cpp:509-545` | root row count and `_order_sd` |
+| list checks and section count, `def_write.cpp:1076-1088` | `SLOTS <N>` | `writeIdbSlot()` gets the active vector and converts every root, `def_write_edadb.cpp:544-580` | root row count and `_order_sd` |
 | root loop, `def_write.cpp:1090-1091` | `- LAYER <name>` | `toShadow()` stores root index and layer name, `shadow_idb_slot.h:24-30` | `primary_key`, `_order_sd`, `_layer_name_sd` |
 | rect loop, `def_write.cpp:1093-1095` | repeated `RECT` | `toShadow()` copies the complete rect vector, `shadow_idb_slot.h:32-38` | `_rect_list_sd` + child `_vec_idx` |
 | terminators, `def_write.cpp:1097-1100` | `;`, `END SLOTS` | rebuilt from root/child boundaries | no column |
@@ -57,7 +57,7 @@ TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbSlot>, "iSlotSD",
 
 ## EDADB Paths And Order
 
-- Write conversion and insert：`def_write_edadb.cpp:530-545`。
+- Write conversion and insert：`def_write_edadb.cpp:565-588`。
 - Read ordered query：`def_read_edadb.cpp:558-562`；restore loop：`def_read_edadb.cpp:564-584`。
 - Read resets the list before restore and again on failure：`def_read_edadb.cpp:556`, `def_read_edadb.cpp:571-580`。
 - Root order：`_order_sd + ORDER BY`；nested rect order：`IdbRectSD._vec_idx`。

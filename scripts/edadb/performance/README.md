@@ -575,18 +575,21 @@ from `167.552 ms` to `172.396 ms` (`2.89%`, within the 5% gate), and database si
 Whole-design rollback across two independent root tables, all 26 core tests and the complete adapter
 regression passed. See `sky130_gcd_ipl_filler_p4_design_transaction_20260829.md`.
 
-### P5 — Root Shadow materialization can amplify memory
+### P5 — Stream Root Shadow Writes — Complete
 
-**Status:** potential large-design scalability issue, not the current measured time bottleneck.
-Instance, Pin, SpecialNet and Net writers first materialize vectors of root Shadow objects before
-calling `insertVector()`. Routed Net shadows may duplicate a large nested routing graph temporarily.
+**Evidence:** the normal GCD files hide temporary Shadow memory beneath the process startup/LEF RSS
+floor. A reproducible 1,000-net routed stress fixture raised the P4 EDADB-write median from a native
+`273,528 KiB` to `302,184 KiB`, proving `28,656 KiB` of EDADB-specific peak memory.
 
-**Implementation after transaction batching:** reuse one prepared insert operator inside the outer
-transaction, convert one root object to one temporary Shadow, insert it, then destroy/reuse it before
-converting the next root. Preserve root/nested order fields and rollback behavior.
+**Implementation:** Instance, Pin, SpecialNet and Net now reuse one prepared insert operator while
+converting, inserting and releasing one stack Shadow at a time inside the P4 outer transaction.
+Root/nested order fields, stored rows and whole-design rollback behavior are unchanged.
 
-**Acceptance:** measure peak RSS as well as time on iRT/PicoRV32A-sized routed DEFs. Object/row counts
-and strict DEF must remain unchanged. Do not claim a benefit from the small GCD case alone.
+**Measured result:** EDADB-write peak RSS fell to `273,356 KiB`, a `28.15 MiB` reduction that removes
+the complete measured excess. The stress write elapsed median changed from `13.63 s` to `13.71 s`
+(`+0.59%`), and the 42,295,296-byte SQLite database is byte-identical. Strict stress DEF diff, all
+26 core tests and the complete adapter regression passed. See
+`sky130_gcd_routed_p5_stream_shadow_20260829.md`.
 
 ### P6 — Adapter/object rebuild residual
 
