@@ -12,4 +12,4 @@
 [submodule "src/database/edadb/core"]
 	path = src/database/edadb/core
 	url = ../edadb.git
-	branch = main
+	branch = performance/optimization

@@ -180,6 +180,11 @@ The measured levels are:
 | Shadow | Nested `toShadow()` and `fromShadow()` callbacks invoked by EDADB core. |
 | Traversal | Object/scalar/vector and child-FK-query counts. |
 
+Measured reports:
+
+- Baseline breakdown: `sky130_gcd_ipl_filler_profile_20260828.md`.
+- P1 child-FK index result: `sky130_gcd_ipl_filler_p1_child_fk_index_20260829.md`.
+
 For one independently reported phase:
 
 ```text
@@ -469,7 +474,7 @@ The order below follows measured recoverable time, dependency between changes, a
 risk. Apply and benchmark one item at a time; otherwise the source of improvement or regression is
 not identifiable.
 
-### P1 — Missing child-FK indexes
+### P1 — Missing child-FK indexes — Complete
 
 **Evidence:** Net read takes `18,977.921 ms`; SQLite `fetchStep` takes `18,878.006 ms` inside that
 phase. The real Point and ViaRef child tables have no index on their three-column parent FK, and
@@ -491,7 +496,13 @@ index, SQLite scans 14,256 Point rows or 3,716 ViaRef rows repeatedly.
 unchanged; all core tests and 24 strict DEF comparisons pass. Re-run the same five-sample benchmark
 and report read improvement, write-index maintenance cost and database-size growth.
 
-### P2 — N+1 recursive child queries
+**Measured result:** Point/ViaRef now use `SEARCH`; the warm profiling-OFF read median changed from
+`19,164.606 ms` to `169.480 ms` (`113.08x` faster), while write changed from `2,011.603 ms` to
+`2,224.625 ms` (`10.59%` slower). Child-query count remains `29,699`, and database size increased
+`33.27%`. Core OFF/ON tests and the complete adapter regression passed. See
+`sky130_gcd_ipl_filler_p1_child_fk_index_20260829.md` for raw evidence and accounting.
+
+### P2 — N+1 recursive child queries — Deferred
 
 **Evidence:** Net restore performs 29,699 child-FK queries, 59,807 Net fetch steps and only eight
 prepares. Prepared statements are reused; repeated query execution is the issue.
@@ -511,6 +522,9 @@ executes one child query for each parent object. Indexes remove table scans but 
 **Acceptance:** child query count drops materially while object/scalar/vector counts, restored graph,
 strict DEF and failure tests remain unchanged. If P1 already makes read sufficiently fast, defer P2
 because it is a larger traversal change.
+
+P1 reduced warm absolute EDADB read to `169.480 ms`, so P2 is deferred until a larger routed design
+shows that the unchanged N+1 count is again a material bottleneck.
 
 ### P3 — Schema creation uses many committed operations
 

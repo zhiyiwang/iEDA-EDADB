@@ -914,3 +914,13 @@ Current audit target: EDADB core `3077132` with iEDA branch `edadb-idb`.
   is included in phase residual rather than the core Shadow metric.
 - Profiling samples must run sequentially. Independent correctness CTests/builds may run in
   parallel, but concurrent performance samples are invalid because they measure contention.
+- P1 child-FK indexing is complete on parent branch `edadb-performance-optimization` and EDADB core
+  branch `performance/optimization`. The generic rule adds a complete parent-FK index only for a
+  generated child table with a valid parent FK and `hasPrimKey=false`; PK-covered children do not get
+  duplicates. Canonical result:
+  `scripts/edadb/performance/sky130_gcd_ipl_filler_p1_child_fk_index_20260829.md`.
+- P1 changed warm profiling-OFF EDADB read from `19,164.606 ms` to `169.480 ms` (`113.08x`) and warm
+  write by `+10.59%`; Point/ViaRef use indexed `SEARCH`, Net child-query count remains `29,699`, and
+  DB size grows `33.27%`. P2 N+1 traversal work is deferred until a larger routed design proves need.
+- EDADB core CTests currently reuse SQLite filenames and must run serially; independent adapter
+  fixture cases own separate databases and may run concurrently.
