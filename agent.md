@@ -900,3 +900,17 @@ Current audit target: EDADB core `3077132` with iEDA branch `edadb-idb`.
 | Verify each migrated family | `default_ipl` covers baseline families; `aux_optional` covers non-empty Blockage/Region/Slot/Group/Fill, optional net fields, special-net explicit refs and rect branch with SQLite assertions; `routed_irt` covers non-empty regular routed NETS with SQLite assertions. | done |
 | Compare against original master and prove logic | `edadb_readme.md` section “对照 master 的正确性结论” defines the proof strategy: compare direct iDB DEF roundtrip with EDADB DEF roundtrip, preserving master DEF writer/parser semantics while replacing the persistence middle step. | done |
 | Use server resources efficiently | Builds use `-j40`; focused regressions avoid unrelated flows; known-variable iRT validation runs three native plus three EDADB controls together with equal per-process threads (`PARALLEL_FIRST_EDADB=1`, `EDADB_RUNS_UPFRONT=3`, `STAGE_RUN_JOBS=3`, `RT_THREAD_NUMBER=12`). | done |
+
+## EDADB Performance Profiling
+
+- Absolute performance uses profiling-OFF Release `bin-release/iEDA`; profiling-ON
+  `bin-profile/iEDA` only provides aggregate phase/API/counter attribution.
+- Canonical method and commands: `scripts/edadb/performance/README.md`.
+- Canonical 2026-08-28 result: `scripts/edadb/performance/sky130_gcd_ipl_filler_profile_20260828.md`.
+- Current result: read is SQLite-dominated (`99.37%` warm); Net restoration is `99.16%` of the
+  command. Point/ViaRef child-FK queries use full table scans, and 29,699 Net child queries establish
+  the N+1 pattern. Write is SQLite-dominated (`96.99%` warm), especially schema/init and transaction
+  `exec`; EDADB-core-managed nested Shadow conversion is below `0.1%`. Adapter root Shadow conversion
+  is included in phase residual rather than the core Shadow metric.
+- Profiling samples must run sequentially. Independent correctness CTests/builds may run in
+  parallel, but concurrent performance samples are invalid because they measure contention.

@@ -35,6 +35,9 @@ scripts/edadb/demo/*
 !scripts/edadb/demo/README.md
 !scripts/edadb/performance/
 scripts/edadb/performance/*
+!scripts/edadb/performance/run_profile.sh
+!scripts/edadb/performance/summarize_profile.py
+!scripts/edadb/performance/sky130_gcd_ipl_filler_profile_20260828.md
 !scripts/edadb/performance/TODO.md
 !scripts/edadb/roundtrip/
 scripts/edadb/roundtrip/*

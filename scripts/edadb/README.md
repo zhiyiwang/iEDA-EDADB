@@ -34,7 +34,10 @@ scripts/edadb/
 ├── performance/
 │   ├── README.md               # benchmark flow, commands, metrics, and boundaries
 │   ├── run.sh                  # native DEF vs EDADB benchmark runner
-│   └── benchmark.tcl           # native/write/read command timing
+│   ├── benchmark.tcl           # native/write/read command timing
+│   ├── run_profile.sh          # profiling-OFF/ON comparison runner
+│   ├── summarize_profile.py    # overhead and phase-breakdown aggregation
+│   └── sky130_gcd_ipl_filler_profile_20260828.md # measured bottleneck report
 └── roundtrip/
     ├── run.sh                  # generic native-vs-EDADB three-process runner
     ├── tcl/
@@ -58,6 +61,8 @@ the reproducible build and flow commands are documented in `scripts/edadb/demo/R
 The minimal native-DEF-versus-EDADB performance benchmark is documented in
 `scripts/edadb/performance/README.md`. It runs cold and warm OS-page-cache groups, keeps read and
 write metrics separate, and accepts a sample only after an exact native/EDADB DEF comparison.
+The first reusable SQLite/traversal breakdown and its measured Net N+1/full-scan evidence are in
+`scripts/edadb/performance/sky130_gcd_ipl_filler_profile_20260828.md`.
 
 ## Tcl Directory Roles
 

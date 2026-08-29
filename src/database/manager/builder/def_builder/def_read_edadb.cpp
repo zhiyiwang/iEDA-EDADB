@@ -5,8 +5,33 @@
 
 #include "def_read_edadb.h"
 
+#include <string>
+#include <utility>
+
 #include "edadb.h"
 #include "edadb_idb_schema.h"
+
+namespace {
+
+template <typename Function>
+auto profileAdapterPhase(std::string_view phase, Function&& function)
+{
+#if EDADB_ENABLE_PROFILING
+    edadb::profiling::reset();
+    auto result = [&]() {
+        edadb::profiling::ScopedNamedTimer timer("phase_total");
+        return std::forward<Function>(function)();
+    }();
+    const std::string operation = "read." + std::string(phase);
+    edadb::profiling::report(std::cout, operation);
+    return result;
+#else
+    static_cast<void>(phase);
+    return std::forward<Function>(function)();
+#endif
+}
+
+} // namespace
 
 namespace idb {
 
@@ -30,12 +55,18 @@ bool DefReadEdadb::createDbFromEdadb(const char* edadb_path, const char* path)
         return false;
     }
 
-    if (!edadb_adapter::EdadbIdbHelper::setIdbDefService(_def_service)) {
+    const bool helper_status = profileAdapterPhase("adapter.helper_init", [&]() {
+        return edadb_adapter::EdadbIdbHelper::setIdbDefService(_def_service);
+    });
+    if (!helper_status) {
         std::cerr << "Error: DefReadEdadb::createDbFromEdadb failed to set IdbDefService!" << std::endl;
         return false;
     }
 
-    if (edadb_adapter::initReadDb(edadb_path) < 0) {
+    const int init_status = profileAdapterPhase("adapter.init", [&]() {
+        return edadb_adapter::initReadDb(edadb_path);
+    });
+    if (init_status < 0) {
         std::cerr << "Error: DefReadEdadb::createDbFromEdadb failed to initReadDb!" << std::endl;
         return false;
     }
@@ -45,7 +76,10 @@ bool DefReadEdadb::createDbFromEdadb(const char* edadb_path, const char* path)
         return false;
     }
 
-    if (!createDbByDef(path)) {
+    const bool def_scan_status = profileAdapterPhase("adapter.reference_def_scan", [&]() {
+        return createDbByDef(path);
+    });
+    if (!def_scan_status) {
         std::cerr << "Error: DefReadEdadb::createDbFromEdadb failed!" << std::endl; 
         return false;
     }
@@ -196,12 +230,15 @@ bool DefReadEdadb::createDbByDef(const char* path) {
 
 
 
-#define CHECK_READ(call, msg)                     \
-    do {                                          \
-        if (!(call)) {                            \
-            std::cerr << (msg) << std::endl;      \
-            return false;                         \
-        }                                         \
+#define CHECK_READ_PROFILE(phase, call, msg)                \
+    do {                                                      \
+        const bool ok = profileAdapterPhase((phase), [&]() { \
+            return (call);                                    \
+        });                                                   \
+        if (!ok) {                                            \
+            std::cerr << (msg) << std::endl;                  \
+            return false;                                     \
+        }                                                     \
     } while (0)
 
 
@@ -209,21 +246,21 @@ bool DefReadEdadb::createDbByEdadb(const char* edadb_path) {
     EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] createDbByEdadb Design/Die/Row/TrackGrid/GCell/Via/Region/Instance/Pin/Blockage/Slot/Group/Fill/SpecialNet/Net enabled path="
               << edadb_path << std::endl;
 
-    CHECK_READ(readIdbDesign(), "DefReadEdadb::createDbByEdadb failed to read IdbDesign!");
-    CHECK_READ(readIdbDie(), "DefReadEdadb::createDbByEdadb failed to read IdbDie!");
-    CHECK_READ(readIdbRow(), "DefReadEdadb::createDbByEdadb failed to read IdbRow!");
-    CHECK_READ(readIdbTrackGrid(), "DefReadEdadb::createDbByEdadb failed to read readIdbTrackGrid!");
-    CHECK_READ(readIdbGCellGrid(), "DefReadEdadb::createDbByEdadb failed to read IdbGCellGrid!");
-    CHECK_READ(readIdbVia(), "DefReadEdadb::createDbByEdadb failed to read IdbVia!");
-    CHECK_READ(readIdbRegion(), "DefReadEdadb::createDbByEdadb failed to read IdbRegion!");
-    CHECK_READ(readIdbInstance(), "DefReadEdadb::createDbByEdadb failed to read IdbInstance!");
-    CHECK_READ(readIdbPin(), "DefReadEdadb::createDbByEdadb failed to read IdbPin!");
-    CHECK_READ(readIdbBlockage(), "DefReadEdadb::createDbByEdadb failed to read IdbBlockage!");
-    CHECK_READ(readIdbSlot(), "DefReadEdadb::createDbByEdadb failed to read IdbSlot!");
-    CHECK_READ(readIdbGroup(), "DefReadEdadb::createDbByEdadb failed to read IdbGroup!");
-    CHECK_READ(readIdbFill(), "DefReadEdadb::createDbByEdadb failed to read IdbFill!");
-    CHECK_READ(readIdbSpecialNet(), "DefReadEdadb::createDbByEdadb failed to read IdbSpecialNet!");
-    CHECK_READ(readIdbNet(), "DefReadEdadb::createDbByEdadb failed to read IdbNet!");
+    CHECK_READ_PROFILE("adapter.root.Design", readIdbDesign(), "DefReadEdadb::createDbByEdadb failed to read IdbDesign!");
+    CHECK_READ_PROFILE("adapter.root.Die", readIdbDie(), "DefReadEdadb::createDbByEdadb failed to read IdbDie!");
+    CHECK_READ_PROFILE("adapter.root.Row", readIdbRow(), "DefReadEdadb::createDbByEdadb failed to read IdbRow!");
+    CHECK_READ_PROFILE("adapter.root.TrackGrid", readIdbTrackGrid(), "DefReadEdadb::createDbByEdadb failed to read readIdbTrackGrid!");
+    CHECK_READ_PROFILE("adapter.root.GCellGrid", readIdbGCellGrid(), "DefReadEdadb::createDbByEdadb failed to read IdbGCellGrid!");
+    CHECK_READ_PROFILE("adapter.root.Via", readIdbVia(), "DefReadEdadb::createDbByEdadb failed to read IdbVia!");
+    CHECK_READ_PROFILE("adapter.root.Region", readIdbRegion(), "DefReadEdadb::createDbByEdadb failed to read IdbRegion!");
+    CHECK_READ_PROFILE("adapter.root.Instance", readIdbInstance(), "DefReadEdadb::createDbByEdadb failed to read IdbInstance!");
+    CHECK_READ_PROFILE("adapter.root.Pin", readIdbPin(), "DefReadEdadb::createDbByEdadb failed to read IdbPin!");
+    CHECK_READ_PROFILE("adapter.root.Blockage", readIdbBlockage(), "DefReadEdadb::createDbByEdadb failed to read IdbBlockage!");
+    CHECK_READ_PROFILE("adapter.root.Slot", readIdbSlot(), "DefReadEdadb::createDbByEdadb failed to read IdbSlot!");
+    CHECK_READ_PROFILE("adapter.root.Group", readIdbGroup(), "DefReadEdadb::createDbByEdadb failed to read IdbGroup!");
+    CHECK_READ_PROFILE("adapter.root.Fill", readIdbFill(), "DefReadEdadb::createDbByEdadb failed to read IdbFill!");
+    CHECK_READ_PROFILE("adapter.root.SpecialNet", readIdbSpecialNet(), "DefReadEdadb::createDbByEdadb failed to read IdbSpecialNet!");
+    CHECK_READ_PROFILE("adapter.root.Net", readIdbNet(), "DefReadEdadb::createDbByEdadb failed to read IdbNet!");
 
 
 

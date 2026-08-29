@@ -7,9 +7,33 @@
 
 #include "def_write_edadb.h"
 
+#include <string>
+#include <utility>
+
 #include "edadb.h"
 #include "edadb_idb_schema.h"
 
+namespace {
+
+template <typename Function>
+auto profileAdapterPhase(std::string_view phase, Function&& function)
+{
+#if EDADB_ENABLE_PROFILING
+    edadb::profiling::reset();
+    auto result = [&]() {
+        edadb::profiling::ScopedNamedTimer timer("phase_total");
+        return std::forward<Function>(function)();
+    }();
+    const std::string operation = "write." + std::string(phase);
+    edadb::profiling::report(std::cout, operation);
+    return result;
+#else
+    static_cast<void>(phase);
+    return std::forward<Function>(function)();
+#endif
+}
+
+} // namespace
 
 namespace idb {
 
@@ -31,7 +55,10 @@ bool DefWriteEdadb::writeDb2Edadb(const char* edadb_path) {
         return false;
     }
 
-    if (edadb_adapter::initWriteDb(edadb_path) < 0) {
+    const int init_status = profileAdapterPhase("adapter.init", [&]() {
+        return edadb_adapter::initWriteDb(edadb_path);
+    });
+    if (init_status < 0) {
         std::cerr << "Error: DefWriteEdadb::writeDb2Edadb failed to initWriteDb!" << std::endl;
         return false;
     } 
@@ -73,49 +100,49 @@ bool DefWriteEdadb::writeDb2Edadb(const char* edadb_path) {
 bool DefWriteEdadb::writeChip2Edadb() {
     EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] writeChip2Edadb Design/Die/Row/TrackGrid/GCell/Via/Instance/Pin/Blockage/Region/Slot/Group/Fill/SpecialNet/Net enabled"
               << std::endl;
-    if (writeIdbDesign() != kDbSuccess) {
+    if (profileAdapterPhase("adapter.root.Design", [&]() { return writeIdbDesign(); }) != kDbSuccess) {
         return false;
     }
-    if (writeIdbDie() != kDbSuccess) {
+    if (profileAdapterPhase("adapter.root.Die", [&]() { return writeIdbDie(); }) != kDbSuccess) {
         return false;
     }
-    if (writeIdbRow() != kDbSuccess) {
+    if (profileAdapterPhase("adapter.root.Row", [&]() { return writeIdbRow(); }) != kDbSuccess) {
         return false;
     }
-    if (writeIdbTrackGrid() != kDbSuccess) {
+    if (profileAdapterPhase("adapter.root.TrackGrid", [&]() { return writeIdbTrackGrid(); }) != kDbSuccess) {
         return false;
     }
-    if (writeIdbGCellGrid() != kDbSuccess) {
+    if (profileAdapterPhase("adapter.root.GCellGrid", [&]() { return writeIdbGCellGrid(); }) != kDbSuccess) {
         return false;
     }
-    if (writeIdbVia() != kDbSuccess) {
+    if (profileAdapterPhase("adapter.root.Via", [&]() { return writeIdbVia(); }) != kDbSuccess) {
         return false;
     }
-    if (writeIdbInstance() != kDbSuccess) {
+    if (profileAdapterPhase("adapter.root.Instance", [&]() { return writeIdbInstance(); }) != kDbSuccess) {
         return false;
     }
-    if (writeIdbPin() != kDbSuccess) {
+    if (profileAdapterPhase("adapter.root.Pin", [&]() { return writeIdbPin(); }) != kDbSuccess) {
         return false;
     }
-    if (writeIdbBlockage() != kDbSuccess) {
+    if (profileAdapterPhase("adapter.root.Blockage", [&]() { return writeIdbBlockage(); }) != kDbSuccess) {
         return false;
     }
-    if (writeIdbRegion() != kDbSuccess) {
+    if (profileAdapterPhase("adapter.root.Region", [&]() { return writeIdbRegion(); }) != kDbSuccess) {
         return false;
     }
-    if (writeIdbSlot() != kDbSuccess) {
+    if (profileAdapterPhase("adapter.root.Slot", [&]() { return writeIdbSlot(); }) != kDbSuccess) {
         return false;
     }
-    if (writeIdbGroup() != kDbSuccess) {
+    if (profileAdapterPhase("adapter.root.Group", [&]() { return writeIdbGroup(); }) != kDbSuccess) {
         return false;
     }
-    if (writeIdbFill() != kDbSuccess) {
+    if (profileAdapterPhase("adapter.root.Fill", [&]() { return writeIdbFill(); }) != kDbSuccess) {
         return false;
     }
-    if (writeIdbSpecialNet() != kDbSuccess) {
+    if (profileAdapterPhase("adapter.root.SpecialNet", [&]() { return writeIdbSpecialNet(); }) != kDbSuccess) {
         return false;
     }
-    if (writeIdbNet() != kDbSuccess) {
+    if (profileAdapterPhase("adapter.root.Net", [&]() { return writeIdbNet(); }) != kDbSuccess) {
         return false;
     }
 

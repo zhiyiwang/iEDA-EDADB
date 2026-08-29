@@ -192,14 +192,22 @@ run_sample() {
   if [[ "$record" -eq 1 ]]; then
     # Read is compared only with read, and write only with write. The runner
     # intentionally does not add read and write into one end-to-end number.
+    local native_read_us
+    local native_write_us
+    local edadb_write_us
+    local edadb_read_us
+    native_read_us="$(read_phase native_def_read "$sample_dir/native.log")"
+    native_write_us="$(read_phase native_def_write "$sample_dir/native.log")"
+    edadb_write_us="$(read_phase edadb_write "$sample_dir/write.log")"
+    edadb_read_us="$(read_phase edadb_read "$sample_dir/read.log")"
     printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
       "$cache_mode" \
       "$sample" \
       "us" \
-      "$(read_phase native_def_read "$sample_dir/native.log")" \
-      "$(read_phase native_def_write "$sample_dir/native.log")" \
-      "$(read_phase edadb_write "$sample_dir/write.log")" \
-      "$(read_phase edadb_read "$sample_dir/read.log")" \
+      "$native_read_us" \
+      "$native_write_us" \
+      "$edadb_write_us" \
+      "$edadb_read_us" \
       >>"$RESULT_TSV"
   fi
 }
