@@ -35,7 +35,7 @@ void initPrimKeys(void) {
 
 
 template <typename T>
-int initTable(bool crt_tab) {
+int initTable(bool crt_tab, bool self_txn = true) {
     const std::string& table_name = edadb::TypeMetaData<edadb::StoreTypeOf<T>>::table_name();
 #if EDADB_OUTPUT_DEBUG
     EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] schema table=" << table_name
@@ -49,7 +49,7 @@ int initTable(bool crt_tab) {
             return -1;
         }
     } else {
-        if (!edadb::createTable<T>()) {
+        if (!edadb::createTable<T>(self_txn)) {
             std::cerr << "failed to create table: " << table_name << std::endl;
             return -1;
         }
@@ -59,9 +59,9 @@ int initTable(bool crt_tab) {
 } // initTable
 
 
-#define EDADB_INIT_TABLE(T, CTR_TBL)          \
-    do {                                      \
-        if (initTable<T>(CTR_TBL) < 0){                               \
+#define EDADB_INIT_TABLE(T, CTR_TBL, SELF_TXN)                       \
+    do {                                                              \
+        if (initTable<T>(CTR_TBL, SELF_TXN) < 0) {                    \
             std::fprintf(stderr, "[EDADB] createTable failed: %s\n",  \
                          typeid(T).name());                           \
             return -1;                                                \
@@ -69,28 +69,28 @@ int initTable(bool crt_tab) {
     } while (0)
 
 
-int initAllTables(bool crt_tab) {
+int initAllTables(bool crt_tab, bool self_txn = true) {
 #if EDADB_OUTPUT_DEBUG
     EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] initAllTables create=" << (crt_tab ? "true" : "false") << std::endl;
 #endif
     EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] initAllTables register Design/Die/Row/TrackGrid/GCell/Via/Region/Instance/Pin/Blockage/Slot/Group/Fill/SpecialNet/Net groups"
               << std::endl;
 
-    EDADB_INIT_TABLE(idb::IdbDesign, crt_tab);
-    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbDie>, crt_tab);
-    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbRow>, crt_tab);
-    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbTrackGrid>, crt_tab);
-    EDADB_INIT_TABLE(idb::IdbGCellGrid, crt_tab);
-    EDADB_INIT_TABLE(idb::IdbVia, crt_tab);
-    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbInstance>, crt_tab);
-    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbPin>, crt_tab);
-    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbBlockage>, crt_tab);
-    EDADB_INIT_TABLE(idb::IdbRegion, crt_tab);
-    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbSlot>, crt_tab);
-    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbGroup>, crt_tab);
-    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbFill>, crt_tab);
-    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbSpecialNet>, crt_tab);
-    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbNet>, crt_tab);
+    EDADB_INIT_TABLE(idb::IdbDesign, crt_tab, self_txn);
+    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbDie>, crt_tab, self_txn);
+    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbRow>, crt_tab, self_txn);
+    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbTrackGrid>, crt_tab, self_txn);
+    EDADB_INIT_TABLE(idb::IdbGCellGrid, crt_tab, self_txn);
+    EDADB_INIT_TABLE(idb::IdbVia, crt_tab, self_txn);
+    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbInstance>, crt_tab, self_txn);
+    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbPin>, crt_tab, self_txn);
+    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbBlockage>, crt_tab, self_txn);
+    EDADB_INIT_TABLE(idb::IdbRegion, crt_tab, self_txn);
+    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbSlot>, crt_tab, self_txn);
+    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbGroup>, crt_tab, self_txn);
+    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbFill>, crt_tab, self_txn);
+    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbSpecialNet>, crt_tab, self_txn);
+    EDADB_INIT_TABLE(edadb::Shadow<idb::IdbNet>, crt_tab, self_txn);
 
     return 0;
 } // createAllTables
@@ -126,8 +126,24 @@ int initWriteDb(const char* edadb_path) {
 
     initPrimKeys();
 
-    if (initAllTables(true) < 0) {
+    if (!edadb::beginTransaction()) {
+        std::cerr << "Error: failed to begin schema transaction" << std::endl;
+        return -1;
+    }
+
+    if (initAllTables(true, false) < 0) {
+        if (!edadb::rollbackTransaction()) {
+            std::cerr << "Error: failed to rollback schema transaction" << std::endl;
+        }
         std::cerr << "Error: failed to initAllTables in edadb database" << std::endl;
+        return -1;
+    }
+
+    if (!edadb::commitTransaction()) {
+        std::cerr << "Error: failed to commit schema transaction" << std::endl;
+        if (!edadb::rollbackTransaction()) {
+            std::cerr << "Error: failed to rollback schema transaction" << std::endl;
+        }
         return -1;
     }
 

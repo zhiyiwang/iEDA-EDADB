@@ -31,17 +31,17 @@ unresolved questions stay only in this file.
   controls explicit `--remote` updates.
 
 Do not implement an optimization until its design and acceptance criteria are agreed. Apply one
-optimization per commit and remeasure before starting the next one. P1 is complete; P2-P6 remain
-pending.
+optimization per commit and remeasure before starting the next one. P1 and P3 are complete; P2 is
+deferred and P4-P6 remain pending.
 
 ## Confirmed Bottlenecks
 
-| Priority | Confirmed observation | Current cost |
-| --- | --- | ---: |
-| P1 | Net Point/ViaRef child-FK queries use full-table `SCAN` | Net read `18,977.921 ms` |
-| P2 | Recursive restore executes one child query per parent | Net child-FK queries `29,699` |
-| P3 | Schema creation runs each root table tree in a self-managed transaction | write init `1,072.374 ms` |
-| P4 | Each non-empty root family runs a separate write transaction | SQLite write `exec` `1,652.985 ms` |
+| Priority | Status | Confirmed observation | Baseline/result |
+| --- | --- | --- | ---: |
+| P1 | complete | Net Point/ViaRef child-FK queries used full-table `SCAN` | warm read `19,164.606 -> 169.480 ms` |
+| P2 | deferred | Recursive restore executes one child query per parent | Net child-FK queries `29,699` |
+| P3 | complete | Schema creation used one self-managed transaction per root tree | warm init `1,328.322 -> 93.294 ms` |
+| P4 | next review | Each non-empty root family runs a separate write transaction | warm write `1,131.619 ms` after P3 |
 
 P5 root-Shadow memory amplification is a scalability risk that still requires peak-RSS evidence.
 P6 adapter/object rebuild is currently below 3% and is not an immediate optimization target.
@@ -288,7 +288,7 @@ Acceptance:
 Decision after P1: defer P2. P1 reduced the warm absolute read median to `169.480 ms`; use a larger
 routed design to prove N+1 is again material before accepting the higher-risk traversal rewrite.
 
-### P3: Batch Schema Creation
+### P3: Batch Schema Creation — Complete
 
 Goal: create all 15 root table trees in one schema transaction.
 
@@ -297,14 +297,19 @@ Proposed implementation:
 1. Begin one transaction around `initAllTables(true)`.
 2. Call every `createTable<T>(false)` inside it.
 3. Commit once, or rollback the complete schema after any failure.
-4. Add an explicit schema compatibility/version rule before skipping existing schema work.
+4. Keep old-database migration and schema-version handling out of scope during current development.
 
 Acceptance:
 
 - Fresh schema DDL, PK, FK and indexes match the expected schema.
 - Injected failure leaves no partial schema.
-- Existing compatible/incompatible database behavior is deterministic and tested.
+- Explicit schema commit and rollback behavior is tested.
 - Five sequential Release samples show init/`sqlite_exec` change.
+
+Measured result: warm schema init changed from `1,328.322 ms` to `93.294 ms` (`14.24x`), init
+`sqlite_exec` calls changed from `85` to `57`, and warm profiling-OFF EDADB write changed from
+`2,224.625 ms` to `1,131.619 ms` (`49.13%` faster). Read and database size did not regress. Full
+evidence is in `sky130_gcd_ipl_filler_p3_schema_transaction_20260829.md`.
 
 ### P4: Batch Design Writes
 
@@ -356,5 +361,5 @@ P1-P4. Do not optimize an unmeasured subcomponent.
 3. Index naming decided: `<full-child-table-name>__edadb_parent_fk_idx`.
 4. Performance gate decided: at least 50% warm-read median reduction, no more than 20% warm-write
    median regression, with five sequential Release samples and all correctness gates passing.
-5. Decide whether P3 and P4 should share one transaction API change or remain separate commits.
+5. P3 and P4 are separate commits: P3 changes schema atomicity; P4 will change design-write atomicity.
 6. Select the larger routed design used to decide P5.

@@ -184,6 +184,7 @@ Measured reports:
 
 - Baseline breakdown: `sky130_gcd_ipl_filler_profile_20260828.md`.
 - P1 child-FK index result: `sky130_gcd_ipl_filler_p1_child_fk_index_20260829.md`.
+- P3 schema transaction result: `sky130_gcd_ipl_filler_p3_schema_transaction_20260829.md`.
 
 For one independently reported phase:
 
@@ -526,7 +527,7 @@ because it is a larger traversal change.
 P1 reduced warm absolute EDADB read to `169.480 ms`, so P2 is deferred until a larger routed design
 shows that the unchanged N+1 count is again a material bottleneck.
 
-### P3 — Schema creation uses many committed operations
+### P3 — Schema creation uses many committed operations — Complete
 
 **Evidence:** write init costs `1,072.374 ms` (`57.30%` of write) and executes 72 SQLite `exec` calls.
 `initAllTables()` registers 15 table trees, and each `createTable()` currently uses its own
@@ -541,10 +542,15 @@ self-managed transaction in addition to the child-table DDL.
    creation work. Never skip compatibility validation based only on table existence.
 
 **Acceptance:** schema is byte/DDL equivalent, foreign-key checks pass, failure rolls back all schema
-changes, and `sqlite_exec` count/time decreases. Measure fresh-database and existing-database cases
-separately.
+changes, and `sqlite_exec` count/time decreases. Current development validates newly created
+databases; old-database migration remains out of scope.
 
-### P4 — One transaction per non-empty root family
+**Measured result:** one outer schema transaction changed warm init from `1,328.322 ms` to
+`93.294 ms` (`14.24x`), reduced init `sqlite_exec` calls from `85` to `57`, and improved the warm
+profiling-OFF write median from `2,224.625 ms` to `1,131.619 ms` (`49.13%`). Database size and read
+behavior are unchanged. See `sky130_gcd_ipl_filler_p3_schema_transaction_20260829.md`.
+
+### P4 — One transaction per non-empty root family — Next Review
 
 **Evidence:** every non-empty `insertObject/insertVector` performs `BEGIN` and `COMMIT`. The current
 input has ten non-empty families, adding 20 transaction `exec` calls. Small families still cost

@@ -924,3 +924,9 @@ Current audit target: EDADB core `3077132` with iEDA branch `edadb-idb`.
   DB size grows `33.27%`. P2 N+1 traversal work is deferred until a larger routed design proves need.
 - EDADB core CTests currently reuse SQLite filenames and must run serially; independent adapter
   fixture cases own separate databases and may run concurrently.
+- P3 schema batching is complete on `edadb-performance-optimization`: `initWriteDb()` opens one
+  transaction and calls the 15 root `createTable<T>(false)` operations before one commit. Canonical
+  result: `scripts/edadb/performance/sky130_gcd_ipl_filler_p3_schema_transaction_20260829.md`.
+- P3 changed warm schema init from `1,328.322 ms` to `93.294 ms`, init `sqlite_exec` calls from `85`
+  to `57`, and warm profiling-OFF write from `2,224.625 ms` to `1,131.619 ms`; DB size and read did
+  not regress. P4 design-write transaction batching is the next review and must remain separate.
