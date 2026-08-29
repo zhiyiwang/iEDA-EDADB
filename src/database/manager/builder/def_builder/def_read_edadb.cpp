@@ -991,7 +991,8 @@ bool DefReadEdadb::readIdbNet(void) {
 
     net_list->reset();
 
-    auto net_reader = edadb::makeGenericQueryOp<edadb::Shadow<idb::IdbNet>>();
+  auto net_reader = edadb::makeGenericQueryOp<edadb::Shadow<idb::IdbNet>>();
+  net_reader.enableLeafBatchRead();
     if (net_reader.preparePredicate("ORDER BY \"_order_sd\"") < 0) {
         std::cerr << "DefReadEdadb::readIdbNet failed to prepare ordered query!" << std::endl;
         return false;

@@ -503,7 +503,7 @@ and report read improvement, write-index maintenance cost and database-size grow
 `33.27%`. Core OFF/ON tests and the complete adapter regression passed. See
 `sky130_gcd_ipl_filler_p1_child_fk_index_20260829.md` for raw evidence and accounting.
 
-### P2 — N+1 recursive child queries — Decision Gate Passed
+### P2 — Wire-Scoped Leaf Batch Read — Complete
 
 **Evidence:** Net restore performs 29,699 child-FK queries, 59,807 Net fetch steps and only eight
 prepares. Prepared statements are reused; repeated query execution is the issue.
@@ -514,23 +514,26 @@ executes one child query for each parent object. Indexes remove table scans but 
 
 **Implementation:**
 
-1. Read each large child table once, ordered/grouped by the complete ancestor FK chain and its
-   stored vector index.
-2. Stream rows into a map/current-parent group and publish one completed child vector to its parent.
+1. Read each eligible leaf table once per Wire scope, ordered/grouped by Segment FK and its stored
+   vector index.
+2. Stage rows in a one-Wire map and publish one completed child vector to each Segment.
 3. Preserve sparse/order indices, pointer ownership and the current failure-atomic staging contract.
-4. Start with Net Point/ViaRef; do not rewrite every child-table path until this proves useful.
+4. Enable only Net Point/ViaRef/VirtualPoint; leave every other child-table path unchanged.
 
 **Acceptance:** child query count drops materially while object/scalar/vector counts, restored graph,
-strict DEF and failure tests remain unchanged. If P1 already makes read sufficiently fast, defer P2
-because it is a larger traversal change.
+strict DEF and failure tests remain unchanged; peak RSS must not regress and write time must remain
+within the agreed 5% gate.
 
-P1 reduced the small iPL-filler warm read to about `171 ms`, but the fresh 1,000-net routed fixture
-raises warm EDADB read to `1,966.411 ms` (`3.73x` native) and Net child-FK queries to `447,699`.
-Profiling-ON ranks SQLite fetch-step as the largest measured leaf cost, although its `38.34%`
-instrumentation overhead prevents treating the measured percentage as an unperturbed absolute
-fraction. The stable query count, profiling-OFF total and scaling evidence satisfy the P2 decision
-gate. Implement only a Net Point/ViaRef batch-read prototype first. See
-`sky130_gcd_p2_reassessment_20260829.md`.
+P1 reduced the small iPL-filler warm read to about `171 ms`, but the 1,000-net routed fixture raised
+warm EDADB read to `1,966.411 ms` (`3.73x` native) and Net child-FK queries to `447,699`. P2 adds a
+default-off leaf-vector FK-prefix path and enables it only for the iEDA Net reader. It batches
+Point/ViaRef/VirtualPoint once per Wire, groups rows by Segment and restores explicit vector indices.
+
+Five sequential Release samples reduced Net child queries to `11,739` (`-97.38%`) and warm EDADB read
+to `1,473.071 ms` (`-25.09%`, `2.79x` native). Cold write changed `+4.59%`, warm write improved, peak
+RSS did not regress, and the database size/hash remained identical. Core, sanitizer, adapter and
+strict DEF gates passed. Full commands, raw-result locations and accounting are in
+`sky130_gcd_routed_p2_leaf_batch_20260829.md`.
 
 ### P3 — Schema creation uses many committed operations — Complete
 
@@ -606,8 +609,8 @@ the instrumented routed warm read).
 
 **Implementation only if later needed:** add coarse adapter subphase timers first, then optimize the
 largest measured subphase through vector `reserve`, reusable temporary objects or batched name
-lookup. Reassess after P2 removes the known high-frequency query path; do not optimize residuals
-based on perturbed measurements.
+lookup. P2 has removed the known high-frequency leaf-query path; remeasure profiling overhead before
+using residual time to justify an adapter change.
 
 ### Deferred/non-problems in the current profile
 
@@ -619,8 +622,9 @@ based on perturbed measurements.
   below the `2,369.287 ms` Net phase and independent of the N+1 child-query issue.
 - Routed cold read is `2,304.850 ms` versus warm `1,966.411 ms`; page-cache state contributes but does
   not explain the remaining `3.73x` warm EDADB/native ratio.
-- Adding EDADB/iDB multithreading before P2 would add synchronization and SQLite contention around a
-  high-query-count algorithm. Revisit parallelism only after the batch-read decision is measured.
+- Adding EDADB/iDB multithreading is not the next step: P2 removed most leaf-query calls without
+  synchronization. Revisit parallelism only after a new profile identifies CPU-parallel work rather
+  than SQLite serialization as the remaining bottleneck.
 
 Do not change SQLite durability pragmas merely to obtain a faster number. Journal/synchronous mode
 is a separate durability contract and must be compared under explicitly documented guarantees.

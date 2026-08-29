@@ -31,15 +31,15 @@ unresolved questions stay only in this file.
   controls explicit `--remote` updates.
 
 Do not implement an optimization until its design and acceptance criteria are agreed. Apply one
-optimization per commit and remeasure before starting the next one. P1, P3, P4 and P5 are complete;
-the large routed decision gate now justifies a Net-only P2 prototype, and P6 remains conditional.
+optimization per commit and remeasure before starting the next one. P1 through P5 are complete;
+P6 remains conditional.
 
 ## Confirmed Bottlenecks
 
 | Priority | Status | Confirmed observation | Baseline/result |
 | --- | --- | --- | ---: |
 | P1 | complete | Net Point/ViaRef child-FK queries used full-table `SCAN` | warm read `19,164.606 -> 169.480 ms` |
-| P2 | ready | Recursive restore executes one child query per parent | routed Net child-FK queries `447,699`; warm read `3.73x` native |
+| P2 | complete | Wire-scoped leaf batching removes repeated Segment leaf queries | queries `447,699 -> 11,739`; warm read `1,966.411 -> 1,473.071 ms` |
 | P3 | complete | Schema creation used one self-managed transaction per root tree | warm init `1,328.322 -> 93.294 ms` |
 | P4 | complete | One atomic transaction now covers all design root families | warm write `1,131.619 -> 378.269 ms` |
 | P5 | complete | Full root-Shadow vectors amplified routed-write memory | peak RSS `302,184 -> 273,356 KiB` |
@@ -268,16 +268,27 @@ without `SEARCH`, or `SEARCH` with changed object/vector results, is not accepta
 Correctness builds/tests may run in parallel. Performance samples remain sequential and use the same
 Release compiler flags, inputs, cache protocol and settle interval as the baseline.
 
-### P2: Reduce N+1 Child Queries
+### P2: Reduce N+1 Child Queries — Complete
 
 Goal: reduce repeated bind/step/reset cycles after indexed lookup has been measured.
 
-Candidate implementation:
+Implemented design:
 
-1. Add a bulk child-read path for full-root/full-design restoration.
-2. Read a child table ordered by complete ancestor FK plus stored vector index.
-3. Stream rows into one current-parent group instead of materializing a second full database graph.
-4. Start only with Net Point/ViaRef; retain the existing per-parent query for single-object reads.
+1. Add a default-off leaf-vector FK-prefix path and enable it explicitly only in the iEDA Net reader.
+2. For `Net -> Wire -> Segment -> leaf`, bind the `Net + Wire` FK prefix once, group rows by Segment
+   key, then restore Point/ViaRef/VirtualPoint by their stored vector-order column.
+3. Cache only one Wire scope and clear the cache at every root-row boundary; do not materialize a
+   second full database graph.
+4. Retain the existing complete-FK query when batching is disabled, the vector is not a leaf, or its
+   FK depth is less than two.
+
+The rule is depth-independent. For a leaf table with `d` ancestor FK columns, the normal lookup has
+`d` equality predicates. Prefix batching removes the immediate-parent key from the predicate, so it
+uses `d - 1` equality predicates, reads that final FK as the group key, and orders by two columns:
+the immediate-parent FK and the leaf's stored vector-order/local-key column. Example: Point has three
+ancestor keys `(Net, Wire, Segment)`, therefore the Wire batch uses two predicates `(Net, Wire)` and
+`ORDER BY Segment, _vec_idx`. A deeper leaf applies the same formula; query depth grows, while the
+two ordering roles do not.
 
 Acceptance:
 
@@ -285,12 +296,34 @@ Acceptance:
 - Sparse/duplicate vector-index validation and failure-atomic staging remain covered by core tests.
 - Strict DEF comparisons pass and P1 indexes remain used where applicable.
 
-Decision after routed reassessment: proceed with a Net-only prototype. The 1,000-net fixture raises
-warm EDADB read to `1,966.411 ms` (`3.73x` native), Net child-FK queries to `447,699`, and the
-EDADB-minus-native read excess by `14.37x` relative to iPL filler. Profiling-ON identifies SQLite
-fetch-step as the largest leaf category, but its `38.34%` read overhead means only call counts and
-bottleneck ordering—not exact profiled percentages—are acceptance evidence. Full measurements and
-the narrowed scope are in `sky130_gcd_p2_reassessment_20260829.md`.
+Measured result: all acceptance gates passed. Net child-FK queries fell from `447,699` to `11,739`
+(`-97.38%`), and the five-run warm profiling-OFF EDADB-read median improved from `1,966.411 ms` to
+`1,473.071 ms` (`-25.09%`). The cold write median changed `+4.59%`, below the 5% gate; warm write
+improved. Peak read RSS did not regress, and database bytes/SHA-256 remained identical. Core 27/27,
+ASan/UBSan SELECT, complete adapter regression and all strict performance/RSS diffs passed. See
+`sky130_gcd_routed_p2_leaf_batch_20260829.md`.
+
+The earlier routed decision evidence remains in `sky130_gcd_p2_reassessment_20260829.md`; the final
+implementation and measurements are in `sky130_gcd_routed_p2_leaf_batch_20260829.md`.
+
+#### P2+ TODO: Root-window graph loading
+
+The long-term generic N+1 solution is a bounded root-window loader. Read a fixed number of roots,
+query each descendant table once for that root-key set, group by the complete ancestor FK chain, and
+attach rows by stored vector index. This reduces query count toward
+`root_window_count * relation_count` while bounding memory. Do not implement it as one giant JOIN,
+which would multiply sibling vectors. This remains future work after the completed Wire-level P2;
+it requires a buffered root cursor and a broader traversal contract than the current explicit leaf
+optimization.
+
+For an arbitrary-depth leaf with `d` ancestor FK columns, let `p` be the number of leading ancestor
+keys fixed by one batch query. The SQL then has `p` equality predicates, while the remaining
+`d - p` FK columns identify the parent group inside the returned window. To restore an ordered
+vector directly from the result stream, use `ORDER BY` on those `d - p` grouping columns followed by
+the leaf vector-order column, for `d - p + 1` ordering columns in total. The current Wire-scoped P2
+is the special case `p = d - 1`: query depth can increase, but SQL still orders by only the immediate
+parent key and the leaf vector index. A wider root window reduces query count further, but adds
+grouping/order columns and memory proportional to the number of rows in the selected window.
 
 ### P3: Batch Schema Creation — Complete
 
