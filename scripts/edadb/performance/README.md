@@ -550,7 +550,7 @@ databases; old-database migration remains out of scope.
 profiling-OFF write median from `2,224.625 ms` to `1,131.619 ms` (`49.13%`). Database size and read
 behavior are unchanged. See `sky130_gcd_ipl_filler_p3_schema_transaction_20260829.md`.
 
-### P4 — One transaction per non-empty root family — Next Review
+### P4 — One transaction per non-empty root family — Complete
 
 **Evidence:** every non-empty `insertObject/insertVector` performs `BEGIN` and `COMMIT`. The current
 input has ten non-empty families, adding 20 transaction `exec` calls. Small families still cost
@@ -567,6 +567,13 @@ roughly `40–50 ms`, even when writing only one to 39 rows.
 **Acceptance:** verify whole-design rollback semantics, duplicate-PK/error recovery, unchanged DEF/DB
 content and reduced `sqlite_exec` time. This intentionally changes failure behavior from partially
 committed families to atomic design write, so the API contract must document the change.
+
+**Measured result:** one outer design transaction changed the warm profiling-OFF write median from
+`1,131.619 ms` to `378.269 ms` (`66.57%` faster), reduced write `sqlite_exec` calls from `77` to `59`,
+and reduced warm `sqlite_exec` time from `849.969 ms` to `220.784 ms`. The warm read median changed
+from `167.552 ms` to `172.396 ms` (`2.89%`, within the 5% gate), and database size is unchanged.
+Whole-design rollback across two independent root tables, all 26 core tests and the complete adapter
+regression passed. See `sky130_gcd_ipl_filler_p4_design_transaction_20260829.md`.
 
 ### P5 — Root Shadow materialization can amplify memory
 

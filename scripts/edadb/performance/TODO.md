@@ -31,8 +31,8 @@ unresolved questions stay only in this file.
   controls explicit `--remote` updates.
 
 Do not implement an optimization until its design and acceptance criteria are agreed. Apply one
-optimization per commit and remeasure before starting the next one. P1 and P3 are complete; P2 is
-deferred and P4-P6 remain pending.
+optimization per commit and remeasure before starting the next one. P1, P3 and P4 are complete; P2
+is deferred and P5-P6 remain pending.
 
 ## Confirmed Bottlenecks
 
@@ -41,7 +41,7 @@ deferred and P4-P6 remain pending.
 | P1 | complete | Net Point/ViaRef child-FK queries used full-table `SCAN` | warm read `19,164.606 -> 169.480 ms` |
 | P2 | deferred | Recursive restore executes one child query per parent | Net child-FK queries `29,699` |
 | P3 | complete | Schema creation used one self-managed transaction per root tree | warm init `1,328.322 -> 93.294 ms` |
-| P4 | next review | Each non-empty root family runs a separate write transaction | warm write `1,131.619 ms` after P3 |
+| P4 | complete | One atomic transaction now covers all design root families | warm write `1,131.619 -> 378.269 ms` |
 
 P5 root-Shadow memory amplification is a scalability risk that still requires peak-RSS evidence.
 P6 adapter/object rebuild is currently below 3% and is not an immediate optimization target.

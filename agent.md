@@ -929,4 +929,11 @@ Current audit target: EDADB core `3077132` with iEDA branch `edadb-idb`.
   result: `scripts/edadb/performance/sky130_gcd_ipl_filler_p3_schema_transaction_20260829.md`.
 - P3 changed warm schema init from `1,328.322 ms` to `93.294 ms`, init `sqlite_exec` calls from `85`
   to `57`, and warm profiling-OFF write from `2,224.625 ms` to `1,131.619 ms`; DB size and read did
-  not regress. P4 design-write transaction batching is the next review and must remain separate.
+  not regress.
+- P4 design-write transaction batching is complete. `writeDb2Edadb()` owns one atomic design
+  transaction, all 15 root insert entry points use `self_txn=false`, and writer failures propagate to
+  a whole-design rollback. Canonical result:
+  `scripts/edadb/performance/sky130_gcd_ipl_filler_p4_design_transaction_20260829.md`.
+- P4 changed warm write from `1,131.619 ms` to `378.269 ms` (`66.57%` faster), reduced write
+  `sqlite_exec` calls from `77` to `59`, preserved the `2,936,832`-byte database, and passed the
+  26-test EDADB core suite plus the complete 8-way adapter regression.

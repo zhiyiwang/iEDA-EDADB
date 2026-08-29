@@ -64,13 +64,22 @@ bool DefWriteEdadb::writeDb2Edadb(const char* edadb_path) {
     } 
 
 
+    const bool begin_status = profileAdapterPhase("adapter.transaction.begin", [&]() {
+        return edadb::beginTransaction();
+    });
+    if (!begin_status) {
+        std::cerr << "Error: DefWriteEdadb::writeDb2Edadb failed to begin design transaction!" << std::endl;
+        return false;
+    }
+
+    bool write_status = false;
     switch (_type) {
       case DefWriteType::kChip: {
-        writeChip2Edadb();
+        write_status = writeChip2Edadb();
         break;
       }
       case DefWriteType::kSynthesis: {
-        writeDbSynthesis2Edadb();
+        write_status = writeDbSynthesis2Edadb();
         break;
       }
       case DefWriteType::kFloorplan:
@@ -78,20 +87,40 @@ bool DefWriteEdadb::writeDb2Edadb(const char* edadb_path) {
       case DefWriteType::kDetailPlace:
       case DefWriteType::kGlobalRouting:
       case DefWriteType::kDetailRouting: {
-        writeChip2Edadb();
+        write_status = writeChip2Edadb();
         break;
       }
       case DefWriteType::kLef: {
         //EDADB_TODO: implement LEF-to-EDADB persistence when LEF schema is defined.
-        writeLef2Edadb();
+        write_status = writeLef2Edadb();
         break;
       }
   
       default: {
-        writeChip2Edadb();
+        write_status = writeChip2Edadb();
         break;
       }
     }
+
+    if (!write_status) {
+        if (!profileAdapterPhase("adapter.transaction.rollback", [&]() {
+                return edadb::rollbackTransaction();
+            })) {
+            std::cerr << "Error: DefWriteEdadb::writeDb2Edadb failed to rollback design transaction!" << std::endl;
+        }
+        return false;
+    }
+
+    if (!profileAdapterPhase("adapter.transaction.commit", [&]() {
+            return edadb::commitTransaction();
+        })) {
+        std::cerr << "Error: DefWriteEdadb::writeDb2Edadb failed to commit design transaction!" << std::endl;
+        if (!edadb::rollbackTransaction()) {
+            std::cerr << "Error: DefWriteEdadb::writeDb2Edadb failed to rollback design transaction!" << std::endl;
+        }
+        return false;
+    }
+
     EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] DefWriteEdadb::writeDb2Edadb completed" << std::endl;
     return true;
 } // writeDbToEdadb
@@ -208,7 +237,7 @@ int32_t DefWriteEdadb::writeIdbDesign() {
               << " version=" << design->get_version()
               << " micron_dbu=" << micron_dbu << std::endl;
 
-    if (!edadb::insertObject<idb::IdbDesign>(design)) {
+    if (!edadb::insertObject<idb::IdbDesign>(design, false)) {
         std::cerr << "DefWriteEdadb::writeIdbDesign failed to insertObject" << std::endl;
         return kDbFail;
     }
@@ -233,7 +262,7 @@ int32_t DefWriteEdadb::writeIdbDie(void) {
     EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] writeIdbDie insert point_count="
               << die->get_points().size() << std::endl;
 
-    if (!edadb::insertObject<edadb::Shadow<idb::IdbDie>>(&die_sd)) {
+    if (!edadb::insertObject<edadb::Shadow<idb::IdbDie>>(&die_sd, false)) {
         std::cerr << "DefWriteEdadb::writeIdbDie failed to insertObject" << std::endl;
         return kDbFail;
     }
@@ -263,7 +292,7 @@ int32_t DefWriteEdadb::writeIdbRow(void) {
     EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] writeIdbRow insert row_count="
               << row_sd_vec.size() << std::endl;
 
-    if (!edadb::insertVector<edadb::Shadow<idb::IdbRow>>(row_sd_vec)) {
+    if (!edadb::insertVector<edadb::Shadow<idb::IdbRow>>(row_sd_vec, false)) {
         std::cerr << "DefWriteEdadb::writeIdbRow failed to insertVector" << std::endl;
         return kDbFail;
     }
@@ -293,7 +322,7 @@ int32_t DefWriteEdadb::writeIdbTrackGrid(void) {
     EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] writeIdbTrackGrid insert track_grid_count="
               << track_grid_sd_vec.size() << std::endl;
 
-    if (!edadb::insertVector<edadb::Shadow<idb::IdbTrackGrid>>(track_grid_sd_vec)) {
+    if (!edadb::insertVector<edadb::Shadow<idb::IdbTrackGrid>>(track_grid_sd_vec, false)) {
         std::cerr << "DefWriteEdadb::writeIdbTrackGrid failed to insertVector" << std::endl;
         return kDbFail;
     }
@@ -317,7 +346,7 @@ int32_t DefWriteEdadb::writeIdbGCellGrid(void) {
         return kDbSuccess;
     }
 
-    if (!edadb::insertVector<idb::IdbGCellGrid>(gcell_grid_vec)) {
+    if (!edadb::insertVector<idb::IdbGCellGrid>(gcell_grid_vec, false)) {
         std::cerr << "DefWriteEdadb::writeIdbGCellGrid failed to insertVector" << std::endl;
         return kDbFail;
     }
@@ -346,7 +375,7 @@ int32_t DefWriteEdadb::writeIdbVia(void) {
       return kDbSuccess;
     }
 
-    if (!edadb::insertVector<idb::IdbVia>(via_vec)) {
+    if (!edadb::insertVector<idb::IdbVia>(via_vec, false)) {
         std::cerr << "DefWriteEdadb::writeIdbVia failed to insertVector" << std::endl;
         return kDbFail;
     }
@@ -390,7 +419,7 @@ int32_t DefWriteEdadb::writeIdbInstance(void) {
         inst_sd_vec.emplace_back(inst_sd);
     }
 
-    bool ok = edadb::insertVector<edadb::Shadow<idb::IdbInstance>>(inst_sd_vec);
+    bool ok = edadb::insertVector<edadb::Shadow<idb::IdbInstance>>(inst_sd_vec, false);
     for (auto& inst_sd : inst_sd_vec) {
         delete inst_sd;
         inst_sd = nullptr;
@@ -440,7 +469,7 @@ int32_t DefWriteEdadb::writeIdbPin(void) {
         pin_sd_vec.emplace_back(pin_sd);
     }
 
-    bool ok = edadb::insertVector<edadb::Shadow<idb::IdbPin>>(pin_sd_vec);
+    bool ok = edadb::insertVector<edadb::Shadow<idb::IdbPin>>(pin_sd_vec, false);
     for (auto& pin_sd : pin_sd_vec) {
         delete pin_sd;
         pin_sd = nullptr;
@@ -490,7 +519,7 @@ int32_t DefWriteEdadb::writeIdbBlockage(void) {
         blockage_sd_vec.emplace_back(blockage_sd);
     }
 
-    bool ok = edadb::insertVector<edadb::Shadow<idb::IdbBlockage>>(blockage_sd_vec);
+    bool ok = edadb::insertVector<edadb::Shadow<idb::IdbBlockage>>(blockage_sd_vec, false);
     for (auto& blockage_sd : blockage_sd_vec) {
         delete blockage_sd;
         blockage_sd = nullptr;
@@ -525,7 +554,7 @@ int32_t DefWriteEdadb::writeIdbRegion(void) {
       return kDbSuccess;
     }
 
-    if (!edadb::insertVector<idb::IdbRegion>(region_vec)) {
+    if (!edadb::insertVector<idb::IdbRegion>(region_vec, false)) {
         std::cerr << "DefWriteEdadb::writeIdbRegion failed to insertVector" << std::endl;
         return kDbFail;
     }
@@ -569,7 +598,7 @@ int32_t DefWriteEdadb::writeIdbSlot(void) {
         slot_sd_vec.emplace_back(slot_sd);
     }
 
-    bool ok = edadb::insertVector<edadb::Shadow<idb::IdbSlot>>(slot_sd_vec);
+    bool ok = edadb::insertVector<edadb::Shadow<idb::IdbSlot>>(slot_sd_vec, false);
     for (auto& slot_sd : slot_sd_vec) {
         delete slot_sd;
         slot_sd = nullptr;
@@ -619,7 +648,7 @@ int32_t DefWriteEdadb::writeIdbGroup(void) {
         group_sd_vec.emplace_back(group_sd);
     }
 
-    bool ok = edadb::insertVector<edadb::Shadow<idb::IdbGroup>>(group_sd_vec);
+    bool ok = edadb::insertVector<edadb::Shadow<idb::IdbGroup>>(group_sd_vec, false);
     for (auto& group_sd : group_sd_vec) {
         delete group_sd;
         group_sd = nullptr;
@@ -669,7 +698,7 @@ int32_t DefWriteEdadb::writeIdbFill(void) {
         fill_sd_vec.emplace_back(fill_sd);
     }
 
-    bool ok = edadb::insertVector<edadb::Shadow<idb::IdbFill>>(fill_sd_vec);
+    bool ok = edadb::insertVector<edadb::Shadow<idb::IdbFill>>(fill_sd_vec, false);
     for (auto& fill_sd : fill_sd_vec) {
         delete fill_sd;
         fill_sd = nullptr;
@@ -720,7 +749,7 @@ int32_t DefWriteEdadb::writeIdbSpecialNet(void) {
         special_net_sd_vec.emplace_back(special_net_sd);
     }
 
-    bool ok = edadb::insertVector<edadb::Shadow<idb::IdbSpecialNet>>(special_net_sd_vec);
+    bool ok = edadb::insertVector<edadb::Shadow<idb::IdbSpecialNet>>(special_net_sd_vec, false);
     for (auto& special_net_sd : special_net_sd_vec) {
         delete special_net_sd;
         special_net_sd = nullptr;
@@ -771,7 +800,7 @@ int32_t DefWriteEdadb::writeIdbNet(void) {
         net_sd_vec.emplace_back(net_sd);
     }
 
-    bool ok = edadb::insertVector<edadb::Shadow<idb::IdbNet>>(net_sd_vec);
+    bool ok = edadb::insertVector<edadb::Shadow<idb::IdbNet>>(net_sd_vec, false);
     for (auto& net_sd : net_sd_vec) {
         delete net_sd;
         net_sd = nullptr;
