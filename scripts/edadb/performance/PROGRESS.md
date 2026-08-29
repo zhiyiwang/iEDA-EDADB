@@ -1,6 +1,6 @@
 # EDADB Performance Optimization Progress
 
-Last updated: 2026-08-29
+Last updated: 2026-08-30
 
 This file is the single current-state summary for EDADB performance work. Detailed methodology and
 reproduction commands remain in `README.md`; dated reports retain the raw evidence for each phase.
@@ -90,3 +90,4 @@ separate design review because it changes root cursor buffering and memory bound
 - P5: `scripts/edadb/performance/sky130_gcd_routed_p5_stream_shadow_20260829.md`
 - P2 reassessment: `scripts/edadb/performance/sky130_gcd_p2_reassessment_20260829.md`
 - P2 leaf batch: `scripts/edadb/performance/sky130_gcd_routed_p2_leaf_batch_20260829.md`
+- Full old/current/native validation: `scripts/edadb/performance/sky130_gcd_full_validation_20260830.md`
