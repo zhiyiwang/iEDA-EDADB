@@ -35,6 +35,13 @@ scripts/edadb/demo/*
 !scripts/edadb/demo/README.md
 !scripts/edadb/performance/
 scripts/edadb/performance/*
+!scripts/edadb/performance/sqlite-baseline/
+scripts/edadb/performance/sqlite-baseline/*
+!scripts/edadb/performance/sqlite-baseline/CMakeLists.txt
+!scripts/edadb/performance/sqlite-baseline/*.md
+!scripts/edadb/performance/sqlite-baseline/*.cpp
+!scripts/edadb/performance/sqlite-baseline/*.h
+!scripts/edadb/performance/sqlite-baseline/*.py
 !scripts/edadb/performance/TODO.md
 !scripts/edadb/roundtrip/
 scripts/edadb/roundtrip/*

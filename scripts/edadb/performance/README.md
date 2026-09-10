@@ -3,6 +3,22 @@
 This test compares native DEF read/write with EDADB write/read. It does not modify iEDA, the
 adapter, or EDADB core.
 
+The independent [SQLite / DEF subset benchmark](sqlite-baseline/readme.md) is a separate
+benchmark with five implementations and a flat eight-field COMPONENT dataset. The complete
+2026-09-10 batch, including streaming reads and SQLite configuration comparisons, passed:
+99 correctness groups and 540 timing samples across 108 groups, five samples per group.
+It uses a C++ harness rather than this Tcl runner; its native/adapter paths restore real iDB.
+See its readme for results and its test_plan.md for the implementation/configuration/timing matrix.
+
+Cross-project records live in [edadb-notes](https://github.com/zhiyiwang/edadb-notes):
+
+- [Actual task status](https://github.com/zhiyiwang/edadb-notes/blob/main/TODO.md)
+- [Optimization design](https://github.com/zhiyiwang/edadb-notes/blob/main/projects/ieda-edadb/performance-plan.md)
+- [Demo presentation](https://github.com/zhiyiwang/edadb-notes/blob/main/demos/2026-09-07-performance/presentation.txt)
+
+This README owns the version-specific benchmark instructions. Historical optimization-branch
+TODO/PROGRESS files are snapshots; update live cross-project status only in edadb-notes.
+
 The two groups refer to the Linux OS page cache, not whether iDB objects exist in memory:
 
 - `cold`: call `posix_fadvise(..., POSIX_FADV_DONTNEED)` to evict the input DEF/DB file pages before

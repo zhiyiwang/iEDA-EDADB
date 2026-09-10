@@ -1,5 +1,14 @@
 # iEDA-EDADB Handoff
 
+## Cross-Project Task Records
+
+The canonical live task list is https://github.com/zhiyiwang/edadb-notes/blob/main/TODO.md.
+Read its AGENTS.md for task/document maintenance. Keep code-specific API, schema and test
+documentation in this repository; notes links to fixed commits instead of duplicating those files.
+Historical branch TODO/PROGRESS files remain evidence snapshots, not a second live task list.
+Demo narratives do not override actual completion state. Child-FK full-scan findings remain
+internal and are excluded from the current boss demo. Do not mix source changes into notes commits.
+
 This file keeps only the branch facts, EDADB layout, validation command, and current C-branch rules.
 
 ## Validation Rule
