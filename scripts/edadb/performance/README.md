@@ -10,6 +10,11 @@ benchmark with five implementations and a flat eight-field COMPONENT dataset. Th
 It uses a C++ harness rather than this Tcl runner; its native/adapter paths restore real iDB.
 See its readme for results and its test_plan.md for the implementation/configuration/timing matrix.
 
+The [PK/FK benchmark](sqlite-pk-fk/readme.md) compares SQLite/EDADB APIs with composite-PK,
+non-unique-index and no-explicit-index child schemas. Its first 10,000-parent/100,000-child batch
+passed 88 correctness cases, 275 timing samples and full-field checks of 55 formal disk databases;
+parent/child-ratio extensions remain unrun.
+
 Cross-project records live in [edadb-notes](https://github.com/zhiyiwang/edadb-notes):
 
 - [Actual task status](https://github.com/zhiyiwang/edadb-notes/blob/main/TODO.md)

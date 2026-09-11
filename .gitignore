@@ -42,6 +42,12 @@ scripts/edadb/performance/sqlite-baseline/*
 !scripts/edadb/performance/sqlite-baseline/*.cpp
 !scripts/edadb/performance/sqlite-baseline/*.h
 !scripts/edadb/performance/sqlite-baseline/*.py
+!scripts/edadb/performance/sqlite-pk-fk/
+scripts/edadb/performance/sqlite-pk-fk/*
+!scripts/edadb/performance/sqlite-pk-fk/*.md
+!scripts/edadb/performance/sqlite-pk-fk/CMakeLists.txt
+!scripts/edadb/performance/sqlite-pk-fk/*.cpp
+!scripts/edadb/performance/sqlite-pk-fk/*.py
 !scripts/edadb/performance/TODO.md
 !scripts/edadb/roundtrip/
 scripts/edadb/roundtrip/*
