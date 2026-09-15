@@ -1,33 +1,53 @@
-# SQLite / EDADB性能测试
+# SQLite性能实验：入口
 
-比较同一组8字段合成数据的五条读写路线。时间单位为ms，建表与数据读写分开统计。
+本目录分为两个实验和两份共用资料，不按运行日期分组。
+
+```text
+sqlite-baseline/
+├── readme.md
+├── baseline/            五路线整体性能
+│   ├── readme.md        计划、运行、接续事项
+│   ├── results.md       基线结果与证据
+│   ├── run.py
+│   ├── audit.py
+│   └── fixtures.py
+├── sqlite_vs_edadb/     SQLite与EDADB额外操作对照
+│   ├── readme.md        NULL／绑定／clear实验设计与运行
+│   ├── results.md       对照结果与源码位置
+│   ├── run_read.py
+│   └── run_write.py
+├── sqlite_params/       共用SQLite参数与机制
+│   ├── config.md
+│   └── runtime.md
+└── benchmark/           共用测试程序
+    ├── implementation.md
+    ├── stream_benchmark.cpp
+    ├── benchmark_support.h
+    └── CMakeLists.txt
+```
 
 ## 阅读顺序
 
-| 顺序 | 文件 | 内容 |
-| --- | --- | --- |
-| 1 | [test_plan.md](test_plan.md) | 数据、实验矩阵、计时与比较规则 |
-| 2 | [sqlite_config.md](sqlite_config.md) | SQLite配置和事务控制组 |
-| 3 | [implementation.md](implementation.md) | 五条路线的源码行号、伪代码、计时边界 |
-| 4 | [experiment_report.md](experiment_report.md) | 编译运行命令、数据路径、实测结果与分析 |
+| 目的 | 顺序与要点 |
+| --- | --- |
+| 开会汇报 | [基线结果](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/baseline/results.md) → [额外开销结果](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/sqlite_vs_edadb/results.md)：先说谁快，再解释已验证原因；不要跨批次相减 |
+| 理解测试 | [基线计划](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/baseline/readme.md)或[对照计划](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/sqlite_vs_edadb/readme.md) → [参数](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/sqlite_params/config.md)：检查schema、规模、改变的变量与计时边界 |
+| 审查代码 | [实现说明](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/benchmark/implementation.md) → [Record/schema](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/benchmark/benchmark_support.h:111) → [main计时](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/benchmark/stream_benchmark.cpp:138) → [读写API](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/benchmark/stream_benchmark.cpp:49) |
+| 运行与复核 | 对应实验readme → run脚本 → 输出目录的samples、统计、正确性/审计文件；先查正确性再看性能 |
+| 查询SQLite机制 | [运行机制及官方链接](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/sqlite_params/runtime.md)，不必作为必读前置 |
 
-源码从[stream_benchmark.cpp](stream_benchmark.cpp)开始；辅助函数见[benchmark_support.h](benchmark_support.h)，
-数据生成见[fixtures.py](fixtures.py)，运行与统计见[run_stream.py](run_stream.py)，结果复核见[audit_stream.py](audit_stream.py)。
-SQLite机制按需查[sqlite_runtime.md](sqlite_runtime.md)。
+## 源码职责
 
-## 结果入口
+- [baseline/fixtures.py](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/baseline/fixtures.py)生成最小LEF和DEF；[generate()](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/benchmark/benchmark_support.h:133)生成内存记录。
+- [baseline/run.py](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/baseline/run.py)运行五路线，[baseline/audit.py](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/baseline/audit.py)核验原始时间、统计及输入哈希。
+- [sqlite_vs_edadb/run_read.py](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/sqlite_vs_edadb/run_read.py)比较NULL检查，[sqlite_vs_edadb/run_write.py](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/sqlite_vs_edadb/run_write.py)比较绑定API和clear。
+- [benchmark/CMakeLists.txt](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/benchmark/CMakeLists.txt)构建唯一的测试可执行文件。实际EDADB调用链及生产源码行号在implementation/results中，不移动core或adapter。
 
-本页全部结果来自同一个完整批次，包括adapter，不拼接专项数据。接续分析见[handoff.md](handoff.md)。
+## 已有结果与保存规则
 
-正式批次2026-09-10（19:42–21:00）：99组正确性检查通过，540条计时样本，108个分组各5次。
-
-- [report.md：统计表及原始计时](/tmp/iedadb_stream_full_20260910/report.md)
-- [samples.tsv：逐次时间和日志路径](/tmp/iedadb_stream_full_20260910/samples.tsv)
-- [summary.tsv：均值、中位数、最小值、最大值](/tmp/iedadb_stream_full_20260910/summary.tsv)
-- [datasets.json：输入路径、字节数、哈希](/tmp/iedadb_stream_full_20260910/datasets.json)
-- [manifest.json：版本、硬件、二进制和源码哈希](/tmp/iedadb_stream_full_20260910/manifest.json)
-- [checks.json：正确性](/tmp/iedadb_stream_full_20260910/checks.json) / [audit.json：结果审计](/tmp/iedadb_stream_full_20260910/audit.json)
-
-实测值以manifest对应的二进制与source快照为准。Git只保存代码、配置说明、方法与实验结论；
-可重新生成的输入、DB、日志和统计产物不提交。以上/tmp链接仅在运行机器有效，清理后需重新运行，
-时间不会逐次完全相同。需要保留原始证据时另行备份整个输出目录；编译和运行命令只在实验报告维护。
+- 基线：99组正确性、540条计时；[完整结果](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/baseline/results.md)。
+- 读写补充：16组正确性、80条计时；[对照结果](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/sqlite_vs_edadb/results.md)。
+- 计划放readme，伪代码/计时边界放implementation，数字和分析放results；参数只在sqlite_params维护。
+- 输入、DB、二进制、日志、统计产物放仓库外；原始证据链接指向本机/tmp，不是永久备份。Python缓存不阅读、不提交。
+- 目录迁移已通过Release -O3构建、76组小规模正确性检查及46条采样；仅验证入口与统计，不替代历史性能结果。C++计时实现未改动。
+- 迁移验证证据：[基线审计](/tmp/iedadb_reorg_baseline_smoke/audit.json)、[读对照检查](/tmp/iedadb_reorg_read_smoke/checks.json)、[写对照检查](/tmp/iedadb_reorg_write_smoke/checks.json)。构建仍有既有LEF/DEF依赖的ODR警告，未在本次目录整理中修改生产代码。

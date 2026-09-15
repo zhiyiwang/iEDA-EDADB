@@ -4,7 +4,7 @@ if(NOT CMAKE_BUILD_TYPE STREQUAL "Release")
     message(FATAL_ERROR "Configure with -DCMAKE_BUILD_TYPE=Release")
 endif()
 find_package(SQLite3 REQUIRED)
-get_filename_component(REPO_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../../.." ABSOLUTE)
+get_filename_component(REPO_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../../../.." ABSOLUTE)
 set(IEDA_RELEASE_BUILD "${REPO_ROOT}/build-release" CACHE PATH "Verified iEDA Release dependencies")
 set(NATIVE_INCLUDES "")
 foreach(relative IN ITEMS

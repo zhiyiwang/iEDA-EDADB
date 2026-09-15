@@ -66,30 +66,71 @@ void data_operation(sqlite3* database, bool edadb_route, bool write,
         "SELECT name,master_name,source,status,orient,x,y,record_order FROM component", -1, &statement, nullptr) == SQLITE_OK, "prepare");
     std::unique_ptr<sqlite3_stmt, decltype(&sqlite3_finalize)> guard(statement, sqlite3_finalize);
     if (write) {
+        // Select controls once. No runtime experiment branch inside the loop.
+        auto insert = [&]<bool MatchBindings, bool ClearBindings>() {
         for (const auto& record : input) {
+            if constexpr (MatchBindings) {
+                require(sqlite3_bind_text64(statement, 1, record.name.data(), record.name.size(), SQLITE_TRANSIENT, SQLITE_UTF8) == SQLITE_OK, "bind");
+                require(sqlite3_bind_text64(statement, 2, record.master_name.data(), record.master_name.size(), SQLITE_TRANSIENT, SQLITE_UTF8) == SQLITE_OK, "bind");
+                require(sqlite3_bind_int(statement, 3, record.source) == SQLITE_OK, "bind");
+                require(sqlite3_bind_int(statement, 4, record.status) == SQLITE_OK, "bind");
+                require(sqlite3_bind_int(statement, 5, record.orient) == SQLITE_OK, "bind");
+                require(sqlite3_bind_int(statement, 6, record.x) == SQLITE_OK, "bind");
+                require(sqlite3_bind_int(statement, 7, record.y) == SQLITE_OK, "bind");
+                require(sqlite3_bind_int64(statement, 8, record.record_order) == SQLITE_OK, "bind");
+            } else {
             require(sqlite3_bind_text(statement, 1, record.name.data(), record.name.size(), SQLITE_TRANSIENT) == SQLITE_OK, "bind");
             require(sqlite3_bind_text(statement, 2, record.master_name.data(), record.master_name.size(), SQLITE_TRANSIENT) == SQLITE_OK, "bind");
             std::array<int64_t, 6> values{record.source, record.status, record.orient, record.x, record.y, record.record_order};
             for (size_t column = 0; column < values.size(); ++column)
                 require(sqlite3_bind_int64(statement, column + 3, values[column]) == SQLITE_OK, "bind");
+            }
             require(sqlite3_step(statement) == SQLITE_DONE, "insert");
+            // Match EDADB resetForReuse: clear first, then reset.
+            if constexpr (ClearBindings)
+                require(sqlite3_clear_bindings(statement) == SQLITE_OK, "clear bindings");
             require(sqlite3_reset(statement) == SQLITE_OK, "reset");
         }
+        };
+        const bool match = std::getenv("STREAM_MATCH_BINDINGS") != nullptr;
+        const bool clear = std::getenv("STREAM_CLEAR_BINDINGS") != nullptr;
+        if (match && clear) insert.template operator()<true, true>();
+        else if (match) insert.template operator()<true, false>();
+        else if (clear) insert.template operator()<false, true>();
+        else insert.template operator()<false, false>();
     } else {
+        // Dispatch once, outside the row loop. The control instantiation has no
+        // additional per-field branch; the checked one mirrors EDADB NULL guards.
+        auto fetch = [&]<bool CheckNull>() {
         ComponentRecord record;
         int result;
         while ((result = sqlite3_step(statement)) == SQLITE_ROW) {
+            if constexpr (CheckNull) { if (sqlite3_column_type(statement, 0) != SQLITE_NULL)
+                record.name.assign(reinterpret_cast<const char*>(sqlite3_column_text(statement, 0)), sqlite3_column_bytes(statement, 0));
+            } else
             record.name.assign(reinterpret_cast<const char*>(sqlite3_column_text(statement, 0)), sqlite3_column_bytes(statement, 0));
+            if constexpr (CheckNull) { if (sqlite3_column_type(statement, 1) != SQLITE_NULL)
+                record.master_name.assign(reinterpret_cast<const char*>(sqlite3_column_text(statement, 1)), sqlite3_column_bytes(statement, 1));
+            } else
             record.master_name.assign(reinterpret_cast<const char*>(sqlite3_column_text(statement, 1)), sqlite3_column_bytes(statement, 1));
+            if (!CheckNull || sqlite3_column_type(statement, 2) != SQLITE_NULL)
             record.source = sqlite3_column_int(statement, 2);
+            if (!CheckNull || sqlite3_column_type(statement, 3) != SQLITE_NULL)
             record.status = sqlite3_column_int(statement, 3);
+            if (!CheckNull || sqlite3_column_type(statement, 4) != SQLITE_NULL)
             record.orient = sqlite3_column_int(statement, 4);
+            if (!CheckNull || sqlite3_column_type(statement, 5) != SQLITE_NULL)
             record.x = sqlite3_column_int(statement, 5);
+            if (!CheckNull || sqlite3_column_type(statement, 6) != SQLITE_NULL)
             record.y = sqlite3_column_int(statement, 6);
+            if (!CheckNull || sqlite3_column_type(statement, 7) != SQLITE_NULL)
             record.record_order = sqlite3_column_int64(statement, 7);
             consumer.accept(record);
         }
         require(result == SQLITE_DONE, "read");
+        };
+        if (std::getenv("STREAM_NULL_CHECK")) fetch.template operator()<true>();
+        else fetch.template operator()<false>();
     }
     require(sqlite3_finalize(guard.release()) == SQLITE_OK, "finalize");
 }

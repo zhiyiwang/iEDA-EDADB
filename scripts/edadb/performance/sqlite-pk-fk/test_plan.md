@@ -94,7 +94,7 @@ x=(index%1000)*100，y=(index/1000)*100，record_order=index。
 - 首轮：10,000父×10子；SQLite/EDADB × pk/index/none × memory/disk。
 - 后续比例：1,000父×100子、100,000父×1子。父记录数也变化，差值不全归因于查询次数。
 - FK控制：固定pk和首轮数据，只切换foreign_keys ON/OFF。fetch-only仅首轮数据，单独报告。
-- memory/disk复用[A/B-batch参数](../sqlite-baseline/sqlite_config.md)，但主实验统一FK=ON，标记A-fk-on/B-batch-fk-on；重连后也核验。不是完全默认配置。
+- memory/disk复用[A/B-batch参数](../sqlite-baseline/sqlite_params/config.md)，但主实验统一FK=ON，标记A-fk-on/B-batch-fk-on；重连后也核验。不是完全默认配置。
 - Release -O3、同一SQLite库、关闭trace；性能串行，预热1次、正式5次、样本前等待5秒。
 - memory测first/repeat，disk新连接OS-warm；首轮不测cold。none先小规模估时，不静默缩减正式数据。
 

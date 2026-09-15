@@ -1,7 +1,7 @@
 # SQLite实验参数
 
-更新：2026-09-10。参数说明，非自动加载文件；新入口stream_benchmark.cpp按配置名执行，运行状态见[实验记录](experiment_report.md)。
-运行机制见[sqlite_runtime.md](sqlite_runtime.md)，数据与计时见[TEST_PLAN](test_plan.md)。
+更新：2026-09-10。参数说明，非自动加载文件；新入口stream_benchmark.cpp按配置名执行，运行状态见[实验记录](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/baseline/results.md)。
+运行机制见[sqlite_params/runtime.md](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/sqlite_params/runtime.md)，数据与计时见[TEST_PLAN](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/baseline/readme.md)。
 
 ## 候选配置与默认参考
 
@@ -32,7 +32,7 @@ A保留回滚作为主内存基线；A-no-journal只测成功路径的低开销�
 两个参数不是同一维度：journal_mode选择恢复机制（DELETE为rollback journal提交时删除日志）；
 synchronous选择该机制下的文件同步保障（FULL为同步级别2），不选择日志类型或事务大小。
 “实际默认”是不写设置PRAGMA、读回当前库的值；“固定参考”是主动强设指定值，两者可能相同但不能预设。
-B-default/B-batch名称只区分数据事务边界，具体计时见[test_plan.md](test_plan.md)。
+B-default/B-batch名称只区分数据事务边界，具体计时见[baseline/readme.md](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/baseline/readme.md)。
 
 ## 为什么选择这些配置
 
@@ -92,10 +92,10 @@ B-batch同样不调用config_sql，读回配置必须与B-default逐项一致。
   完整adapter仍按原family边界执行，不能擅自合并为整个design事务。
 - 事务相同不保证所有PRAGMA相同；adapter实际同步/日志等必须记录后再声称配置一致。
 
-源码：[def_write_edadb.cpp:366](../../../../src/database/manager/builder/def_builder/def_write_edadb.cpp#L366)调用insertVector；
-core对应[runMaybeTransaction:119](../../../../src/database/edadb/core/include/edadb.h#L119)、
-[createTable:319](../../../../src/database/edadb/core/include/edadb.h#L319)、
-[insertVector:397](../../../../src/database/edadb/core/include/edadb.h#L397)。
+源码：[def_write_edadb.cpp:366](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/database/manager/builder/def_builder/def_write_edadb.cpp#L366)调用insertVector；
+core对应[runMaybeTransaction:119](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/database/edadb/core/include/edadb.h#L119)、
+[createTable:319](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/database/edadb/core/include/edadb.h#L319)、
+[insertVector:397](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/database/edadb/core/include/edadb.h#L397)。
 
 - 在实际连接、事务开始前配置，检查返回码及实际值；内存库关闭即消失，读写需同连接。
 - 保存sqlite_version()、sqlite_source_id()、PRAGMA compile_options和表中参数的实际值。

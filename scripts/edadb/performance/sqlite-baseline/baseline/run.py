@@ -1,5 +1,5 @@
 """Generate fixtures, check correctness, then sample serially. All artifacts go to --out.
-Example: python3 run_stream.py --binary /tmp/iedadb_stream_clean_build/stream_benchmark --out /tmp/iedadb_stream --counts 1000 10000 100000 1000000
+Example: python3 run.py --binary /tmp/iedadb_stream_clean_build/stream_benchmark --out /tmp/iedadb_stream --counts 1000 10000 100000 1000000
 Defaults: one warmup, five samples, five-second settling, B-default capped at 1000.
 """
 import argparse
@@ -31,7 +31,9 @@ def run(binary, directory, count, group, label, check, settle):
     load = os.getloadavg()[0]
     with Path(str(stem)+".log").open("w") as log:
         subprocess.run(command, stdout=log, stderr=subprocess.STDOUT, check=True,
-                       env={**os.environ, "STREAM_SETTLE":str(settle)})
+                       env={**{key: value for key, value in os.environ.items()
+                               if key not in ("STREAM_NULL_CHECK", "STREAM_MATCH_BINDINGS", "STREAM_CLEAR_BINDINGS")},
+                            "STREAM_SETTLE":str(settle)})
     lines = Path(str(stem)+".log").read_text().splitlines()
     rows = []
     for line in lines:
@@ -117,12 +119,18 @@ def main():
     args.out.mkdir(parents=True, exist_ok=False)
     source_copy = args.out/"source"
     source_copy.mkdir()
-    for path in Path(__file__).parent.iterdir():
-        if path.is_file(): shutil.copy2(path,source_copy/path.name)
-    root = Path(__file__).resolve().parents[4]
+    suite = Path(__file__).resolve().parent.parent
+    sources = [path for path in suite.rglob("*") if path.is_file()
+               and path.suffix in (".py", ".cpp", ".h", ".md", ".txt")
+               and "__pycache__" not in path.parts]
+    for path in sources:
+        destination = source_copy / path.relative_to(suite)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, destination)
+    root = Path(__file__).resolve().parents[5]
     manifest = dict(arguments={key:str(value) if isinstance(value, Path) else value for key,value in vars(args).items()},
                     binary_sha256=sha(args.binary),
-                    source_sha256={path.name:sha(path) for path in Path(__file__).parent.iterdir() if path.is_file()},
+                    source_sha256={str(path.relative_to(suite)):sha(path) for path in sources},
                     git=subprocess.check_output(["git","rev-parse","HEAD"],cwd=root,text=True).strip(),
                     core=subprocess.check_output(["git","-C","src/database/edadb/core","rev-parse","HEAD"],cwd=root,text=True).strip(),
                     hardware=subprocess.check_output(["sh","-c","lscpu; free -h; df -h /tmp; ldd " + str(args.binary)],text=True))

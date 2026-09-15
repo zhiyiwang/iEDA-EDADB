@@ -1,5 +1,5 @@
 """Audit a completed run without rerunning benchmarks.
-python3 audit_stream.py /tmp/iedadb_stream_formal_20260910
+python3 audit.py /tmp/iedadb_stream_formal_20260910
 Writes audit.json alongside the original timing files.
 """
 import collections
