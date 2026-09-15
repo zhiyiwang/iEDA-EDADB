@@ -8,7 +8,18 @@ benchmark with five implementations and a flat eight-field COMPONENT dataset. Th
 2026-09-10 batch, including streaming reads and SQLite configuration comparisons, passed:
 99 correctness groups and 540 timing samples across 108 groups, five samples per group.
 It uses a C++ harness rather than this Tcl runner; its native/adapter paths restore real iDB.
-See its readme for results and its test_plan.md for the implementation/configuration/timing matrix.
+See its [results](sqlite-baseline/baseline/results.md) and
+[test plan](sqlite-baseline/baseline/readme.md) for the implementation/configuration/timing matrix.
+
+## Document Links
+
+Local file links are relative to each Markdown file; source line references use `#L<number>`.
+Copy the directory tree without flattening it. Links to production source require the rest of
+the repository (including the EDADB submodule). Official web links remain HTTPS URLs.
+Historical evidence under `/tmp` is outside this repository: its relative links resolve in the
+original server layout only, and copying Markdown alone does not copy those artifacts.
+Measured results remain in the report tables. `/tmp` paths in commands are output examples,
+not portable bundled data; choose a fresh output directory when rerunning.
 
 The [PK/FK benchmark](sqlite-pk-fk/readme.md) compares SQLite/EDADB APIs with composite-PK,
 non-unique-index and no-explicit-index child schemas. Its first 10,000-parent/100,000-child batch
@@ -101,7 +112,7 @@ Do not add read and write time together when claiming a read or write speed diff
 Quick smoke test:
 
 ```bash
-cd /home/zhiyiwang/cs/arch/eda/iEDA-EDADB
+cd "$(git rev-parse --show-toplevel)"
 PERF_WARMUPS=0 PERF_RUNS=1 \
 OUT_DIR=/tmp/iedadb_perf_smoke \
 bash scripts/edadb/performance/run.sh \
@@ -111,7 +122,7 @@ bash scripts/edadb/performance/run.sh \
 Initial performance test:
 
 ```bash
-cd /home/zhiyiwang/cs/arch/eda/iEDA-EDADB
+cd "$(git rev-parse --show-toplevel)"
 PERF_WARMUPS=1 PERF_RUNS=5 \
 OUT_DIR=/tmp/iedadb_perf_filler \
 bash scripts/edadb/performance/run.sh \
@@ -184,13 +195,13 @@ Performance measurements must use an optimized Release build, not the repository
 build in `bin/iEDA`. Build a separate binary so normal development artifacts are not overwritten:
 
 ```bash
-cd /home/zhiyiwang/cs/arch/eda/iEDA-EDADB
+cd "$(git rev-parse --show-toplevel)"
 
 # Build the Rust iIR archive when the shared ExternalProject stamp exists but
 # its Release archive is absent.
 cd src/operation/iIR/source/iir-rust/iir
 cargo build --release
-cd /home/zhiyiwang/cs/arch/eda/iEDA-EDADB
+cd "$(git rev-parse --show-toplevel)"
 
 cmake -S . -B build-release \
   -DCMAKE_CXX_COMPILER=g++-10 \

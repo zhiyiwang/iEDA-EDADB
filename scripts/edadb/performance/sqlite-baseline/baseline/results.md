@@ -3,17 +3,17 @@
 
 ## 1. 项目与资料位置
 
-项目：`/home/zhiyiwang/cs/arch/eda/iEDA-EDADB`。
-实验目录：`/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline`。
+项目：`../../../../..`。
+实验目录：`..`。
 
-| 内容 | 文件绝对路径链接 |
+| 内容 | 文件相对路径链接 |
 | --- | --- |
-| 计划与配置 | [baseline/readme.md](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/baseline/readme.md)、[sqlite_params/config.md](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/sqlite_params/config.md) |
-| SQLite机制 | [sqlite_params/runtime.md](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/sqlite_params/runtime.md) |
-| 实现与计时位置 | [benchmark/implementation.md](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/benchmark/implementation.md) |
-| C++代码与对象定义 | [benchmark/stream_benchmark.cpp](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/benchmark/stream_benchmark.cpp)、[benchmark/benchmark_support.h](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/benchmark/benchmark_support.h) |
-| 数据生成与调度 | [baseline/fixtures.py](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/baseline/fixtures.py)、[baseline/run.py](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/baseline/run.py) |
-| 实测依据 | [baseline/results.md](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/baseline/results.md) |
+| 计划与配置 | [baseline/readme.md](readme.md)、[sqlite_params/config.md](../sqlite_params/config.md) |
+| SQLite机制 | [sqlite_params/runtime.md](../sqlite_params/runtime.md) |
+| 实现与计时位置 | [benchmark/implementation.md](../benchmark/implementation.md) |
+| C++代码与对象定义 | [benchmark/stream_benchmark.cpp](../benchmark/stream_benchmark.cpp)、[benchmark/benchmark_support.h](../benchmark/benchmark_support.h) |
+| 数据生成与调度 | [baseline/fixtures.py](fixtures.py)、[baseline/run.py](run.py) |
+| 实测依据 | [baseline/results.md](results.md) |
 
 实验归档提交为`4f49ce07b`，当前`prof-test`包含该提交；测量时版本和归档版本的关系见完整报告，不将当前HEAD冒充测量时HEAD。
 
@@ -51,8 +51,8 @@ TABLE4CLASS(ComponentRecord, "component",
 ```
 
 EDADB测试入口另设`Cpp2SqlTypeTrait<ComponentRecord>::hasPrimKey = false`，不将name自动当主键。
-对象和映射见[benchmark_support.h:111](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/benchmark/benchmark_support.h#L111)，
-关闭主键见[stream_benchmark.cpp:171](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/benchmark/stream_benchmark.cpp#L171)。
+对象和映射见[benchmark_support.h:111](../benchmark/benchmark_support.h#L111)，
+关闭主键见[stream_benchmark.cpp:171](../benchmark/stream_benchmark.cpp#L171)。
 
 SQLite直接路线实际DDL（EDADB生成同字段/类型的表）：
 
@@ -70,7 +70,7 @@ CREATE TABLE component (
 ```
 
 无显式PRIMARY KEY、FOREIGN KEY、二级索引或NOT NULL约束。record_order是普通数据列，不要求SELECT排序。
-建表源码：[stream_benchmark.cpp:188](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/benchmark/stream_benchmark.cpp#L188)。
+建表源码：[stream_benchmark.cpp:188](../benchmark/stream_benchmark.cpp#L188)。
 
 | 字段 | C++类型 / SQL类型 | 语义及DEF对应 |
 | --- | --- | --- |
@@ -86,7 +86,7 @@ CREATE TABLE component (
 先不引入主外键、子表和复杂约束，减少变量。它不是全部iDB对象的schema。
 
 adapter不使用上面的简化TABLE4CLASS，而使用`Shadow<IdbInstance>`的实际映射。
-其schema见[edadb_idb_schema.h:91](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/database/edadb/idb/edadb_idb_schema.h#L91)。
+其schema见[edadb_idb_schema.h:91](../../../../../src/database/edadb/idb/edadb_idb_schema.h#L91)。
 因此“逻辑输入同源”不等于“五条路线执行相同SQL、存储相同列数”。
 
 ### 数据生成与同一条记录的表示
@@ -108,8 +108,8 @@ SQLite绑定值（name至record_order）：
 ```
 
 DEF还包含VERSION、DESIGN、UNITS、DIEAREA等必要上下文；最小LEF定义bench_cell。
-生成器见[fixtures.py:15](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/baseline/fixtures.py#L15)，
-C++对象生成见[benchmark_support.h:133](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/benchmark/benchmark_support.h#L133)。
+生成器见[fixtures.py:15](fixtures.py#L15)，
+C++对象生成见[benchmark_support.h:133](../benchmark/benchmark_support.h#L133)。
 
 | Component数量 | 输入DEF大小（bytes） |
 | ---: | ---: |
@@ -159,7 +159,7 @@ INSERT INTO component VALUES(?,?,?,?,?,?,?,?);
 SELECT name,master_name,source,status,orient,x,y,record_order FROM component;
 ```
 
-实际读写见[stream_benchmark.cpp:49](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/benchmark/stream_benchmark.cpp#L49)。
+实际读写见[stream_benchmark.cpp:49](../benchmark/stream_benchmark.cpp#L49)。
 直接读取两字符串复制到复用Record、消费整数和字符串长度，不累积结果vector；完整字段校验在独立check流程。
 
 ### 公共条件
@@ -262,7 +262,7 @@ cache_size负值表示KiB预算；temp_store=2请求内存，0沿用构建默认
 B-default/B-batch仅数据事务不同；A/B同时改变多项配置，不是纯磁盘差值。
 adapter保持应用设置，FK=1，不冒充direct的默认配置。A是低文件I/O参考，不是已证明最快。
 
-[print_config源码:34](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/benchmark/stream_benchmark.cpp#L34)输出如下制表符分隔的B配置记录：
+[print_config源码:34](../benchmark/stream_benchmark.cpp#L34)输出如下制表符分隔的B配置记录：
 
 ```text
 CONFIG  journal_mode  delete
@@ -272,17 +272,17 @@ CONFIG  version      3.37.2
 ```
 
 另有temp_store、mmap_size（如适用）、foreign_keys、page_size、encoding、source_id。
-原始日志和audit.json中的configs保留实际值；其绝对路径在[baseline/results.md](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/baseline/results.md)中索引。
+原始日志和audit.json中的configs保留实际值；其文件引用在本文中索引。
 
-会议现场可直接展开[配置与统计审计audit.json](/tmp/iedadb_stream_full_20260910/audit.json)查看configs；
-展开[输入大小与哈希datasets.json](/tmp/iedadb_stream_full_20260910/datasets.json)查看数据文件证据。
-这些绝对路径指向cherry13，链接中的数字是原始目录标识，不是性能计时单位。
+会议现场可直接展开[配置与统计审计audit.json](../../../../../../../../../../../tmp/iedadb_stream_full_20260910/audit.json)查看configs；
+展开[输入大小与哈希datasets.json](../../../../../../../../../../../tmp/iedadb_stream_full_20260910/datasets.json)查看数据文件证据。
+这些原始证据位于cherry13的仓库外/tmp，相对链接仅在原服务器目录布局下可用；复制本文不会携带原始证据。链接中的数字是原始目录标识，不是性能计时单位。
 
 ## 5. 结果：1,000,000条
 
-数据来源：[每次计时samples.tsv](/tmp/iedadb_stream_full_20260910/samples.tsv)、
-[均值/中位数/min/max summary.tsv](/tmp/iedadb_stream_full_20260910/summary.tsv)、
-[完整统计report.md](/tmp/iedadb_stream_full_20260910/report.md)。正文摘取同一个完整批次，未拼接其他结果。
+数据来源：[每次计时samples.tsv](../../../../../../../../../../../tmp/iedadb_stream_full_20260910/samples.tsv)、
+[均值/中位数/min/max summary.tsv](../../../../../../../../../../../tmp/iedadb_stream_full_20260910/summary.tsv)、
+[完整统计report.md](../../../../../../../../../../../tmp/iedadb_stream_full_20260910/report.md)。正文摘取同一个完整批次，未拼接其他结果。
 
 1,000,000条，5次中位数，单位ms；文件为warm，内存取first-read。
 仅列绝对时间，不列speedup；写与写、读与读分别讨论。
@@ -298,8 +298,8 @@ CONFIG  version      3.37.2
 | write complete | 每个样本的data BEGIN + write data + data COMMIT；write data包含prepare/op构造、字段绑定与全部INSERT、reset、finalize/op销毁 | init、create、close、输入生成、LEF加载、校验、预热及等待 |
 | read data | prepare SELECT/reader构造、遍历全部结果、取字段到复用Record并消费、finalize/reader销毁 | 连接init/close、缓存准备、repeat预读、独立正确性校验；不重复建表 |
 
-两条direct的实际边界见[stream_benchmark.cpp:188](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/benchmark/stream_benchmark.cpp#L188)，
-complete计算见[stream_benchmark.cpp:26](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/benchmark/stream_benchmark.cpp#L26)。
+两条direct的实际边界见[stream_benchmark.cpp:188](../benchmark/stream_benchmark.cpp#L188)，
+complete计算见[stream_benchmark.cpp:26](../benchmark/stream_benchmark.cpp#L26)。
 
 **写入：以SQLite B-batch为例。**Tx表示`steady_clock::now()`取得的时间点，差值换算为ms；EDADB直接路线用op构造/销毁对应prepare/finalize。
 源码对每个阶段独立记录起止点。下面按执行顺序纵向展示；括号给出该阶段的计算式。
@@ -372,7 +372,7 @@ read data = R3 - R2
 ```
 
 内存库复用写连接，不重新打开，最终在读取后关闭；repeat组的预读也在R2之前，不进入正式读取计时。
-读取过程见[stream_benchmark.cpp:204](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/benchmark/stream_benchmark.cpp#L204)。
+读取过程见[stream_benchmark.cpp:204](../benchmark/stream_benchmark.cpp#L204)。
 
 **write complete与read data不是同一种阶段名称，不能直接混称为“纯读写时间”。**应区分下面两层口径：
 
@@ -440,7 +440,7 @@ adapter read仅createDbByEdadb，不扫描参考DEF；恢复完整iDB。direct�
 
 - **写入**：本例原生iEDA的write data最短；SQLite/EDADB即使排除建表和外层提交，也没有比原生写DEF更快。计入B-batch的数据提交后，差距进一步增大。
 - **读取**：C++文本与direct路线快于原生iEDA，但只解析或消费简化Record，不恢复完整iDB，不能据此宣称完整DEF加载获得同等加速。
-- **同条件API对照**：相同schema和配置下，EDADB直接读写均比手写SQLite慢；本批次只证明整条路径的净差异，额外操作验证见[SQLite与EDADB对照结果](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/sqlite_vs_edadb/results.md)。
+- **同条件API对照**：相同schema和配置下，EDADB直接读写均比手写SQLite慢；本批次只证明整条路径的净差异，额外操作验证见[SQLite与EDADB对照结果](../sqlite_vs_edadb/results.md)。
 - **adapter**：读取中位数接近原生iEDA，写入较慢；其schema、对象恢复和事务工作量不同，不能将总差值全归因于adapter代码。
 - **配置比较**：A与B-batch同时改变存储、日志、同步等参数，时间差表示整套配置的差异，不是独立磁盘I/O耗时；A-no-journal没有显示出稳定的整体优势。
 
@@ -459,8 +459,8 @@ adapter read仅createDbByEdadb，不扫描参考DEF；恢复完整iDB。direct�
 
 ## 7. 运行证据与边界
 
-原完整批次约78分钟，99组正确性、540条计时、108组各5次，退出码0、审计PASS。编译为g++-10 Release -O3/-DNDEBUG、trace关闭；测量版本以[manifest](/tmp/iedadb_stream_full_20260910/manifest.json)为准，源码归档提交不覆盖原始测量版本。
+原完整批次约78分钟，99组正确性、540条计时、108组各5次，退出码0、审计PASS。编译为g++-10 Release -O3/-DNDEBUG、trace关闭；测量版本以[manifest](../../../../../../../../../../../tmp/iedadb_stream_full_20260910/manifest.json)为准，源码归档提交不覆盖原始测量版本。
 
-[原始样本](/tmp/iedadb_stream_full_20260910/samples.tsv)、[统计](/tmp/iedadb_stream_full_20260910/summary.tsv)、[完整报告](/tmp/iedadb_stream_full_20260910/report.md)、[正确性](/tmp/iedadb_stream_full_20260910/checks.json)、[审计](/tmp/iedadb_stream_full_20260910/audit.json)、[编译参数](/tmp/iedadb_stream_full_20260910/compile_flags.txt)、[链接参数](/tmp/iedadb_stream_full_20260910/link_command.txt)、[源码快照](/tmp/iedadb_stream_full_20260910/source/)。/tmp不是永久备份；需要保留证据时另行归档，不将生成DB和二进制提交Git。
+[原始样本](../../../../../../../../../../../tmp/iedadb_stream_full_20260910/samples.tsv)、[统计](../../../../../../../../../../../tmp/iedadb_stream_full_20260910/summary.tsv)、[完整报告](../../../../../../../../../../../tmp/iedadb_stream_full_20260910/report.md)、[正确性](../../../../../../../../../../../tmp/iedadb_stream_full_20260910/checks.json)、[审计](../../../../../../../../../../../tmp/iedadb_stream_full_20260910/audit.json)、[编译参数](../../../../../../../../../../../tmp/iedadb_stream_full_20260910/compile_flags.txt)、[链接参数](../../../../../../../../../../../tmp/iedadb_stream_full_20260910/link_command.txt)、[源码快照](../../../../../../../../../../../tmp/iedadb_stream_full_20260910/source)。/tmp不是永久备份；需要保留证据时另行归档，不将生成DB和二进制提交Git。
 
 COMMIT占比及其口径见第5.2节，不代表纯sync时间。链接时存在LEF/DEF类型ODR警告，未修改该生产依赖，不宣称已解决。

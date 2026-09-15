@@ -1,6 +1,6 @@
 # 测试汇总：EDADB额外开销对照
 
-内容范围：2026-09-14 14:00之后的NULL检查、绑定清理对照及单条成本分析。原始五路线比较见[baseline/results.md](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/baseline/results.md)。
+内容范围：sqlite basenline 增加NULL检查、绑定清理对照及单条成本分析。原始五路线比较见[baseline/results.md](../baseline/results.md)。
 
 ## EDADB为何比直接SQLite慢：补充对照
 
@@ -13,8 +13,8 @@
 ### 读取：每列多一次NULL检查
 
 原SQLite直接取列；EDADB先判断NULL再取值，共增加8,000,000次检查。调用链：
-[DbTableOpSelect4Sqlite.h:76](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/database/edadb/core/include/edadb/backend/sqlite/DbTableOpSelect4Sqlite.h:76)
-→ [DbStatement4Sqlite.h:348：sqlite3_column_type](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/database/edadb/core/include/edadb/backend/sqlite/DbStatement4Sqlite.h:348)。
+[DbTableOpSelect4Sqlite.h:76](../../../../../src/database/edadb/core/include/edadb/backend/sqlite/DbTableOpSelect4Sqlite.h#L76)
+→ [DbStatement4Sqlite.h:348：sqlite3_column_type](../../../../../src/database/edadb/core/include/edadb/backend/sqlite/DbStatement4Sqlite.h#L348)。
 
 | 路线 | A读取 | B-batch读取 |
 | --- | ---: | ---: |
@@ -30,9 +30,9 @@
 
 | 差异 | 直接SQLite | EDADB及源码 |
 | --- | --- | --- |
-| 参数清理 | 每行仅reset，下轮重新绑定全部参数 | [Insert:230](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/database/edadb/core/include/edadb/backend/sqlite/DbTableOpInsert4Sqlite.h:230) → [resetForReuse:131](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/database/edadb/core/include/edadb/backend/sqlite/DbStatement4Sqlite.h:131) → [clear_bindings:108](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/database/edadb/core/include/edadb/backend/sqlite/DbStatement4Sqlite.h:108)，然后reset |
-| 字符串绑定 | 2次bind_text | [bind_text64:242](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/database/edadb/core/include/edadb/backend/sqlite/DbStatement4Sqlite.h:242)，两边均为TRANSIENT |
-| 整数绑定 | 6次bind_int64 | [5次bind_int:184](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/database/edadb/core/include/edadb/backend/sqlite/DbStatement4Sqlite.h:184)＋[1次bind_int64:207](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/database/edadb/core/include/edadb/backend/sqlite/DbStatement4Sqlite.h:207) |
+| 参数清理 | 每行仅reset，下轮重新绑定全部参数 | [Insert:230](../../../../../src/database/edadb/core/include/edadb/backend/sqlite/DbTableOpInsert4Sqlite.h#L230) → [resetForReuse:131](../../../../../src/database/edadb/core/include/edadb/backend/sqlite/DbStatement4Sqlite.h#L131) → [clear_bindings:108](../../../../../src/database/edadb/core/include/edadb/backend/sqlite/DbStatement4Sqlite.h#L108)，然后reset |
+| 字符串绑定 | 2次bind_text | [bind_text64:242](../../../../../src/database/edadb/core/include/edadb/backend/sqlite/DbStatement4Sqlite.h#L242)，两边均为TRANSIENT |
+| 整数绑定 | 6次bind_int64 | [5次bind_int:184](../../../../../src/database/edadb/core/include/edadb/backend/sqlite/DbStatement4Sqlite.h#L184)＋[1次bind_int64:207](../../../../../src/database/edadb/core/include/edadb/backend/sqlite/DbStatement4Sqlite.h#L207) |
 
 原SQLite每轮重绑8个参数；EDADB另外清理一次，共增加1,000,000次clear。它不是读端的NULL类型检查。[官方说明：reset保留绑定，clear将绑定置NULL](https://www.sqlite.org/c3ref/clear_bindings.html)。
 
@@ -47,11 +47,11 @@
 - **仅增加clear净增55–72ms；匹配绑定API后，clear仍净增59–62ms。**
 - 仅改变绑定路径为−3.428/+21.252ms，没有稳定的大幅影响；不能认定text64必然更慢。
 - 全部对齐后仍剩52–58ms。文件组有波动，不能将净差值当作函数独占时间。
-- create、COMMIT等分项保留在[原始计时](/tmp/iedadb_write_control/samples.tsv)，不混入write比较。
+- create、COMMIT等分项保留在[原始计时](../../../../../../../../../../../tmp/iedadb_write_control/samples.tsv)，不混入write比较。
 
 ### 未拆分的额外工作
 
-EDADB还有[读操作器状态检查](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/database/edadb/core/include/edadb/backend/sqlite/DbTableOpSelect4Sqlite.h:397)、[写操作器状态管理](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/database/edadb/core/include/edadb/backend/sqlite/DbTableOpInsert4Sqlite.h:101)、[通用成员遍历](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/database/edadb/core/include/edadb/DbObjectTraverser.h:139)、[逐成员绑定及返回检查](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/database/edadb/core/include/edadb/backend/sqlite/DbTableOpInsert4Sqlite.h:126)。这些是剩余成本候选，未分别计时；模板代码可能被优化。两边都有step、取值和字符串复制；本例没有adapter、Shadow或N+1。
+EDADB还有[读操作器状态检查](../../../../../src/database/edadb/core/include/edadb/backend/sqlite/DbTableOpSelect4Sqlite.h#L397)、[写操作器状态管理](../../../../../src/database/edadb/core/include/edadb/backend/sqlite/DbTableOpInsert4Sqlite.h#L101)、[通用成员遍历](../../../../../src/database/edadb/core/include/edadb/DbObjectTraverser.h#L139)、[逐成员绑定及返回检查](../../../../../src/database/edadb/core/include/edadb/backend/sqlite/DbTableOpInsert4Sqlite.h#L126)。这些是剩余成本候选，未分别计时；模板代码可能被优化。两边都有step、取值和字符串复制；本例没有adapter、Shadow或N+1。
 
 ### 每条记录与指令估算
 
@@ -64,8 +64,8 @@ N=1,000,000时，**整批差值1ms = 每条1ns**：
 
 | 对照 | 测试实现／脚本 | 原始时间／统计 |
 | --- | --- | --- |
-| 读NULL | [读取循环:101](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/benchmark/stream_benchmark.cpp:101)、[sqlite_vs_edadb/run_read.py](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/sqlite_vs_edadb/run_read.py:1) | [samples.tsv](/tmp/iedadb_null_check/samples.tsv)、[summary.json](/tmp/iedadb_null_check/summary.json) |
-| 写绑定与clear | [写入循环:67](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/benchmark/stream_benchmark.cpp:67)、[sqlite_vs_edadb/run_write.py](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/sqlite_vs_edadb/run_write.py:1) | [samples.tsv](/tmp/iedadb_write_control/samples.tsv)、[summary.json](/tmp/iedadb_write_control/summary.json)、[checks.json](/tmp/iedadb_write_control/checks.json) |
+| 读NULL | [读取循环:101](../benchmark/stream_benchmark.cpp#L101)、[sqlite_vs_edadb/run_read.py](run_read.py#L1) | [samples.tsv](../../../../../../../../../../../tmp/iedadb_null_check/samples.tsv)、[summary.json](../../../../../../../../../../../tmp/iedadb_null_check/summary.json) |
+| 写绑定与clear | [写入循环:67](../benchmark/stream_benchmark.cpp#L67)、[sqlite_vs_edadb/run_write.py](run_write.py#L1) | [samples.tsv](../../../../../../../../../../../tmp/iedadb_write_control/samples.tsv)、[summary.json](../../../../../../../../../../../tmp/iedadb_write_control/summary.json)、[checks.json](../../../../../../../../../../../tmp/iedadb_write_control/checks.json) |
 
 脚本内含运行命令；结果目录保留当次源码、编译参数和日志。仅扩展测试程序，core和adapter未修改。下一步若省略检查或清理，必须另验NULL、部分绑定和失败后复用，不能仅凭性能结果删除安全处理。
 

@@ -30,24 +30,24 @@ sqlite-baseline/
 
 | 目的 | 顺序与要点 |
 | --- | --- |
-| 开会汇报 | [基线结果](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/baseline/results.md) → [额外开销结果](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/sqlite_vs_edadb/results.md)：先说谁快，再解释已验证原因；不要跨批次相减 |
-| 理解测试 | [基线计划](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/baseline/readme.md)或[对照计划](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/sqlite_vs_edadb/readme.md) → [参数](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/sqlite_params/config.md)：检查schema、规模、改变的变量与计时边界 |
-| 审查代码 | [实现说明](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/benchmark/implementation.md) → [Record/schema](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/benchmark/benchmark_support.h:111) → [main计时](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/benchmark/stream_benchmark.cpp:138) → [读写API](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/benchmark/stream_benchmark.cpp:49) |
+| 开会汇报 | [基线结果](baseline/results.md) → [额外开销结果](sqlite_vs_edadb/results.md)：先说谁快，再解释已验证原因；不要跨批次相减 |
+| 理解测试 | [基线计划](baseline/readme.md)或[对照计划](sqlite_vs_edadb/readme.md) → [参数](sqlite_params/config.md)：检查schema、规模、改变的变量与计时边界 |
+| 审查代码 | [实现说明](benchmark/implementation.md) → [Record/schema](benchmark/benchmark_support.h#L111) → [main计时](benchmark/stream_benchmark.cpp#L138) → [读写API](benchmark/stream_benchmark.cpp#L49) |
 | 运行与复核 | 对应实验readme → run脚本 → 输出目录的samples、统计、正确性/审计文件；先查正确性再看性能 |
-| 查询SQLite机制 | [运行机制及官方链接](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/sqlite_params/runtime.md)，不必作为必读前置 |
+| 查询SQLite机制 | [运行机制及官方链接](sqlite_params/runtime.md)，不必作为必读前置 |
 
 ## 源码职责
 
-- [baseline/fixtures.py](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/baseline/fixtures.py)生成最小LEF和DEF；[generate()](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/benchmark/benchmark_support.h:133)生成内存记录。
-- [baseline/run.py](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/baseline/run.py)运行五路线，[baseline/audit.py](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/baseline/audit.py)核验原始时间、统计及输入哈希。
-- [sqlite_vs_edadb/run_read.py](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/sqlite_vs_edadb/run_read.py)比较NULL检查，[sqlite_vs_edadb/run_write.py](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/sqlite_vs_edadb/run_write.py)比较绑定API和clear。
-- [benchmark/CMakeLists.txt](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/benchmark/CMakeLists.txt)构建唯一的测试可执行文件。实际EDADB调用链及生产源码行号在implementation/results中，不移动core或adapter。
+- [baseline/fixtures.py](baseline/fixtures.py)生成最小LEF和DEF；[generate()](benchmark/benchmark_support.h#L133)生成内存记录。
+- [baseline/run.py](baseline/run.py)运行五路线，[baseline/audit.py](baseline/audit.py)核验原始时间、统计及输入哈希。
+- [sqlite_vs_edadb/run_read.py](sqlite_vs_edadb/run_read.py)比较NULL检查，[sqlite_vs_edadb/run_write.py](sqlite_vs_edadb/run_write.py)比较绑定API和clear。
+- [benchmark/CMakeLists.txt](benchmark/CMakeLists.txt)构建唯一的测试可执行文件。实际EDADB调用链及生产源码行号在implementation/results中，不移动core或adapter。
 
 ## 已有结果与保存规则
 
-- 基线：99组正确性、540条计时；[完整结果](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/baseline/results.md)。
-- 读写补充：16组正确性、80条计时；[对照结果](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/sqlite_vs_edadb/results.md)。
+- 基线：99组正确性、540条计时；[完整结果](baseline/results.md)。
+- 读写补充：16组正确性、80条计时；[对照结果](sqlite_vs_edadb/results.md)。
 - 计划放readme，伪代码/计时边界放implementation，数字和分析放results；参数只在sqlite_params维护。
 - 输入、DB、二进制、日志、统计产物放仓库外；原始证据链接指向本机/tmp，不是永久备份。Python缓存不阅读、不提交。
 - 目录迁移已通过Release -O3构建、76组小规模正确性检查及46条采样；仅验证入口与统计，不替代历史性能结果。C++计时实现未改动。
-- 迁移验证证据：[基线审计](/tmp/iedadb_reorg_baseline_smoke/audit.json)、[读对照检查](/tmp/iedadb_reorg_read_smoke/checks.json)、[写对照检查](/tmp/iedadb_reorg_write_smoke/checks.json)。构建仍有既有LEF/DEF依赖的ODR警告，未在本次目录整理中修改生产代码。
+- 迁移验证证据：[基线审计](../../../../../../../../../../tmp/iedadb_reorg_baseline_smoke/audit.json)、[读对照检查](../../../../../../../../../../tmp/iedadb_reorg_read_smoke/checks.json)、[写对照检查](../../../../../../../../../../tmp/iedadb_reorg_write_smoke/checks.json)。构建仍有既有LEF/DEF依赖的ODR警告，未在本次目录整理中修改生产代码。

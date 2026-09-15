@@ -46,7 +46,7 @@ SQLite/EDADB的DDL、SQL、参数与索引列定义一致。无需修改adapter�
 100,000父的扩展可能显著增加运行时间，留待review后执行，不据此伪称所有比例已经验证。
 
 ```bash
-cd /home/zhiyiwang/cs/arch/eda/iEDA-EDADB
+cd "$(git rev-parse --show-toplevel)"
 cmake -S scripts/edadb/performance/sqlite-pk-fk \
   -B /tmp/iedadb_pk_fk_build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=g++-10
 cmake --build /tmp/iedadb_pk_fk_build -j40

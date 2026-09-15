@@ -3,7 +3,7 @@
 ## 目标与数据
 
 测量各路线的读写阶段耗时和同条件净增量，不将路线差值解释为某个内部模块的独立耗时。
-实现与计时位置见[benchmark/implementation.md](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/benchmark/implementation.md)，执行证据见[baseline/results.md](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/baseline/results.md)。
+实现与计时位置见[benchmark/implementation.md](../benchmark/implementation.md)，执行证据见[baseline/results.md](results.md)。
 
 固定单表component，两个TEXT、五个INTEGER和一个BIGINT，无显式PK/FK/二级索引：
 
@@ -31,7 +31,7 @@ struct ComponentRecord {
 | edadb | EDADB C++ API↔复用Record | 同sqlite | 构造op→insert循环→销毁op | 构造reader→readNext/消费→销毁reader |
 | adapter | iEDA adapter↔完整iDB | 保留应用配置与事务 | writeChip2Edadb，含内部提交 | 仅createDbByEdadb，不扫描参考DEF |
 
-参数仅在[sqlite_params/config.md](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/sqlite_params/config.md)维护：
+参数仅在[sqlite_params/config.md](../sqlite_params/config.md)维护：
 - A：内存库低文件I/O参考；A-no-journal只改变日志设置，不预设其最快。
 - B-default：文件库实际默认参数，逐条隐式提交；B-batch只加外层数据BEGIN/COMMIT。
 - B-default首轮限制1,000条；其余配置覆盖全部规模。
@@ -62,10 +62,10 @@ struct ComponentRecord {
 
 ## 编译与运行
 
-先按[共用构建说明](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/benchmark/implementation.md)生成Release可执行文件。以下从仓库根目录执行，输出目录必须不存在：
+先按[共用构建说明](../benchmark/implementation.md)生成Release可执行文件。以下从仓库根目录执行，输出目录必须不存在：
 
 ```bash
-cd /home/zhiyiwang/cs/arch/eda/iEDA-EDADB
+cd "$(git rev-parse --show-toplevel)"
 python3 scripts/edadb/performance/sqlite-baseline/baseline/run.py \
   --binary /tmp/iedadb_benchmark_build/stream_benchmark \
   --out /tmp/iedadb_baseline_full \
@@ -75,11 +75,11 @@ python3 scripts/edadb/performance/sqlite-baseline/baseline/audit.py /tmp/iedadb_
 
 快速验证：将输出目录换成新的目录，使用`--counts 100 --runs 1 --settle 0`；仍覆盖五路线及0/1/8条正确性检查，不用于正式性能结论。使用`--routes`可只选择部分路线；输入的原生DEF准备仍在计时外。
 
-输出：`samples.tsv`保存逐次阶段时间，`summary.tsv`和`report.md`保存统计，`checks.json`/`audit.json`保存正确性与审计。`datasets.json`记录输入大小/哈希，`manifest.json`和`source/`记录版本、硬件、二进制哈希与源码快照。先查正确性，再查原始样本与统计，最后读[结果分析](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/baseline/results.md)。
+输出：`samples.tsv`保存逐次阶段时间，`summary.tsv`和`report.md`保存统计，`checks.json`/`audit.json`保存正确性与审计。`datasets.json`记录输入大小/哈希，`manifest.json`和`source/`记录版本、硬件、二进制哈希与源码快照。先查正确性，再查原始样本与统计，最后读[结果分析](results.md)。
 
 ## 接续事项
 
 - adapter的独立建表、内部COMMIT、SQL读取和对象重建尚未分别计时；不得将总差值称为单一模块成本。
 - 原生与adapter恢复完整iDB，direct只复用Record；adapter schema、主键、排序及FK设置也不同，需先对齐工作量再解释差距。
-- NULL／参数清理对照已完成，见[SQLite与EDADB对照结果](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/sqlite_vs_edadb/results.md)；不把其他分支优化结果混入本基线。
+- NULL／参数清理对照已完成，见[SQLite与EDADB对照结果](../sqlite_vs_edadb/results.md)；不把其他分支优化结果混入本基线。
 - 未测disk OS-cold、等价文本fsync、硬件指令计数；如需开展，先定义边界和扰动控制，不自动修改生产代码。

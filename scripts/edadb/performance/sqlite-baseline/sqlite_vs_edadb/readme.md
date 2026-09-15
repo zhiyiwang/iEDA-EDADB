@@ -2,7 +2,7 @@
 
 ## 计划
 
-只比较直接SQLite API与EDADB API，不经过adapter。复用[基线的8字段Component](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/baseline/readme.md)及[A/B-batch配置](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/sqlite_params/config.md)，固定1,000,000条；每组独立正确性/预热1次、正式5次，串行并轮换顺序，write/read之间等待1秒。
+只比较直接SQLite API与EDADB API，不经过adapter。复用[基线的8字段Component](../baseline/readme.md)及[A/B-batch配置](../sqlite_params/config.md)，固定1,000,000条；每组独立正确性/预热1次、正式5次，串行并轮换顺序，write/read之间等待1秒。
 
 | 实验 | 控制组 | 唯一关注的变化 |
 | --- | --- | --- |
@@ -19,10 +19,10 @@
 
 ## 运行
 
-先按[构建说明](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/benchmark/implementation.md)生成可执行文件；两个实验顺序运行，不并行竞争资源。输出目录必须不存在：
+先按[构建说明](../benchmark/implementation.md)生成可执行文件；两个实验顺序运行，不并行竞争资源。输出目录必须不存在：
 
 ```bash
-cd /home/zhiyiwang/cs/arch/eda/iEDA-EDADB
+cd "$(git rev-parse --show-toplevel)"
 python3 scripts/edadb/performance/sqlite-baseline/sqlite_vs_edadb/run_read.py \
   /tmp/iedadb_benchmark_build/stream_benchmark /tmp/iedadb_read_control
 python3 scripts/edadb/performance/sqlite-baseline/sqlite_vs_edadb/run_write.py \
@@ -31,11 +31,11 @@ python3 scripts/edadb/performance/sqlite-baseline/sqlite_vs_edadb/run_write.py \
 
 默认保持1,000,000条和5次正式采样。快速验证可追加`--count 1000 --runs 1 --settle 0`并使用新目录；这只验证迁移后的运行，不替代历史性能结果。
 
-输出`samples.tsv`、`summary.json`、`checks.json`、逐次日志、源码快照和编译参数。原始完整对照的结论与证据统一见[results.md](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/sqlite_vs_edadb/results.md)，不重新维护多份时间表。
+输出`samples.tsv`、`summary.json`、`checks.json`、逐次日志、源码快照和编译参数。原始完整对照的结论与证据统一见[results.md](results.md)，不重新维护多份时间表。
 
 ## 实现入口与接续
 
-[写入控制循环](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/benchmark/stream_benchmark.cpp:67)、[读取控制循环](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/benchmark/stream_benchmark.cpp:101)；共用调用链见[benchmark/implementation.md](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/benchmark/implementation.md)。
+[写入控制循环](../benchmark/stream_benchmark.cpp#L67)、[读取控制循环](../benchmark/stream_benchmark.cpp#L101)；共用调用链见[benchmark/implementation.md](../benchmark/implementation.md)。
 `STREAM_NULL_CHECK`、`STREAM_MATCH_BINDINGS`、`STREAM_CLEAR_BINDINGS`按环境变量是否存在启用，设为0仍启用；runner负责先清除继承值再按组设置。
 
 剩余成本尚未独立量化。任何去除NULL检查/clear的优化，必须先验证可空字段、部分绑定、失败后复用和字符串生命周期。是否采集阶段内instructions/cycles需另行讨论。

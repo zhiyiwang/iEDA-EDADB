@@ -1,7 +1,7 @@
 # SQLite事务、日志与同步运行机制
 
 更新：2026-09-10。官方文档与源码阅读说明；不代表benchmark已做故障注入测试。
-实验参数统一见[sqlite_params/config.md](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/sqlite_params/config.md)。
+实验参数统一见[sqlite_params/config.md](config.md)。
 
 ## 0. 写入成功、提交成功与持久化不是同一个边界
 
@@ -85,7 +85,7 @@ C++通过SQLite API执行这些PRAGMA并读取结果；不需要重新编译SQLi
 
 **journal_mode与synchronous独立**：切换WAL不代表自动选择NORMAL。
 常规同步默认FULL(2)，但编译选项可改变默认值，应用也可覆盖；每个连接都应读回确认。
-默认自动提交开启；显式BEGIN省略类型时为DEFERRED。实验完整参数见[sqlite_params/config.md](/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/sqlite-baseline/sqlite_params/config.md)。
+默认自动提交开启；显式BEGIN省略类型时为DEFERRED。实验完整参数见[sqlite_params/config.md](config.md)。
 依据：[启用WAL及持久性](https://www.sqlite.org/wal.html#activating_and_configuring_wal_mode)、
 [journal_mode](https://www.sqlite.org/pragma.html#pragma_journal_mode)、
 [synchronous](https://www.sqlite.org/pragma.html#pragma_synchronous)。
