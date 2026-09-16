@@ -49,6 +49,11 @@ scripts/edadb/performance/sqlite-baseline/*/*
 !scripts/edadb/performance/sqlite-baseline/benchmark/*.cpp
 !scripts/edadb/performance/sqlite-baseline/benchmark/*.h
 !scripts/edadb/performance/sqlite-baseline/benchmark/CMakeLists.txt
+!scripts/edadb/performance/sqlite-baseline/sqlite_vs_edadb/*.cpp
+!scripts/edadb/performance/sqlite-baseline/sqlite_vs_edadb/CMakeLists.txt
+!scripts/edadb/performance/sqlite-baseline/sqlite_vs_edadb/archive/
+scripts/edadb/performance/sqlite-baseline/sqlite_vs_edadb/archive/*
+!scripts/edadb/performance/sqlite-baseline/sqlite_vs_edadb/archive/*.md
 !scripts/edadb/performance/sqlite-pk-fk/
 scripts/edadb/performance/sqlite-pk-fk/*
 !scripts/edadb/performance/sqlite-pk-fk/*.md

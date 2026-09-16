@@ -1,41 +1,37 @@
-# SQLite与EDADB：额外开销对照
+# SQLite与EDADB：直接API开销对照
 
-## 计划
+**已冻结**：测试实现与结论经用户确认；后续修改须先获得明确同意，规则见[AGENTS.md](AGENTS.md)。新实验放在独立目录，不覆盖本批结果。
 
-只比较直接SQLite API与EDADB API，不经过adapter。复用[基线的8字段Component](../baseline/readme.md)及[A/B-batch配置](../sqlite_params/config.md)，固定1,000,000条；每组独立正确性/预热1次、正式5次，串行并轮换顺序，write/read之间等待1秒。
+只比较固定8字段Component的直接SQLite与EDADB API，不涉及adapter。**当前主实验是SQL/API对齐实验**，首轮结果只供追溯。
 
-| 实验 | 控制组 | 唯一关注的变化 |
-| --- | --- | --- |
-| 读 | 原SQLite、SQLite加NULL检查、EDADB | SQLite增加逐列类型检查，取值和消费不变 |
-| 写 | 原SQLite、仅clear、仅匹配绑定API、同时匹配并clear、EDADB | 绑定方式与参数清理的2×2对照 |
+## 阅读顺序
 
-- read：prepare SELECT → step/取列/赋值/消费 → finalize。
-- write：prepare INSERT → bind/step/[clear]/reset → finalize；建表、BEGIN、COMMIT、打开关闭单列。
-- 性能只消费字段与摘要，独立check才逐字段比较并检测同长度损坏。配置、校验、缓存准备不进入数据计时。
-- A读是同连接first-read；B-batch读是文件OS-warm、新连接。不存在本实验的设备冷缓存结论。
-- 只在同一批次内相减；测得的是净增量，不是函数独占耗时，不从墙钟反推指令数。
-- 所有字段在本例均非NULL。当前通用读取跳过NULL非指针标量赋值，可能留下旧值；本实验不评价该行为是否适合所有应用。
-- 对照只修改测试分支；EDADB core和adapter不变。两边均复制字符串、复用Record，无Shadow、子表或N+1。
+1. [alignment.md](alignment.md)：先看读、写各组增加什么操作，SQL、源码对应及计时边界。
+2. [results.md](results.md)：当前时间、delta、每条成本、结论和未证实的部分；开会可直接打开这一页。
+3. [alignment.cpp](alignment.cpp#L96)：核对控制变量及API调用；[run_alignment.py](run_alignment.py)负责运行，[audit_alignment.py](audit_alignment.py)负责审计。
+4. 要追溯首轮实验才看[archive/initial_checks.md](archive/initial_checks.md)，不与当前批次混算。
 
-## 运行
+## 目录职责
 
-先按[构建说明](../benchmark/implementation.md)生成可执行文件；两个实验顺序运行，不并行竞争资源。输出目录必须不存在：
-
-```bash
-cd "$(git rev-parse --show-toplevel)"
-python3 scripts/edadb/performance/sqlite-baseline/sqlite_vs_edadb/run_read.py \
-  /tmp/iedadb_benchmark_build/stream_benchmark /tmp/iedadb_read_control
-python3 scripts/edadb/performance/sqlite-baseline/sqlite_vs_edadb/run_write.py \
-  /tmp/iedadb_benchmark_build/stream_benchmark /tmp/iedadb_write_control_new
+```text
+sqlite_vs_edadb/
+├── readme.md                 导航，不重复时间表
+├── alignment.md              当前实验方法、源码对应、唯一运行说明
+├── results.md                当前结果、分析、原始证据
+├── alignment.cpp             当前独立C++测试入口
+├── CMakeLists.txt            构建alignment
+├── run_alignment.py          正确性、串行采样、统计
+├── audit_alignment.py        核验原始日志、统计及SQL
+├── archive/
+│   └── initial_checks.md     首轮两个独立批次的结果与复现说明
+├── run_read.py               首轮读NULL实验runner
+└── run_write.py              首轮写绑定/clear实验runner
 ```
 
-默认保持1,000,000条和5次正式采样。快速验证可追加`--count 1000 --runs 1 --settle 0`并使用新目录；这只验证迁移后的运行，不替代历史性能结果。
+保留脚本和C++路径，避免改变已有命令、源代码行号和结果快照；只调整文档职责。
+首轮runner调用共用stream_benchmark，当前runner调用独立alignment，不能互换。
 
-输出`samples.tsv`、`summary.json`、`checks.json`、逐次日志、源码快照和编译参数。原始完整对照的结论与证据统一见[results.md](results.md)，不重新维护多份时间表。
-
-## 实现入口与接续
-
-[写入控制循环](../benchmark/stream_benchmark.cpp#L67)、[读取控制循环](../benchmark/stream_benchmark.cpp#L101)；共用调用链见[benchmark/implementation.md](../benchmark/implementation.md)。
-`STREAM_NULL_CHECK`、`STREAM_MATCH_BINDINGS`、`STREAM_CLEAR_BINDINGS`按环境变量是否存在启用，设为0仍启用；runner负责先清除继承值再按组设置。
-
-剩余成本尚未独立量化。任何去除NULL检查/clear的优化，必须先验证可空字段、部分绑定、失败后复用和字符串生命周期。是否采集阶段内instructions/cycles需另行讨论。
+- schema/生成器：[共用支持头](../benchmark/benchmark_support.h#L111)。
+- SQLite配置：[config.md](../sqlite_params/config.md)；机制及官方依据：[runtime.md](../sqlite_params/runtime.md)。
+- 五路线总体性能：[冻结基线](../baseline/results.md)，本次不修改。
+- 运行命令只维护在[方法页](alignment.md#4-构建运行与审计)；结果目录只维护在[结果页](results.md#原始数据与复核)。生成数据和二进制在仓库外，不提交。
