@@ -3,13 +3,13 @@
 This test compares native DEF read/write with EDADB write/read. It does not modify iEDA, the
 adapter, or EDADB core.
 
-The independent [SQLite / DEF subset benchmark](sqlite-baseline/readme.md) is a separate
+The independent [SQLite / DEF subset benchmark](storage/readme.md) is a separate
 benchmark with five implementations and a flat eight-field COMPONENT dataset. The complete
 2026-09-10 batch, including streaming reads and SQLite configuration comparisons, passed:
 99 correctness groups and 540 timing samples across 108 groups, five samples per group.
 It uses a C++ harness rather than this Tcl runner; its native/adapter paths restore real iDB.
-See its [results](sqlite-baseline/baseline/results.md) and
-[test plan](sqlite-baseline/baseline/readme.md) for the implementation/configuration/timing matrix.
+See its [results](storage/baseline/results.md) and
+[test plan](storage/baseline/readme.md) for the implementation/configuration/timing matrix.
 
 ## Document Links
 
@@ -21,7 +21,7 @@ original server layout only, and copying Markdown alone does not copy those arti
 Measured results remain in the report tables. `/tmp` paths in commands are output examples,
 not portable bundled data; choose a fresh output directory when rerunning.
 
-The [PK/FK benchmark](sqlite-pk-fk/readme.md) compares SQLite/EDADB APIs with composite-PK,
+The [PK/FK benchmark](storage/sqlite-pk-fk/readme.md) compares SQLite/EDADB APIs with composite-PK,
 non-unique-index and no-explicit-index child schemas. Its first 10,000-parent/100,000-child batch
 passed 88 correctness cases, 275 timing samples and full-field checks of 55 formal disk databases;
 parent/child-ratio extensions remain unrun.
