@@ -66,9 +66,11 @@ scripts/edadb/performance/storage/sqlite-vs-edadb/archive/*
 !scripts/edadb/performance/storage/sqlite-pk-fk/*.cpp
 !scripts/edadb/performance/storage/sqlite-pk-fk/docs/
 !scripts/edadb/performance/storage/sqlite-pk-fk/docs/*.md
-!scripts/edadb/performance/storage/sqlite-rowid/
-!scripts/edadb/performance/storage/sqlite-rowid/docs/
-!scripts/edadb/performance/storage/sqlite-rowid/docs/*.md
+!scripts/edadb/performance/storage/sqlite-index/
+!scripts/edadb/performance/storage/sqlite-index/docs/
+!scripts/edadb/performance/storage/sqlite-index/docs/*.md
+!scripts/edadb/performance/storage/sqlite-index/*.cpp
+!scripts/edadb/performance/storage/sqlite-index/CMakeLists.txt
 !scripts/edadb/performance/TODO.md
 !scripts/edadb/roundtrip/
 scripts/edadb/roundtrip/*

@@ -37,9 +37,12 @@ storage/
 │   ├── pk_fk_benchmark.cpp
 │   ├── run_pk_fk.py
 │   └── audit_pk_fk.py
-├── sqlite-rowid/        独立存储布局对照；只有方案，未运行
+├── sqlite-index/        单表主键、索引与布局；完整测试通过，已冻结
 │   ├── readme.md
-│   └── docs/test_plan.md
+│   ├── docs/            test_plan.md、results.md
+│   ├── benchmark.cpp
+│   ├── run.py
+│   └── summarize.py
 └── benchmark/           共用测试程序
     ├── implementation.md
     ├── stream_benchmark.cpp

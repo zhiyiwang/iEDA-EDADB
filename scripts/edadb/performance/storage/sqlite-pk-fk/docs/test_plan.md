@@ -59,7 +59,7 @@ index−none是普通索引的净影响，pk−index是唯一性及实现的净�
 
 ## 4. 独立实验边界
 
-本实验比较child的pk/index/none，不扩展WITHOUT ROWID。保持相同PK/FK、仅改变表布局的方案已独立为[sqlite-rowid](../../sqlite-rowid/docs/test_plan.md)，两套结果分别保存。
+本实验比较child的pk/index/none，不扩展WITHOUT ROWID。后续独立的[sqlite-index](../../sqlite-index/docs/test_plan.md)已收敛为单表主键、索引与布局对照，不包含FK；两套结果分别保存。
 
 ## 5. 其他未做范围
 

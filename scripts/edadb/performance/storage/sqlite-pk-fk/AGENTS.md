@@ -15,7 +15,7 @@ and docs/results.md as the authoritative results and evidence index.
 Do not silently replace results or mix samples from different batches.
 
 Put follow-up experiments in sibling directories. In particular, rowid versus
-WITHOUT ROWID belongs to ../sqlite-rowid/, not this frozen experiment.
+WITHOUT ROWID belongs to ../sqlite-index/, not this frozen experiment.
 Changes to shared dependencies that affect reproduction require user approval.
 
 Generated datasets, databases, executables, logs, and raw timing files stay
