@@ -13,7 +13,15 @@
 
 ## 2. 写入：step具体多做什么
 
-测试在[benchmark.cpp](../benchmark.cpp#L190)复用一个INSERT：每行bind八字段、step、reset。prepare/finalize计入data，外层BEGIN/COMMIT单列。
+### 先区分准备与执行
+
+`src/prepare.c:882`的prepare_v2通过`:784`的sqlite3LockAndPrepare进入编译；SELECT生成器在`src/select.c:6877`调用sqlite3WhereBegin选择访问路径。本例没有WHERE/JOIN/ORDER BY，实际计划就是扫描表；查询规划在prepare时完成，不是每条记录重新优化。正式时间包含prepare，但没有其独占计时，不能凭“有优化器”就认定它是主要成本。[官方架构](https://www.sqlite.org/arch.html)
+
+写入文本只需格式化并顺序写出缓冲；SQLite则将参数存入Mem槽，执行已编译VM，将字段编码成record、生成rowid并插入表B-tree。普通rowid表的叶cell保存rowid及行payload，Pager维护页面和事务状态。没有声明二级索引不等于没有B-tree。
+
+新增多行INSERT把多条记录放在一个VM执行周期中；绑定总字段数不变，仍逐行MakeRecord/Insert，只减少语句执行/重置周期并改变字节码结构。因此差值不能全称为step入口成本。批量SQL及独立EXPLAIN保存在新批次`batch_explain.json`；它是同source ID的独立解释，不是正式样本的trace。
+
+测试在[benchmark.cpp](../benchmark.cpp#L196)复用INSERT：标准组每行bind八字段、step、reset；多行组每10/100条执行一次step/reset。prepare/finalize计入data，外层BEGIN/COMMIT单列。
 
 | 执行层 | 源码位置 | 相比顺序输出文本，多做的工作 |
 | --- | --- | --- |
@@ -69,11 +77,17 @@
 ## 4. 读取：step之外还有取列
 
 - `src/vdbe.c:2634` OP_Column从记录解码字段；`:1511` OP_ResultRow返回一行；`:5930` OP_Next推进游标。
-- 应用随后执行[fetch_record](../benchmark.cpp#L178)：两个字符串各取text及bytes，六个整数取值，共10次column API，再赋值和消费结果。
+- 应用随后执行[fetch_record](../benchmark.cpp#L184)：两个字符串各取text及bytes，六个整数取值，共10次column API，再赋值和消费结果。
 - `src/vdbeapi.c:1067` columnMem负责访问结果字段、列范围及连接互斥；后续columnMallocFailure处理错误并释放互斥。该路径不是仅返回一个C++成员。
 - 当前读取CPU占比统一见[结果](results.md)；不能把全部读差距归于step，也没有证据表明正常全表SELECT在逐行sync。
 
 官方：[OP_Column](https://github.com/sqlite/sqlite/blob/version-3.37.2/src/vdbe.c#L2634)、[取列实现](https://github.com/sqlite/sqlite/blob/version-3.37.2/src/vdbeapi.c#L1067)。
+
+### 完整读取与step-only的边界
+
+两组使用同一SELECT，VM仍执行OP_Column/ResultRow，解码8列并返回行；step-only只是不在C++侧调用10次column API、赋值字符串/整数及计算字段摘要。它没有取消SQLite内部列解码，不能称为“仅磁盘读取”。差值是客户端物化/消费路径及其连带效应，不能全称为字符串拷贝或单一API成本。
+
+文本读取也要解析并保存字段，但没有SQLite VM到结果寄存器再到column API的通用接口层。究竟哪部分占主导，须联合实测消融、独立计数和CPU采样判断，不从源码长度推算时间。
 
 ## 5. 结论与下一项可验证问题
 

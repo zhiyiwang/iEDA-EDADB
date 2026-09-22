@@ -10,7 +10,7 @@ import statistics
 import subprocess
 import time
 
-ROUTES = ("text", "sqlite", "static")
+ROUTES = ("text", "sqlite", "static", "batch10", "batch100", "step-only")
 STAGES = ("init_ms", "create_ms", "begin_ms", "data_ms", "commit_ms", "close_ms")
 
 
@@ -43,7 +43,11 @@ def invoke(args, config, route, sample, count, mode):
             counters.append(dict(config=config, route=route, phase=fields[1],
                                  counter=fields[2], value=int(fields[3]),
                                  count=count, log=stem.with_suffix(".log").name))
-    assert results["read"] == results["write"] and results["read"][0] == count
+    assert results["read"][0] == results["write"][0] == count
+    if route != "step-only" or mode == "check":
+        assert results["read"] == results["write"]
+    else:
+        assert results["read"][1] == 0
     assert "CHECK\t" + ("full fields" if mode == "check" else "digest") + "\tPASS" in lines
     assert not any(line.startswith("PROBE\t") for line in lines)
     if mode == "check" and route != "text" and count:
@@ -51,7 +55,9 @@ def invoke(args, config, route, sample, count, mode):
     if mode == "counters":
         assert not timings and len(counters) == 32
         values = {(row["phase"], row["counter"]): row["value"] for row in counters}
-        assert values["write", "run"] == count and values["read", "run"] == 1
+        batch = {"batch10": 10, "batch100": 100}.get(route, 1)
+        assert count % batch == 0
+        assert values["write", "run"] == count // batch and values["read", "run"] == 1
         for phase in ("write", "read"):
             for name in ("sort", "autoindex", "reprepare"):
                 assert values[phase, name] == 0
@@ -103,7 +109,9 @@ def summarize(output, rows):
         for operation in ("write", "read"):
             pairs = [("sqlite", "text")]
             if operation == "write":
-                pairs.append(("sqlite", "static"))
+                pairs.extend((("sqlite", "static"), ("sqlite", "batch10"), ("sqlite", "batch100")))
+            else:
+                pairs.append(("sqlite", "step-only"))
             for left, right in pairs:
                 paired = []
                 for sample in sorted({row["sample"] for row in rows}):
@@ -165,11 +173,13 @@ def main():
         uid=os.getuid(), process_status=Path("/proc/self/status").read_text(),
         hardware=subprocess.check_output(["lscpu"], text=True), memory=Path("/proc/meminfo").read_text(),
         libraries=subprocess.check_output(["ldd", str(args.binary)], text=True)))
+    # Execute the archived binary, not a build path that another compilation can replace.
+    args.binary = args.output / "benchmark"
     checks, rows, counters = [], [], []
     for config in ("A", "B-batch"):
         for route in ROUTES:
             # The full-size correctness pass also serves as the warm-up.
-            for count in dict.fromkeys((0, 1, 8, args.count)):
+            for count in dict.fromkeys((0, 1, 8, 101, args.count)):
                 invoke(args, config, route, "check", count, "check")
                 checks.append(dict(config=config, route=route, count=count, status="PASS"))
         save(args.output / "checks.json", checks)
@@ -181,13 +191,14 @@ def main():
                 write_tsv(args.output / "samples.tsv", rows)
     # Diagnostics cannot perturb any later formal sample.
     for config in ("A", "B-batch"):
-        for route in ("sqlite", "static"):
+        for route in ROUTES[1:]:
             _, measured = invoke(args, config, route, "counters", args.count, "counters")
             counters.extend(measured)
     write_tsv(args.output / "counters.tsv", counters)
     summarize(args.output, rows)
     save(args.output / "audit.json", dict(status="PASS", checks=len(checks), timing_rows=len(rows),
-         groups=12, samples_per_group=args.runs, counter_runs=4, counter_rows=len(counters),
+         groups=2 * len(ROUTES) * 2, samples_per_group=args.runs,
+         counter_runs=2 * (len(ROUTES) - 1), counter_rows=len(counters),
          scope="row/value checks and SQL counter invariants; no counters in timing mode"))
     print("COMPLETE", args.output, flush=True)
 

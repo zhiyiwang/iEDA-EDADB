@@ -120,6 +120,12 @@ double stage(sqlite3* database, bool diagnose, const char* phase, Function actio
     return milliseconds(start, Clock::now());
 }
 const char* insert_sql = "INSERT INTO component VALUES(?,?,?,?,?,?,?,?)";
+std::string batch_insert_sql(size_t batch) {
+    std::string sql = "INSERT INTO component VALUES";
+    for (size_t index = 0; index < batch; ++index)
+        sql += (index ? "," : "") + std::string("(?,?,?,?,?,?,?,?)");
+    return sql;
+}
 const char* select_sql = "SELECT name,master_name,source,status,orient,x,y,record_order FROM component";
 const char* schema_sql = "CREATE TABLE component(name TEXT,master_name TEXT,source INTEGER,status INTEGER,orient INTEGER,x INTEGER,y INTEGER,record_order BIGINT);";
 void execute(sqlite3* database, const char* sql) {
@@ -139,7 +145,7 @@ void config(sqlite3* database) {
     }
     std::cout << "CONFIG\tversion\t" << sqlite3_libversion() << "\nCONFIG\tsource_id\t" << sqlite3_sourceid() << '\n';
 }
-void explain(sqlite3* database) {
+void explain(sqlite3* database, const std::string& write_sql) {
     sqlite3_stmt* plan = nullptr;
     const auto query = std::string("EXPLAIN QUERY PLAN ") + select_sql;
     require(sqlite3_prepare_v2(database, query.c_str(), -1, &plan, nullptr) == SQLITE_OK, "EQP prepare");
@@ -148,13 +154,13 @@ void explain(sqlite3* database) {
         std::cout << "EQP\t" << sqlite3_column_text(plan, 3) << '\n';
     require(plan_status == SQLITE_DONE, "EQP done");
     require(sqlite3_finalize(plan) == SQLITE_OK, "EQP finalize");
-    for (const char* sql : {insert_sql, select_sql}) {
+    for (const char* sql : {write_sql.c_str(), select_sql}) {
         sqlite3_stmt* statement = nullptr;
         std::string request = std::string("EXPLAIN ") + sql;
         require(sqlite3_prepare_v2(database, request.c_str(), -1, &statement, nullptr) == SQLITE_OK, "explain prepare");
         int status;
         while ((status = sqlite3_step(statement)) == SQLITE_ROW) {
-            std::cout << "EXPLAIN\t" << (sql == insert_sql ? "write" : "read");
+            std::cout << "EXPLAIN\t" << (sql == select_sql ? "read" : "write");
             for (int column = 0; column < sqlite3_column_count(statement); ++column) {
                 const auto* value = sqlite3_column_text(statement, column);
                 std::cout << '\t' << (value ? reinterpret_cast<const char*>(value) : "");
@@ -167,13 +173,13 @@ void explain(sqlite3* database) {
 }
 // Input owns string storage until finalize, making STATIC safe in this control.
 template <bool Static>
-void bind_record(sqlite3_stmt* statement, const Record& record) {
+void bind_record(sqlite3_stmt* statement, const Record& record, int offset = 0) {
     auto lifetime = Static ? SQLITE_STATIC : SQLITE_TRANSIENT;
-    require(sqlite3_bind_text(statement, 1, record.name.data(), record.name.size(), lifetime) == SQLITE_OK, "bind");
-    require(sqlite3_bind_text(statement, 2, record.master_name.data(), record.master_name.size(), lifetime) == SQLITE_OK, "bind");
+    require(sqlite3_bind_text(statement, offset + 1, record.name.data(), record.name.size(), lifetime) == SQLITE_OK, "bind");
+    require(sqlite3_bind_text(statement, offset + 2, record.master_name.data(), record.master_name.size(), lifetime) == SQLITE_OK, "bind");
     std::array<int64_t, 6> values{record.source, record.status, record.orient, record.x, record.y, record.record_order};
     for (size_t column = 0; column < values.size(); ++column)
-        require(sqlite3_bind_int64(statement, column + 3, values[column]) == SQLITE_OK, "bind");
+        require(sqlite3_bind_int64(statement, offset + column + 3, values[column]) == SQLITE_OK, "bind");
 }
 void fetch_record(sqlite3_stmt* statement, Record& record) {
     record.name.assign(reinterpret_cast<const char*>(sqlite3_column_text(statement, 0)), sqlite3_column_bytes(statement, 0));
@@ -186,18 +192,35 @@ void fetch_record(sqlite3_stmt* statement, Record& record) {
     record.record_order = sqlite3_column_int64(statement, 7);
 }
 // Same SQL and row loop in both modes; only diagnostic instantiations query counters.
-template <bool Diagnose, bool Static>
-void operation(sqlite3* database, bool write, const std::vector<Record>& input, Consumer& consumer) {
+template <bool Diagnose, bool Static, size_t Batch = 1, bool CountOnly = false>
+void operation(sqlite3* database, bool write, const std::vector<Record>& input, Consumer& consumer,
+               const char* read_sql = select_sql) {
     sqlite3_stmt* statement = nullptr;
-    require(sqlite3_prepare_v2(database, write ? insert_sql : select_sql, -1, &statement, nullptr)
+    std::string batch_sql;
+    if constexpr (Batch > 1) {
+        // SQL construction belongs to write data; the tail uses the original single-row statement.
+        if (write) {
+            batch_sql = batch_insert_sql(Batch);
+        }
+    }
+    const char* sql = write ? (Batch > 1 ? batch_sql.c_str() : insert_sql) : read_sql;
+    require(sqlite3_prepare_v2(database, sql, -1, &statement, nullptr)
             == SQLITE_OK, "prepare");
     std::unique_ptr<sqlite3_stmt, decltype(&sqlite3_finalize)> guard(statement, sqlite3_finalize);
     // A fresh statement starts at zero; no prior execution needs resetting.
     if (write) {
-        for (const auto& record : input) {
-            bind_record<Static>(statement, record);
+        size_t position = 0;
+        for (; position + Batch <= input.size(); position += Batch) {
+            for (size_t slot = 0; slot < Batch; ++slot)
+                bind_record<Static>(statement, input[position + slot], static_cast<int>(slot * 8));
             require(sqlite3_step(statement) == SQLITE_DONE, "insert");
             require(sqlite3_reset(statement) == SQLITE_OK, "reset");
+        }
+        if constexpr (Batch > 1) {
+            if (position < input.size()) {
+                std::vector<Record> tail(input.begin() + position, input.end());
+                operation<Diagnose, Static>(database, true, tail, consumer);
+            }
         }
     } else {
         Record record;
@@ -205,8 +228,13 @@ void operation(sqlite3* database, bool write, const std::vector<Record>& input, 
             const int status = sqlite3_step(statement);
             if (status == SQLITE_DONE) break;
             require(status == SQLITE_ROW, "row");
-            fetch_record(statement, record);
-            consumer.accept(record);
+            if constexpr (CountOnly) {
+                // Diagnostic ablation only: not equivalent to returning eight fields.
+                ++consumer.seen;
+            } else {
+                fetch_record(statement, record);
+                consumer.accept(record);
+            }
         }
     }
     if constexpr (Diagnose) {
@@ -237,6 +265,7 @@ void report(const char* name, const Metrics& metric, const Consumer& consumer, b
                   << '\t' << metric.data << '\t' << metric.commit << '\t' << metric.close << '\n';
     std::cout << "ROWS\t" << name << '\t' << consumer.seen << '\t' << consumer.digest << '\n';
 }
+#ifndef SQLITE_TEXT_LIBRARY
 int main(int argc, char** argv) {
     try {
         // Reserved argument keeps the phase-gated perf launcher interface stable.
@@ -244,7 +273,8 @@ int main(int argc, char** argv) {
         const std::string route = argv[1], setting = argv[2], path = argv[4], mode = argv[5];
         const bool verify = mode == "check", diagnose = mode == "counters";
         require(mode == "check" || mode == "timing" || diagnose, "mode");
-        require(route == "text" || route == "sqlite" || route == "static", "route");
+        require(route == "text" || route == "sqlite" || route == "static" || route == "batch10"
+                || route == "batch100" || route == "step-only", "route");
         require(!diagnose || route != "text", "text has no SQLite counters");
         require(setting == "A" || setting == "B-batch", "config");
         const size_t count = std::stoull(argv[3]);
@@ -290,16 +320,23 @@ int main(int argc, char** argv) {
             };
             auto start = Clock::now(); open(); write.init = milliseconds(start, Clock::now());
             config(database);
-            std::cout << "SQL\tcreate\t" << schema_sql << "\nSQL\twrite\t" << insert_sql << "\nSQL\tread\t" << select_sql << '\n';
+            const auto actual_insert = batch_insert_sql(route == "batch10" ? 10 : route == "batch100" ? 100 : 1);
+            std::cout << "SQL\tcreate\t" << schema_sql << "\nSQL\twrite\t" << actual_insert << "\nSQL\tread\t" << select_sql << '\n';
             write.create = stage(database, diagnose, "create", [&] {
                 execute(database, "BEGIN"); execute(database, schema_sql); execute(database, "COMMIT");
             });
             auto run = [&](bool writing, Consumer& output) {
                 if (diagnose) {
-                    if (route == "static") operation<true, true>(database, writing, input, output);
+                    if (route == "batch10") operation<true, false, 10>(database, writing, input, output);
+                    else if (route == "batch100") operation<true, false, 100>(database, writing, input, output);
+                    else if (route == "step-only") operation<true, false, 1, true>(database, writing, input, output);
+                    else if (route == "static") operation<true, true>(database, writing, input, output);
                     else operation<true, false>(database, writing, input, output);
                 } else {
-                    if (route == "static") operation<false, true>(database, writing, input, output);
+                    if (route == "batch10") operation<false, false, 10>(database, writing, input, output);
+                    else if (route == "batch100") operation<false, false, 100>(database, writing, input, output);
+                    else if (route == "step-only" && !verify) operation<false, false, 1, true>(database, writing, input, output);
+                    else if (route == "static") operation<false, true>(database, writing, input, output);
                     else operation<false, false>(database, writing, input, output);
                 }
             };
@@ -317,7 +354,7 @@ int main(int argc, char** argv) {
             perf_gate("read", true);
             read.data = stage(database, diagnose, "read", [&] { run(false, consumer); });
             perf_gate("read", false);
-            if (diagnose) explain(database);
+            if (diagnose) explain(database, actual_insert);
             if (verify && count) {
                 execute(database, "UPDATE component SET name='V0000000' WHERE record_order=0");
                 Consumer damaged{true, input};
@@ -329,7 +366,8 @@ int main(int argc, char** argv) {
             }
             start = Clock::now(); require(sqlite3_close(database) == SQLITE_OK, "close"); read.close = milliseconds(start, Clock::now());
         }
-        require(consumer.seen == expected.seen && consumer.digest == expected.digest, "result mismatch");
+        require(consumer.seen == expected.seen, "row count mismatch");
+        require((route == "step-only" && !verify) || consumer.digest == expected.digest, "result mismatch");
         report("write", write, expected, diagnose);
         report("read", read, consumer, diagnose);
         for (const auto& counter : counters)
@@ -341,3 +379,4 @@ int main(int argc, char** argv) {
         return 1;
     }
 }
+#endif

@@ -38,6 +38,7 @@ scripts/edadb/performance/*
 !scripts/edadb/performance/storage/
 scripts/edadb/performance/storage/*
 !scripts/edadb/performance/storage/readme.md
+!scripts/edadb/performance/storage/report.md
 !scripts/edadb/performance/storage/baseline/
 !scripts/edadb/performance/storage/sqlite-vs-edadb/
 !scripts/edadb/performance/storage/sqlite-reference/
@@ -61,6 +62,7 @@ scripts/edadb/performance/storage/sqlite-vs-edadb/archive/*
 !scripts/edadb/performance/storage/sqlite-vs-text/*.sh
 !scripts/edadb/performance/storage/sqlite-vs-text/CMakeLists.txt
 !scripts/edadb/performance/handoff.md
+!scripts/edadb/performance/milestone.md
 !scripts/edadb/performance/storage/sqlite-pk-fk/
 !scripts/edadb/performance/storage/sqlite-pk-fk/CMakeLists.txt
 !scripts/edadb/performance/storage/sqlite-pk-fk/*.cpp

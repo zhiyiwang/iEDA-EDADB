@@ -9,7 +9,7 @@
 | 五路线、单表8字段基线 | [baseline](storage/baseline/results.md) | 已冻结；保留原始口径和数字 |
 | SQLite与EDADB API对齐 | [sqlite-vs-edadb](storage/sqlite-vs-edadb/readme.md) | 已冻结；NULL、clear及其他API因素分开 |
 | 主外键实验 | [sqlite-pk-fk](storage/sqlite-pk-fk/readme.md) | 独立实验，不与单表数据量或查询方式混比 |
-| SQLite与文本定位 | [sqlite-vs-text](storage/sqlite-vs-text/readme.md) | 当前工作；先A写、再A读、最后B-batch复核 |
+| SQLite与文本定位 | [sqlite-vs-text](storage/sqlite-vs-text/readme.md) | 本轮归因、SELECT补充及perf审计完成；已冻结 |
 | SQLite参数与机制 | [sqlite-reference](storage/sqlite-reference/) | 共用说明；改共享配置需先确认影响 |
 
 ## 不得突破的边界
@@ -34,8 +34,16 @@
 
 ## 当前实验交接
 
-- [结果](storage/sqlite-vs-text/docs/results.md)：普通用户宿主机批次32组正确性检查、80条正式计时；perf 24组采样及24组同二进制控制。
-- 主批证据：`/tmp/iedadb_sqlite_text_host_full`；perf：`/tmp/iedadb_sqlite_text_perf_final`。后者含environment对照。
-- 同一保存二进制在沙箱/宿主机出现显著时间差，原因尚未细分。主表只使用普通用户宿主机批次；`/tmp/iedadb_sqlite_text_full`仅为早期环境诊断，不混合统计。
-- perf已安装，需sudo权限；不调整全局sysctl。通过FIFO及ACK只采样data窗口，COMMIT不在窗口内。ACK尾部NUL及A内存无DB文件的脚本问题已修复，失败样本未纳入结果。
-- [源码分析](storage/sqlite-vs-text/docs/sqlite_source.md)关联实际发行版源码、官方源码与现有采样。下一步若需量化B的sync，应独立追踪系统调用及阶段边界，不改冻结基线，也不将跟踪运行时间替换正式样本。
+- 本次收尾前基点为prof-test@7ebde2b94，core为d6656f08c9ae3123ce5272a344ea3d5515159fe7；交付提交以[配对milestone](milestone.md)解析为准。测量版本以各批manifest和source快照核对，不能仅用收尾提交标识历史测量代码。
+- [唯一结果记录](storage/sqlite-vs-text/docs/results.md)：主实验60组正确性、120条正式计时、24个统计组及10次独立计数；比较文本、SQLite、STATIC、10/100行INSERT与step-only读取消融，审计PASS。
+- SELECT补充：16组正确性、20条正式计时、4次计数；比较星号与显式全部列的完整读取及独立prepare/finalize循环，字节码一致，审计PASS。
+- perf：24组采样＋24组同二进制控制，审计PASS、无丢失样本；只采样data窗口，不能把CPU占比当作独占wall time。
+- 当前正式证据分别为`/tmp/iedadb_sqlite_text_causal_host`、`/tmp/iedadb_select_host`、`/tmp/iedadb_sqlite_text_causal_perf`。旧host_full/perf_final批次不再是当前主结果，不混算。
+- 主结果使用普通宿主机环境；前置沙箱批次不作为性能依据。正式运行归档二进制，避免构建替换；详见结果中的环境与批次说明。
+
+## 本轮收尾与提交边界
+
+- 本轮实验已获用户授权收尾、冻结并建立配对milestone；不扩大实验矩阵或替换原始性能样本。交付范围与已知限制见milestone说明。
+- 本分支拟提交测试代码、方法、结果、审计程序、整体报告和状态文档；不提交生成DB、二进制、构建目录及完整日志。
+- 后续生产优化建议保留在本地记录中，不纳入本轮基线提交；导航不依赖该被忽略文件。基线的测量限制属于当前实验，应随实验文档保留。
+- 本轮未量化SQLite各内部函数的精确独占时间，也未覆盖所有cold条件或验证掉电持久性；这些不应写成已通过的验收项。生产adapter细分及EDADB优化实作是独立后续工作，不阻塞本轮已测范围的归档。

@@ -1,6 +1,6 @@
 # SQLite与文本：低扰动成本定位方案
 
-状态：已实现低扰动版本；结果与验证状态统一见[results.md](results.md)。只修改本实验目录，不改SQLite库、EDADB或冻结基线。
+状态：本轮新增归因对照已完成；结果与验证状态统一见[results.md](results.md)。只修改本实验目录，不改SQLite库、EDADB或冻结基线。
 
 ## 1. 已知事实与要回答的问题
 
@@ -31,7 +31,7 @@ SELECT name,master_name,source,status,orient,x,y,record_order FROM component;
 | 独立计数 | 同SQL、数据、配置；阶段边界读取SQLite已有计数器 | 工作量，不提供bind/step的毫秒数 |
 | 独立perf | 只采目标data阶段，另跑相同二进制无perf控制 | CPU热点；嵌套调用不相加，不能解释全部I/O等待 |
 
-正确性独立运行0/1/8/1,000,000条，逐值验证、行数和顺序检查，不进入正式样本。正式读取保留相同的可观察消费摘要，保证实际取字段；消费本身有成本，因此所有路线同口径保留，不宣称零开销。
+正确性独立运行0/1/8/101/1,000,000条，逐值验证、行数和顺序检查，不进入正式样本。101条覆盖批量尾部。完整读取保留相同消费摘要；step-only仅检查行数，是不等价的诊断消融，不能当作完整读取结果。
 
 ### 写入边界
 
@@ -76,6 +76,10 @@ read close：关闭连接
 
 STATIC对照保持所有INSERT、事务和最终DB内容相同。差值是改变绑定生命周期后的净影响，包含缓存/分配连带效应，不是memcpy函数的独占时间。
 
+新增batch10/batch100：同一statement每次插入10/100条，仍逐字段TRANSIENT绑定，外层仍仅一个事务。write包含批量SQL构造、prepare、全部绑定/step/reset与finalize；不足一批的尾部由单行INSERT处理。正式N可整除100，没有尾部成本。绑定总量仍是8,000,000次，step/reset分别减少至100,000/10,000次；独立计数核验RUN，VM_STEP按实测报告。
+
+这不是纯step函数消融：多行语句改变VM程序、参数槽、游标生命周期及SQL准备成本。净收益说明语句组织方式的影响，不能全部解释成step API调用开销。
+
 先A后B复核。只有B出现明显写页/溢出且需要进一步区分时，再设计单独的缓存或同步单因素实验，不用A−B推算磁盘时间。必要时另跑系统调用诊断检查fsync/fdatasync；其耗时不纳入正式性能数据。
 
 ## 5. 读取：原因、证据、验证
@@ -86,7 +90,7 @@ STATIC对照保持所有INSERT、事务和最终DB内容相同。差值是改变
 | 取列与应用保存 | column API类型访问/转换、字符串复制、消费 | perf区分取列/复制与step；不得直接删掉fetch后与完整读取比较 |
 | 缓存访问 | Pager命中或读页 | CACHE_HIT/MISS；miss不是物理磁盘读取次数 |
 
-首轮不加入只step、SELECT少数字段或只检查长度的“加速组”：它们减少了实际工作，不能证明完整读取成本。若取列路径确为热点，再独立审批borrowed-view对照，并为文本定义相同结果语义；不混入本轮主对照。
+新增独立step-only组：SELECT文本和数据库与标准组一致，仍执行step直至DONE并计数，但不调用column API、不复制字符串、不计算字段摘要。与完整读取的配对差值是删除取列、应用保存和消费的净影响，包含连带效应，不是单一函数耗时；绝不把此组称为等价读取加速。check模式另外读取全部字段验证库内容，timing/counters模式只验证返回行数。
 
 ## 6. 如何实现统计且不污染时间
 
@@ -106,14 +110,32 @@ STATIC对照保持所有INSERT、事务和最终DB内容相同。差值是改变
 - 缓存计数读取：连接互斥锁、遍历attached database的Pager并汇总内存计数；成本与连接中数据库数有关，不随表行数逐行扫描。
 - 不声称一次读取耗时多少ns。本测试每个阶段前后各取4个缓存计数、每个statement结束取6个语句计数；全部在独立进程进行。正式模式不调用这些接口，SQLite原本维护计数的成本则仍属于真实运行库成本。
 
-源码：[vdbeapi.c:1728](https://github.com/sqlite/sqlite/blob/version-3.37.2/src/vdbeapi.c#L1728)、[status.c](https://github.com/sqlite/sqlite/blob/version-3.37.2/src/status.c#L353)。实现：[缓存快照](../benchmark.cpp#L95)、[阶段边界](../benchmark.cpp#L107)、[语句循环及诊断模板](../benchmark.cpp#L190)。
+源码：[vdbeapi.c:1728](https://github.com/sqlite/sqlite/blob/version-3.37.2/src/vdbeapi.c#L1728)、[status.c](https://github.com/sqlite/sqlite/blob/version-3.37.2/src/status.c#L353)。实现：[缓存快照](../benchmark.cpp#L95)、[阶段边界](../benchmark.cpp#L107)、[语句循环及诊断模板](../benchmark.cpp#L196)。
 
 ## 7. 结果怎么解释、何时算完成
 
-分别输出写、读两个结论表：text、SQLite标准、写入STATIC对照；报告中位数、min–max、每组样本和差值。独立计数表解释执行了多少工作，CPU热点表解释热点在哪里。
+分别输出写、读两个结论表：写比较text、SQLite标准、STATIC、batch10/batch100；读比较text、SQLite标准、step-only。其他路线重复读取仅作为控制，不声称有新的读取算法。报告中位数、min–max和同轮净差；计数和既有独立perf解释工作量及路径，不换算成独占毫秒数。
 
 同一轮配对delta=SQLite阶段时间−text阶段时间；绑定delta=TRANSIENT−STATIC。除以N得到每条记录净代价，不能从ns猜测CPU指令数。样本差值方向不稳定时报告“未能分辨”，必要时增加配对轮次，不硬给因果结论。
 
 完成要求：正确性全部通过；正式路径无行内诊断；计数符合SQL实际执行；perf有控制及扰动报告；每项结论标明实测差值、CPU占比或未量化候选。若perf改变阶段时间超过5%，降低采样频率复核，不能宣称5%以内等于无扰动。
 
 **本方案能可靠回答总共慢多少、哪些路径最值得检查、改变特定因素的净差值。不能无扰动地精确拆出每个内部函数的wall time；没有数据支持的部分明确保留未知，不凑齐总时间。**
+
+## 8. SELECT *与显式全部列：读取补充
+
+固定同一8字段表及1,000,000条数据，仅切换SQL：
+
+```sql
+SELECT * FROM component;
+SELECT name,master_name,source,status,orient,x,y,record_order FROM component;
+```
+
+- 两组都通过相同函数取列、保存、消费全部字段；无WHERE/ORDER BY。复用schema/生成器/读取实现，不增加另一套解析器。
+- 每样本独立进程/新库，数据构造和写入在计时外。A同连接first-read，B预读文件后新连接；先完整读，再执行prepare诊断，避免预先编译影响完整读的初始化口径。
+- read data：prepare→逐行step/fetch/保存/消费→finalize，首尾计时。
+- prepare诊断：先一次不计时预热，再连续10,000次prepare→finalize，整段计时。均摊值=整段/10,000，包含finalize、循环与错误检查，**不是纯prepare或首次schema加载时间**；不执行SELECT。
+- 每配置0/1/8/完整规模检查，完整检查兼预热；正式5轮交换两种SQL的先后顺序。独立计数核对RUN/VM_STEP；对比完整EXPLAIN字节码及恢复字段。诊断输出不在计时内。
+- 结果按同轮star−explicit计算delta和范围；区间交叉/方向不稳定时不宣称稳定差异，也不从本实验推断“少读列”的收益。
+
+实现：[select_projection.cpp](../select_projection.cpp)、[运行脚本](../run_select.py)。原有归因结果仍以其归档源码/二进制为准，不用新批次替换旧数字。

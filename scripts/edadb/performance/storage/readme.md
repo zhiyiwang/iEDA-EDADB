@@ -2,6 +2,10 @@
 
 本目录按实验和共用资料组织，不按运行日期分组。
 
+会议汇报先读[四组已冻结实验汇总](report.md)：方法、数据、计时边界、结果与实验之间的关系。
+
+当前验收及提交范围见[performance交接](../handoff.md#本轮收尾与提交边界)；生产优化方案不属于本轮基线交付。
+
 ```text
 storage/
 ├── readme.md
@@ -28,7 +32,7 @@ storage/
 │   ├── execution_flow.md SQL准备、VM执行、存储与返回
 │   ├── btree_storage.md rowid、字符串主键、B-tree页面与缺页读取
 │   └── execution_analysis.md 执行计划、统计接口及计时限制
-├── sqlite-vs-text/      SQLite与文本定位；低扰动实验已完成
+├── sqlite-vs-text/      本轮归因、SELECT补充及perf审计完成；已冻结
 │   ├── readme.md
 │   └── docs/            test_plan.md、results.md、sqlite_source.md
 ├── sqlite-pk-fk/        两表PK/FK与索引实验
