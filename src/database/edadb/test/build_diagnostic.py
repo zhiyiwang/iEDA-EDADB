@@ -10,6 +10,7 @@ root = pathlib.Path(__file__).resolve().parents[4]
 build = root / "build-release"
 output = pathlib.Path(sys.argv[1]).resolve()
 output.mkdir(parents=True, exist_ok=False)
+conversion_fault = "--conversion-fault" in sys.argv[2:]
 flags = {}
 for line in (build / "src/database/manager/builder/def_builder/CMakeFiles/def_builder.dir/flags.make").read_text().splitlines():
     if line.startswith("CXX_") and " = " in line:
@@ -18,9 +19,26 @@ for line in (build / "src/database/manager/builder/def_builder/CMakeFiles/def_bu
 
 
 def compile_source(name):
+    source = root / "src/database/manager/builder/def_builder" / name
+    if conversion_fault and name == "def_write_edadb.cpp":
+        # Test-only source copy: exercise the real toShadow null-input failure
+        # after one Net has been inserted; never change the production source.
+        content = source.read_text()
+        original = "        if (!net_sd.toShadow(net_vec[net_idx], &net_idx)) {"
+        replacement = '''        static bool conversion_failed_once = false;
+        auto* source_net = net_vec[net_idx];
+        if (net_idx == 1 && !conversion_failed_once) {
+            conversion_failed_once = true;
+            source_net = nullptr;
+            std::fprintf(stderr, "FAULT conversion null Net at index=1\\n");
+        }
+        if (!net_sd.toShadow(source_net, &net_idx)) {'''
+        assert content.count(original) == 1
+        source = output / name
+        source.write_text(content.replace(original, replacement))
     subprocess.run(["/usr/bin/g++-10", *flags["CXX_DEFINES"], *flags["CXX_INCLUDES"],
                     *flags["CXX_FLAGS"], "-DEDADB_OUTPUT_DEBUG=1", "-c",
-                    str(root / "src/database/manager/builder/def_builder" / name),
+                    "-I" + str(root / "src/database/manager/builder/def_builder"), str(source),
                     "-o", str(output / (name + ".o"))], check=True)
 
 

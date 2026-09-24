@@ -1,0 +1,129 @@
+{
+  "status": "PASS",
+  "cases": 15,
+  "strict": 10,
+  "normalized": 5,
+  "binary_sha256": "db525761a15032efa339abb99b5fb1ab6b64c77d45db9d24cc66d05c002e9f44",
+  "results": [
+    {
+      "case": "default_ipl",
+      "comparison": "strict",
+      "assertions": 37,
+      "integrity": "ok",
+      "foreign_key_check": "ok",
+      "restored_def_sha256": "26fc1e9ff16bf660c403cb9d3f0a8714be0ffd7a945d20fae76027e6c6d5dd85"
+    },
+    {
+      "case": "design_fields",
+      "comparison": "strict",
+      "assertions": 3,
+      "integrity": "ok",
+      "foreign_key_check": "ok",
+      "restored_def_sha256": "30ee65c2fb7cd1a8ab07b77190cb4fb2ee0809eec08f4f6ed0bfffa5f53c79b8"
+    },
+    {
+      "case": "design_fallback",
+      "comparison": "strict",
+      "assertions": 3,
+      "integrity": "ok",
+      "foreign_key_check": "ok",
+      "restored_def_sha256": "26fc1e9ff16bf660c403cb9d3f0a8714be0ffd7a945d20fae76027e6c6d5dd85"
+    },
+    {
+      "case": "die_polygon",
+      "comparison": "strict",
+      "assertions": 5,
+      "integrity": "ok",
+      "foreign_key_check": "ok",
+      "restored_def_sha256": "df079c1f1a382d4cb4d789e73f0e36aa6117a97019ce482306eb9dff9eb45879"
+    },
+    {
+      "case": "aux_optional",
+      "comparison": "normalized_root_order",
+      "assertions": 90,
+      "integrity": "ok",
+      "foreign_key_check": "ok",
+      "restored_def_sha256": "07e76579542fc3479c58a823ea3f0c1c15ca72d7d5ed6424a9cb90fcb82fc220"
+    },
+    {
+      "case": "pin_derived",
+      "comparison": "strict",
+      "assertions": 39,
+      "integrity": "ok",
+      "foreign_key_check": "ok",
+      "restored_def_sha256": "ff4e74f45786fa3625286f47579a635f1784f9b360f19ef5fb012797bd8bf416"
+    },
+    {
+      "case": "pin_writer",
+      "comparison": "strict",
+      "assertions": 5,
+      "integrity": "ok",
+      "foreign_key_check": "ok",
+      "restored_def_sha256": "76b7a31336919e309803d4d45ae99f721a372796dfd1ee4a49662d288a3277c9"
+    },
+    {
+      "case": "pin_branches",
+      "comparison": "strict",
+      "assertions": 9,
+      "integrity": "ok",
+      "foreign_key_check": "ok",
+      "restored_def_sha256": "8c9f405687e17797b6d01259408aa24aece1c0cdad0644684f0fa3d12543e17b"
+    },
+    {
+      "case": "group_branches",
+      "comparison": "normalized_root_order",
+      "assertions": 93,
+      "integrity": "ok",
+      "foreign_key_check": "ok",
+      "restored_def_sha256": "07e76579542fc3479c58a823ea3f0c1c15ca72d7d5ed6424a9cb90fcb82fc220"
+    },
+    {
+      "case": "special_net_branches",
+      "comparison": "normalized_root_order",
+      "assertions": 21,
+      "integrity": "ok",
+      "foreign_key_check": "ok",
+      "restored_def_sha256": "217cb0be5050b7191fd1dd7dbdd72131f9addb848cf3ddcfe8d46668dee50267"
+    },
+    {
+      "case": "grid_branches",
+      "comparison": "normalized_root_order",
+      "assertions": 14,
+      "integrity": "ok",
+      "foreign_key_check": "ok",
+      "restored_def_sha256": "6fc1362d7a9cdc45c8c80c73a23865cb01b5d7cd675df25d414b5cdaa356b16f"
+    },
+    {
+      "case": "via_branches",
+      "comparison": "normalized_root_order",
+      "assertions": 11,
+      "integrity": "ok",
+      "foreign_key_check": "ok",
+      "restored_def_sha256": "4a15b7ebda0bf30f4323f4826d34c2f7d1cf96701486272bf77d4db58ecb40b4"
+    },
+    {
+      "case": "instance_branches",
+      "comparison": "strict",
+      "assertions": 7,
+      "integrity": "ok",
+      "foreign_key_check": "ok",
+      "restored_def_sha256": "12dbfc7b0eb619b16605d25c171b9171c429d21323e01ea6a5d2907fe3582aed"
+    },
+    {
+      "case": "routed_irt",
+      "comparison": "strict",
+      "assertions": 22,
+      "integrity": "ok",
+      "foreign_key_check": "ok",
+      "restored_def_sha256": "25b0c2d5ec93463ef0c2b935ee86086a2602bd97a666c71843bc6f373dab8960"
+    },
+    {
+      "case": "net_branches",
+      "comparison": "strict",
+      "assertions": 36,
+      "integrity": "ok",
+      "foreign_key_check": "ok",
+      "restored_def_sha256": "4e551da3869f245d4dd1fa39d673f470ee9c1b9a0275cb87d1466503875a2ce0"
+    }
+  ]
+}

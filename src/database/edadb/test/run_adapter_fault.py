@@ -35,6 +35,7 @@ root = Path(__file__).resolve().parents[4]
 binary = Path(sys.argv[1]).resolve()
 output = Path(sys.argv[2]).resolve()
 output.mkdir(parents=True, exist_ok=False)
+conversion_fault = "--conversion-fault" in sys.argv[3:]
 test = Path(__file__).resolve().parent
 shim = output / "adapter_fault.so"
 subprocess.run(["g++-10", "-std=c++17", "-O3", "-shared", "-fPIC", str(test / "adapter_fault.cpp"),
@@ -47,6 +48,10 @@ environment.update(WORKSPACE=str(workspace), CONFIG_DIR=str(workspace / "iEDA_co
                    DESIGN_TOP="gcd", NETLIST_FILE="/dev/null", SDC_FILE="/dev/null", SPEF_FILE="/dev/null",
                    INPUT_DEF=str(workspace / "result/iPL_filler_result.def"),
                    EDADB_DB_PATH=str(output / "edadb.db"), FAULT_RUNNER=str(Path(__file__).resolve()))
+if conversion_fault:
+    environment["ADAPTER_CONVERSION_FAULT"] = "1"
+else:
+    environment.pop("ADAPTER_CONVERSION_FAULT", None)
 
 
 def run(script, name, preload=False):
@@ -61,7 +66,8 @@ def run(script, name, preload=False):
 
 run(test / "tcl/adapter_fault.tcl", "fault", preload=True)
 log = (output / "fault.log").read_text()
-for marker in ("FAULT fired", "FAULT rollback result=0 autocommit=1 instances=0 nets=0",
+fault_marker = "FAULT conversion rollback pending" if conversion_fault else "FAULT fired"
+for marker in (fault_marker, "FAULT rollback result=0 autocommit=1 instances=0 nets=0",
                "PASS: adapter error reached Tcl", "PASS: schema retained", "PASS: same-process retry succeeded"):
     assert marker in log, marker
 database = audit_database(output / "edadb.db")
@@ -70,7 +76,8 @@ run(test / "tcl/edadb2def_generic.tcl", "read")
 environment["OUTPUT_DEF"] = str(output / "native.def")
 run(test / "tcl/direct_def_roundtrip.tcl", "native")
 assert (output / "native.def").read_bytes() == (output / "restored.def").read_bytes()
-result = dict(status="PASS", binary_sha256=hashlib.sha256(binary.read_bytes()).hexdigest(),
+result = dict(status="PASS", fault_mode="conversion" if conversion_fault else "insert",
+              binary_sha256=hashlib.sha256(binary.read_bytes()).hexdigest(),
               input_sha256=hashlib.sha256(Path(environment["INPUT_DEF"]).read_bytes()).hexdigest(),
               rollback_all_tables_empty=True, same_process_retry=True, strict_def_equal=True, database=database)
 (output / "audit.json").write_text(json.dumps(result, indent=2) + "\n")

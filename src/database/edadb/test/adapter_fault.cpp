@@ -12,6 +12,7 @@ static Step real_step = reinterpret_cast<Step>(dlsym(RTLD_NEXT, "sqlite3_step"))
 static Exec real_exec = reinterpret_cast<Exec>(dlsym(RTLD_NEXT, "sqlite3_exec"));
 static bool injected = false;
 static int net_inserts = 0;
+static bool conversion_mode = std::getenv("ADAPTER_CONVERSION_FAULT") != nullptr;
 
 static int count_rows(sqlite3* database, const char* sql) {
     sqlite3_stmt* statement = nullptr;
@@ -25,6 +26,9 @@ static int count_rows(sqlite3* database, const char* sql) {
 
 extern "C" int sqlite3_step(sqlite3_stmt* statement) {
     const char* sql = sqlite3_sql(statement);
+    if (conversion_mode) {
+        return real_step(statement);
+    }
     if (!injected && sql && std::strstr(sql, "INSERT INTO \"iNetSD\"")) {
         if (++net_inserts == 2) {
             injected = true;
@@ -50,6 +54,13 @@ extern "C" int sqlite3_step(sqlite3_stmt* statement) {
 
 extern "C" int sqlite3_exec(sqlite3* database, const char* sql,
                             int (*callback)(void*, int, char**, char**), void* argument, char** error) {
+    if (conversion_mode && sql && std::strstr(sql, "ROLLBACK")) {
+        int instances = count_rows(database, "SELECT count(*) FROM iInstSD");
+        int nets = count_rows(database, "SELECT count(*) FROM iNetSD");
+        if (instances <= 0 || nets != 1 || sqlite3_get_autocommit(database)) std::abort();
+        std::fprintf(stderr, "FAULT conversion rollback pending instances=%d nets=%d\n", instances, nets);
+        injected = true;
+    }
     int result = real_exec(database, sql, callback, argument, error);
     if (injected && sql && std::strstr(sql, "ROLLBACK")) {
         int instances = count_rows(database, "SELECT count(*) FROM iInstSD");

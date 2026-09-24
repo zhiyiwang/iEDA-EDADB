@@ -1,0 +1,26 @@
+{
+  "binaries": {
+    "baseline": "be1d2de135a09960288736804aa63fd68181c5e4c3836c3e8afca4341f85f985",
+    "stream": "ee137b5e589d2101a71472bfbd3cc71fe1cb87c7baf91bcb89d6ef5110546986"
+  },
+  "inputs": {
+    "filler": {
+      "bytes": 726155,
+      "sha256": "b2a8ade6f7e74f620491f56914a34d8fb89dd3efe957e4dc3ec4a42d50104c5e"
+    },
+    "routed-stress": {
+      "bytes": 6305169,
+      "sha256": "faa4ffa9bc5ef50169788aa99f5f907c6d3475091264de5713ed31892a046ae0"
+    }
+  },
+  "cache": "warm",
+  "stage_timing": "ON",
+  "cpu": 2,
+  "warmups": 1,
+  "runs": 5,
+  "settle_seconds": 5,
+  "additional_stress_nets": 1000,
+  "parent_head": "7f19a46501be0d64eec79e87a4c8a2a2ccd1e17d",
+  "core_gitlink": "1c4857c485a172d7ffb8c8fc615f3046fbb68a0f",
+  "writer_sha256": "528823a301a9d714fa1d5ff712f00ea9492e3787989b8d9fd379647f7354eb5f"
+}

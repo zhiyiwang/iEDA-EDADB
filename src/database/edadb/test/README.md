@@ -8,6 +8,7 @@ This directory keeps repeatable EDADB adapter tests close to the EDADB code.
 - `build_diagnostic.py`: builds a separate Release binary with adapter logs for the existing regression assertions.
 - `audit_regression.py`: checks all 15 completed cases and database integrity; records strict versus normalized comparisons.
 - [Current acceptance report](../docs/performance/acceptance.md): commands, results and coverage limits. These tests are not performance measurements.
+- `stream_shadow/run.py`: paired warm-cache write/read/RSS measurements and independent SQL counters; see [streaming results](../docs/performance/stream-shadow.md). `build_diagnostic.py --conversion-fault` additionally builds a test-only null-Net conversion failure variant.
 
 Run from the repository root:
 

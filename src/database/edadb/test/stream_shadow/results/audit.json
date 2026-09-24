@@ -1,0 +1,43 @@
+{
+  "status": "PASS",
+  "strict_roundtrips": 24,
+  "equal_database_dumps": 24,
+  "counts": {
+    "filler": {
+      "baseline": {
+        "prepare": 26,
+        "insert": 34358,
+        "begin": 2,
+        "commit": 2,
+        "rollback": 0
+      },
+      "stream": {
+        "prepare": 26,
+        "insert": 34358,
+        "begin": 2,
+        "commit": 2,
+        "rollback": 0
+      }
+    },
+    "routed-stress": {
+      "baseline": {
+        "prepare": 26,
+        "insert": 449214,
+        "begin": 2,
+        "commit": 2,
+        "rollback": 0
+      },
+      "stream": {
+        "prepare": 26,
+        "insert": 449214,
+        "begin": 2,
+        "commit": 2,
+        "rollback": 0
+      }
+    }
+  },
+  "database_dump_sha256": {
+    "filler": "a7656a7bd1b502fb8fa626443538ee4935687a5cc870a8d0836c011f2f54b091",
+    "routed-stress": "a2458cd4ed2bbc31e38de52085e5e7d1737441c6519e9efd2d2bc541c2443469"
+  }
+}

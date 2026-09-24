@@ -10,10 +10,19 @@
    [功能验收报告](acceptance.md)：15/15用例、adapter中途失败回滚、同进程重试及审计。
 3. [事务合并实现](transaction-batching.md)与[代码变化](optimization-code-changes.md)：核对具体改动及验证范围。
 4. [仅父键索引版本结果](parent-index-results.md)与[历史实验记录](optimization-history.md)：用于追溯，不将中间优化版本当作未优化基线。
+5. [流式Shadow新增实验](stream-shadow.md)：在事务优化版本上逐root转换、写入、释放；包含内存、阶段耗时、SQL计数及失败回滚验证。
 
-## 当前结果与限制
+## 流式Shadow工作区验证
 
-- 当前版本包含父键索引、建表事务合并、design写事务合并，并移除参考DEF扫描；不包含后续流式Shadow和叶子批量读取。
+- 四个writer改为逐root转换和写入，复用InsertOp；15/15功能回归、插入/转换失败回滚及24个性能样本的严格DEF/DB审计通过。
+- routed压力输入的写进程峰值RSS降低28.20 MiB（9.55%）；write data耗时增加0.63%，完整write增加2.34%。这是内存优化，不宣称写入加速。
+- [实现、正确性证据及结果](stream-shadow.md)包含原始样本与统计链接；实现和验证记录一起保存于开发分支，Demo分支未移动，core未修改。
+
+## 流式Shadow修改前的结果与限制
+
+以下保留先前事务优化实验，不与上述新批次混合。
+
+- 此处对照版本包含父键索引、建表事务合并、design写事务合并，并移除参考DEF扫描；不包含流式Shadow和叶子批量读取。
 - 原始iEDA已重新Release构建并完成热缓存复测：完整读取47.484 ms、写入6.855 ms；当前EDADB为106.132 ms、371.532 ms，均为5次中位数。
 - 当前EDADB完整读、写分别耗时为原生DEF的2.24倍、54.20倍。此次不使用历史profiling版本代替原始iEDA。
 - 同批独立阶段观测组：读data均值102.967 ms；写init 0.181 ms、create 89.754 ms、data 279.471 ms。data包含数据事务，不含建表。分段不得与OFF中位数相减。
