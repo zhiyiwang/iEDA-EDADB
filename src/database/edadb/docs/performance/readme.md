@@ -7,6 +7,7 @@
 1. [优化实验结果](optimization-results.md)：接入前原生iEDA `007435241`与当前EDADB已同环境复测；读写分开，init/create单列。
    原生DEF历史时间差异与同环境复测方法见[基线核查](baseline-verification.md)；完整命令始终使用原Tcl计时，不能与C++内部阶段混算。
 2. [分段计时方法](stage-timing.md)：计时开关、起止位置、包含与排除的工作、代码位置及运行命令。
+   [功能验收报告](acceptance.md)：15/15用例、adapter中途失败回滚、同进程重试及审计。
 3. [事务合并实现](transaction-batching.md)与[代码变化](optimization-code-changes.md)：核对具体改动及验证范围。
 4. [仅父键索引版本结果](parent-index-results.md)与[历史实验记录](optimization-history.md)：用于追溯，不将中间优化版本当作未优化基线。
 

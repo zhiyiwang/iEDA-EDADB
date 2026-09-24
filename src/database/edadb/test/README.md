@@ -4,6 +4,10 @@ This directory keeps repeatable EDADB adapter tests close to the EDADB code.
 
 - `run_idb_roundtrip_regression.sh`: object/field/schema/DEF roundtrip regression.
 - `stage_validation/`: native versus EDADB-restored point-tool stage validation.
+- `run_adapter_fault.py`: real adapter error propagation, rollback and same-process retry using the test-only `adapter_fault.cpp` preload shim.
+- `build_diagnostic.py`: builds a separate Release binary with adapter logs for the existing regression assertions.
+- `audit_regression.py`: checks all 15 completed cases and database integrity; records strict versus normalized comparisons.
+- [Current acceptance report](../docs/performance/acceptance.md): commands, results and coverage limits. These tests are not performance measurements.
 
 Run from the repository root:
 

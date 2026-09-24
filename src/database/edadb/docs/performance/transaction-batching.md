@@ -68,4 +68,4 @@ g++-10 -std=c++17 -O3 -DEDADB_ENABLE_PROFILING=0 \
 - filler cold/warm各1次：严格DEF diff、integrity_check、foreign_key_check均通过；两份数据库的完整SQL dump与上一轮P1数据库相同，表、索引及数据未改变。
 - 日志及生成物：`/tmp/iedadb_p3p4/`；构建日志：`/tmp/iedadb_p3p4_build.log`。
 - 这次是功能smoke，不是正式性能复测；不使用各1次的耗时声明加速比，也不覆盖已保存的P1结果。
-- 尚未完成新版本的adapter故障注入、15用例完整回归及P3/P4分别测量；已完成累计版本正式性能测试。本次保存为[Demo阶段提交](demo.md)，不将两阶段标记为全部验收完成。
+- 后续已补齐代表性adapter故障注入和15/15用例回归，见[功能验收](acceptance.md)。累计版本正式性能测试已完成；两项事务优化分别测量及其他故障类型不在本次验收覆盖内。
