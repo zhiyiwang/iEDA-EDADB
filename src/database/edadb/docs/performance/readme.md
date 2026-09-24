@@ -1,6 +1,6 @@
 # iEDA+EDADB性能文档
 
-会议入口：[Demo版本说明](demo.md)。本次保存为阶段性提交，不标记完整验收milestone。
+会议入口：[Demo版本说明](demo.md)，对应`demo/20260924`分支。沿用现有Demo分支约定，不设置milestone，不代表完整验收通过。
 
 ## 阅读顺序
 
