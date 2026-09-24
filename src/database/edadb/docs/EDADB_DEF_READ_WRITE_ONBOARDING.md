@@ -136,7 +136,7 @@ Call order:
 2. `idb::edadb_adapter::initReadDb()`
 3. `DefReadEdadb::createDbByEdadb()`
 4. `readIdbDesign()`, `readIdbDie()`, `readIdbRow()`, `readIdbTrackGrid()`, `readIdbGCellGrid()`, `readIdbVia()`, `readIdbRegion()`, `readIdbInstance()`, `readIdbPin()`, `readIdbBlockage()`, `readIdbSlot()`, `readIdbGroup()`, `readIdbFill()`, `readIdbSpecialNet()`, `readIdbNet()`
-5. `DefReadEdadb::createDbByDef()` still parses DEF text, but disables callbacks for objects restored from EDADB.
+No reference DEF is scanned after EDADB restoration. The legacy DEF path argument remains for interface compatibility; LEF initialization is still required.
 
 For each class, compare with `src/database/manager/builder/def_builder/def_read.cpp` and its callbacks. The EDADB read path must rebuild the same iDB state that the original DEF callback would have built.
 
@@ -187,7 +187,7 @@ This onboarding guide owns only the architecture and reading path. Use the canon
 ```bash
 rg -n "CmdEdadb|edadb_read|edadb_write|def_init|def_save" src/interface/tcl/tcl_idb
 rg -n "readDefFromEdadb|saveDefToEdadb|buildDefFromEdadb|saveDefToEdadb" src/platform src/database
-rg -n "createDbFromEdadb|createDbByDef|createDbByEdadb|readIdb" src/database/manager/builder/def_builder/def_read_edadb.cpp
+rg -n "createDbFromEdadb|createDbByEdadb|readIdb" src/database/manager/builder/def_builder/def_read_edadb.cpp
 rg -n "writeDb2Edadb|writeChip2Edadb|writeIdb" src/database/manager/builder/def_builder/def_write_edadb.cpp
 rg -n "TABLE4|EDADB_INIT_TABLE|initReadDb|initWriteDb|Shadow<" src/database/edadb/idb
 ```

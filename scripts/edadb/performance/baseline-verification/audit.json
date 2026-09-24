@@ -1,0 +1,196 @@
+{
+  "checks": [
+    {
+      "version": "baseline",
+      "round": 0,
+      "cache": "cold",
+      "parent_fk_indexes": 0
+    },
+    {
+      "version": "baseline",
+      "round": 0,
+      "cache": "warm",
+      "parent_fk_indexes": 0
+    },
+    {
+      "version": "baseline",
+      "round": 1,
+      "cache": "cold",
+      "parent_fk_indexes": 0
+    },
+    {
+      "version": "baseline",
+      "round": 1,
+      "cache": "warm",
+      "parent_fk_indexes": 0
+    },
+    {
+      "version": "baseline",
+      "round": 2,
+      "cache": "cold",
+      "parent_fk_indexes": 0
+    },
+    {
+      "version": "baseline",
+      "round": 2,
+      "cache": "warm",
+      "parent_fk_indexes": 0
+    },
+    {
+      "version": "baseline",
+      "round": 3,
+      "cache": "cold",
+      "parent_fk_indexes": 0
+    },
+    {
+      "version": "baseline",
+      "round": 3,
+      "cache": "warm",
+      "parent_fk_indexes": 0
+    },
+    {
+      "version": "baseline",
+      "round": 4,
+      "cache": "cold",
+      "parent_fk_indexes": 0
+    },
+    {
+      "version": "baseline",
+      "round": 4,
+      "cache": "warm",
+      "parent_fk_indexes": 0
+    },
+    {
+      "version": "baseline",
+      "round": 5,
+      "cache": "cold",
+      "parent_fk_indexes": 0
+    },
+    {
+      "version": "baseline",
+      "round": 5,
+      "cache": "warm",
+      "parent_fk_indexes": 0
+    },
+    {
+      "version": "optimized",
+      "round": 0,
+      "cache": "cold",
+      "parent_fk_indexes": 13
+    },
+    {
+      "version": "optimized",
+      "round": 0,
+      "cache": "warm",
+      "parent_fk_indexes": 13
+    },
+    {
+      "version": "optimized",
+      "round": 1,
+      "cache": "cold",
+      "parent_fk_indexes": 13
+    },
+    {
+      "version": "optimized",
+      "round": 1,
+      "cache": "warm",
+      "parent_fk_indexes": 13
+    },
+    {
+      "version": "optimized",
+      "round": 2,
+      "cache": "cold",
+      "parent_fk_indexes": 13
+    },
+    {
+      "version": "optimized",
+      "round": 2,
+      "cache": "warm",
+      "parent_fk_indexes": 13
+    },
+    {
+      "version": "optimized",
+      "round": 3,
+      "cache": "cold",
+      "parent_fk_indexes": 13
+    },
+    {
+      "version": "optimized",
+      "round": 3,
+      "cache": "warm",
+      "parent_fk_indexes": 13
+    },
+    {
+      "version": "optimized",
+      "round": 4,
+      "cache": "cold",
+      "parent_fk_indexes": 13
+    },
+    {
+      "version": "optimized",
+      "round": 4,
+      "cache": "warm",
+      "parent_fk_indexes": 13
+    },
+    {
+      "version": "optimized",
+      "round": 5,
+      "cache": "cold",
+      "parent_fk_indexes": 13
+    },
+    {
+      "version": "optimized",
+      "round": 5,
+      "cache": "warm",
+      "parent_fk_indexes": 13
+    }
+  ],
+  "table_row_counts": {
+    "iDesign": 1,
+    "iDieSD": 1,
+    "iDieSD_points_sd_iCoordSD": 2,
+    "iRow": 39,
+    "iTrackGridSD": 12,
+    "iTrackGridSD__layer_name_vec_sd___edadb_primitive_vector": 12,
+    "iGCellGrid": 6,
+    "iVia": 4,
+    "iVia__master_instance_iViaMasterSD_fixed_layer_shape_list_sd_iLayerShapeSD": 0,
+    "iVia__master_instance_iViaMasterSD_fixed_layer_shape_list_sd_iLayerShapeSD__rect_list_sd_IdbRectSD": 0,
+    "iInstSD": 2604,
+    "iPinSD": 56,
+    "iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD": 56,
+    "iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD__layer_shape_list_sd_iLayerShapeSD": 56,
+    "iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD__layer_shape_list_sd_iLayerShapeSD__rect_list_sd_IdbRectSD": 56,
+    "iBlockageSD": 0,
+    "iBlockageSD__rect_list_sd_IdbRectSD": 0,
+    "iRegion": 0,
+    "iRegion__boudary_list_IdbRectSD": 0,
+    "iSlotSD": 0,
+    "iSlotSD__rect_list_sd_IdbRectSD": 0,
+    "iGroupSD": 0,
+    "iGroupSD__instance_name_vec_sd___edadb_primitive_vector": 0,
+    "iFillSD": 0,
+    "iFillSD__rect_list_sd_IdbRectSD": 0,
+    "iFillSD__coordinate_list_sd_iCoordSD": 0,
+    "iSpecNetSD": 2,
+    "iSpecNetSD__pin_string_list_sd___edadb_primitive_vector": 6,
+    "iSpecNetSD__io_pin_name_list_sd___edadb_primitive_vector": 0,
+    "iSpecNetSD__instance_pin_list_sd_iSpecPinRef": 0,
+    "iSpecNetSD__wire_list_sd_iSpecWireSD": 2,
+    "iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD": 639,
+    "iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD__point_list_sd_iCoordSD": 697,
+    "iNetSD": 677,
+    "iNetSD__io_pin_name_list_sd___edadb_primitive_vector": 54,
+    "iNetSD__instance_pin_list_sd_iNetPinRef": 1730,
+    "iNetSD__wire_list_sd_iRegWireSD": 677,
+    "iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD": 8997,
+    "iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__via_ref_list_sd_iRegViaRef": 3716,
+    "iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__virtual_point_index_list_sd___edadb_primitive_vector": 0,
+    "iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__point_list_sd_iCoordSD": 14256
+  },
+  "canonical_def_sha256": [
+    "b2a8ade6f7e74f620491f56914a34d8fb89dd3efe957e4dc3ec4a42d50104c5e"
+  ],
+  "formal_samples": 20,
+  "status": "PASS"
+}

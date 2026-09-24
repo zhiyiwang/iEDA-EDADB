@@ -1,0 +1,17 @@
+version	cache	metric	count	median_ms	mean_ms	min_ms	max_ms
+baseline	cold	native_def_read	5	48.977	49.4718	48.827	50.934
+baseline	cold	native_def_write	5	6.98	6.955	6.827	7.083
+baseline	cold	edadb_read	5	11960.965	12029.6278	11950.827	12221.657
+baseline	cold	edadb_write	5	2233.728	2217.7022	2088.234	2331.477
+baseline	warm	native_def_read	5	48.272	48.3364	48.078	48.767
+baseline	warm	native_def_write	5	6.92	6.9304	6.897	6.971
+baseline	warm	edadb_read	5	11931.378	12018.8166	11921.305	12382.369
+baseline	warm	edadb_write	5	2277.177	2309.2928	2153.786	2494.176
+optimized	cold	native_def_read	5	48.33	52.457	47.993	62.355
+optimized	cold	native_def_write	5	6.94	6.9996	6.88	7.237
+optimized	cold	edadb_read	5	181.958	164.7768	131.089	189.077
+optimized	cold	edadb_write	5	413.533	397.3474	365.405	415.17
+optimized	warm	native_def_read	5	47.295	47.3458	47.189	47.681
+optimized	warm	native_def_write	5	7.034	7.0432	6.951	7.12
+optimized	warm	edadb_read	5	108.873	108.0642	102.469	111.069
+optimized	warm	edadb_write	5	419.34	416.3258	375.621	438.057

@@ -20,22 +20,14 @@ public:
   
     /**
      * @brief build def from edadb database:
-     *   Currently, use path to call createDbByDef to debug;
-     *   Finally, will directly build def from edadb database.
+     *   Restore all design data from EDADB without scanning a reference DEF.
      * @param edadb_path edadb database path
-     * @param path def file path
+     * @param path legacy DEF path, retained for interface compatibility; not read
      * @return true if success, false otherwise
      */
     bool createDbFromEdadb(const char* edadb_path, const char* path);
 
 protected:
-    /**
-     * @brief create database by def file
-     * @param path def file path
-     * @return true if success, false otherwise
-     */
-    bool createDbByDef(const char* path);
-
     /**
      * @brief create database by edadb database
      * @param edadb_path edadb database path

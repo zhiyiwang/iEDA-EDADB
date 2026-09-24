@@ -1,0 +1,33 @@
+{
+  "strict_def_pass": 24,
+  "integrity_fk_pass": 24,
+  "logical_dump_equal_to_p1": 24,
+  "measured_samples": 20,
+  "warmup_samples": 4,
+  "samples": [
+    "off/cold/run-1",
+    "off/cold/run-2",
+    "off/cold/run-3",
+    "off/cold/run-4",
+    "off/cold/run-5",
+    "off/cold/warmup-1",
+    "off/warm/run-1",
+    "off/warm/run-2",
+    "off/warm/run-3",
+    "off/warm/run-4",
+    "off/warm/run-5",
+    "off/warm/warmup-1",
+    "on/cold/run-1",
+    "on/cold/run-2",
+    "on/cold/run-3",
+    "on/cold/run-4",
+    "on/cold/run-5",
+    "on/cold/warmup-1",
+    "on/warm/run-1",
+    "on/warm/run-2",
+    "on/warm/run-3",
+    "on/warm/run-4",
+    "on/warm/run-5",
+    "on/warm/warmup-1"
+  ]
+}

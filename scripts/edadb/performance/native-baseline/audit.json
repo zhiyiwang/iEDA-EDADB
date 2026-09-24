@@ -1,0 +1,11 @@
+{
+  "status": "PASS",
+  "formal_command_records": 30,
+  "formal_stage_records": 70,
+  "database_checks": 12,
+  "cross_version_def_checks": 6,
+  "roundtrip_checks": 12,
+  "canonical_def_sha256": [
+    "b2a8ade6f7e74f620491f56914a34d8fb89dd3efe957e4dc3ec4a42d50104c5e"
+  ]
+}

@@ -1,5 +1,7 @@
 # iEDA And EDADB Performance Test
 
+当前优化结果统一维护于[集成性能文档](../../../src/database/edadb/docs/performance/readme.md)，优化基线为未优化iEDA+EDADB。本目录保留运行脚本、测试源码及历史实验记录；新增[粗粒度计时说明](../../../src/database/edadb/docs/performance/stage-timing.md)与下文历史完整命令指标应区分使用，不能混算加速比。
+
 This test compares native DEF read/write with EDADB write/read. It does not modify iEDA, the
 adapter, or EDADB core.
 

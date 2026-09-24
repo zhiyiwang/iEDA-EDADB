@@ -9,6 +9,8 @@ Paired deliverable checkpoint:
 
 ## Read First
 
+Performance work: [iEDA + EDADB性能文档](performance/readme.md) — 以未优化iEDA+EDADB为基线的结果、代码变化、分段计时与阅读顺序。
+
 1. `EDADB_DEF_READ_WRITE_ONBOARDING.md`: architecture, call chain, and code-reading order for EDADB-backed DEF read/write.
 2. `def-ieda-mapping-and-order.md`: canonical DEF-to-iDB mapping, A/B/C/D root-order policy, current order implementation status, and planned order-stress tests.
 3. `idb-adapter/README.md`: canonical adapter implementation, review, test, and documentation rules.

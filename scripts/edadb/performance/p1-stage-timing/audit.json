@@ -1,0 +1,42 @@
+{
+  "strict_def_samples": 24,
+  "sqlite_integrity_and_fk_pass": 24,
+  "samples": [
+    "off/cold/run-1",
+    "off/cold/run-2",
+    "off/cold/run-3",
+    "off/cold/run-4",
+    "off/cold/run-5",
+    "off/cold/warmup-1",
+    "off/warm/run-1",
+    "off/warm/run-2",
+    "off/warm/run-3",
+    "off/warm/run-4",
+    "off/warm/run-5",
+    "off/warm/warmup-1",
+    "on/cold/run-1",
+    "on/cold/run-2",
+    "on/cold/run-3",
+    "on/cold/run-4",
+    "on/cold/run-5",
+    "on/cold/warmup-1",
+    "on/warm/run-1",
+    "on/warm/run-2",
+    "on/warm/run-3",
+    "on/warm/run-4",
+    "on/warm/run-5",
+    "on/warm/warmup-1"
+  ],
+  "core_tests": 27,
+  "regression_cases": 15,
+  "no_reference_def_strict_diff": true,
+  "paired_write_count": 10,
+  "paired_delta_percent": [
+    18.62472398497559,
+    -19.946191832415174,
+    1.8019140939516287,
+    -5.187002514576589,
+    -0.9969792029243307
+  ],
+  "paired_delta_median_percent": -0.9969792029243307
+}

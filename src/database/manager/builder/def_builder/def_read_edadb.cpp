@@ -10,6 +10,7 @@
 
 #include "edadb.h"
 #include "edadb_idb_schema.h"
+#include "edadb_stage_timing.h"
 
 namespace {
 
@@ -48,6 +49,7 @@ DefReadEdadb::DefReadEdadb(IdbDefService* def_service) : DefRead(def_service)
 
 bool DefReadEdadb::createDbFromEdadb(const char* edadb_path, const char* path)
 {
+    edadb_adapter::stage_timing::Session timing("read");
     EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] DefReadEdadb::createDbFromEdadb edadb_path="
               << edadb_path << " def_path=" << path << std::endl;
     if (_def_service == nullptr) {
@@ -55,33 +57,32 @@ bool DefReadEdadb::createDbFromEdadb(const char* edadb_path, const char* path)
         return false;
     }
 
-    const bool helper_status = profileAdapterPhase("adapter.helper_init", [&]() {
-        return edadb_adapter::EdadbIdbHelper::setIdbDefService(_def_service);
-    });
-    if (!helper_status) {
-        std::cerr << "Error: DefReadEdadb::createDbFromEdadb failed to set IdbDefService!" << std::endl;
-        return false;
+    {
+        edadb_adapter::stage_timing::ScopedTimer timer(edadb_adapter::stage_timing::Phase::Init);
+        const bool helper_status = profileAdapterPhase("adapter.helper_init", [&]() {
+            return edadb_adapter::EdadbIdbHelper::setIdbDefService(_def_service);
+        });
+        if (!helper_status) {
+            std::cerr << "Error: DefReadEdadb::createDbFromEdadb failed to set IdbDefService!" << std::endl;
+            return false;
+        }
+
+        const int init_status = profileAdapterPhase("adapter.init", [&]() {
+            return edadb_adapter::initReadDb(edadb_path);
+        });
+        if (init_status < 0) {
+            std::cerr << "Error: DefReadEdadb::createDbFromEdadb failed to initReadDb!" << std::endl;
+            return false;
+        }
     }
 
-    const int init_status = profileAdapterPhase("adapter.init", [&]() {
-        return edadb_adapter::initReadDb(edadb_path);
-    });
-    if (init_status < 0) {
-        std::cerr << "Error: DefReadEdadb::createDbFromEdadb failed to initReadDb!" << std::endl;
-        return false;
-    }
-
-    if (!createDbByEdadb(edadb_path)) {
-        std::cerr << "Error: DefReadEdadb::createDbFromEdadb failed!" << std::endl;
-        return false;
-    }
-
-    const bool def_scan_status = profileAdapterPhase("adapter.reference_def_scan", [&]() {
-        return createDbByDef(path);
-    });
-    if (!def_scan_status) {
-        std::cerr << "Error: DefReadEdadb::createDbFromEdadb failed!" << std::endl; 
-        return false;
+    {
+        // Reading and iDB assembly remain interleaved; measure the complete loop once.
+        edadb_adapter::stage_timing::ScopedTimer timer(edadb_adapter::stage_timing::Phase::Data);
+        if (!createDbByEdadb(edadb_path)) {
+            std::cerr << "Error: DefReadEdadb::createDbFromEdadb failed!" << std::endl;
+            return false;
+        }
     }
 
     EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] DefReadEdadb::createDbFromEdadb completed" << std::endl;
@@ -91,142 +92,7 @@ bool DefReadEdadb::createDbFromEdadb(const char* edadb_path, const char* path)
 
 
 
-bool DefReadEdadb::createDbByDef(const char* path) {
-    EDADB_IDB_DEBUG_STREAM << "[EDADB-IDB] createDbByDef restore iDB from DEF text path="
-              << path << std::endl;
-    FILE* f = fopen(path, "r");
-    if (f == NULL) {
-      std::cerr << "Open def file failed..." << std::endl;
-      return false;
-    }
 
-    defrInit();
-    defrReset();
-
-    defrInitSession();
-
-    // DEF callbacks for EDADB-restored object families are intentionally not registered.
-
-    int res = defrRead(f, path, (defiUserData) this, /* case sensitive */ 1);
-
-    if (res != 0) {
-      return false;
-    }
-
-    (void) defrUnsetCallbacks();
-
-    // Unset all the callbacks
-    defrUnsetArrayNameCbk();
-    defrUnsetAssertionCbk();
-    defrUnsetAssertionsStartCbk();
-    defrUnsetAssertionsEndCbk();
-    defrUnsetBlockageCbk();
-    defrUnsetBlockageStartCbk();
-    defrUnsetBlockageEndCbk();
-    defrUnsetBusBitCbk();
-    defrUnsetCannotOccupyCbk();
-    defrUnsetCanplaceCbk();
-    defrUnsetCaseSensitiveCbk();
-    defrUnsetComponentCbk();
-    defrUnsetComponentExtCbk();
-    defrUnsetComponentStartCbk();
-    defrUnsetComponentEndCbk();
-    defrUnsetConstraintCbk();
-    defrUnsetConstraintsStartCbk();
-    defrUnsetConstraintsEndCbk();
-    defrUnsetDefaultCapCbk();
-    defrUnsetDesignCbk();
-    defrUnsetDesignEndCbk();
-    defrUnsetDieAreaCbk();
-    defrUnsetDividerCbk();
-    defrUnsetExtensionCbk();
-    defrUnsetFillCbk();
-    defrUnsetFillStartCbk();
-    defrUnsetFillEndCbk();
-    defrUnsetFPCCbk();
-    defrUnsetFPCStartCbk();
-    defrUnsetFPCEndCbk();
-    defrUnsetFloorPlanNameCbk();
-    defrUnsetGcellGridCbk();
-    defrUnsetGroupCbk();
-    defrUnsetGroupExtCbk();
-    defrUnsetGroupMemberCbk();
-    defrUnsetComponentMaskShiftLayerCbk();
-    defrUnsetGroupNameCbk();
-    defrUnsetGroupsStartCbk();
-    defrUnsetGroupsEndCbk();
-    defrUnsetHistoryCbk();
-    defrUnsetIOTimingCbk();
-    defrUnsetIOTimingsStartCbk();
-    defrUnsetIOTimingsEndCbk();
-    defrUnsetIOTimingsExtCbk();
-    defrUnsetNetCbk();
-    defrUnsetNetNameCbk();
-    defrUnsetNetNonDefaultRuleCbk();
-    defrUnsetNetConnectionExtCbk();
-    defrUnsetNetExtCbk();
-    defrUnsetNetPartialPathCbk();
-    defrUnsetNetSubnetNameCbk();
-    defrUnsetNetStartCbk();
-    defrUnsetNetEndCbk();
-    defrUnsetNonDefaultCbk();
-    defrUnsetNonDefaultStartCbk();
-    defrUnsetNonDefaultEndCbk();
-    defrUnsetPartitionCbk();
-    defrUnsetPartitionsExtCbk();
-    defrUnsetPartitionsStartCbk();
-    defrUnsetPartitionsEndCbk();
-    defrUnsetPathCbk();
-    defrUnsetPinCapCbk();
-    defrUnsetPinCbk();
-    defrUnsetPinEndCbk();
-    defrUnsetPinExtCbk();
-    defrUnsetPinPropCbk();
-    defrUnsetPinPropStartCbk();
-    defrUnsetPinPropEndCbk();
-    defrUnsetPropCbk();
-    defrUnsetPropDefEndCbk();
-    defrUnsetPropDefStartCbk();
-    defrUnsetRegionCbk();
-    defrUnsetRegionStartCbk();
-    defrUnsetRegionEndCbk();
-    defrUnsetRowCbk();
-    defrUnsetScanChainExtCbk();
-    defrUnsetScanchainCbk();
-    defrUnsetScanchainsStartCbk();
-    defrUnsetScanchainsEndCbk();
-    defrUnsetSiteCbk();
-    defrUnsetSlotCbk();
-    defrUnsetSlotStartCbk();
-    defrUnsetSlotEndCbk();
-    defrUnsetSNetWireCbk();
-    defrUnsetSNetCbk();
-    defrUnsetSNetStartCbk();
-    defrUnsetSNetEndCbk();
-    defrUnsetSNetPartialPathCbk();
-    defrUnsetStartPinsCbk();
-    defrUnsetStylesCbk();
-    defrUnsetStylesStartCbk();
-    defrUnsetStylesEndCbk();
-    defrUnsetTechnologyCbk();
-    defrUnsetTimingDisableCbk();
-    defrUnsetTimingDisablesStartCbk();
-    defrUnsetTimingDisablesEndCbk();
-    defrUnsetTrackCbk();
-    defrUnsetUnitsCbk();
-    defrUnsetVersionCbk();
-    defrUnsetVersionStrCbk();
-    defrUnsetViaCbk();
-    defrUnsetViaExtCbk();
-    defrUnsetViaStartCbk();
-    defrUnsetViaEndCbk();
-
-    defrClear();
-
-    fclose(f);
-
-    return true;
-} // createDbByDef
 
 
 
