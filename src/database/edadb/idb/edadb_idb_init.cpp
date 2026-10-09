@@ -132,12 +132,12 @@ int initWriteDb(const char* edadb_path) {
 
     // P3: one transaction owns all schema trees; keep its commit inside create timing.
     stage_timing::ScopedTimer timer(stage_timing::Phase::Create);
-    if (!edadb::beginTransaction()) {
+    if (!stage_timing::observe("schema.begin", [] { return edadb::beginTransaction(); })) {
         std::cerr << "Error: failed to begin schema transaction" << std::endl;
         return -1;
     }
 
-    if (initAllTables(true, false) < 0) {
+    if (stage_timing::observe("schema.tables", [] { return initAllTables(true, false); }) < 0) {
         if (!edadb::rollbackTransaction()) {
             std::cerr << "Error: failed to rollback schema transaction" << std::endl;
         }
@@ -145,7 +145,7 @@ int initWriteDb(const char* edadb_path) {
         return -1;
     }
 
-    if (!edadb::commitTransaction()) {
+    if (!stage_timing::observe("schema.commit", [] { return edadb::commitTransaction(); })) {
         std::cerr << "Error: failed to commit schema transaction" << std::endl;
         if (!edadb::rollbackTransaction()) {
             std::cerr << "Error: failed to rollback schema transaction" << std::endl;

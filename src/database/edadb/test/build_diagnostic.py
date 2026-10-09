@@ -1,16 +1,21 @@
 """Relink current Release objects with adapter logging, without changing production outputs."""
 import concurrent.futures
+import argparse
 import pathlib
 import shlex
 import shutil
 import subprocess
-import sys
 
 root = pathlib.Path(__file__).resolve().parents[4]
-build = root / "build-release"
-output = pathlib.Path(sys.argv[1]).resolve()
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("output", type=pathlib.Path)
+parser.add_argument("--build", type=pathlib.Path, default=root / "build-release")
+parser.add_argument("--conversion-fault", action="store_true")
+arguments = parser.parse_args()
+build = arguments.build.resolve()
+output = arguments.output.resolve()
 output.mkdir(parents=True, exist_ok=False)
-conversion_fault = "--conversion-fault" in sys.argv[2:]
+conversion_fault = arguments.conversion_fault
 flags = {}
 for line in (build / "src/database/manager/builder/def_builder/CMakeFiles/def_builder.dir/flags.make").read_text().splitlines():
     if line.startswith("CXX_") and " = " in line:

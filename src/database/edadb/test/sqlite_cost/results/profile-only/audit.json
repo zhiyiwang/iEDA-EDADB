@@ -1,0 +1,48 @@
+{
+  "status": "PASS",
+  "roundtrips": {
+    "smoke": 4,
+    "timing": 24,
+    "counters": 2,
+    "markers": 2,
+    "perf": 6,
+    "io": 2
+  },
+  "formal_command_samples": 40,
+  "groups": 114,
+  "database_dumps_equal_to_frozen_streaming_result": true,
+  "source_and_binary_hashes_match": true,
+  "diagnostic_root": "/tmp/edadb-profile-only",
+  "statistics_review": {
+    "archived_statistics": "PASS",
+    "groups": 114,
+    "command_samples": 40,
+    "stage_checks": "PASS",
+    "select_runs": {
+      "filler": 30548,
+      "routed-stress": 448548
+    },
+    "current_sources_match_archive": {
+      "src/database/edadb/idb/edadb_stage_timing.h": true,
+      "src/database/edadb/idb/edadb_idb_init.cpp": true,
+      "src/database/manager/builder/def_builder/def_write_edadb.cpp": true,
+      "src/database/manager/builder/def_builder/def_read_edadb.cpp": true
+    },
+    "current_binary_matches_archive": true
+  },
+  "production_sources": [
+    "src/database/edadb/idb/edadb_stage_timing.h",
+    "src/database/edadb/idb/edadb_idb_init.cpp",
+    "src/database/manager/builder/def_builder/def_write_edadb.cpp",
+    "src/database/manager/builder/def_builder/def_read_edadb.cpp"
+  ],
+  "benchmark_sources": {
+    "test_probe.py": "1135003b2b1960e796cbd3234de2f0ee3958840d588b4a0f91662f375242cc45",
+    "review.py": "9dfcd2242551d87fe383a2b5ecfb0a801f3c2e4bc51c701f2fe361ce8b44a865",
+    "test_workflow.py": "21e69e9528aa0f867cd907a45b6a383cb56f292b0e2a684af7621f6605bd3134",
+    "probe.cpp": "95384627f5a9c74fa083a84b04e31ba6adc37ebe3360867e96e173916a5cbe2b",
+    "collect.py": "2b62f12df3c72a25140bfc541e8fee771ab704238394e96263b6d2250b5e4dbc",
+    "run.py": "1f2b95d09de2fae9b20e16f880a7b982f4b7cd5aab113477017f7c9e3824d3a0",
+    "analyze.py": "a5ae367b9ff1072a687fa77dd20dd00db2b696e9f2e60372376135d6693dd0d4"
+  }
+}

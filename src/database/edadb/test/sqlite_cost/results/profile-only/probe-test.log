@@ -1,0 +1,32 @@
+BOUNDARY	test	command	1	5079296920716469	1791511003755817834	2659000	0
+EXEC	command	CREATE TABLE test(value INTEGER)
+BOUNDARY	test	insert	1	5079296921183515	1791511003756285662	3127000	0
+DBSTATUS	test	insert	1	4	0	0	0	13576
+BOUNDARY	test	insert	0	5079296927285412	1791511003762388176	9229000	0
+DBSTATUS	test	insert	0	5524	0	0	0	35296
+BOUNDARY	test	select	1	5079296927310834	1791511003762414435	9255000	0
+DBSTATUS	test	select	1	5524	0	0	0	35296
+BOUNDARY	test	select	0	5079296928420010	1791511003763523142	10364000	0
+DBSTATUS	test	select	0	5531	0	0	0	35296
+BOUNDARY	test	command	0	5079296928457493	1791511003763561110	10401000	0
+STMT	insert	2001	18009	0	0	0	INSERT INTO test VALUES(?)
+STMT	select	1	6009	2000	0	0	SELECT value FROM test
+API	command	close	1
+API	command	exec	1
+API	command	open	1
+API	insert	finalize	1
+API	insert	prepare	1
+API	insert	reset	2001
+API	insert	sqlite3_bind_int	2001
+API	insert	sqlite3_step	2001
+API	select	finalize	1
+API	select	prepare	1
+API	select	sqlite3_column_int	2001
+API	select	sqlite3_step	2002
+EDADB_STAGE	test	init	ns	0
+EDADB_STAGE	test	create	ns	0
+EDADB_STAGE	test	test	ns	0
+EDADB_STAGE	test	other	ns	7744307
+EDADB_STAGE	test	command	ns	7744307
+EDADB_DETAIL	test	insert	ns	6102560	1
+EDADB_DETAIL	test	select	ns	1108677	1

@@ -13,6 +13,7 @@ void run_command(const char* operation) {
     }
     {
         timing::ScopedTimer timer(timing::Phase::Data);
+        timing::DetailTimer detail("root.test");
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 }
@@ -30,6 +31,10 @@ int main() {
     run_command("write");
     assert(!timing::state.active);
     assert(timing::state.elapsed_ns[static_cast<unsigned>(timing::Phase::Init)] > 0);
+    assert(timing::state.detail_count == 1);
+    assert(timing::state.details[0].calls == 1);
+    assert(timing::state.details[0].elapsed_ns > 0);
+    assert(timing::state.details[0].elapsed_ns <= timing::state.elapsed_ns[static_cast<unsigned>(timing::Phase::Data)]);
     run_command("read");
     assert(!timing::state.active);
     assert(timing::state.elapsed_ns[static_cast<unsigned>(timing::Phase::Create)] == 0);

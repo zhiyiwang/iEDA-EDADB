@@ -1,0 +1,110 @@
+[
+  {
+    "dataset": "filler",
+    "operation": "read",
+    "round": 0,
+    "command_samples": 102,
+    "unknown_leaf_samples": 5,
+    "mean_stack_depth": 18.15686274509804,
+    "lost_event_messages": []
+  },
+  {
+    "dataset": "filler",
+    "operation": "write",
+    "round": 0,
+    "command_samples": 120,
+    "unknown_leaf_samples": 1,
+    "mean_stack_depth": 18.7,
+    "lost_event_messages": []
+  },
+  {
+    "dataset": "filler",
+    "operation": "read",
+    "round": 1,
+    "command_samples": 100,
+    "unknown_leaf_samples": 1,
+    "mean_stack_depth": 18.22,
+    "lost_event_messages": []
+  },
+  {
+    "dataset": "filler",
+    "operation": "write",
+    "round": 1,
+    "command_samples": 120,
+    "unknown_leaf_samples": 4,
+    "mean_stack_depth": 18.791666666666668,
+    "lost_event_messages": []
+  },
+  {
+    "dataset": "filler",
+    "operation": "read",
+    "round": 2,
+    "command_samples": 100,
+    "unknown_leaf_samples": 1,
+    "mean_stack_depth": 17.75,
+    "lost_event_messages": []
+  },
+  {
+    "dataset": "filler",
+    "operation": "write",
+    "round": 2,
+    "command_samples": 126,
+    "unknown_leaf_samples": 0,
+    "mean_stack_depth": 18.8015873015873,
+    "lost_event_messages": []
+  },
+  {
+    "dataset": "routed-stress",
+    "operation": "read",
+    "round": 0,
+    "command_samples": 1167,
+    "unknown_leaf_samples": 16,
+    "mean_stack_depth": 18.4541559554413,
+    "lost_event_messages": []
+  },
+  {
+    "dataset": "routed-stress",
+    "operation": "write",
+    "round": 0,
+    "command_samples": 1757,
+    "unknown_leaf_samples": 26,
+    "mean_stack_depth": 19.18212862834377,
+    "lost_event_messages": []
+  },
+  {
+    "dataset": "routed-stress",
+    "operation": "read",
+    "round": 1,
+    "command_samples": 1204,
+    "unknown_leaf_samples": 14,
+    "mean_stack_depth": 18.36378737541528,
+    "lost_event_messages": []
+  },
+  {
+    "dataset": "routed-stress",
+    "operation": "write",
+    "round": 1,
+    "command_samples": 1760,
+    "unknown_leaf_samples": 25,
+    "mean_stack_depth": 19.0375,
+    "lost_event_messages": []
+  },
+  {
+    "dataset": "routed-stress",
+    "operation": "read",
+    "round": 2,
+    "command_samples": 1177,
+    "unknown_leaf_samples": 9,
+    "mean_stack_depth": 18.331350892098556,
+    "lost_event_messages": []
+  },
+  {
+    "dataset": "routed-stress",
+    "operation": "write",
+    "round": 2,
+    "command_samples": 1752,
+    "unknown_leaf_samples": 28,
+    "mean_stack_depth": 19.019977168949772,
+    "lost_event_messages": []
+  }
+]

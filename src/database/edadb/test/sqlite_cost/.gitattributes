@@ -1,0 +1,2 @@
+results/profile-only/*.tsv -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+results/profile-only/production.patch -text -whitespace

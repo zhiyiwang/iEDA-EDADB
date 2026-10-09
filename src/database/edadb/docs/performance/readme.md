@@ -1,39 +1,26 @@
 # iEDA+EDADB性能文档
 
-当前交付入口：[优化版本milestone](milestone-optimized-v1.md)。历史会议入口：[Demo版本说明](demo.md)，对应`demo/20260924`分支；该Demo快照保持不变。
+## 已交付milestone：P1/P3/P4/P5
 
-## 阅读顺序
+1. [demo.md](demo.md)：交付范围与四份文档阅读入口。
+2. [optimization-results.md](optimization-results.md)：原始iEDA、未优化EDADB、优化后EDADB对比；历史各P收益单列。
+3. [transaction-batching.md](transaction-batching.md)：索引、事务及流式Shadow实现。
+4. [stage-timing.md](stage-timing.md)：交付版的计时边界。
 
-1. [优化实验结果](optimization-results.md)：接入前原生iEDA `007435241`与当前EDADB已同环境复测；读写分开，init/create单列。
-   原生DEF历史时间差异与同环境复测方法见[基线核查](baseline-verification.md)；完整命令始终使用原Tcl计时，不能与C++内部阶段混算。
-2. [分段计时方法](stage-timing.md)：计时开关、起止位置、包含与排除的工作、代码位置及运行命令。
-   [功能验收报告](acceptance.md)：15/15用例、adapter中途失败回滚、同进程重试及审计。
-3. [事务合并实现](transaction-batching.md)与[代码变化](optimization-code-changes.md)：核对具体改动及验证范围。
-4. [仅父键索引版本结果](parent-index-results.md)与[历史实验记录](optimization-history.md)：用于追溯，不将中间优化版本当作未优化基线。
-5. [流式Shadow新增实验](stream-shadow.md)：在事务优化版本上逐root转换、写入、释放；包含内存、阶段耗时、SQL计数及失败回滚验证。
+配对标签 `milestone/ieda-edadb-optimized-v1` 指向iEDA `27d1ceefd` / core `494ce79`。下面profiling提交不移动该标签。
 
-## 流式Shadow工作区验证
+## 新的profiling：源码不含P2
 
-- 四个writer改为逐root转换和写入，复用InsertOp；15/15功能回归、插入/转换失败回滚及24个性能样本的严格DEF/DB审计通过。
-- routed压力输入的写进程峰值RSS降低28.20 MiB（9.55%）；write data耗时增加0.63%，完整write增加2.34%。这是内存优化，不宣称写入加速。
-- [实现、正确性证据及结果](stream-shadow.md)包含原始样本与统计链接；实现和验证记录一起保存于开发分支，Demo分支未移动，core未修改。
+1. [结论](sqlite-cost-takeaway.md)。
+2. [读写结果及证据](sqlite-cost-results.md)。
+3. [计划与限制](sqlite-cost-plan.md)。
+4. [测试实现、运行和原始结果](../../test/sqlite_cost/readme.md)。
 
-## 流式Shadow修改前的结果与限制
+本轮只增加观测，不改变存储格式、SQL和对象恢复；P2实验已移出工作树。完整时间使用OFF中位数，内部阶段使用ON均值，COMMIT是data子项。历史批次不混算，未启用批量读取。
 
-以下保留先前事务优化实验，不与上述新批次混合。
+## 配对版本与历史保留
 
-- 此处对照版本包含父键索引、建表事务合并、design写事务合并，并移除参考DEF扫描；不包含流式Shadow和叶子批量读取。
-- 原始iEDA已重新Release构建并完成热缓存复测：完整读取47.484 ms、写入6.855 ms；当前EDADB为106.132 ms、371.532 ms，均为5次中位数。
-- 当前EDADB完整读、写分别耗时为原生DEF的2.24倍、54.20倍。此次不使用历史profiling版本代替原始iEDA。
-- 同批独立阶段观测组：读data均值102.967 ms；写init 0.181 ms、create 89.754 ms、data 279.471 ms。data包含数据事务，不含建表。分段不得与OFF中位数相减。
-- ON/OFF仅表示新增阶段计时器开启/关闭，优化逻辑相同；OFF作为计时扰动对照，不是未优化基线。
-- 本轮6次跨版本原生DEF严格比较、12次EDADB roundtrip、12个数据库完整性/FK检查通过；原始时间和审计见结果文档。更早core 27/27、诊断回归15/15不冒充本轮回归。
-- 总表补入已有未优化EDADB完整读11931.378 ms、写2277.177 ms，并区分同批收益与跨批比较；来源为`62504bd9d/be6bbdd`，不冒充配对milestone的实测值。无阶段数据则不列。
-- 两仓库开发分支为`edadb-performance-optimization-dev`；父仓库以`4ba761281`为起点，Demo提交保存累计修改；core固定`1c4857c`，无本次新增修改。
-
-## 入口与维护
-
-- [性能运行脚本](../../../../../scripts/edadb/performance/run.sh)、[Tcl计时](../../../../../scripts/edadb/performance/benchmark.tcl)、[计时器测试](../../../../../scripts/edadb/performance/p1-stage-timing/test_stage_timing.cpp)。
-- [历史原始样本](../../../../../scripts/edadb/performance/p_optimization_samples.tsv)、[集成文档总入口](../README.md)。
-- 正文集中在本目录；使用相对链接，不复制源码、数据库或大日志。
-- 结果使用描述性名称；历史commit、原始TSV标识和数据路径保留原样以便审计。内部编号仅留在历史代码追溯资料中。
+- 新配对标签：`milestone/ieda-edadb-profiled-v2`，iEDA指向本轮profiling提交，core仍为`494ce79`；不是新增性能优化。
+- iEDA的`edadb-performance-optimization`与`edadb-performance-optimization-dev`同步到新提交；core的`performance/optimization`与`edadb-performance-optimization-dev`同步到`494ce79`。
+- 原含P2的历史实现用两仓库同名标签`archive/ieda-edadb-opt-with-p2-before-profiled-v2`保留：iEDA `53aa2e52a` / core `ad0f820`。这是分支指向替换，不是将历史P2合并到现行代码。
+- 旧`milestone/ieda-edadb-optimized-v1`不移动；新v2的性能证据只使用本轮无P2源码复测。

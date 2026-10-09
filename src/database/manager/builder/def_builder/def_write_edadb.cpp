@@ -19,6 +19,7 @@ namespace {
 template <typename Function>
 auto profileAdapterPhase(std::string_view phase, Function&& function)
 {
+    idb::edadb_adapter::stage_timing::DetailTimer detail(phase.data());
 #if EDADB_ENABLE_PROFILING
     edadb::profiling::reset();
     auto result = [&]() {
