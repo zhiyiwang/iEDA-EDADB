@@ -165,9 +165,9 @@ check_default_sql() {
         "0" "$name row does not persist an iSite table"
     assert_eq "$(sql_value "$edadb_db" "select count(*) from pragma_table_info('iTrackGridSD') where name='_order_sd';")" \
         "0" "$name track grid has no root order column"
-    assert_eq "$(sql_value "$edadb_db" "select group_concat(_track_sd__direction || ':' || _track_sd__start || ':' || _track_num_sd || ':' || _track_sd__pitch || ':' || value, ';') from (select g._track_sd__direction, g._track_sd__start, g._track_num_sd, g._track_sd__pitch, v.value from iTrackGridSD g join iTrackGridSD__layer_name_vec_sd___edadb_primitive_vector v on v.iTrackGridSD_primary_key=g.primary_key and v.__edadb_vec_idx=0 order by g._track_sd__direction, g._track_sd__start, g._track_num_sd, g._track_sd__pitch, v.value);")" \
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_track_sd__direction || ':' || _track_sd__start || ':' || _track_num_sd || ':' || _track_sd__pitch || ':' || value, ';') from (select g._track_sd__direction, g._track_sd__start, g._track_num_sd, g._track_sd__pitch, v.value from iTrackGridSD g join iTrackGridSD__layer_name_vec_sd___edadb_primitive_vector v on v.iTrackGridSD_primary_key=g.primary_key and v._vec_idx=0 order by g._track_sd__direction, g._track_sd__start, g._track_num_sd, g._track_sd__pitch, v.value);")" \
         "1:185:44:3330:met5;1:185:404:370:met1;1:240:311:480:li1;1:240:311:480:met2;1:370:202:740:met3;1:480:155:960:met4;2:185:45:3330:met5;2:185:405:370:li1;2:185:405:370:met1;2:240:312:480:met2;2:370:202:740:met3;2:480:155:960:met4" "$name track fields"
-    assert_eq "$(sql_value "$edadb_db" "select count(*) || '|' || group_concat(value, ',') from (select value from iTrackGridSD__layer_name_vec_sd___edadb_primitive_vector order by iTrackGridSD_primary_key, __edadb_vec_idx);")" \
+    assert_eq "$(sql_value "$edadb_db" "select count(*) || '|' || group_concat(value, ',') from (select value from iTrackGridSD__layer_name_vec_sd___edadb_primitive_vector order by iTrackGridSD_primary_key, _vec_idx);")" \
         "12|li1,li1,met1,met1,met2,met2,met3,met3,met4,met4,met5,met5" "$name track layer primitive vector"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_name, ',') from (select _name from iVia order by _name);")" \
         "via2_1600x480,via3_1600x480,via4_1600x1600,via_1600x480" "$name via names"
@@ -272,9 +272,9 @@ check_aux_optional_sql() {
         "met5|1" "$name explicit port layer shape"
     assert_eq "$(sql_value "$edadb_db" "select _vec_idx || '|' || _lx_sd || '|' || _ly_sd || '|' || _hx_sd || '|' || _hy_sd from iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD__layer_shape_list_sd_iLayerShapeSD__rect_list_sd_IdbRectSD where iPinSD__pin_name_sd='clk';")" \
         "0|-1000|-1000|1000|1000" "$name explicit port rect"
-    assert_eq "$(sql_value "$edadb_db" "select group_concat(__edadb_vec_idx || ':' || value, ',') from (select __edadb_vec_idx, value from iGroupSD__instance_name_vec_sd___edadb_primitive_vector order by __edadb_vec_idx);")" \
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_vec_idx || ':' || value, ',') from (select _vec_idx, value from iGroupSD__instance_name_vec_sd___edadb_primitive_vector order by _vec_idx);")" \
         "0:ctrl/_34_,1:ctrl/_35_" "$name group member order"
-    assert_eq "$(sql_value "$edadb_db" "select group_concat(__edadb_vec_idx || ':' || value, ',') from iGroupSD__instance_name_vec_sd___edadb_primitive_vector order by rowid;")" \
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_vec_idx || ':' || value, ',') from iGroupSD__instance_name_vec_sd___edadb_primitive_vector order by rowid;")" \
         "1:ctrl/_35_,0:ctrl/_34_" "$name group member physical order was perturbed"
     assert_eq "$(sql_value "$edadb_db" "select count(*) from pragma_table_info('iFillSD') where name='_order_sd';")" \
         "0" "$name fill has no root order column"
@@ -341,9 +341,9 @@ check_special_net_branch_sql() {
         "1" "$name two-point via branch"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_vec_idx || ':' || _x_sd || ',' || _y_sd, ';') from (select p._vec_idx, p._x_sd, p._y_sd from iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD s join iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD__point_list_sd_iCoordSD p on p.iSpecNetSD__net_name_sd=s.iSpecNetSD__net_name_sd and p.iSpecNetSD__wire_list_sd_iSpecWireSD_primary_key=s.iSpecNetSD__wire_list_sd_iSpecWireSD_primary_key and p.iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD_primary_key=s.primary_key where s.iSpecNetSD__net_name_sd='VSS' and s._is_via_sd=0 and s._is_rect_sd=0 and s._layer_name_sd='met1' and s._route_width_sd=480 and (select count(*) from iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD__point_list_sd_iCoordSD points where points.iSpecNetSD__net_name_sd=s.iSpecNetSD__net_name_sd and points.iSpecNetSD__wire_list_sd_iSpecWireSD_primary_key=s.iSpecNetSD__wire_list_sd_iSpecWireSD_primary_key and points.iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD_primary_key=s.primary_key)=3 order by p._vec_idx);")" \
         "0:15000,15000;1:25000,15000;2:30000,15000" "$name ordered three-point branch"
-    assert_eq "$(sql_value "$edadb_db" "select group_concat(__edadb_vec_idx || ':' || value, ',') from (select __edadb_vec_idx, value from iSpecNetSD__pin_string_list_sd___edadb_primitive_vector where iSpecNetSD__net_name_sd='VDD' order by __edadb_vec_idx);")" \
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_vec_idx || ':' || value, ',') from (select _vec_idx, value from iSpecNetSD__pin_string_list_sd___edadb_primitive_vector where iSpecNetSD__net_name_sd='VDD' order by _vec_idx);")" \
         "0:VPWR,1:VPB,2:vdd" "$name ordered pin-string connections"
-    assert_eq "$(sql_value "$edadb_db" "select group_concat(__edadb_vec_idx || ':' || value, ',') from (select __edadb_vec_idx, value from iSpecNetSD__io_pin_name_list_sd___edadb_primitive_vector where iSpecNetSD__net_name_sd='VSS' order by __edadb_vec_idx);")" \
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_vec_idx || ':' || value, ',') from (select _vec_idx, value from iSpecNetSD__io_pin_name_list_sd___edadb_primitive_vector where iSpecNetSD__net_name_sd='VSS' order by _vec_idx);")" \
         "0:clk,1:req_msg[0]" "$name ordered IO-pin connections"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || ':' || instance_name || ':' || pin_name, ',') from (select _order_sd, instance_name, pin_name from iSpecNetSD__instance_pin_list_sd_iSpecPinRef where iSpecNetSD__net_name_sd='VSS' order by _order_sd);")" \
         "0:ctrl/_34_:A,1:ctrl/_35_:A" "$name ordered instance-pin connections"
@@ -395,11 +395,11 @@ check_routed_sql() {
         "0" "$name old reduced segment columns removed"
     assert_eq "$(sql_value "$edadb_db" "select sum(pk) from pragma_table_info('iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__via_ref_list_sd_iRegViaRef');")" \
         "0" "$name via-ref order is not a primary key"
-    assert_eq "$(sql_value "$edadb_db" "select min(_order_sd) || '|' || max(_order_sd) || '|' || count(*) from iNetSD__instance_pin_list_sd_iNetPinRef where iNetSD__net_name_sd='clk_0';")" \
+    assert_eq "$(sql_value "$edadb_db" "select min(_vec_idx) || '|' || max(_vec_idx) || '|' || count(*) from iNetSD__instance_pin_list_sd_iNetPinRef where iNetSD__net_name_sd='clk_0';")" \
         "0|18|19" "$name clk_0 ordered pin refs"
     assert_eq "$(sql_value "$edadb_db" "select sum(pk) from pragma_table_info('iNetSD__instance_pin_list_sd_iNetPinRef');")" \
         "0" "$name net pin-ref order is not a primary key"
-    assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || ':' || instance_name || ':' || pin_name, ',') from (select _order_sd, instance_name, pin_name from iNetSD__instance_pin_list_sd_iNetPinRef where iNetSD__net_name_sd='clk_0' order by _order_sd limit 5);")" \
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_vec_idx || ':' || instance_name || ':' || pin_name, ',') from (select _vec_idx, instance_name, pin_name from iNetSD__instance_pin_list_sd_iNetPinRef where iNetSD__net_name_sd='clk_0' order by _vec_idx limit 5);")" \
         "0:clk_0_buf:X,1:dpath/b_reg/_140_:CLK,2:dpath/b_reg/_139_:CLK,3:dpath/b_reg/_138_:CLK,4:dpath/b_reg/_137_:CLK" "$name clk_0 pin order prefix"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(iNetSD__net_name_sd || ':' || cnt, ',') from (select iNetSD__net_name_sd, count(*) as cnt from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD group by iNetSD__net_name_sd order by cnt desc, iNetSD__net_name_sd limit 3);")" \
         "clk_0:138,clk_1:137,dpath/a_mux/_066_:103" "$name largest routed segment nets"
@@ -428,9 +428,9 @@ check_grid_branch_sql() {
         "0" "$name track grid has no root order column"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(primary_key, ',') from (select primary_key from iTrackGridSD order by rowid);")" \
         "12,11,10,9,8,7,6,5,4,3,2,1" "$name perturbed track root fetch order"
-    assert_eq "$(sql_value "$edadb_db" "select group_concat(__edadb_vec_idx || ':' || value, ',') from (select __edadb_vec_idx, value from iTrackGridSD__layer_name_vec_sd___edadb_primitive_vector where iTrackGridSD_primary_key=1 order by rowid);")" \
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_vec_idx || ':' || value, ',') from (select _vec_idx, value from iTrackGridSD__layer_name_vec_sd___edadb_primitive_vector where iTrackGridSD_primary_key=1 order by rowid);")" \
         "1:met4,0:met5" "$name perturbed track layer fetch order"
-    assert_eq "$(sql_value "$edadb_db" "select group_concat(__edadb_vec_idx || ':' || value, ',') from (select __edadb_vec_idx, value from iTrackGridSD__layer_name_vec_sd___edadb_primitive_vector where iTrackGridSD_primary_key=1 order by __edadb_vec_idx);")" \
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_vec_idx || ':' || value, ',') from (select _vec_idx, value from iTrackGridSD__layer_name_vec_sd___edadb_primitive_vector where iTrackGridSD_primary_key=1 order by _vec_idx);")" \
         "0:met5,1:met4" "$name ordered track layer names"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(_direction || ':' || _start || ':' || _num || ':' || _space, ';') from (select _direction, _start, _num, _space from iGCellGrid order by rowid);")" \
         "2:144720:2:5408;2:3600:43:3360;2:0:2:3600;1:144720:2:5240;1:3600:43:3360;1:0:2:3600" "$name perturbed gcell root fetch order"
@@ -509,9 +509,9 @@ check_net_branch_sql() {
         "4" "$name no-shield wire state"
     assert_eq "$(sql_value "$edadb_db" "select _connect_type_sd || '|' || _order_sd from iNetSD where _net_name_sd='special_signal';")" \
         "1|0" "$name SPECIALNETS SIGNAL dispatched to IdbNet"
-    assert_eq "$(sql_value "$edadb_db" "select group_concat(_order_sd || ':' || _via_name_sd || '@' || _point_index_sd, ',') from (select v._order_sd, v._via_name_sd, v._point_index_sd from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD s join iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__via_ref_list_sd_iRegViaRef v on v.iNetSD__net_name_sd=s.iNetSD__net_name_sd and v.iNetSD__wire_list_sd_iRegWireSD_primary_key=s.iNetSD__wire_list_sd_iRegWireSD_primary_key and v.iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD_primary_key=s.primary_key where s.iNetSD__net_name_sd='ctrl\$a_mux_sel[0]' and s._vec_idx=1 order by v._order_sd);")" \
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(_vec_idx || ':' || _via_name_sd || '@' || _point_index_sd, ',') from (select v._vec_idx, v._via_name_sd, v._point_index_sd from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD s join iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__via_ref_list_sd_iRegViaRef v on v.iNetSD__net_name_sd=s.iNetSD__net_name_sd and v.iNetSD__wire_list_sd_iRegWireSD_primary_key=s.iNetSD__wire_list_sd_iRegWireSD_primary_key and v.iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD_primary_key=s.primary_key where s.iNetSD__net_name_sd='ctrl\$a_mux_sel[0]' and s._vec_idx=1 order by v._vec_idx);")" \
         "0:L1M1_PR@0,1:M1M2_PR@0" "$name ordered multi-via references"
-    assert_eq "$(sql_value "$edadb_db" "select group_concat(v._order_sd, ',') from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD s join iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__via_ref_list_sd_iRegViaRef v on v.iNetSD__net_name_sd=s.iNetSD__net_name_sd and v.iNetSD__wire_list_sd_iRegWireSD_primary_key=s.iNetSD__wire_list_sd_iRegWireSD_primary_key and v.iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD_primary_key=s.primary_key where s.iNetSD__net_name_sd='ctrl\$a_mux_sel[0]' and s._vec_idx=1 order by v.rowid;")" \
+    assert_eq "$(sql_value "$edadb_db" "select group_concat(v._vec_idx, ',') from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD s join iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__via_ref_list_sd_iRegViaRef v on v.iNetSD__net_name_sd=s.iNetSD__net_name_sd and v.iNetSD__wire_list_sd_iRegWireSD_primary_key=s.iNetSD__wire_list_sd_iRegWireSD_primary_key and v.iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD_primary_key=s.primary_key where s.iNetSD__net_name_sd='ctrl\$a_mux_sel[0]' and s._vec_idx=1 order by v.rowid;")" \
         "1,0" "$name multi-via physical order was perturbed"
     assert_eq "$(sql_value "$edadb_db" "select group_concat(value, ',') from (select value from iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__virtual_point_index_list_sd___edadb_primitive_vector where iNetSD__net_name_sd='ctrl\$a_mux_sel[0]' order by value);")" \
         "1,2" "$name all virtual-point indices"
@@ -939,7 +939,7 @@ INSERT INTO iTrackGridSD SELECT * FROM track_grids_reversed;
 
 CREATE TEMP TABLE track_layers_reversed AS
 SELECT * FROM iTrackGridSD__layer_name_vec_sd___edadb_primitive_vector
-ORDER BY iTrackGridSD_primary_key, __edadb_vec_idx DESC;
+ORDER BY iTrackGridSD_primary_key, _vec_idx DESC;
 DELETE FROM iTrackGridSD__layer_name_vec_sd___edadb_primitive_vector;
 INSERT INTO iTrackGridSD__layer_name_vec_sd___edadb_primitive_vector
 SELECT * FROM track_layers_reversed;
@@ -990,7 +990,7 @@ SELECT * FROM slot_rects_reversed;
 
 CREATE TEMP TABLE group_members_reversed AS
 SELECT * FROM iGroupSD__instance_name_vec_sd___edadb_primitive_vector
-ORDER BY iGroupSD__group_name_sd, __edadb_vec_idx DESC;
+ORDER BY iGroupSD__group_name_sd, _vec_idx DESC;
 DELETE FROM iGroupSD__instance_name_vec_sd___edadb_primitive_vector;
 INSERT INTO iGroupSD__instance_name_vec_sd___edadb_primitive_vector
 SELECT * FROM group_members_reversed;
@@ -1059,14 +1059,14 @@ SELECT * FROM special_wires_reversed;
 
 CREATE TEMP TABLE special_pin_strings_reversed AS
 SELECT * FROM iSpecNetSD__pin_string_list_sd___edadb_primitive_vector
-ORDER BY iSpecNetSD__net_name_sd, __edadb_vec_idx DESC;
+ORDER BY iSpecNetSD__net_name_sd, _vec_idx DESC;
 DELETE FROM iSpecNetSD__pin_string_list_sd___edadb_primitive_vector;
 INSERT INTO iSpecNetSD__pin_string_list_sd___edadb_primitive_vector
 SELECT * FROM special_pin_strings_reversed;
 
 CREATE TEMP TABLE special_io_pins_reversed AS
 SELECT * FROM iSpecNetSD__io_pin_name_list_sd___edadb_primitive_vector
-ORDER BY iSpecNetSD__net_name_sd, __edadb_vec_idx DESC;
+ORDER BY iSpecNetSD__net_name_sd, _vec_idx DESC;
 DELETE FROM iSpecNetSD__io_pin_name_list_sd___edadb_primitive_vector;
 INSERT INTO iSpecNetSD__io_pin_name_list_sd___edadb_primitive_vector
 SELECT * FROM special_io_pins_reversed;
@@ -1101,7 +1101,7 @@ SELECT * FROM regular_points_reversed;
 CREATE TEMP TABLE regular_via_refs_reversed AS
 SELECT * FROM iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__via_ref_list_sd_iRegViaRef
 ORDER BY iNetSD__net_name_sd, iNetSD__wire_list_sd_iRegWireSD_primary_key,
-         iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD_primary_key, _order_sd DESC;
+         iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD_primary_key, _vec_idx DESC;
 DELETE FROM iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__via_ref_list_sd_iRegViaRef;
 INSERT INTO iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__via_ref_list_sd_iRegViaRef
 SELECT * FROM regular_via_refs_reversed;
@@ -1109,7 +1109,7 @@ SELECT * FROM regular_via_refs_reversed;
 CREATE TEMP TABLE regular_virtual_points_reversed AS
 SELECT * FROM iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__virtual_point_index_list_sd___edadb_primitive_vector
 ORDER BY iNetSD__net_name_sd, iNetSD__wire_list_sd_iRegWireSD_primary_key,
-         iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD_primary_key, __edadb_vec_idx DESC;
+         iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD_primary_key, _vec_idx DESC;
 DELETE FROM iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__virtual_point_index_list_sd___edadb_primitive_vector;
 INSERT INTO iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__virtual_point_index_list_sd___edadb_primitive_vector
 SELECT * FROM regular_virtual_points_reversed;
@@ -1130,14 +1130,14 @@ SELECT * FROM regular_segments_reversed;
 
 CREATE TEMP TABLE regular_io_pins_reversed AS
 SELECT * FROM iNetSD__io_pin_name_list_sd___edadb_primitive_vector
-ORDER BY iNetSD__net_name_sd, __edadb_vec_idx DESC;
+ORDER BY iNetSD__net_name_sd, _vec_idx DESC;
 DELETE FROM iNetSD__io_pin_name_list_sd___edadb_primitive_vector;
 INSERT INTO iNetSD__io_pin_name_list_sd___edadb_primitive_vector
 SELECT * FROM regular_io_pins_reversed;
 
 CREATE TEMP TABLE regular_instance_pins_reversed AS
 SELECT * FROM iNetSD__instance_pin_list_sd_iNetPinRef
-ORDER BY iNetSD__net_name_sd, _order_sd DESC;
+ORDER BY iNetSD__net_name_sd, _vec_idx DESC;
 DELETE FROM iNetSD__instance_pin_list_sd_iNetPinRef;
 INSERT INTO iNetSD__instance_pin_list_sd_iNetPinRef
 SELECT * FROM regular_instance_pins_reversed;

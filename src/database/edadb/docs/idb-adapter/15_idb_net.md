@@ -20,11 +20,17 @@
 
 ## EDADB Schema And Primary Key
 
+顺序字段统一：NetPinRef、RegularWireViaRef的`_order_sd`改为`_vec_idx`；core的primitive vector列`__edadb_vec_idx`也改为`_vec_idx`，后者影响全部primitive vector表。Net根及SpecialNet原有`_order_sd`不变。仅改名，不改变主键、索引、事务、查询策略或恢复排序逻辑。
+
+**兼容性：** 旧数据库需从原始输入重新生成，或另行迁移列名；本次不提供自动迁移。不可将旧列名数据库直接当作新格式读取。
+
+改名验证：Release构建、core的27项CTest、adapter的15用例回归全部通过；回归包含SQL列名、物理行序扰动及DEF往返检查。功能验证不代表性能提升。
+
 ```cpp
 TABLE4CLASS(idb::edadb_adapter::NetPinRef, "iNetPinRef",
-            (_order_sd, instance_name, pin_name));
+            (_vec_idx, instance_name, pin_name));
 TABLE4CLASS(idb::edadb_adapter::RegularWireViaRef, "iRegViaRef",
-            (_order_sd, _via_name_sd, _point_index_sd));
+            (_vec_idx, _via_name_sd, _point_index_sd));
 TABLE4CLASS_WVEC(edadb::Shadow<idb::IdbRegularWireSegment>, "iRegWireSegSD",
                  (primary_key, _vec_idx, _layer_name_sd,
                   _is_via_sd, _is_rect_sd, _delta_rect_sd),
@@ -50,7 +56,7 @@ Primary-key audit：
 
 - Root `_net_name_sd` 是 identity；`_order_sd` 只保存 Level-A root order。
 - Wire/Segment synthetic `primary_key` 只关联下一层 child rows；`_vec_idx` 单独恢复 owner-local order。
-- `NetPinRef::_order_sd`、`RegularWireViaRef::_order_sd` 都是 child order，不是 identity，所以显式关闭 PK。
+- `NetPinRef::_vec_idx`、`RegularWireViaRef::_vec_idx` 都是 child order，不是 identity，所以显式关闭 PK。
 - Point 使用 `Shadow<IdbCoordinate<int32_t>>::_vec_idx` 恢复顺序；delta rect 通过已注册的 `Shadow<IdbRect>` 存储。
 
 ## Why Shadows Are Required
@@ -109,7 +115,7 @@ read 时重新 lookup 或计算：
 | USE/SOURCE/WEIGHT/XTALK/FIXEDBUMP/FREQUENCY/ORIGINAL，`def_read.cpp:1055-1081` | root scalar state | `fromShadow()` 按 parser setter 顺序恢复，`shadow_idb_net.h:423-430` |
 | 根据 connection count 创建 `setPinNet` policy，`def_read.cpp:1083-1092` | computed pin back-reference rule | 从两个 stored connection vectors 的总数重新计算同一 lambda，`shadow_idb_net.h:438-448` |
 | IO connection branch，`def_read.cpp:1094-1106` | IO pin lookup、append、conditional back-reference | name lookup 后 `add_io_pin()` + `set_pin_net()`，`shadow_idb_net.h:450-458` |
-| instance connection branch，`def_read.cpp:1107-1121` | instance lookup、instance-list append、term pin lookup、append/back-reference | 按 `_order_sd` 恢复 refs，并执行同一 lookup/append/policy，`shadow_idb_net.h:460-478` |
+| instance connection branch，`def_read.cpp:1107-1121` | instance lookup、instance-list append、term pin lookup、append/back-reference | 按 `_vec_idx` 恢复 refs，并执行同一 lookup/append/policy，`shadow_idb_net.h:460-478` |
 | wire/path owner construction，`def_read.cpp:1124-1143` | wire state、SHIELD、ordered segment objects | root/wire shadows 按 `_vec_idx` 重建 wires/segments，`shadow_idb_net.h:295-325`、`shadow_idb_net.h:480-494` |
 | `DEFIPATH_LAYER`，`def_read.cpp:1144-1147` | layer name + active `IdbLayer*` | 保存 name，read 时 global lookup 并 set name/pointer，`shadow_idb_net.h:130-138` |
 | `DEFIPATH_VIA`，`def_read.cpp:1149-1170` | mark via；DEF→LEF lookup；clone；coordinate = current point end | 每个 Via 保存 name/order/对应 point index；read 时逐个 lookup、clone、以该 point 重设 coordinate，`shadow_idb_net.h:171-201` |

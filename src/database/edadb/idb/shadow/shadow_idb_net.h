@@ -17,14 +17,14 @@ namespace idb::edadb_adapter {
 
 class NetPinRef {
 public:
-    uint64_t _order_sd = 0;
+    uint64_t _vec_idx = 0;
     std::string instance_name;
     std::string pin_name;
 };
 
 class RegularWireViaRef {
 public:
-    uint64_t _order_sd = 0;
+    uint64_t _vec_idx = 0;
     std::string _via_name_sd;
     uint64_t _point_index_sd = 0;
 };
@@ -99,7 +99,7 @@ public:
                 }
 
                 idb::edadb_adapter::RegularWireViaRef via_ref_sd;
-                via_ref_sd._order_sd = via_order++;
+                via_ref_sd._vec_idx = via_order++;
                 via_ref_sd._via_name_sd = via->get_name();
                 via_ref_sd._point_index_sd = via_point_index;
                 if (via_ref_sd._via_name_sd.empty()) {
@@ -176,7 +176,7 @@ public:
             }
 
             std::sort(_via_ref_list_sd.begin(), _via_ref_list_sd.end(),
-                      [](const auto& lhs, const auto& rhs) { return lhs._order_sd < rhs._order_sd; });
+                      [](const auto& lhs, const auto& rhs) { return lhs._vec_idx < rhs._vec_idx; });
             for (auto& via_ref_sd : _via_ref_list_sd) {
                 if (via_ref_sd._point_index_sd >= _point_list_sd.size()) {
                     return false;
@@ -384,7 +384,7 @@ public:
                 return false;
             }
             idb::edadb_adapter::NetPinRef pin_ref_sd;
-            pin_ref_sd._order_sd = pin_order++;
+            pin_ref_sd._vec_idx = pin_order++;
             pin_ref_sd.instance_name = pin->get_instance() ? pin->get_instance()->get_name() : "";
             pin_ref_sd.pin_name = pin->get_pin_name();
             _instance_pin_list_sd.emplace_back(pin_ref_sd);
@@ -458,7 +458,7 @@ public:
         }
 
         std::sort(_instance_pin_list_sd.begin(), _instance_pin_list_sd.end(),
-                  [](const auto& lhs, const auto& rhs) { return lhs._order_sd < rhs._order_sd; });
+                  [](const auto& lhs, const auto& rhs) { return lhs._vec_idx < rhs._vec_idx; });
         for (auto& pin_ref_sd : _instance_pin_list_sd) {
             idb::IdbInstance* instance = instance_list->find_instance(pin_ref_sd.instance_name);
             if (instance == nullptr) {
