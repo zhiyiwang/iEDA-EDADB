@@ -1,0 +1,101 @@
+{
+  "observations": [
+    {
+      "route": "single",
+      "repeat": 0,
+      "control_ms": 1198.35,
+      "sampled_ms": 1204.75
+    },
+    {
+      "route": "single",
+      "repeat": 1,
+      "control_ms": 1213.75,
+      "sampled_ms": 1204.73
+    },
+    {
+      "route": "single",
+      "repeat": 2,
+      "control_ms": 1191.54,
+      "sampled_ms": 1204.51
+    },
+    {
+      "route": "batch100",
+      "repeat": 0,
+      "control_ms": 686.733,
+      "sampled_ms": 694.278
+    },
+    {
+      "route": "batch100",
+      "repeat": 1,
+      "control_ms": 685.055,
+      "sampled_ms": 691.298
+    },
+    {
+      "route": "batch100",
+      "repeat": 2,
+      "control_ms": 683.853,
+      "sampled_ms": 691.277
+    },
+    {
+      "route": "switch1",
+      "repeat": 0,
+      "control_ms": 354.254,
+      "sampled_ms": 359.131
+    },
+    {
+      "route": "switch1",
+      "repeat": 1,
+      "control_ms": 353.367,
+      "sampled_ms": 358.355
+    },
+    {
+      "route": "switch1",
+      "repeat": 2,
+      "control_ms": 354.65,
+      "sampled_ms": 357.549
+    },
+    {
+      "route": "grouped",
+      "repeat": 0,
+      "control_ms": 351.719,
+      "sampled_ms": 354.028
+    },
+    {
+      "route": "grouped",
+      "repeat": 1,
+      "control_ms": 350.221,
+      "sampled_ms": 360.134
+    },
+    {
+      "route": "grouped",
+      "repeat": 2,
+      "control_ms": 350.663,
+      "sampled_ms": 356.082
+    }
+  ],
+  "summary": [
+    {
+      "route": "single",
+      "control_ms": 1198.35,
+      "paired_delta_percent": 0.5340676763883749
+    },
+    {
+      "route": "batch100",
+      "control_ms": 685.055,
+      "paired_delta_percent": 1.0837086073381104
+    },
+    {
+      "route": "switch1",
+      "control_ms": 354.254,
+      "paired_delta_percent": 1.376695817125552
+    },
+    {
+      "route": "grouped",
+      "control_ms": 350.663,
+      "paired_delta_percent": 1.5453583640133068
+    }
+  ],
+  "binary_sha256": "e6823ace003685cd33e8b69195c6aeeceb8cdb10b0dc55bf6a8c4a6b16527706",
+  "cpu": 0,
+  "scope": "memory/write data only; independent profile binary; no wall-time attribution"
+}

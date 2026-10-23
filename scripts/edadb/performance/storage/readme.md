@@ -1,13 +1,19 @@
 # SQLite性能实验：入口
 
+新agent接续先读[SQLite实验交接README](sqlite-handoff.md)：当前分支、最新A/B结果、代码入口、复现命令及冻结边界。
+
 本目录按实验和共用资料组织，不按运行日期分组。
 
 会议汇报先读[四组已冻结实验汇总](report.md)：方法、数据、计时边界、结果与实验之间的关系。
 
-当前验收及提交范围见[performance交接](../handoff.md#本轮收尾与提交边界)；生产优化方案不属于本轮基线交付。
+历史基线验收见[performance交接](../handoff.md#本轮收尾与提交边界)；新增SQLite A/B和文档范围见[待提交清单](sqlite-handoff.md#8-待提交清单与交付边界)，尚未提交。DuckDB后端仅有设计交接，不属于已完成代码。
 
 ```text
 storage/
+├── sqlite-write/        新增单表A／交织B、早期写perf；代码与证据待提交
+├── sqlite-handoff.md    SQLite接续及待提交清单
+├── db-text-plan.md      外部三库历史方案，非最新验收结果
+├── duckdb-backend-handoff.md 后端设计与起点，尚未实施
 ├── readme.md
 ├── baseline/            五路线整体性能
 │   ├── readme.md        计划、运行、接续事项

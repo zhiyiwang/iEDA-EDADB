@@ -73,6 +73,15 @@ scripts/edadb/performance/storage/sqlite-vs-edadb/archive/*
 !scripts/edadb/performance/storage/sqlite-index/docs/*.md
 !scripts/edadb/performance/storage/sqlite-index/*.cpp
 !scripts/edadb/performance/storage/sqlite-index/CMakeLists.txt
+!scripts/edadb/performance/storage/sqlite-write/
+!scripts/edadb/performance/storage/sqlite-write/benchmark.cpp
+!scripts/edadb/performance/storage/sqlite-write/profile.cpp
+!scripts/edadb/performance/storage/sqlite-write/interleaved.cpp
+!scripts/edadb/performance/storage/sqlite-write/CMakeLists.txt
+!scripts/edadb/performance/storage/sqlite-write/results/
+scripts/edadb/performance/storage/sqlite-write/results/*
+!scripts/edadb/performance/storage/sqlite-write/results/*.json
+!scripts/edadb/performance/storage/sqlite-write/results/*.tsv
 !scripts/edadb/performance/TODO.md
 !scripts/edadb/roundtrip/
 scripts/edadb/roundtrip/*
@@ -94,3 +103,7 @@ run.out
 
 # Prevent accidental re-addition of removed submodules
 src/third_party/mt-kahypar/
+!scripts/edadb/performance/experiment-summary.md
+!scripts/edadb/performance/storage/sqlite-handoff.md
+!scripts/edadb/performance/storage/db-text-plan.md
+!scripts/edadb/performance/storage/duckdb-backend-handoff.md

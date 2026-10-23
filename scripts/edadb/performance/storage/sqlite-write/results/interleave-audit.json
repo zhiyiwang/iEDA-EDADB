@@ -1,0 +1,11 @@
+{
+  "status": "PASS",
+  "checks": 210,
+  "full_warmup_checks": 100,
+  "formal_processes": 100,
+  "timing_rows": 200,
+  "counter_processes": 10,
+  "source_unchanged": true,
+  "expected_read_runs": 3,
+  "expected_write_runs": 300000
+}

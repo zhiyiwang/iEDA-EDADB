@@ -1,0 +1,763 @@
+{
+  "status": "PASS",
+  "timing_rows": 200,
+  "groups": 40,
+  "comparisons": [
+    {
+      "label": "write switching versus each row",
+      "baseline": [
+        "text",
+        "memory",
+        "1",
+        "all",
+        "write"
+      ],
+      "candidate": [
+        "text",
+        "memory",
+        "10",
+        "all",
+        "write"
+      ],
+      "median_delta_ms": -1.9666799999999967,
+      "min_delta_ms": -10.236063999999999,
+      "max_delta_ms": 7.255734000000018,
+      "median_time_ratio": 0.9851335195824498
+    },
+    {
+      "label": "write switching versus each row",
+      "baseline": [
+        "text",
+        "memory",
+        "1",
+        "all",
+        "write"
+      ],
+      "candidate": [
+        "text",
+        "memory",
+        "all",
+        "all",
+        "write"
+      ],
+      "median_delta_ms": -5.613818000000009,
+      "min_delta_ms": -11.576925000000017,
+      "max_delta_ms": -2.030126999999993,
+      "median_time_ratio": 0.9751575199927932
+    },
+    {
+      "label": "read switching versus each row",
+      "baseline": [
+        "text",
+        "memory",
+        "all",
+        "1",
+        "read"
+      ],
+      "candidate": [
+        "text",
+        "memory",
+        "all",
+        "all",
+        "read"
+      ],
+      "median_delta_ms": -2.352265000000017,
+      "min_delta_ms": -10.028345000000002,
+      "max_delta_ms": -1.9577170000000024,
+      "median_time_ratio": 0.9868070258326983
+    },
+    {
+      "label": "read switching versus each row",
+      "baseline": [
+        "text",
+        "memory",
+        "all",
+        "1",
+        "read"
+      ],
+      "candidate": [
+        "text",
+        "memory",
+        "all",
+        "10",
+        "read"
+      ],
+      "median_delta_ms": -1.3816480000000126,
+      "min_delta_ms": -3.631618000000003,
+      "max_delta_ms": -1.311331999999993,
+      "median_time_ratio": 0.9922883607309472
+    },
+    {
+      "label": "SQLite minus matching text",
+      "baseline": [
+        "text",
+        "memory",
+        "1",
+        "all",
+        "write"
+      ],
+      "candidate": [
+        "sqlite",
+        "memory",
+        "1",
+        "all",
+        "write"
+      ],
+      "median_delta_ms": 221.07386,
+      "min_delta_ms": 214.704239,
+      "max_delta_ms": 227.24054800000002,
+      "median_time_ratio": 1.9753415479348426
+    },
+    {
+      "label": "SQLite minus matching text",
+      "baseline": [
+        "text",
+        "memory",
+        "1",
+        "all",
+        "read"
+      ],
+      "candidate": [
+        "sqlite",
+        "memory",
+        "1",
+        "all",
+        "read"
+      ],
+      "median_delta_ms": 64.09374400000002,
+      "min_delta_ms": 63.26552700000002,
+      "max_delta_ms": 74.23832100000001,
+      "median_time_ratio": 1.3789576402231638
+    },
+    {
+      "label": "SQLite minus matching text",
+      "baseline": [
+        "text",
+        "memory",
+        "10",
+        "all",
+        "write"
+      ],
+      "candidate": [
+        "sqlite",
+        "memory",
+        "10",
+        "all",
+        "write"
+      ],
+      "median_delta_ms": 221.91158,
+      "min_delta_ms": 218.084666,
+      "max_delta_ms": 222.85739499999997,
+      "median_time_ratio": 2.0009309708077785
+    },
+    {
+      "label": "write switching versus each row",
+      "baseline": [
+        "sqlite",
+        "memory",
+        "1",
+        "all",
+        "write"
+      ],
+      "candidate": [
+        "sqlite",
+        "memory",
+        "10",
+        "all",
+        "write"
+      ],
+      "median_delta_ms": -2.8325810000000047,
+      "min_delta_ms": -9.806173999999999,
+      "max_delta_ms": 5.3138700000000085,
+      "median_time_ratio": 0.9978953623357975
+    },
+    {
+      "label": "SQLite minus matching text",
+      "baseline": [
+        "text",
+        "memory",
+        "10",
+        "all",
+        "read"
+      ],
+      "candidate": [
+        "sqlite",
+        "memory",
+        "10",
+        "all",
+        "read"
+      ],
+      "median_delta_ms": 63.97486000000001,
+      "min_delta_ms": 63.24619200000001,
+      "max_delta_ms": 65.552874,
+      "median_time_ratio": 1.3749246131037491
+    },
+    {
+      "label": "SQLite minus matching text",
+      "baseline": [
+        "text",
+        "memory",
+        "all",
+        "all",
+        "write"
+      ],
+      "candidate": [
+        "sqlite",
+        "memory",
+        "all",
+        "all",
+        "write"
+      ],
+      "median_delta_ms": 222.85700900000003,
+      "min_delta_ms": 218.85171799999998,
+      "max_delta_ms": 231.40824199999997,
+      "median_time_ratio": 2.010125346284162
+    },
+    {
+      "label": "write switching versus each row",
+      "baseline": [
+        "sqlite",
+        "memory",
+        "1",
+        "all",
+        "write"
+      ],
+      "candidate": [
+        "sqlite",
+        "memory",
+        "all",
+        "all",
+        "write"
+      ],
+      "median_delta_ms": -3.4241549999999847,
+      "min_delta_ms": -10.756256000000008,
+      "max_delta_ms": 2.1034539999999993,
+      "median_time_ratio": 0.9923290732210001
+    },
+    {
+      "label": "SQLite minus matching text",
+      "baseline": [
+        "text",
+        "memory",
+        "all",
+        "all",
+        "read"
+      ],
+      "candidate": [
+        "sqlite",
+        "memory",
+        "all",
+        "all",
+        "read"
+      ],
+      "median_delta_ms": 64.922257,
+      "min_delta_ms": 64.06442099999998,
+      "max_delta_ms": 65.891309,
+      "median_time_ratio": 1.3793399123850865
+    },
+    {
+      "label": "read switching versus each row",
+      "baseline": [
+        "sqlite",
+        "memory",
+        "all",
+        "1",
+        "read"
+      ],
+      "candidate": [
+        "sqlite",
+        "memory",
+        "all",
+        "all",
+        "read"
+      ],
+      "median_delta_ms": -3.5711189999999817,
+      "min_delta_ms": -4.644745999999998,
+      "max_delta_ms": -2.3390290000000107,
+      "median_time_ratio": 0.9819016863727374
+    },
+    {
+      "label": "SQLite minus matching text",
+      "baseline": [
+        "text",
+        "memory",
+        "all",
+        "1",
+        "write"
+      ],
+      "candidate": [
+        "sqlite",
+        "memory",
+        "all",
+        "1",
+        "write"
+      ],
+      "median_delta_ms": 222.48628700000003,
+      "min_delta_ms": 212.71524399999998,
+      "max_delta_ms": 228.835006,
+      "median_time_ratio": 2.0164326654436895
+    },
+    {
+      "label": "SQLite minus matching text",
+      "baseline": [
+        "text",
+        "memory",
+        "all",
+        "1",
+        "read"
+      ],
+      "candidate": [
+        "sqlite",
+        "memory",
+        "all",
+        "1",
+        "read"
+      ],
+      "median_delta_ms": 67.15282399999998,
+      "min_delta_ms": 57.472361999999976,
+      "max_delta_ms": 67.296738,
+      "median_time_ratio": 1.3862307555263345
+    },
+    {
+      "label": "SQLite minus matching text",
+      "baseline": [
+        "text",
+        "memory",
+        "all",
+        "10",
+        "write"
+      ],
+      "candidate": [
+        "sqlite",
+        "memory",
+        "all",
+        "10",
+        "write"
+      ],
+      "median_delta_ms": 222.523999,
+      "min_delta_ms": 221.30929199999997,
+      "max_delta_ms": 226.225748,
+      "median_time_ratio": 2.0110547949019937
+    },
+    {
+      "label": "SQLite minus matching text",
+      "baseline": [
+        "text",
+        "memory",
+        "all",
+        "10",
+        "read"
+      ],
+      "candidate": [
+        "sqlite",
+        "memory",
+        "all",
+        "10",
+        "read"
+      ],
+      "median_delta_ms": 65.29690000000002,
+      "min_delta_ms": 58.94788199999999,
+      "max_delta_ms": 68.005379,
+      "median_time_ratio": 1.3778114228840326
+    },
+    {
+      "label": "read switching versus each row",
+      "baseline": [
+        "sqlite",
+        "memory",
+        "all",
+        "1",
+        "read"
+      ],
+      "candidate": [
+        "sqlite",
+        "memory",
+        "all",
+        "10",
+        "read"
+      ],
+      "median_delta_ms": -2.156097999999986,
+      "min_delta_ms": -4.279915999999986,
+      "max_delta_ms": 0.32454899999999043,
+      "median_time_ratio": 0.9862616543166128
+    },
+    {
+      "label": "write switching versus each row",
+      "baseline": [
+        "text",
+        "disk",
+        "1",
+        "all",
+        "write"
+      ],
+      "candidate": [
+        "text",
+        "disk",
+        "10",
+        "all",
+        "write"
+      ],
+      "median_delta_ms": -1.3724770000000035,
+      "min_delta_ms": -1.7471850000000018,
+      "max_delta_ms": 15.902660999999995,
+      "median_time_ratio": 0.9934339174629724
+    },
+    {
+      "label": "write switching versus each row",
+      "baseline": [
+        "text",
+        "disk",
+        "1",
+        "all",
+        "write"
+      ],
+      "candidate": [
+        "text",
+        "disk",
+        "all",
+        "all",
+        "write"
+      ],
+      "median_delta_ms": -3.8827190000000087,
+      "min_delta_ms": -4.996098000000018,
+      "max_delta_ms": -2.3831050000000005,
+      "median_time_ratio": 0.9824076606457036
+    },
+    {
+      "label": "read switching versus each row",
+      "baseline": [
+        "text",
+        "disk",
+        "all",
+        "1",
+        "read"
+      ],
+      "candidate": [
+        "text",
+        "disk",
+        "all",
+        "all",
+        "read"
+      ],
+      "median_delta_ms": -2.949613999999997,
+      "min_delta_ms": -3.39910500000002,
+      "max_delta_ms": -1.3246350000000007,
+      "median_time_ratio": 0.9848237152764191
+    },
+    {
+      "label": "read switching versus each row",
+      "baseline": [
+        "text",
+        "disk",
+        "all",
+        "1",
+        "read"
+      ],
+      "candidate": [
+        "text",
+        "disk",
+        "all",
+        "10",
+        "read"
+      ],
+      "median_delta_ms": -1.8328759999999988,
+      "min_delta_ms": -3.244384000000025,
+      "max_delta_ms": -1.0382990000000234,
+      "median_time_ratio": 0.9891996353405693
+    },
+    {
+      "label": "SQLite minus matching text",
+      "baseline": [
+        "text",
+        "disk",
+        "1",
+        "all",
+        "write"
+      ],
+      "candidate": [
+        "sqlite",
+        "disk",
+        "1",
+        "all",
+        "write"
+      ],
+      "median_delta_ms": 292.179749,
+      "min_delta_ms": 287.37838100000005,
+      "max_delta_ms": 301.64599699999997,
+      "median_time_ratio": 2.3028488767014084
+    },
+    {
+      "label": "SQLite minus matching text",
+      "baseline": [
+        "text",
+        "disk",
+        "1",
+        "all",
+        "read"
+      ],
+      "candidate": [
+        "sqlite",
+        "disk",
+        "1",
+        "all",
+        "read"
+      ],
+      "median_delta_ms": 99.05332000000001,
+      "min_delta_ms": 97.19498800000002,
+      "max_delta_ms": 106.24425300000001,
+      "median_time_ratio": 1.5775491864896176
+    },
+    {
+      "label": "SQLite minus matching text",
+      "baseline": [
+        "text",
+        "disk",
+        "10",
+        "all",
+        "write"
+      ],
+      "candidate": [
+        "sqlite",
+        "disk",
+        "10",
+        "all",
+        "write"
+      ],
+      "median_delta_ms": 310.04893999999996,
+      "min_delta_ms": 269.42762600000003,
+      "max_delta_ms": 346.63398199999995,
+      "median_time_ratio": 2.3940137429503774
+    },
+    {
+      "label": "write switching versus each row",
+      "baseline": [
+        "sqlite",
+        "disk",
+        "1",
+        "all",
+        "write"
+      ],
+      "candidate": [
+        "sqlite",
+        "disk",
+        "10",
+        "all",
+        "write"
+      ],
+      "median_delta_ms": 14.658977999999934,
+      "min_delta_ms": -2.0480940000000487,
+      "max_delta_ms": 56.112720999999965,
+      "median_time_ratio": 1.032761843463235
+    },
+    {
+      "label": "SQLite minus matching text",
+      "baseline": [
+        "text",
+        "disk",
+        "10",
+        "all",
+        "read"
+      ],
+      "candidate": [
+        "sqlite",
+        "disk",
+        "10",
+        "all",
+        "read"
+      ],
+      "median_delta_ms": 98.389702,
+      "min_delta_ms": 96.97548399999997,
+      "max_delta_ms": 104.95984200000001,
+      "median_time_ratio": 1.5823827232605974
+    },
+    {
+      "label": "SQLite minus matching text",
+      "baseline": [
+        "text",
+        "disk",
+        "all",
+        "all",
+        "write"
+      ],
+      "candidate": [
+        "sqlite",
+        "disk",
+        "all",
+        "all",
+        "write"
+      ],
+      "median_delta_ms": 291.245949,
+      "min_delta_ms": 288.22673599999996,
+      "max_delta_ms": 301.976313,
+      "median_time_ratio": 2.322376853352107
+    },
+    {
+      "label": "write switching versus each row",
+      "baseline": [
+        "sqlite",
+        "disk",
+        "1",
+        "all",
+        "write"
+      ],
+      "candidate": [
+        "sqlite",
+        "disk",
+        "all",
+        "all",
+        "write"
+      ],
+      "median_delta_ms": -3.8888039999999364,
+      "min_delta_ms": -8.930731999999978,
+      "max_delta_ms": 10.356726999999978,
+      "median_time_ratio": 0.9907384000410027
+    },
+    {
+      "label": "SQLite minus matching text",
+      "baseline": [
+        "text",
+        "disk",
+        "all",
+        "all",
+        "read"
+      ],
+      "candidate": [
+        "sqlite",
+        "disk",
+        "all",
+        "all",
+        "read"
+      ],
+      "median_delta_ms": 102.48894699999997,
+      "min_delta_ms": 93.96190599999997,
+      "max_delta_ms": 103.84232000000003,
+      "median_time_ratio": 1.6011237179304103
+    },
+    {
+      "label": "read switching versus each row",
+      "baseline": [
+        "sqlite",
+        "disk",
+        "all",
+        "1",
+        "read"
+      ],
+      "candidate": [
+        "sqlite",
+        "disk",
+        "all",
+        "all",
+        "read"
+      ],
+      "median_delta_ms": -2.86504199999996,
+      "min_delta_ms": -5.019720000000007,
+      "max_delta_ms": 5.109352000000001,
+      "median_time_ratio": 1.0119768523984027
+    },
+    {
+      "label": "SQLite minus matching text",
+      "baseline": [
+        "text",
+        "disk",
+        "all",
+        "1",
+        "write"
+      ],
+      "candidate": [
+        "sqlite",
+        "disk",
+        "all",
+        "1",
+        "write"
+      ],
+      "median_delta_ms": 291.230859,
+      "min_delta_ms": 282.097398,
+      "max_delta_ms": 310.529754,
+      "median_time_ratio": 2.323032001815477
+    },
+    {
+      "label": "SQLite minus matching text",
+      "baseline": [
+        "text",
+        "disk",
+        "all",
+        "1",
+        "read"
+      ],
+      "candidate": [
+        "sqlite",
+        "disk",
+        "all",
+        "1",
+        "read"
+      ],
+      "median_delta_ms": 96.56140299999998,
+      "min_delta_ms": 95.18110299999998,
+      "max_delta_ms": 105.78439799999998,
+      "median_time_ratio": 1.5581627235566882
+    },
+    {
+      "label": "SQLite minus matching text",
+      "baseline": [
+        "text",
+        "disk",
+        "all",
+        "10",
+        "write"
+      ],
+      "candidate": [
+        "sqlite",
+        "disk",
+        "all",
+        "10",
+        "write"
+      ],
+      "median_delta_ms": 287.37282600000003,
+      "min_delta_ms": 283.97402999999997,
+      "max_delta_ms": 329.43597300000005,
+      "median_time_ratio": 2.301638058495276
+    },
+    {
+      "label": "SQLite minus matching text",
+      "baseline": [
+        "text",
+        "disk",
+        "all",
+        "10",
+        "read"
+      ],
+      "candidate": [
+        "sqlite",
+        "disk",
+        "all",
+        "10",
+        "read"
+      ],
+      "median_delta_ms": 101.93355199999999,
+      "min_delta_ms": 98.85045599999998,
+      "max_delta_ms": 104.444579,
+      "median_time_ratio": 1.5929384757607452
+    },
+    {
+      "label": "read switching versus each row",
+      "baseline": [
+        "sqlite",
+        "disk",
+        "all",
+        "1",
+        "read"
+      ],
+      "candidate": [
+        "sqlite",
+        "disk",
+        "all",
+        "10",
+        "read"
+      ],
+      "median_delta_ms": 0.6304039999999986,
+      "min_delta_ms": -4.639704999999992,
+      "max_delta_ms": 5.211613,
+      "median_time_ratio": 1.0112770223033538
+    }
+  ]
+}

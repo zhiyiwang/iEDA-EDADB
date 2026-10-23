@@ -1,0 +1,15 @@
+{
+  "hashes": {
+    "/tmp/sqlite-interleaved-build/sqlite_interleaved": "afd08703035f3b9fb545e10038d3b72ee16dc8e0e517e539ed8a3ebb542b18c5",
+    "/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/storage/sqlite-write/run_interleaved.py": "12d4bfb890181505c2d2d699f9da3cdc3798e63939d271568345f54c71b0afc5",
+    "/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/storage/sqlite-write/interleaved.cpp": "bd0a5db3e125d3430c091c3287d19e62b808ac5b4c492f8d973c7c13fe637305",
+    "/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/storage/sqlite-vs-text/benchmark.cpp": "f8c0d32c50f50dab1d0805de23123e0221808f685bf40628f1edac9b262a74ac"
+  },
+  "cpu": 0,
+  "parent_commit": "d1e3a21256063218d7cd0b62db8926e7a9633433",
+  "library": "\tlinux-vdso.so.1 (0x00007fffc2bf5000)\n\tlibsqlite3.so.0 => /lib/x86_64-linux-gnu/libsqlite3.so.0 (0x00007fef26921000)\n\tlibstdc++.so.6 => /lib/x86_64-linux-gnu/libstdc++.so.6 (0x00007fef266f5000)\n\tlibgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007fef266d5000)\n\tlibc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007fef264ac000)\n\tlibm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007fef263c5000)\n\t/lib64/ld-linux-x86-64.so.2 (0x00007fef26a90000)\n",
+  "compiler": "c++ (Ubuntu 11.4.0-1ubuntu1~22.04.3) 11.4.0",
+  "count_per_table": 100000,
+  "repeats": 5,
+  "formal_full_field_validation": "after timed reading"
+}

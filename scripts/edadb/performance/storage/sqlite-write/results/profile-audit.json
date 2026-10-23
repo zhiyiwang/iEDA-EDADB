@@ -1,0 +1,352 @@
+{
+  "status": "PASS",
+  "captures": 12,
+  "controls": 12,
+  "lost_samples": 0,
+  "overhead_within_5_percent": true,
+  "hotspots": [
+    {
+      "route": "single",
+      "paired_delta_percent": 0.5340676763883749,
+      "sqlite3_step": 59.56,
+      "bind_record<false>": 36.07,
+      "sqlite3_reset": 2.83,
+      "sqlite3VdbeHalt": 11.79,
+      "sqlite3BtreeInsert": 5.96
+    },
+    {
+      "route": "batch100",
+      "paired_delta_percent": 1.0837086073381104,
+      "sqlite3_step": 38.0,
+      "bind_record<false>": 61.66,
+      "sqlite3_reset": null,
+      "sqlite3VdbeHalt": null,
+      "sqlite3BtreeInsert": 11.24
+    },
+    {
+      "route": "switch1",
+      "paired_delta_percent": 1.376695817125552,
+      "sqlite3_step": 65.08,
+      "bind_record<false>": 30.54,
+      "sqlite3_reset": 1.66,
+      "sqlite3VdbeHalt": 11.62,
+      "sqlite3BtreeInsert": 7.88
+    },
+    {
+      "route": "grouped",
+      "paired_delta_percent": 1.5453583640133068,
+      "sqlite3_step": 60.37,
+      "bind_record<false>": 36.22,
+      "sqlite3_reset": 2.83,
+      "sqlite3VdbeHalt": 9.95,
+      "sqlite3BtreeInsert": 10.1
+    }
+  ],
+  "reports": [
+    {
+      "name": "batch100-0.report.txt",
+      "lost": 0,
+      "samples": 357,
+      "symbols": {
+        "bind_record<false>": {
+          "children": 59.41,
+          "self": 4.03
+        },
+        "sqlite3_step": {
+          "children": 39.96,
+          "self": 0.29
+        },
+        "sqlite3BtreeInsert": {
+          "children": 9.22,
+          "self": 2.02
+        },
+        "sqlite3VdbeHalt": {
+          "children": 1.16,
+          "self": 0.29
+        }
+      }
+    },
+    {
+      "name": "batch100-1.report.txt",
+      "lost": 0,
+      "samples": 355,
+      "symbols": {
+        "bind_record<false>": {
+          "children": 61.95,
+          "self": 4.04
+        },
+        "sqlite3_step": {
+          "children": 37.98,
+          "self": 0.0
+        },
+        "sqlite3BtreeInsert": {
+          "children": 11.6,
+          "self": 2.61
+        }
+      }
+    },
+    {
+      "name": "batch100-2.report.txt",
+      "lost": 0,
+      "samples": 356,
+      "symbols": {
+        "bind_record<false>": {
+          "children": 61.66,
+          "self": 5.2
+        },
+        "sqlite3_step": {
+          "children": 38.0,
+          "self": 0.0
+        },
+        "sqlite3BtreeInsert": {
+          "children": 11.24,
+          "self": 4.01
+        }
+      }
+    },
+    {
+      "name": "grouped-0.report.txt",
+      "lost": 0,
+      "samples": 186,
+      "symbols": {
+        "sqlite3_step": {
+          "children": 61.08,
+          "self": 0.57
+        },
+        "bind_record<false>": {
+          "children": 34.19,
+          "self": 1.13
+        },
+        "sqlite3BtreeInsert": {
+          "children": 10.1,
+          "self": 3.38
+        },
+        "sqlite3VdbeHalt": {
+          "children": 9.95,
+          "self": 1.56
+        },
+        "sqlite3_reset": {
+          "children": 2.83,
+          "self": 0.57
+        }
+      }
+    },
+    {
+      "name": "grouped-1.report.txt",
+      "lost": 0,
+      "samples": 189,
+      "symbols": {
+        "sqlite3_step": {
+          "children": 60.37,
+          "self": 1.68
+        },
+        "bind_record<false>": {
+          "children": 36.22,
+          "self": 2.37
+        },
+        "sqlite3VdbeHalt": {
+          "children": 14.37,
+          "self": 0.58
+        },
+        "sqlite3BtreeInsert": {
+          "children": 10.34,
+          "self": 5.56
+        },
+        "sqlite3_reset": {
+          "children": 2.2,
+          "self": 0.0
+        }
+      }
+    },
+    {
+      "name": "grouped-2.report.txt",
+      "lost": 0,
+      "samples": 187,
+      "symbols": {
+        "sqlite3_step": {
+          "children": 58.73,
+          "self": 2.82
+        },
+        "bind_record<false>": {
+          "children": 37.54,
+          "self": 3.43
+        },
+        "sqlite3VdbeHalt": {
+          "children": 7.95,
+          "self": 0.0
+        },
+        "sqlite3BtreeInsert": {
+          "children": 6.78,
+          "self": 2.26
+        },
+        "sqlite3_reset": {
+          "children": 3.06,
+          "self": 0.56
+        }
+      }
+    },
+    {
+      "name": "single-0.report.txt",
+      "lost": 0,
+      "samples": 609,
+      "symbols": {
+        "sqlite3_step": {
+          "children": 59.67,
+          "self": 1.33
+        },
+        "bind_record<false>": {
+          "children": 35.14,
+          "self": 1.66
+        },
+        "sqlite3VdbeHalt": {
+          "children": 13.34,
+          "self": 2.56
+        },
+        "sqlite3BtreeInsert": {
+          "children": 5.96,
+          "self": 2.17
+        },
+        "sqlite3_reset": {
+          "children": 3.12,
+          "self": 0.29
+        }
+      }
+    },
+    {
+      "name": "single-1.report.txt",
+      "lost": 0,
+      "samples": 611,
+      "symbols": {
+        "sqlite3_step": {
+          "children": 57.96,
+          "self": 2.14
+        },
+        "bind_record<false>": {
+          "children": 38.53,
+          "self": 2.84
+        },
+        "sqlite3VdbeHalt": {
+          "children": 11.79,
+          "self": 1.16
+        },
+        "sqlite3BtreeInsert": {
+          "children": 6.81,
+          "self": 1.66
+        },
+        "sqlite3_reset": {
+          "children": 2.66,
+          "self": 1.0
+        }
+      }
+    },
+    {
+      "name": "single-2.report.txt",
+      "lost": 0,
+      "samples": 608,
+      "symbols": {
+        "sqlite3_step": {
+          "children": 59.56,
+          "self": 2.82
+        },
+        "bind_record<false>": {
+          "children": 36.07,
+          "self": 2.33
+        },
+        "sqlite3VdbeHalt": {
+          "children": 10.4,
+          "self": 2.34
+        },
+        "sqlite3BtreeInsert": {
+          "children": 5.83,
+          "self": 1.83
+        },
+        "sqlite3_reset": {
+          "children": 2.83,
+          "self": 0.17
+        }
+      }
+    },
+    {
+      "name": "switch1-0.report.txt",
+      "lost": 0,
+      "samples": 189,
+      "symbols": {
+        "sqlite3_step": {
+          "children": 65.08,
+          "self": 0.0
+        },
+        "bind_record<false>": {
+          "children": 30.83,
+          "self": 2.23
+        },
+        "sqlite3VdbeHalt": {
+          "children": 10.31,
+          "self": 1.1
+        },
+        "sqlite3BtreeInsert": {
+          "children": 6.14,
+          "self": 1.11
+        },
+        "sqlite3_reset": {
+          "children": 1.26,
+          "self": 0.14
+        }
+      }
+    },
+    {
+      "name": "switch1-1.report.txt",
+      "lost": 0,
+      "samples": 188,
+      "symbols": {
+        "sqlite3_step": {
+          "children": 66.61,
+          "self": 1.69
+        },
+        "bind_record<false>": {
+          "children": 30.54,
+          "self": 0.56
+        },
+        "sqlite3VdbeHalt": {
+          "children": 11.62,
+          "self": 1.68
+        },
+        "sqlite3BtreeInsert": {
+          "children": 7.88,
+          "self": 3.37
+        },
+        "sqlite3_reset": {
+          "children": 1.66,
+          "self": 0.0
+        }
+      }
+    },
+    {
+      "name": "switch1-2.report.txt",
+      "lost": 0,
+      "samples": 189,
+      "symbols": {
+        "sqlite3_step": {
+          "children": 62.64,
+          "self": 2.24
+        },
+        "bind_record<false>": {
+          "children": 30.45,
+          "self": 2.78
+        },
+        "sqlite3VdbeHalt": {
+          "children": 12.64,
+          "self": 0.56
+        },
+        "sqlite3BtreeInsert": {
+          "children": 9.26,
+          "self": 2.55
+        },
+        "sqlite3_reset": {
+          "children": 3.48,
+          "self": 0.13
+        }
+      }
+    }
+  ],
+  "scope": "memory write CPU samples; child percentages overlap; omitted symbols are unknown, not zero"
+}

@@ -1,0 +1,98 @@
+{
+  "status": "PASS",
+  "formal_samples": 70,
+  "pairs": [
+    {
+      "setting": "memory",
+      "baseline": "single",
+      "variant": "text",
+      "delta_ms": -759.2324759999999,
+      "min_ms": -768.9882619999998,
+      "max_ms": -754.269561,
+      "delta_percent": -50.59343692945316
+    },
+    {
+      "setting": "memory",
+      "baseline": "single",
+      "variant": "batch10",
+      "delta_ms": -491.13047499999993,
+      "min_ms": -503.00763699999993,
+      "max_ms": -482.4435349999999,
+      "delta_percent": -32.727760595747846
+    },
+    {
+      "setting": "memory",
+      "baseline": "single",
+      "variant": "batch100",
+      "delta_ms": -552.8679179999999,
+      "min_ms": -562.7707909999999,
+      "max_ms": -548.543912,
+      "delta_percent": -36.84179618740529
+    },
+    {
+      "setting": "memory",
+      "baseline": "switch1",
+      "variant": "switch10",
+      "delta_ms": -3.912050000000022,
+      "min_ms": -6.685210999999981,
+      "max_ms": 20.65524499999998,
+      "delta_percent": -0.8752346785276085
+    },
+    {
+      "setting": "memory",
+      "baseline": "switch1",
+      "variant": "grouped",
+      "delta_ms": -2.179194999999993,
+      "min_ms": -5.966791000000001,
+      "max_ms": 6.255683999999974,
+      "delta_percent": -0.48754669170229287
+    },
+    {
+      "setting": "disk",
+      "baseline": "single",
+      "variant": "text",
+      "delta_ms": -844.5224239999999,
+      "min_ms": -871.63333,
+      "max_ms": -782.722304,
+      "delta_percent": -53.26830109806264
+    },
+    {
+      "setting": "disk",
+      "baseline": "single",
+      "variant": "batch10",
+      "delta_ms": -511.1849179999999,
+      "min_ms": -547.6905430000002,
+      "max_ms": -495.3446160000001,
+      "delta_percent": -32.24301848592769
+    },
+    {
+      "setting": "disk",
+      "baseline": "single",
+      "variant": "batch100",
+      "delta_ms": -565.7638559999999,
+      "min_ms": -597.7541790000001,
+      "max_ms": -538.690805,
+      "delta_percent": -35.68558818020084
+    },
+    {
+      "setting": "disk",
+      "baseline": "switch1",
+      "variant": "switch10",
+      "delta_ms": 0.7352190000000292,
+      "min_ms": -7.391938999999979,
+      "max_ms": 7.485488999999973,
+      "delta_percent": 0.14540291012923653
+    },
+    {
+      "setting": "disk",
+      "baseline": "switch1",
+      "variant": "grouped",
+      "delta_ms": -3.821506999999997,
+      "min_ms": -10.465816000000018,
+      "max_ms": 4.972591000000023,
+      "delta_percent": -0.7557724145856213
+    }
+  ],
+  "source_hashes_verified": true,
+  "actual_journal_sync_verified": true
+}

@@ -13,8 +13,11 @@ See its [results](storage/baseline/results.md) and
 
 ## Document Links
 
+- [新实验待提交清单](storage/sqlite-handoff.md#8-待提交清单与交付边界)：区分已测SQLite A/B、历史报告和后续方案；尚未提交，不替代既有milestone。
+
+- [实验总结](experiment-summary.md)：服务器、数据集、完整设计优化、SQLite A/B及证据边界；建议先读。
 - [配对milestone](milestone.md)：两仓库同名标签、固定core提交、交付范围和复现方式。
-- [当前实验交接及提交边界](handoff.md#当前实验交接)：本轮归因、SELECT对照及perf审计完成并冻结，不包含后续生产优化方案。
+- [已冻结基线交接](handoff.md#当前实验交接)：历史归因、SELECT对照及perf审计，不是新增sqlite-write的提交状态。
 
 Local file links are relative to each Markdown file; source line references use `#L<number>`.
 Copy the directory tree without flattening it. Links to production source require the rest of

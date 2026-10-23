@@ -1,0 +1,9 @@
+{
+  "status": "PASS",
+  "timing_rows": 80,
+  "paired_comparisons": 12,
+  "full_field_checks": 40,
+  "counter_runs": 6,
+  "same_read_vm": true,
+  "current_source_hashes_verified": true
+}

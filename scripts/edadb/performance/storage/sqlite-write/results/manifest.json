@@ -1,0 +1,20 @@
+{
+  "hashes": {
+    "/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/storage/sqlite-write/run.py": "a82465fc2955b28fc987683d79b9450787143042ee5ee026b90ebb6f6f8201a1",
+    "/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/storage/sqlite-write/benchmark.cpp": "e294b700a82d75e40d5b7a0c56a2155f53e0f288f65c3cf9c415da9f6ecac15a",
+    "/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/storage/sqlite-vs-text/benchmark.cpp": "f8c0d32c50f50dab1d0805de23123e0221808f685bf40628f1edac9b262a74ac",
+    "/tmp/sqlite-write-build/sqlite_write": "46777942c0132e70ad85c44a71a51dfe6ede8bbcdcbcf047978f9fc4c5943a3a"
+  },
+  "cpu": 0,
+  "uname": [
+    "Linux",
+    "cherry13",
+    "5.15.0-187-generic",
+    "#197-Ubuntu SMP Fri Jul 17 19:17:01 UTC 2026",
+    "x86_64"
+  ],
+  "parent_commit": "d1e3a21256063218d7cd0b62db8926e7a9633433",
+  "library": "\tlinux-vdso.so.1 (0x00007ffdd39cc000)\n\tlibsqlite3.so.0 => /lib/x86_64-linux-gnu/libsqlite3.so.0 (0x00007fd5fdebc000)\n\tlibstdc++.so.6 => /lib/x86_64-linux-gnu/libstdc++.so.6 (0x00007fd5fdc90000)\n\tlibgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007fd5fdc70000)\n\tlibc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007fd5fda47000)\n\tlibm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007fd5fd960000)\n\t/lib64/ld-linux-x86-64.so.2 (0x00007fd5fe02c000)\n",
+  "repetitions": 5,
+  "validation": "all fields outside timers, including formal samples"
+}

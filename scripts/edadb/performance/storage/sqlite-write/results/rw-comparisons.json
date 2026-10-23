@@ -1,0 +1,110 @@
+[
+  {
+    "config": "A",
+    "route": "sqlite",
+    "operation": "write",
+    "ratio_to_text": 2.0396963218848274,
+    "paired_delta_ms": 767.4351300000001,
+    "min_delta_ms": 749.66677,
+    "max_delta_ms": 770.575858
+  },
+  {
+    "config": "A",
+    "route": "sqlite",
+    "operation": "read",
+    "ratio_to_text": 1.3539380712699922,
+    "paired_delta_ms": 203.41294099999993,
+    "min_delta_ms": 198.89219500000002,
+    "max_delta_ms": 232.357261
+  },
+  {
+    "config": "A",
+    "route": "batch10",
+    "operation": "write",
+    "ratio_to_text": 1.3671804447932112,
+    "paired_delta_ms": 271.1753,
+    "min_delta_ms": 262.9003640000001,
+    "max_delta_ms": 275.170079
+  },
+  {
+    "config": "A",
+    "route": "batch10",
+    "operation": "read",
+    "ratio_to_text": 1.3519203936659565,
+    "paired_delta_ms": 200.480637,
+    "min_delta_ms": 194.68543899999997,
+    "max_delta_ms": 215.71548799999994
+  },
+  {
+    "config": "A",
+    "route": "batch100",
+    "operation": "write",
+    "ratio_to_text": 1.2693667672731608,
+    "paired_delta_ms": 198.414354,
+    "min_delta_ms": 186.01569000000006,
+    "max_delta_ms": 207.22772099999997
+  },
+  {
+    "config": "A",
+    "route": "batch100",
+    "operation": "read",
+    "ratio_to_text": 1.36091916950401,
+    "paired_delta_ms": 210.63982399999998,
+    "min_delta_ms": 204.41410599999995,
+    "max_delta_ms": 213.49670400000002
+  },
+  {
+    "config": "B-batch",
+    "route": "sqlite",
+    "operation": "write",
+    "ratio_to_text": 2.1178752915604377,
+    "paired_delta_ms": 828.4585479999998,
+    "min_delta_ms": 821.237071,
+    "max_delta_ms": 861.535989
+  },
+  {
+    "config": "B-batch",
+    "route": "sqlite",
+    "operation": "read",
+    "ratio_to_text": 1.4282571269637705,
+    "paired_delta_ms": 249.46158000000003,
+    "min_delta_ms": 244.879502,
+    "max_delta_ms": 253.00577599999997
+  },
+  {
+    "config": "B-batch",
+    "route": "batch10",
+    "operation": "write",
+    "ratio_to_text": 1.4484212426370446,
+    "paired_delta_ms": 331.577413,
+    "min_delta_ms": 321.42891099999997,
+    "max_delta_ms": 372.83490399999994
+  },
+  {
+    "config": "B-batch",
+    "route": "batch10",
+    "operation": "read",
+    "ratio_to_text": 1.409733355071134,
+    "paired_delta_ms": 239.15793400000007,
+    "min_delta_ms": 227.06561499999998,
+    "max_delta_ms": 243.00645599999996
+  },
+  {
+    "config": "B-batch",
+    "route": "batch100",
+    "operation": "write",
+    "ratio_to_text": 1.3576859629925635,
+    "paired_delta_ms": 264.885048,
+    "min_delta_ms": 260.135845,
+    "max_delta_ms": 271.63497800000005
+  },
+  {
+    "config": "B-batch",
+    "route": "batch100",
+    "operation": "read",
+    "ratio_to_text": 1.4254402451889057,
+    "paired_delta_ms": 248.13285899999994,
+    "min_delta_ms": 244.63100499999996,
+    "max_delta_ms": 251.22539800000004
+  }
+]

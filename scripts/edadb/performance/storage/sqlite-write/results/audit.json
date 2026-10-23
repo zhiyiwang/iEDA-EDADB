@@ -1,0 +1,769 @@
+{
+  "status": "PASS",
+  "checks": 152,
+  "formal_samples": 70,
+  "counter_runs": 12,
+  "source_unchanged": true,
+  "checks_detail": [
+    {
+      "label": "check-memory-text-0",
+      "rows_per_table": 0,
+      "status": "PASS"
+    },
+    {
+      "label": "check-memory-text-1",
+      "rows_per_table": 1,
+      "status": "PASS"
+    },
+    {
+      "label": "check-memory-text-8",
+      "rows_per_table": 8,
+      "status": "PASS"
+    },
+    {
+      "label": "check-memory-text-101",
+      "rows_per_table": 101,
+      "status": "PASS"
+    },
+    {
+      "label": "check-memory-single-0",
+      "rows_per_table": 0,
+      "status": "PASS"
+    },
+    {
+      "label": "check-memory-single-1",
+      "rows_per_table": 1,
+      "status": "PASS"
+    },
+    {
+      "label": "check-memory-single-8",
+      "rows_per_table": 8,
+      "status": "PASS"
+    },
+    {
+      "label": "check-memory-single-101",
+      "rows_per_table": 101,
+      "status": "PASS"
+    },
+    {
+      "label": "check-memory-batch10-0",
+      "rows_per_table": 0,
+      "status": "PASS"
+    },
+    {
+      "label": "check-memory-batch10-1",
+      "rows_per_table": 1,
+      "status": "PASS"
+    },
+    {
+      "label": "check-memory-batch10-8",
+      "rows_per_table": 8,
+      "status": "PASS"
+    },
+    {
+      "label": "check-memory-batch10-101",
+      "rows_per_table": 101,
+      "status": "PASS"
+    },
+    {
+      "label": "check-memory-batch100-0",
+      "rows_per_table": 0,
+      "status": "PASS"
+    },
+    {
+      "label": "check-memory-batch100-1",
+      "rows_per_table": 1,
+      "status": "PASS"
+    },
+    {
+      "label": "check-memory-batch100-8",
+      "rows_per_table": 8,
+      "status": "PASS"
+    },
+    {
+      "label": "check-memory-batch100-101",
+      "rows_per_table": 101,
+      "status": "PASS"
+    },
+    {
+      "label": "check-memory-switch1-0",
+      "rows_per_table": 0,
+      "status": "PASS"
+    },
+    {
+      "label": "check-memory-switch1-1",
+      "rows_per_table": 1,
+      "status": "PASS"
+    },
+    {
+      "label": "check-memory-switch1-8",
+      "rows_per_table": 8,
+      "status": "PASS"
+    },
+    {
+      "label": "check-memory-switch1-101",
+      "rows_per_table": 101,
+      "status": "PASS"
+    },
+    {
+      "label": "check-memory-switch10-0",
+      "rows_per_table": 0,
+      "status": "PASS"
+    },
+    {
+      "label": "check-memory-switch10-1",
+      "rows_per_table": 1,
+      "status": "PASS"
+    },
+    {
+      "label": "check-memory-switch10-8",
+      "rows_per_table": 8,
+      "status": "PASS"
+    },
+    {
+      "label": "check-memory-switch10-101",
+      "rows_per_table": 101,
+      "status": "PASS"
+    },
+    {
+      "label": "check-memory-grouped-0",
+      "rows_per_table": 0,
+      "status": "PASS"
+    },
+    {
+      "label": "check-memory-grouped-1",
+      "rows_per_table": 1,
+      "status": "PASS"
+    },
+    {
+      "label": "check-memory-grouped-8",
+      "rows_per_table": 8,
+      "status": "PASS"
+    },
+    {
+      "label": "check-memory-grouped-101",
+      "rows_per_table": 101,
+      "status": "PASS"
+    },
+    {
+      "label": "check-disk-text-0",
+      "rows_per_table": 0,
+      "status": "PASS"
+    },
+    {
+      "label": "check-disk-text-1",
+      "rows_per_table": 1,
+      "status": "PASS"
+    },
+    {
+      "label": "check-disk-text-8",
+      "rows_per_table": 8,
+      "status": "PASS"
+    },
+    {
+      "label": "check-disk-text-101",
+      "rows_per_table": 101,
+      "status": "PASS"
+    },
+    {
+      "label": "check-disk-single-0",
+      "rows_per_table": 0,
+      "status": "PASS"
+    },
+    {
+      "label": "check-disk-single-1",
+      "rows_per_table": 1,
+      "status": "PASS"
+    },
+    {
+      "label": "check-disk-single-8",
+      "rows_per_table": 8,
+      "status": "PASS"
+    },
+    {
+      "label": "check-disk-single-101",
+      "rows_per_table": 101,
+      "status": "PASS"
+    },
+    {
+      "label": "check-disk-batch10-0",
+      "rows_per_table": 0,
+      "status": "PASS"
+    },
+    {
+      "label": "check-disk-batch10-1",
+      "rows_per_table": 1,
+      "status": "PASS"
+    },
+    {
+      "label": "check-disk-batch10-8",
+      "rows_per_table": 8,
+      "status": "PASS"
+    },
+    {
+      "label": "check-disk-batch10-101",
+      "rows_per_table": 101,
+      "status": "PASS"
+    },
+    {
+      "label": "check-disk-batch100-0",
+      "rows_per_table": 0,
+      "status": "PASS"
+    },
+    {
+      "label": "check-disk-batch100-1",
+      "rows_per_table": 1,
+      "status": "PASS"
+    },
+    {
+      "label": "check-disk-batch100-8",
+      "rows_per_table": 8,
+      "status": "PASS"
+    },
+    {
+      "label": "check-disk-batch100-101",
+      "rows_per_table": 101,
+      "status": "PASS"
+    },
+    {
+      "label": "check-disk-switch1-0",
+      "rows_per_table": 0,
+      "status": "PASS"
+    },
+    {
+      "label": "check-disk-switch1-1",
+      "rows_per_table": 1,
+      "status": "PASS"
+    },
+    {
+      "label": "check-disk-switch1-8",
+      "rows_per_table": 8,
+      "status": "PASS"
+    },
+    {
+      "label": "check-disk-switch1-101",
+      "rows_per_table": 101,
+      "status": "PASS"
+    },
+    {
+      "label": "check-disk-switch10-0",
+      "rows_per_table": 0,
+      "status": "PASS"
+    },
+    {
+      "label": "check-disk-switch10-1",
+      "rows_per_table": 1,
+      "status": "PASS"
+    },
+    {
+      "label": "check-disk-switch10-8",
+      "rows_per_table": 8,
+      "status": "PASS"
+    },
+    {
+      "label": "check-disk-switch10-101",
+      "rows_per_table": 101,
+      "status": "PASS"
+    },
+    {
+      "label": "check-disk-grouped-0",
+      "rows_per_table": 0,
+      "status": "PASS"
+    },
+    {
+      "label": "check-disk-grouped-1",
+      "rows_per_table": 1,
+      "status": "PASS"
+    },
+    {
+      "label": "check-disk-grouped-8",
+      "rows_per_table": 8,
+      "status": "PASS"
+    },
+    {
+      "label": "check-disk-grouped-101",
+      "rows_per_table": 101,
+      "status": "PASS"
+    },
+    {
+      "label": "warm-memory-text",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "warm-memory-single",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "warm-memory-batch10",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "warm-memory-batch100",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "warm-memory-switch1",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    },
+    {
+      "label": "warm-memory-switch10",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    },
+    {
+      "label": "warm-memory-grouped",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    },
+    {
+      "label": "warm-disk-text",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "warm-disk-single",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "warm-disk-batch10",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "warm-disk-batch100",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "warm-disk-switch1",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    },
+    {
+      "label": "warm-disk-switch10",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    },
+    {
+      "label": "warm-disk-grouped",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-0-memory-text",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-0-memory-single",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-0-memory-batch10",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-0-memory-batch100",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-0-memory-switch1",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-0-memory-switch10",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-0-memory-grouped",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-0-disk-text",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-0-disk-single",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-0-disk-batch10",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-0-disk-batch100",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-0-disk-switch1",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-0-disk-switch10",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-0-disk-grouped",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-1-memory-text",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-1-disk-grouped",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-1-disk-switch10",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-1-disk-switch1",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-1-disk-batch100",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-1-disk-batch10",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-1-disk-single",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-1-disk-text",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-1-memory-grouped",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-1-memory-switch10",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-1-memory-switch1",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-1-memory-batch100",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-1-memory-batch10",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-1-memory-single",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-2-memory-batch10",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-2-memory-batch100",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-2-memory-switch1",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-2-memory-switch10",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-2-memory-grouped",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-2-disk-text",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-2-disk-single",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-2-disk-batch10",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-2-disk-batch100",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-2-disk-switch1",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-2-disk-switch10",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-2-disk-grouped",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-2-memory-text",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-2-memory-single",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-3-memory-batch10",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-3-memory-single",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-3-memory-text",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-3-disk-grouped",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-3-disk-switch10",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-3-disk-switch1",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-3-disk-batch100",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-3-disk-batch10",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-3-disk-single",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-3-disk-text",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-3-memory-grouped",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-3-memory-switch10",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-3-memory-switch1",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-3-memory-batch100",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-4-memory-switch1",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-4-memory-switch10",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-4-memory-grouped",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-4-disk-text",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-4-disk-single",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-4-disk-batch10",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-4-disk-batch100",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-4-disk-switch1",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-4-disk-switch10",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-4-disk-grouped",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-4-memory-text",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-4-memory-single",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-4-memory-batch10",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "sample-4-memory-batch100",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "counter-memory-single",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "counter-memory-batch10",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "counter-memory-batch100",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "counter-memory-switch1",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    },
+    {
+      "label": "counter-memory-switch10",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    },
+    {
+      "label": "counter-memory-grouped",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    },
+    {
+      "label": "counter-disk-single",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "counter-disk-batch10",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "counter-disk-batch100",
+      "rows_per_table": 1000000,
+      "status": "PASS"
+    },
+    {
+      "label": "counter-disk-switch1",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    },
+    {
+      "label": "counter-disk-switch10",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    },
+    {
+      "label": "counter-disk-grouped",
+      "rows_per_table": 100000,
+      "status": "PASS"
+    }
+  ]
+}

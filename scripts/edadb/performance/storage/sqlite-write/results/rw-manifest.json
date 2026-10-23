@@ -1,0 +1,17 @@
+{
+  "cpu": 0,
+  "parent_commit": "d1e3a21256063218d7cd0b62db8926e7a9633433",
+  "hashes": {
+    "/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/storage/sqlite-write/run_read_write.py": "e4a362b52acfb4f188ef1d84cbd52eaa1a05d4ffc4000097d78262f27305ad39",
+    "/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/storage/sqlite-vs-text/run.py": "246af70edc621a00a7233136ab21d705545ed3f696753786b645b51a60b684cf",
+    "/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/storage/sqlite-vs-text/benchmark.cpp": "f8c0d32c50f50dab1d0805de23123e0221808f685bf40628f1edac9b262a74ac",
+    "/tmp/sqlite-read-write-build/sqlite_read_write": "a1bc123837e8ebf2e5462b22a921e8d0228fdc7b7259b372a5fcdfc8cba3d8fc",
+    "/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/storage/sqlite-write/CMakeLists.txt": "b3789e580dfa339bcbd963f3a1c0ad292d4bed275ce23e2c4c34c0745bc3cd22"
+  },
+  "library": "\tlinux-vdso.so.1 (0x00007fffa9595000)\n\tlibsqlite3.so.0 => /lib/x86_64-linux-gnu/libsqlite3.so.0 (0x00007fe025ad6000)\n\tlibstdc++.so.6 => /lib/x86_64-linux-gnu/libstdc++.so.6 (0x00007fe0258aa000)\n\tlibgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007fe02588a000)\n\tlibc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007fe025661000)\n\tlibm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007fe02557a000)\n\t/lib64/ld-linux-x86-64.so.2 (0x00007fe025c47000)\n",
+  "compiler": "c++ (Ubuntu 11.4.0-1ubuntu1~22.04.3) 11.4.0",
+  "count": 1000000,
+  "repeats": 5,
+  "cache": "A same connection first read; B/text file pre-read outside timer",
+  "correctness": "full-field warmup and small checks; timing reads use equal digest, not full-field comparisons"
+}
