@@ -1,0 +1,182 @@
+-- Found OpenMP_C: -fopenmp (found version "4.5") 
+-- Found OpenMP_CXX: -fopenmp (found version "4.5") 
+OPENMP FOUND
+-- Found OpenMP_C: -fopenmp (found version "4.5") 
+-- Found OpenMP_CXX: -fopenmp (found version "4.5") 
+-- pybind11 v2.10.2 
+-- Linking static zlib: /usr/lib/x86_64-linux-gnu/libz.a
+-- Linking static zlib: /usr/lib/x86_64-linux-gnu/libz.a
+-- Git Version: milestone/ieda-edadb-profiled-v2
+-- Linking static zlib: /usr/lib/x86_64-linux-gnu/libz.a
+-- verilog parser rust lib path /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/database/manager/parser/verilog/verilog-rust/verilog-parser/target/release/libverilog_parser.a
+-- liberty parser rust lib path /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/database/manager/parser/liberty/lib-rust/liberty-parser/target/release/libliberty_parser.a
+-- vcd parser rust lib path /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/database/manager/parser/vcd/vcd_parser/target/release/libvcd_parser.a
+-- spef parser rust lib path /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/database/manager/parser/spef/spef-parser/target/release/libspef_parser.a
+-- CMakeLists.txt: EDADB home: /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/database/edadb/core
+-- CMakeLists.txt: EDADB include dir: /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/database/edadb/core/include
+-- CMakeLists.txt: test dir: /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/database/edadb/core/test
+-- CMakeLists.txt: test sources: /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/database/edadb/core/test/duckdb/DbDuckdbFailureBoundaries.cpp;/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/database/edadb/core/test/duckdb/DbDuckdbObjectMatrix.cpp;/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/database/edadb/core/test/duckdb/DbDuckdbOwnedReplacement.cpp;/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/database/edadb/core/test/duckdb/DbDuckdbRelationalOracle.cpp;/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/database/edadb/core/test/duckdb/DbDuckdbShadowContract.cpp;/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/database/edadb/core/test/duckdb/DbDuckdbStatement.cpp
+-- Building test: DbDuckdbFailureBoundaries
+-- Building test: DbDuckdbOwnedReplacement
+-- Building test: DbDuckdbRelationalOracle
+-- Building test: DbDuckdbShadowContract
+-- Building test: DbDuckdbStatement
+-- 
+-- ############## DRC: STADRC CMAKE ##############
+-- DRC: RELEASE_IDRC_INTERFACE
+-- DRC: RELEASE_IDRC_DATA_MANAGER
+-- DRC: RELEASE_IDRC_GDS_PLOTTER
+-- DRC: RELEASE_IDRC_RULE_VALIDATOR
+-- DRC: RELEASE_IDRC_LOGGER
+-- DRC: RELEASE_IDRC_MONITOR
+-- DRC: RELEASE_IDRC_UTILITY
+-- ############## DRC: END CMAKE ##############
+
+-- iIR rust lib path /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/operation/iIR/source/iir-rust/iir/target/release/libiir.a
+LINK_INTERFACE_MULTIPLICITY: 3
+-- 
+-- ############## RT: START CMAKE ##############
+-- RT: RELEASE_IRT_INTERFACE
+-- RT: RELEASE_IRT_DATA_MANAGER
+-- RT: RELEASE_IRT_DRC_ENGINE
+-- RT: RELEASE_IRT_GDS_PLOTTER
+-- RT: RELEASE_IRT_PIN_ACCESSOR
+-- RT: RELEASE_IRT_SUPPLY_ANALYZER
+-- RT: RELEASE_IRT_TOPOLOGY_GENERATOR
+-- RT: RELEASE_IRT_LAYER_ASSIGNER
+-- RT: RELEASE_IRT_SPACE_ROUTER
+-- RT: RELEASE_IRT_TRACK_ASSIGNER
+-- RT: RELEASE_IRT_DETAILED_ROUTER
+-- RT: RELEASE_IRT_VIOLATION_REPORTER
+-- RT: RELEASE_IRT_EARLY_ROUTER
+-- RT: RELEASE_IRT_LOGGER
+-- RT: RELEASE_IRT_MONITOR
+-- RT: RELEASE_IRT_UTILITY
+-- ############## RT: END CMAKE ##############
+
+-- Eigen3 /usr/include/eigen3
+-- iSTA Test
+-- 
+-- =================  TO: Debugging Options  =================
+-- TO: RELEASE_ITO_API
+-- TO: RELEASE_ITO_UTILITY
+-- TO: RELEASE_ITO_CONFIG
+-- TO: RELEASE_ITO_DATA_MANAGER
+-- TO: RELEASE_ITO_TIMING_ENGINE
+-- TO: RELEASE_ITO_EVALUATOR
+-- TO: RELEASE_ITO_FIX_DRV
+-- TO: RELEASE_ITO_FIX_HOLD
+-- TO: RELEASE_ITO_FIX_SETUP
+-- TO: RELEASE_ITO_PLACER
+-- TO: RELEASE_ITO_TREE_BUILD
+-- TO: RELEASE_ITO_TREE_BUILD_HVTREE
+-- TO: RELEASE_ITO_TREE_BUILD_FLUTE
+-- TO: RELEASE_ITO_TREE_BUILD_SLT
+-- TO: RELEASE_ITO_VG_BUFFER
+-- =================  TO: Debugging Options  =================
+-- 
+-- CTS: RELEASE_ICTS_API
+-- CTS: RELEASE_ICTS_CONFIG
+-- CTS: RELEASE_ICTS_DATABASE
+-- CTS: RELEASE_ICTS_IO
+-- CTS: RELEASE_ICTS_REPORT
+-- CTS: RELEASE_ICTS_EVALUATOR
+-- CTS: RELEASE_ICTS_ROUTER
+-- CTS: RELEASE_ICTS_SOLVER
+-- CTS: RELEASE_ICTS_SOLVER_DATABASE
+-- CTS: RELEASE_ICTS_MIN_COST_FLOW
+-- CTS: RELEASE_ICTS_ANNEAL_OPT
+-- CTS: RELEASE_ICTS_BALANCE_CLUSTERING
+-- CTS: RELEASE_ICTS_TIMING_PROPAGATOR
+-- CTS: RELEASE_ICTS_BST
+-- CTS: RELEASE_ICTS_CBS
+-- CTS: RELEASE_ICTS_LOCAL_LEGALIZATION
+-- CTS: RELEASE_ICTS_TREE_BUILDER
+-- CTS: RELEASE_ICTS_MODEL
+-- CTS: Eigen3 /usr/include/eigen3
+-- CTS: RELEASE_ICTS_TEST
+-- NO: RELEASE_INO_API
+-- NO: RELEASE_INO_SOURCE
+-- NO: RELEASE_INO_IO
+-- NO: RELEASE_INO_MODULE
+-- Solver-Legalization: ENABLE
+-- Configuring done
+CMake Warning (dev) in src/vectorization/src/graph/data_manager/CMakeLists.txt:
+  AUTOGEN: No valid Qt version found for target ivec_graph_dm.  AUTOMOC,
+  AUTOUIC and AUTORCC disabled.  Consider adding:
+
+    find_package(Qt<QTVERSION> COMPONENTS Widgets)
+
+  to your CMakeLists.txt file.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at src/operation/iPNP/api/CMakeLists.txt:1 (add_library):
+  Policy CMP0069 is not set: INTERPROCEDURAL_OPTIMIZATION is enforced when
+  enabled.  Run "cmake --help-policy CMP0069" for policy details.  Use the
+  cmake_policy command to set the policy and suppress this warning.
+
+  INTERPROCEDURAL_OPTIMIZATION property will be ignored for target
+  'ipnp_api'.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at src/operation/iPNP/source/CMakeLists.txt:5 (add_library):
+  Policy CMP0069 is not set: INTERPROCEDURAL_OPTIMIZATION is enforced when
+  enabled.  Run "cmake --help-policy CMP0069" for policy details.  Use the
+  cmake_policy command to set the policy and suppress this warning.
+
+  INTERPROCEDURAL_OPTIMIZATION property will be ignored for target 'pnp'.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at src/operation/iPNP/source/config/CMakeLists.txt:1 (add_library):
+  Policy CMP0069 is not set: INTERPROCEDURAL_OPTIMIZATION is enforced when
+  enabled.  Run "cmake --help-policy CMP0069" for policy details.  Use the
+  cmake_policy command to set the policy and suppress this warning.
+
+  INTERPROCEDURAL_OPTIMIZATION property will be ignored for target
+  'pnp-config'.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at src/operation/iPNP/source/data_manager/CMakeLists.txt:1 (add_library):
+  Policy CMP0069 is not set: INTERPROCEDURAL_OPTIMIZATION is enforced when
+  enabled.  Run "cmake --help-policy CMP0069" for policy details.  Use the
+  cmake_policy command to set the policy and suppress this warning.
+
+  INTERPROCEDURAL_OPTIMIZATION property will be ignored for target
+  'pnp-data'.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at src/operation/iPNP/source/module/evaluator/CMakeLists.txt:1 (add_library):
+  Policy CMP0069 is not set: INTERPROCEDURAL_OPTIMIZATION is enforced when
+  enabled.  Run "cmake --help-policy CMP0069" for policy details.  Use the
+  cmake_policy command to set the policy and suppress this warning.
+
+  INTERPROCEDURAL_OPTIMIZATION property will be ignored for target
+  'pnp-evaluator'.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at src/operation/iPNP/source/module/optimizer/CMakeLists.txt:3 (add_library):
+  Policy CMP0069 is not set: INTERPROCEDURAL_OPTIMIZATION is enforced when
+  enabled.  Run "cmake --help-policy CMP0069" for policy details.  Use the
+  cmake_policy command to set the policy and suppress this warning.
+
+  INTERPROCEDURAL_OPTIMIZATION property will be ignored for target
+  'pnp-optimizer'.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+CMake Warning (dev) at src/operation/iPNP/source/module/synthesis/CMakeLists.txt:3 (add_library):
+  Policy CMP0069 is not set: INTERPROCEDURAL_OPTIMIZATION is enforced when
+  enabled.  Run "cmake --help-policy CMP0069" for policy details.  Use the
+  cmake_policy command to set the policy and suppress this warning.
+
+  INTERPROCEDURAL_OPTIMIZATION property will be ignored for target
+  'pnp-synthesis'.
+This warning is for project developers.  Use -Wno-dev to suppress it.
+
+-- Generating done
+CMake Warning:
+  Manually-specified variables were not used by the project:
+
+    CMD_BUILD
+
+
+-- Build files have been written to: /tmp/edadb-sky130-duckdb-20261117/build

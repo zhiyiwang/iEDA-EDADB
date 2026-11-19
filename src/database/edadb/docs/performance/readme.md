@@ -1,5 +1,9 @@
 # iEDA+EDADB性能文档
 
+## DuckDB集成实验
+
+- [Sky130 GCD filler：版本、复现、历史对照与本轮状态](duckdb-filler-results.md)。与下列SQLite历史批次分开记录。
+
 ## 已交付milestone：P1/P3/P4/P5
 
 1. [demo.md](demo.md)：交付范围与四份文档阅读入口。

@@ -1,0 +1,21 @@
+{
+  "status": "PASS",
+  "formal_samples": 20,
+  "summary_recomputed": true,
+  "thread_setting_verified_reads_and_writes": 14,
+  "def_sha256": {
+    "diagnostic-on/read.def": "b2a8ade6f7e74f620491f56914a34d8fb89dd3efe957e4dc3ec4a42d50104c5e",
+    "round-3/native.def": "b2a8ade6f7e74f620491f56914a34d8fb89dd3efe957e4dc3ec4a42d50104c5e",
+    "round-3/read.def": "b2a8ade6f7e74f620491f56914a34d8fb89dd3efe957e4dc3ec4a42d50104c5e",
+    "round-2/native.def": "b2a8ade6f7e74f620491f56914a34d8fb89dd3efe957e4dc3ec4a42d50104c5e",
+    "round-2/read.def": "b2a8ade6f7e74f620491f56914a34d8fb89dd3efe957e4dc3ec4a42d50104c5e",
+    "round-5/native.def": "b2a8ade6f7e74f620491f56914a34d8fb89dd3efe957e4dc3ec4a42d50104c5e",
+    "round-5/read.def": "b2a8ade6f7e74f620491f56914a34d8fb89dd3efe957e4dc3ec4a42d50104c5e",
+    "round-4/native.def": "b2a8ade6f7e74f620491f56914a34d8fb89dd3efe957e4dc3ec4a42d50104c5e",
+    "round-4/read.def": "b2a8ade6f7e74f620491f56914a34d8fb89dd3efe957e4dc3ec4a42d50104c5e",
+    "round-1/native.def": "b2a8ade6f7e74f620491f56914a34d8fb89dd3efe957e4dc3ec4a42d50104c5e",
+    "round-1/read.def": "b2a8ade6f7e74f620491f56914a34d8fb89dd3efe957e4dc3ec4a42d50104c5e",
+    "round-0/native.def": "b2a8ade6f7e74f620491f56914a34d8fb89dd3efe957e4dc3ec4a42d50104c5e",
+    "round-0/read.def": "b2a8ade6f7e74f620491f56914a34d8fb89dd3efe957e4dc3ec4a42d50104c5e"
+  }
+}

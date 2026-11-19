@@ -1,0 +1,6 @@
+{
+  "status": "FAIL",
+  "roundtrips": 0,
+  "formal_rounds": 0,
+  "error": "Command '['/usr/bin/time', '-v', '-o', '/tmp/edadb-sky130-duckdb-20261117/run-01/round-0/write.resources', 'taskset', '-c', '2', '/tmp/edadb-sky130-duckdb-20261117/bin/iEDA', '-script', '/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/edadb/performance/benchmark.tcl']' returned non-zero exit status 1."
+}

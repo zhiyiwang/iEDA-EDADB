@@ -1,0 +1,107 @@
+diff --git a/src/database/edadb/core b/src/database/edadb/core
+index 494ce7916..8b8566a64 160000
+--- a/src/database/edadb/core
++++ b/src/database/edadb/core
+@@ -1 +1 @@
+-Subproject commit 494ce7916bce741f1629a33bd03be0a2043231cd
++Subproject commit 8b8566a645f17466b1dff6d9c48aa7bb0cc1c3cd
+diff --git a/src/database/edadb/idb/edadb_idb_init.cpp b/src/database/edadb/idb/edadb_idb_init.cpp
+index 007907955..65eb8ef7b 100644
+--- a/src/database/edadb/idb/edadb_idb_init.cpp
++++ b/src/database/edadb/idb/edadb_idb_init.cpp
+@@ -10,6 +10,8 @@
+ #include "edadb_idb_shadow.h"
+ #include "edadb_stage_timing.h"
+ 
++#include <cstdlib>
++#include <string_view>
+ 
+ namespace idb::edadb_adapter {
+ 
+@@ -19,6 +21,23 @@ namespace idb::edadb_adapter {
+ #define EDADB_IDB_DEBUG_STREAM if (true) {} else std::cout
+ #endif
+ 
++static bool configureBenchmarkConnection() {
++#ifdef EDADB_BACKEND_DUCKDB
++    const char* threads = std::getenv("EDADB_BENCH_DUCKDB_THREADS");
++    if (threads == nullptr) {
++        return true;
++    }
++    if (std::string_view(threads) != "1" || !edadb::executeSql("SET threads = 1") ||
++        !edadb::executeSql("SELECT CASE WHEN current_setting('threads') = 1 THEN 1 "
++                           "ELSE error('DuckDB expected threads=1') END")) {
++        std::cerr << "Failed to configure DuckDB benchmark threads=1" << std::endl;
++        return false;
++    }
++    std::cout << "EDADB_BENCH_CONFIG\tduckdb\tthreads\t1\n";
++#endif
++    return true;
++}
++
+ void initPrimKeys(void) {
+     edadb::Cpp2SqlTypeTrait<idb::IdbUnits>::hasPrimKey = false;
+     edadb::Cpp2SqlTypeTrait<idb::IdbBusBitChars>::hasPrimKey = false;
+@@ -106,6 +125,10 @@ int initReadDb(const char* edadb_path) {
+         return -1; 
+     }
+ 
++    if (!configureBenchmarkConnection()) {
++        edadb::closeDatabase();
++        return -1;
++    }
+     initPrimKeys();
+ 
+     if (initAllTables(false) < 0) {
+@@ -127,6 +150,10 @@ int initWriteDb(const char* edadb_path) {
+             return -1;
+         }
+ 
++        if (!configureBenchmarkConnection()) {
++            edadb::closeDatabase();
++            return -1;
++        }
+         initPrimKeys();
+     }
+ 
+diff --git a/src/database/manager/builder/builder.cpp b/src/database/manager/builder/builder.cpp
+index 1cb0ef7f5..940d841a8 100644
+--- a/src/database/manager/builder/builder.cpp
++++ b/src/database/manager/builder/builder.cpp
+@@ -33,6 +33,10 @@
+ 
+ #include "builder.h"
+ 
++#ifdef EDADB_BACKEND_DUCKDB
++#include <filesystem>
++#endif
++
+ #include "log/Log.hh"
+ 
+ using std::cout;
+@@ -377,6 +381,17 @@ IdbDefService* IdbBuilder::buildDefFromEdadb(const char* edadb_path, const char*
+ 
+ bool IdbBuilder::saveDefToEdadb(const char* edadb_path, const DefWriteType type)
+ {
++#ifdef EDADB_BACKEND_DUCKDB
++    if (edadb_path == nullptr || *edadb_path == '\0') {
++      return false;
++    }
++    std::error_code path_error;
++    const bool exists = std::filesystem::exists(edadb_path, path_error);
++    if (path_error || exists) {
++      std::cerr << "DuckDB output requires a new database path: " << edadb_path << std::endl;
++      return false;
++    }
++#else
+     // open edadb database file for write and close the file
+     // then set _def_write_file in class IdbDefService
+     if (IdbDefServiceResult::kServiceFailed ==
+@@ -384,6 +399,7 @@ bool IdbBuilder::saveDefToEdadb(const char* edadb_path, const DefWriteType type)
+       std::cout << "Create EDADB database file for DEF failed..." << endl;
+       return false;
+     }
++#endif
+ 
+ #if EDADB_OUTPUT_DEBUG
+     std::cout << "###################################" << std::endl;

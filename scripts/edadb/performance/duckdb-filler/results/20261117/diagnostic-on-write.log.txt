@@ -1,0 +1,148 @@
+[Data config set] tech lef = /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_fd_sc_hs.tlef
+Read LEF file : /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_fd_sc_hs.tlef
+[Data config set] lef = /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_fd_sc_hs_merged.lef
+[Data config set] lef = /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__com_bus_slice_10um.lef
+[Data config set] lef = /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__com_bus_slice_1um.lef
+[Data config set] lef = /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__com_bus_slice_20um.lef
+[Data config set] lef = /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__com_bus_slice_5um.lef
+[Data config set] lef = /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__connect_vcchib_vccd_and_vswitch_vddio_slice_20um.lef
+[Data config set] lef = /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__corner_pad.lef
+[Data config set] lef = /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__disconnect_vccd_slice_5um.lef
+[Data config set] lef = /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__disconnect_vdda_slice_5um.lef
+[Data config set] lef = /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__gpiov2_pad_wrapped.lef
+[Data config set] lef = /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__vccd_hvc_pad.lef
+[Data config set] lef = /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__vccd_lvc_pad.lef
+[Data config set] lef = /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__vdda_hvc_pad.lef
+[Data config set] lef = /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__vdda_lvc_pad.lef
+[Data config set] lef = /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__vddio_hvc_pad.lef
+[Data config set] lef = /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__vddio_lvc_pad.lef
+[Data config set] lef = /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__vssa_hvc_pad.lef
+[Data config set] lef = /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__vssa_lvc_pad.lef
+[Data config set] lef = /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__vssd_hvc_pad.lef
+[Data config set] lef = /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__vssd_lvc_pad.lef
+[Data config set] lef = /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__vssio_hvc_pad.lef
+[Data config set] lef = /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__vssio_lvc_pad.lef
+[Data config set] lef = /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_fd_io__top_xres4v2.lef
+[Data config set] lef = /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130io_fill.lef
+[Data config set] lef = /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_sram_1rw1r_128x256_8.lef
+[Data config set] lef = /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_sram_1rw1r_44x64_8.lef
+[Data config set] lef = /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_sram_1rw1r_64x256_8.lef
+[Data config set] lef = /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_sram_1rw1r_80x64_8.lef
+Read LEF file : /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_fd_sc_hs_merged.lef
+Read LEF file : /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__com_bus_slice_10um.lef
+Read LEF file : /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__com_bus_slice_1um.lef
+Read LEF file : /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__com_bus_slice_20um.lef
+Read LEF file : /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__com_bus_slice_5um.lef
+Read LEF file : /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__connect_vcchib_vccd_and_vswitch_vddio_slice_20um.lef
+Read LEF file : /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__corner_pad.lef
+Read LEF file : /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__disconnect_vccd_slice_5um.lef
+Read LEF file : /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__disconnect_vdda_slice_5um.lef
+Read LEF file : /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__gpiov2_pad_wrapped.lef
+Read LEF file : /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__vccd_hvc_pad.lef
+Read LEF file : /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__vccd_lvc_pad.lef
+Read LEF file : /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__vdda_hvc_pad.lef
+Read LEF file : /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__vdda_lvc_pad.lef
+Read LEF file : /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__vddio_hvc_pad.lef
+Read LEF file : /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__vddio_lvc_pad.lef
+Read LEF file : /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__vssa_hvc_pad.lef
+Read LEF file : /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__vssa_lvc_pad.lef
+Read LEF file : /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__vssd_hvc_pad.lef
+Read LEF file : /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__vssd_lvc_pad.lef
+Read LEF file : /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__vssio_hvc_pad.lef
+Read LEF file : /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_ef_io__vssio_lvc_pad.lef
+Read LEF file : /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_fd_io__top_xres4v2.lef
+Read LEF file : /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130io_fill.lef
+Tech Units has been init, ignore this lef units...
+Read LEF file : /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_sram_1rw1r_128x256_8.lef
+Tech Units has been init, ignore this lef units...
+Read LEF file : /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_sram_1rw1r_44x64_8.lef
+Tech Units has been init, ignore this lef units...
+Read LEF file : /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_sram_1rw1r_64x256_8.lef
+Tech Units has been init, ignore this lef units...
+Read LEF file : /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/foundry/sky130/lef/sky130_sram_1rw1r_80x64_8.lef
+Tech Units has been init, ignore this lef units...
+[Data config set] def = /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/design/sky130_gcd/result/iPL_filler_result.def
+Read DEF file : /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/scripts/design/sky130_gcd/result/iPL_filler_result.def
+--
+Begin parse Specialnet.
+
+End parse Specialnet.
+
+**************************************************************
+*************************Layout*******************************
+**************************************************************
+Die : 
+**************************************************************
+Core : 
+**************************************************************
+Layers :  number : 13
+**************************************************************
+Sites :  number : 2
+**************************************************************
+Rows :  number : 39
+**************************************************************
+GCells :  number : 6
+**************************************************************
+Track Grids :  number : 12
+**************************************************************
+Cell Masters :  number : 418
+**************************************************************
+Vias :  number : 25
+**************************************************************
+Via Rules :  number : 25
+**************************************************************
+*************************Design*******************************
+**************************************************************
+Design : gcd
+**************************************************************
+Version : 5.8
+**************************************************************
+Instance :  number : 2604
+**************************************************************
+IO Pins :  number : 56
+**************************************************************
+Vias :  number : 4
+**************************************************************
+Nets :  number : 677
+Nets segment :  number : 8997
+**************************************************************
+Special Nets :  number : 2
+Special Nets segment :  number : 639
+**************************************************************
+Blockages :  number : 0
+**************************************************************
+Regions :  number : 0
+**************************************************************
+Slots :  number : 0
+**************************************************************
+Groups :  number : 0
+**************************************************************
+Fillers :  number : 0
+**************************************************************
+EDADB_PERF	edadb_write	29406755
+EDADB_STAGE	write	init	ns	60285088
+EDADB_STAGE	write	create	ns	54316230
+EDADB_STAGE	write	write	ns	29292070567
+EDADB_STAGE	write	other	ns	1050
+EDADB_STAGE	write	command	ns	29406672935
+EDADB_DETAIL	write	adapter.init	ns	114601753	1
+EDADB_DETAIL	write	schema.begin	ns	425595	1
+EDADB_DETAIL	write	schema.tables	ns	31710960	1
+EDADB_DETAIL	write	schema.commit	ns	22178391	1
+EDADB_DETAIL	write	adapter.transaction.begin	ns	251590	1
+EDADB_DETAIL	write	adapter.root.Design	ns	2000708	1
+EDADB_DETAIL	write	adapter.root.Die	ns	3189322	1
+EDADB_DETAIL	write	adapter.root.Row	ns	37359461	1
+EDADB_DETAIL	write	adapter.root.TrackGrid	ns	20172434	1
+EDADB_DETAIL	write	adapter.root.GCellGrid	ns	4014137	1
+EDADB_DETAIL	write	adapter.root.Via	ns	7564150	1
+EDADB_DETAIL	write	adapter.root.Instance	ns	3132264887	1
+EDADB_DETAIL	write	adapter.root.Pin	ns	200505295	1
+EDADB_DETAIL	write	adapter.root.Blockage	ns	3608	1
+EDADB_DETAIL	write	adapter.root.Region	ns	1513	1
+EDADB_DETAIL	write	adapter.root.Slot	ns	1479	1
+EDADB_DETAIL	write	adapter.root.Group	ns	266	1
+EDADB_DETAIL	write	adapter.root.Fill	ns	246	1
+EDADB_DETAIL	write	adapter.root.SpecialNet	ns	1288236272	1
+EDADB_DETAIL	write	adapter.root.Net	ns	23932458178	1
+EDADB_DETAIL	write	adapter.transaction.commit	ns	664027080	1

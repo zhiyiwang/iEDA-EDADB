@@ -10,6 +10,8 @@
 #include "edadb_idb_shadow.h"
 #include "edadb_stage_timing.h"
 
+#include <cstdlib>
+#include <string_view>
 
 namespace idb::edadb_adapter {
 
@@ -18,6 +20,23 @@ namespace idb::edadb_adapter {
 #else
 #define EDADB_IDB_DEBUG_STREAM if (true) {} else std::cout
 #endif
+
+static bool configureBenchmarkConnection() {
+#ifdef EDADB_BACKEND_DUCKDB
+    const char* threads = std::getenv("EDADB_BENCH_DUCKDB_THREADS");
+    if (threads == nullptr) {
+        return true;
+    }
+    if (std::string_view(threads) != "1" || !edadb::executeSql("SET threads = 1") ||
+        !edadb::executeSql("SELECT CASE WHEN current_setting('threads') = 1 THEN 1 "
+                           "ELSE error('DuckDB expected threads=1') END")) {
+        std::cerr << "Failed to configure DuckDB benchmark threads=1" << std::endl;
+        return false;
+    }
+    std::cout << "EDADB_BENCH_CONFIG\tduckdb\tthreads\t1\n";
+#endif
+    return true;
+}
 
 void initPrimKeys(void) {
     edadb::Cpp2SqlTypeTrait<idb::IdbUnits>::hasPrimKey = false;
@@ -106,6 +125,10 @@ int initReadDb(const char* edadb_path) {
         return -1; 
     }
 
+    if (!configureBenchmarkConnection()) {
+        edadb::closeDatabase();
+        return -1;
+    }
     initPrimKeys();
 
     if (initAllTables(false) < 0) {
@@ -127,6 +150,10 @@ int initWriteDb(const char* edadb_path) {
             return -1;
         }
 
+        if (!configureBenchmarkConnection()) {
+            edadb::closeDatabase();
+            return -1;
+        }
         initPrimKeys();
     }
 

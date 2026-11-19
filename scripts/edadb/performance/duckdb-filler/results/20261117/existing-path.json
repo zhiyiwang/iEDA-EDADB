@@ -1,0 +1,6 @@
+{
+  "status": "PASS",
+  "returncode": 1,
+  "before_sha256": "c9dd64717a29bdb3eab511cd8510b65daa0b355eed2ec818b425f88b15b9f261",
+  "after_sha256": "c9dd64717a29bdb3eab511cd8510b65daa0b355eed2ec818b425f88b15b9f261"
+}

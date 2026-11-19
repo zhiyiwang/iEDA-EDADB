@@ -1,5 +1,7 @@
 # 原始iEDA、未优化EDADB与已优化EDADB：性能对比
 
+新增实验：[Sky130 filler DuckDB集成与性能](duckdb-filler-results.md)。独立批次保留，不覆盖以下历史数值；最新执行状态见该页。
+
 只讨论milestone包含的P1/P3/P4/P5，不包含P2或后续profiling。版本、实现和计时说明分别见[demo.md](demo.md)、[transaction-batching.md](transaction-batching.md)、[stage-timing.md](stage-timing.md)。
 
 ## 1. 比较对象和方法

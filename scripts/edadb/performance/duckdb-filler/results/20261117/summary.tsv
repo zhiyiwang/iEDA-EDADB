@@ -1,0 +1,5 @@
+phase	n	median_ms	min_ms	max_ms
+edadb_read	5	23431.18	23262.492	24183.38
+edadb_write	5	29233.615	29154.472	29405.352
+native_def_read	5	71.236	71.002	72.494
+native_def_write	5	8.601	8.572	8.635

@@ -1,0 +1,814 @@
+VERSION v1.5.6
+name	value	
+VARCHAR	VARCHAR	
+[ Rows: 2]
+memory_limit	100.5 GiB
+threads	40
+
+TABLE iBlockageSD__rect_list_sd_IdbRectSD
+count_star()	
+BIGINT	
+[ Rows: 1]
+0
+
+TABLE iDieSD_points_sd_iCoordSD
+count_star()	
+BIGINT	
+[ Rows: 1]
+2
+
+SQL SELECT * FROM "iDieSD_points_sd_iCoordSD" WHERE "iDieSD_primary_key"=1
+┌───────────────────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│          _vec_idx         │
+│           _x_sd           │
+│           _y_sd           │
+│     iDieSD_primary_key    │
+│                           │
+│           ~1 row          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│          SEQ_SCAN         │
+│    ────────────────────   │
+│           Table:          │
+│        design.main        │
+│ .iDieSD_points_sd_iCoordSD│
+│                           │
+│   Type: Sequential Scan   │
+│                           │
+│        Projections:       │
+│     iDieSD_primary_key    │
+│          _vec_idx         │
+│           _x_sd           │
+│           _y_sd           │
+│                           │
+│           ~1 row          │
+└───────────────────────────┘
+
+TABLE iFillSD__coordinate_list_sd_iCoordSD
+count_star()	
+BIGINT	
+[ Rows: 1]
+0
+
+TABLE iFillSD__rect_list_sd_IdbRectSD
+count_star()	
+BIGINT	
+[ Rows: 1]
+0
+
+TABLE iGroupSD__instance_name_vec_sd___edadb_primitive_vector
+count_star()	
+BIGINT	
+[ Rows: 1]
+0
+
+TABLE iNetSD__instance_pin_list_sd_iNetPinRef
+count_star()	
+BIGINT	
+[ Rows: 1]
+1730
+
+SQL SELECT * FROM "iNetSD__instance_pin_list_sd_iNetPinRef" WHERE "iNetSD__net_name_sd"='ctrl$a_mux_sel[0]'
+┌───────────────────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│         _order_sd         │
+│       instance_name       │
+│          pin_name         │
+│    iNetSD__net_name_sd    │
+│                           │
+│          ~3 rows          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│          SEQ_SCAN         │
+│    ────────────────────   │
+│           Table:          │
+│        design.main        │
+│.iNetSD__instance_pin_list_│
+│       sd_iNetPinRef       │
+│                           │
+│   Type: Sequential Scan   │
+│                           │
+│        Projections:       │
+│    iNetSD__net_name_sd    │
+│         _order_sd         │
+│       instance_name       │
+│          pin_name         │
+│                           │
+│          Filters:         │
+│ iNetSD__net_name_sd='ctrl │
+│       $a_mux_sel[0]'      │
+│                           │
+│          ~3 rows          │
+└───────────────────────────┘
+
+TABLE iNetSD__io_pin_name_list_sd___edadb_primitive_vector
+count_star()	
+BIGINT	
+[ Rows: 1]
+54
+
+SQL SELECT * FROM "iNetSD__io_pin_name_list_sd___edadb_primitive_vector" WHERE "iNetSD__net_name_sd"='req_rdy'
+┌───────────────────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│      __edadb_vec_idx      │
+│           value           │
+│    iNetSD__net_name_sd    │
+│                           │
+│          ~2 rows          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│          SEQ_SCAN         │
+│    ────────────────────   │
+│           Table:          │
+│        design.main        │
+│.iNetSD__io_pin_name_list_s│
+│ d___edadb_primitive_vector│
+│                           │
+│   Type: Sequential Scan   │
+│                           │
+│        Projections:       │
+│    iNetSD__net_name_sd    │
+│      __edadb_vec_idx      │
+│           value           │
+│                           │
+│          Filters:         │
+│    iNetSD__net_name_sd=   │
+│         'req_rdy'         │
+│                           │
+│          ~2 rows          │
+└───────────────────────────┘
+
+TABLE iNetSD__wire_list_sd_iRegWireSD
+count_star()	
+BIGINT	
+[ Rows: 1]
+677
+
+SQL SELECT * FROM "iNetSD__wire_list_sd_iRegWireSD" WHERE "iNetSD__net_name_sd"='ctrl$a_mux_sel[0]'
+┌───────────────────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│        primary_key        │
+│          _vec_idx         │
+│       _wire_state_sd      │
+│      _shield_name_sd      │
+│    iNetSD__net_name_sd    │
+│                           │
+│          ~2 rows          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│          SEQ_SCAN         │
+│    ────────────────────   │
+│           Table:          │
+│        design.main        │
+│.iNetSD__wire_list_sd_iRegW│
+│           ireSD           │
+│                           │
+│   Type: Sequential Scan   │
+│                           │
+│        Projections:       │
+│    iNetSD__net_name_sd    │
+│        primary_key        │
+│          _vec_idx         │
+│       _wire_state_sd      │
+│      _shield_name_sd      │
+│                           │
+│          Filters:         │
+│ iNetSD__net_name_sd='ctrl │
+│       $a_mux_sel[0]'      │
+│                           │
+│          ~2 rows          │
+└───────────────────────────┘
+
+TABLE iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD
+count_star()	
+BIGINT	
+[ Rows: 1]
+8997
+
+SQL SELECT * FROM "iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD" WHERE "iNetSD__net_name_sd"='ctrl$a_mux_sel[0]' AND "iNetSD__wire_list_sd_iRegWireSD_primary_key"=1
+┌───────────────────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│        primary_key        │
+│          _vec_idx         │
+│       _layer_name_sd      │
+│         _is_via_sd        │
+│        _is_rect_sd        │
+│  _delta_rect_sd__vec_idx  │
+│   _delta_rect_sd__lx_sd   │
+│   _delta_rect_sd__ly_sd   │
+│   _delta_rect_sd__hx_sd   │
+│   _delta_rect_sd__hy_sd   │
+│    iNetSD__net_name_sd    │
+│iNetSD__wire_list_sd_iRegWi│
+│      reSD_primary_key     │
+│                           │
+│          ~11 rows         │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│          SEQ_SCAN         │
+│    ────────────────────   │
+│           Table:          │
+│        design.main        │
+│.iNetSD__wire_list_sd_iRegW│
+│ireSD__segment_list_sd_iReg│
+│         WireSegSD         │
+│                           │
+│   Type: Sequential Scan   │
+│                           │
+│        Projections:       │
+│    iNetSD__net_name_sd    │
+│iNetSD__wire_list_sd_iRegWi│
+│      reSD_primary_key     │
+│        primary_key        │
+│          _vec_idx         │
+│       _layer_name_sd      │
+│         _is_via_sd        │
+│        _is_rect_sd        │
+│  _delta_rect_sd__vec_idx  │
+│   _delta_rect_sd__lx_sd   │
+│   _delta_rect_sd__ly_sd   │
+│   _delta_rect_sd__hx_sd   │
+│   _delta_rect_sd__hy_sd   │
+│                           │
+│          Filters:         │
+│ iNetSD__net_name_sd='ctrl │
+│       $a_mux_sel[0]'      │
+│iNetSD__wire_list_sd_iRegWi│
+│     reSD_primary_key=1    │
+│                           │
+│          ~11 rows         │
+└───────────────────────────┘
+
+TABLE iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__point_list_sd_iCoordSD
+count_star()	
+BIGINT	
+[ Rows: 1]
+14256
+
+SQL SELECT * FROM "iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__point_list_sd_iCoordSD" WHERE "iNetSD__net_name_sd"='ctrl$a_mux_sel[0]' AND "iNetSD__wire_list_sd_iRegWireSD_primary_key"=1 AND "iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD_primary_key"=1
+┌───────────────────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│          _vec_idx         │
+│           _x_sd           │
+│           _y_sd           │
+│    iNetSD__net_name_sd    │
+│iNetSD__wire_list_sd_iRegWi│
+│      reSD_primary_key     │
+│iNetSD__wire_list_sd_iRegWi│
+│reSD__segment_list_sd_iRegW│
+│    ireSegSD_primary_key   │
+│                           │
+│          ~2 rows          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│          SEQ_SCAN         │
+│    ────────────────────   │
+│           Table:          │
+│        design.main        │
+│.iNetSD__wire_list_sd_iRegW│
+│ireSD__segment_list_sd_iReg│
+│WireSegSD__point_list_sd_iC│
+│           oordSD          │
+│                           │
+│   Type: Sequential Scan   │
+│                           │
+│        Projections:       │
+│    iNetSD__net_name_sd    │
+│iNetSD__wire_list_sd_iRegWi│
+│      reSD_primary_key     │
+│iNetSD__wire_list_sd_iRegWi│
+│reSD__segment_list_sd_iRegW│
+│    ireSegSD_primary_key   │
+│          _vec_idx         │
+│           _x_sd           │
+│           _y_sd           │
+│                           │
+│          Filters:         │
+│ iNetSD__net_name_sd='ctrl │
+│       $a_mux_sel[0]'      │
+│iNetSD__wire_list_sd_iRegWi│
+│     reSD_primary_key=1    │
+│iNetSD__wire_list_sd_iRegWi│
+│reSD__segment_list_sd_iRegW│
+│   ireSegSD_primary_key=1  │
+│                           │
+│          ~2 rows          │
+└───────────────────────────┘
+
+TABLE iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__via_ref_list_sd_iRegViaRef
+count_star()	
+BIGINT	
+[ Rows: 1]
+3716
+
+SQL SELECT * FROM "iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__via_ref_list_sd_iRegViaRef" WHERE "iNetSD__net_name_sd"='ctrl$a_mux_sel[0]' AND "iNetSD__wire_list_sd_iRegWireSD_primary_key"=1 AND "iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD_primary_key"=2
+┌───────────────────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│         _order_sd         │
+│        _via_name_sd       │
+│      _point_index_sd      │
+│    iNetSD__net_name_sd    │
+│iNetSD__wire_list_sd_iRegWi│
+│      reSD_primary_key     │
+│iNetSD__wire_list_sd_iRegWi│
+│reSD__segment_list_sd_iRegW│
+│    ireSegSD_primary_key   │
+│                           │
+│          ~2 rows          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│          SEQ_SCAN         │
+│    ────────────────────   │
+│           Table:          │
+│        design.main        │
+│.iNetSD__wire_list_sd_iRegW│
+│ireSD__segment_list_sd_iReg│
+│WireSegSD__via_ref_list_sd_│
+│         iRegViaRef        │
+│                           │
+│   Type: Sequential Scan   │
+│                           │
+│        Projections:       │
+│    iNetSD__net_name_sd    │
+│iNetSD__wire_list_sd_iRegWi│
+│      reSD_primary_key     │
+│iNetSD__wire_list_sd_iRegWi│
+│reSD__segment_list_sd_iRegW│
+│    ireSegSD_primary_key   │
+│         _order_sd         │
+│        _via_name_sd       │
+│      _point_index_sd      │
+│                           │
+│          Filters:         │
+│ iNetSD__net_name_sd='ctrl │
+│       $a_mux_sel[0]'      │
+│iNetSD__wire_list_sd_iRegWi│
+│     reSD_primary_key=1    │
+│iNetSD__wire_list_sd_iRegWi│
+│reSD__segment_list_sd_iRegW│
+│   ireSegSD_primary_key=2  │
+│                           │
+│          ~2 rows          │
+└───────────────────────────┘
+
+TABLE iNetSD__wire_list_sd_iRegWireSD__segment_list_sd_iRegWireSegSD__virtual_point_index_list_sd___edadb_primitive_vector
+count_star()	
+BIGINT	
+[ Rows: 1]
+0
+
+TABLE iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD
+count_star()	
+BIGINT	
+[ Rows: 1]
+56
+
+SQL SELECT * FROM "iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD" WHERE "iPinSD__pin_name_sd"='clk'
+┌───────────────────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│        primary_key        │
+│          _vec_idx         │
+│         _orient_sd        │
+│    _placement_status_sd   │
+│  _coordinate_sd__vec_idx  │
+│    _coordinate_sd__x_sd   │
+│    _coordinate_sd__y_sd   │
+│    iPinSD__pin_name_sd    │
+│                           │
+│          ~2 rows          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│          SEQ_SCAN         │
+│    ────────────────────   │
+│           Table:          │
+│        design.main        │
+│.iPinSD__io_term_sd_iTermSD│
+│   __port_list_sd_iPortSD  │
+│                           │
+│   Type: Sequential Scan   │
+│                           │
+│        Projections:       │
+│    iPinSD__pin_name_sd    │
+│        primary_key        │
+│          _vec_idx         │
+│         _orient_sd        │
+│    _placement_status_sd   │
+│  _coordinate_sd__vec_idx  │
+│    _coordinate_sd__x_sd   │
+│    _coordinate_sd__y_sd   │
+│                           │
+│          Filters:         │
+│ iPinSD__pin_name_sd='clk' │
+│                           │
+│          ~2 rows          │
+└───────────────────────────┘
+
+TABLE iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD__layer_shape_list_sd_iLayerShapeSD
+count_star()	
+BIGINT	
+[ Rows: 1]
+56
+
+SQL SELECT * FROM "iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD__layer_shape_list_sd_iLayerShapeSD" WHERE "iPinSD__pin_name_sd"='clk' AND "iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD_primary_key"=1
+┌───────────────────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│        primary_key        │
+│          _vec_idx         │
+│       _layer_name_sd      │
+│          _type_sd         │
+│    iPinSD__pin_name_sd    │
+│iPinSD__io_term_sd_iTermSD_│
+│_port_list_sd_iPortSD_prima│
+│           ry_key          │
+│                           │
+│          ~2 rows          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│          SEQ_SCAN         │
+│    ────────────────────   │
+│           Table:          │
+│        design.main        │
+│.iPinSD__io_term_sd_iTermSD│
+│__port_list_sd_iPortSD__lay│
+│er_shape_list_sd_iLayerShap│
+│            eSD            │
+│                           │
+│   Type: Sequential Scan   │
+│                           │
+│        Projections:       │
+│    iPinSD__pin_name_sd    │
+│iPinSD__io_term_sd_iTermSD_│
+│_port_list_sd_iPortSD_prima│
+│           ry_key          │
+│        primary_key        │
+│          _vec_idx         │
+│       _layer_name_sd      │
+│          _type_sd         │
+│                           │
+│          Filters:         │
+│ iPinSD__pin_name_sd='clk' │
+│iPinSD__io_term_sd_iTermSD_│
+│_port_list_sd_iPortSD_prima│
+│          ry_key=1         │
+│                           │
+│          ~2 rows          │
+└───────────────────────────┘
+
+TABLE iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD__layer_shape_list_sd_iLayerShapeSD__rect_list_sd_IdbRectSD
+count_star()	
+BIGINT	
+[ Rows: 1]
+56
+
+SQL SELECT * FROM "iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD__layer_shape_list_sd_iLayerShapeSD__rect_list_sd_IdbRectSD" WHERE "iPinSD__pin_name_sd"='clk' AND "iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD_primary_key"=1 AND "iPinSD__io_term_sd_iTermSD__port_list_sd_iPortSD__layer_shape_list_sd_iLayerShapeSD_primary_key"=1
+┌───────────────────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│          _vec_idx         │
+│           _lx_sd          │
+│           _ly_sd          │
+│           _hx_sd          │
+│           _hy_sd          │
+│    iPinSD__pin_name_sd    │
+│iPinSD__io_term_sd_iTermSD_│
+│_port_list_sd_iPortSD_prima│
+│           ry_key          │
+│iPinSD__io_term_sd_iTermSD_│
+│_port_list_sd_iPortSD__laye│
+│r_shape_list_sd_iLayerShape│
+│       SD_primary_key      │
+│                           │
+│          ~2 rows          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│          SEQ_SCAN         │
+│    ────────────────────   │
+│           Table:          │
+│        design.main        │
+│.iPinSD__io_term_sd_iTermSD│
+│__port_list_sd_iPortSD__lay│
+│er_shape_list_sd_iLayerShap│
+│eSD__rect_list_sd_IdbRectSD│
+│                           │
+│   Type: Sequential Scan   │
+│                           │
+│        Projections:       │
+│    iPinSD__pin_name_sd    │
+│iPinSD__io_term_sd_iTermSD_│
+│_port_list_sd_iPortSD_prima│
+│           ry_key          │
+│iPinSD__io_term_sd_iTermSD_│
+│_port_list_sd_iPortSD__laye│
+│r_shape_list_sd_iLayerShape│
+│       SD_primary_key      │
+│          _vec_idx         │
+│           _lx_sd          │
+│           _ly_sd          │
+│           _hx_sd          │
+│           _hy_sd          │
+│                           │
+│          Filters:         │
+│ iPinSD__pin_name_sd='clk' │
+│iPinSD__io_term_sd_iTermSD_│
+│_port_list_sd_iPortSD_prima│
+│          ry_key=1         │
+│iPinSD__io_term_sd_iTermSD_│
+│_port_list_sd_iPortSD__laye│
+│r_shape_list_sd_iLayerShape│
+│      SD_primary_key=1     │
+│                           │
+│          ~2 rows          │
+└───────────────────────────┘
+
+TABLE iRegion__boudary_list_IdbRectSD
+count_star()	
+BIGINT	
+[ Rows: 1]
+0
+
+TABLE iSlotSD__rect_list_sd_IdbRectSD
+count_star()	
+BIGINT	
+[ Rows: 1]
+0
+
+TABLE iSpecNetSD__instance_pin_list_sd_iSpecPinRef
+count_star()	
+BIGINT	
+[ Rows: 1]
+0
+
+TABLE iSpecNetSD__io_pin_name_list_sd___edadb_primitive_vector
+count_star()	
+BIGINT	
+[ Rows: 1]
+0
+
+TABLE iSpecNetSD__pin_string_list_sd___edadb_primitive_vector
+count_star()	
+BIGINT	
+[ Rows: 1]
+6
+
+SQL SELECT * FROM "iSpecNetSD__pin_string_list_sd___edadb_primitive_vector" WHERE "iSpecNetSD__net_name_sd"='VDD'
+┌───────────────────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│      __edadb_vec_idx      │
+│           value           │
+│  iSpecNetSD__net_name_sd  │
+│                           │
+│          ~3 rows          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│          SEQ_SCAN         │
+│    ────────────────────   │
+│           Table:          │
+│        design.main        │
+│.iSpecNetSD__pin_string_lis│
+│t_sd___edadb_primitive_vect│
+│             or            │
+│                           │
+│   Type: Sequential Scan   │
+│                           │
+│        Projections:       │
+│  iSpecNetSD__net_name_sd  │
+│      __edadb_vec_idx      │
+│           value           │
+│                           │
+│          Filters:         │
+│  iSpecNetSD__net_name_sd= │
+│           'VDD'           │
+│                           │
+│          ~3 rows          │
+└───────────────────────────┘
+
+TABLE iSpecNetSD__wire_list_sd_iSpecWireSD
+count_star()	
+BIGINT	
+[ Rows: 1]
+2
+
+SQL SELECT * FROM "iSpecNetSD__wire_list_sd_iSpecWireSD" WHERE "iSpecNetSD__net_name_sd"='VDD'
+┌───────────────────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│        primary_key        │
+│          _vec_idx         │
+│       _wire_state_sd      │
+│      _shield_name_sd      │
+│  iSpecNetSD__net_name_sd  │
+│                           │
+│           ~1 row          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│          SEQ_SCAN         │
+│    ────────────────────   │
+│           Table:          │
+│        design.main        │
+│.iSpecNetSD__wire_list_sd_i│
+│         SpecWireSD        │
+│                           │
+│   Type: Sequential Scan   │
+│                           │
+│        Projections:       │
+│  iSpecNetSD__net_name_sd  │
+│        primary_key        │
+│          _vec_idx         │
+│       _wire_state_sd      │
+│      _shield_name_sd      │
+│                           │
+│          Filters:         │
+│  iSpecNetSD__net_name_sd= │
+│           'VDD'           │
+│                           │
+│           ~1 row          │
+└───────────────────────────┘
+
+TABLE iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD
+count_star()	
+BIGINT	
+[ Rows: 1]
+639
+
+SQL SELECT * FROM "iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD" WHERE "iSpecNetSD__net_name_sd"='VDD' AND "iSpecNetSD__wire_list_sd_iSpecWireSD_primary_key"=1
+┌───────────────────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│        primary_key        │
+│          _vec_idx         │
+│       _layer_name_sd      │
+│        _via_name_sd       │
+│      _route_width_sd      │
+│       _shape_type_sd      │
+│         _style_sd         │
+│         _is_via_sd        │
+│        _is_rect_sd        │
+│  _delta_rect_sd__vec_idx  │
+│   _delta_rect_sd__lx_sd   │
+│   _delta_rect_sd__ly_sd   │
+│   _delta_rect_sd__hx_sd   │
+│   _delta_rect_sd__hy_sd   │
+│  iSpecNetSD__net_name_sd  │
+│iSpecNetSD__wire_list_sd_iS│
+│   pecWireSD_primary_key   │
+│                           │
+│         ~320 rows         │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│          SEQ_SCAN         │
+│    ────────────────────   │
+│           Table:          │
+│        design.main        │
+│.iSpecNetSD__wire_list_sd_i│
+│SpecWireSD__segment_list_sd│
+│      _iSpecWireSegSD      │
+│                           │
+│   Type: Sequential Scan   │
+│                           │
+│        Projections:       │
+│  iSpecNetSD__net_name_sd  │
+│iSpecNetSD__wire_list_sd_iS│
+│   pecWireSD_primary_key   │
+│        primary_key        │
+│          _vec_idx         │
+│       _layer_name_sd      │
+│        _via_name_sd       │
+│      _route_width_sd      │
+│       _shape_type_sd      │
+│         _style_sd         │
+│         _is_via_sd        │
+│        _is_rect_sd        │
+│  _delta_rect_sd__vec_idx  │
+│   _delta_rect_sd__lx_sd   │
+│   _delta_rect_sd__ly_sd   │
+│   _delta_rect_sd__hx_sd   │
+│   _delta_rect_sd__hy_sd   │
+│                           │
+│          Filters:         │
+│  iSpecNetSD__net_name_sd= │
+│           'VDD'           │
+│iSpecNetSD__wire_list_sd_iS│
+│  pecWireSD_primary_key=1  │
+│                           │
+│         ~320 rows         │
+└───────────────────────────┘
+
+TABLE iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD__point_list_sd_iCoordSD
+count_star()	
+BIGINT	
+[ Rows: 1]
+697
+
+SQL SELECT * FROM "iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD__point_list_sd_iCoordSD" WHERE "iSpecNetSD__net_name_sd"='VDD' AND "iSpecNetSD__wire_list_sd_iSpecWireSD_primary_key"=1 AND "iSpecNetSD__wire_list_sd_iSpecWireSD__segment_list_sd_iSpecWireSegSD_primary_key"=1
+┌───────────────────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│          _vec_idx         │
+│           _x_sd           │
+│           _y_sd           │
+│  iSpecNetSD__net_name_sd  │
+│iSpecNetSD__wire_list_sd_iS│
+│   pecWireSD_primary_key   │
+│iSpecNetSD__wire_list_sd_iS│
+│pecWireSD__segment_list_sd_│
+│ iSpecWireSegSD_primary_key│
+│                           │
+│           ~1 row          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│          SEQ_SCAN         │
+│    ────────────────────   │
+│           Table:          │
+│        design.main        │
+│.iSpecNetSD__wire_list_sd_i│
+│SpecWireSD__segment_list_sd│
+│_iSpecWireSegSD__point_list│
+│        _sd_iCoordSD       │
+│                           │
+│   Type: Sequential Scan   │
+│                           │
+│        Projections:       │
+│  iSpecNetSD__net_name_sd  │
+│iSpecNetSD__wire_list_sd_iS│
+│   pecWireSD_primary_key   │
+│iSpecNetSD__wire_list_sd_iS│
+│pecWireSD__segment_list_sd_│
+│ iSpecWireSegSD_primary_key│
+│          _vec_idx         │
+│           _x_sd           │
+│           _y_sd           │
+│                           │
+│          Filters:         │
+│  iSpecNetSD__net_name_sd= │
+│           'VDD'           │
+│iSpecNetSD__wire_list_sd_iS│
+│  pecWireSD_primary_key=1  │
+│iSpecNetSD__wire_list_sd_iS│
+│pecWireSD__segment_list_sd_│
+│ iSpecWireSegSD_primary_key│
+│             =1            │
+│                           │
+│           ~1 row          │
+└───────────────────────────┘
+
+TABLE iTrackGridSD__layer_name_vec_sd___edadb_primitive_vector
+count_star()	
+BIGINT	
+[ Rows: 1]
+12
+
+SQL SELECT * FROM "iTrackGridSD__layer_name_vec_sd___edadb_primitive_vector" WHERE "iTrackGridSD_primary_key"=1
+┌───────────────────────────┐
+│         PROJECTION        │
+│    ────────────────────   │
+│      __edadb_vec_idx      │
+│           value           │
+│  iTrackGridSD_primary_key │
+│                           │
+│           ~1 row          │
+└─────────────┬─────────────┘
+┌─────────────┴─────────────┐
+│          SEQ_SCAN         │
+│    ────────────────────   │
+│           Table:          │
+│        design.main        │
+│.iTrackGridSD__layer_name_v│
+│ec_sd___edadb_primitive_vec│
+│            tor            │
+│                           │
+│   Type: Sequential Scan   │
+│                           │
+│        Projections:       │
+│  iTrackGridSD_primary_key │
+│      __edadb_vec_idx      │
+│           value           │
+│                           │
+│          Filters:         │
+│ iTrackGridSD_primary_key=1│
+│                           │
+│           ~1 row          │
+└───────────────────────────┘
+
+TABLE iVia__master_instance_iViaMasterSD_fixed_layer_shape_list_sd_iLayerShapeSD
+count_star()	
+BIGINT	
+[ Rows: 1]
+0
+
+TABLE iVia__master_instance_iViaMasterSD_fixed_layer_shape_list_sd_iLayerShapeSD__rect_list_sd_IdbRectSD
+count_star()	
+BIGINT	
+[ Rows: 1]
+0
+

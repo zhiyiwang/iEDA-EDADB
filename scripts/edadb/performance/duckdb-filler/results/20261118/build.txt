@@ -1,0 +1,353 @@
+[  0%] Built target fftsg_library
+[  0%] Performing build step for 'verilog_parser'
+[  0%] Built target absl_spinlock_wait
+[  0%] Built target absl_civil_time
+[  0%] Performing build step for 'liberty_parser'
+[  0%] Built target flute
+[  0%] Performing build step for 'spef_parser'
+[  0%] Built target memory
+[  0%] Built target feature_db
+[  0%] Built target absl_exponential_biased
+[  0%] Built target fort
+[  0%] Performing build step for 'vcd_parser'
+[  0%] Built target log
+[  0%] Built target absl_log_severity
+[  1%] Built target ls_assigner
+[  1%] Built target DefBisonTarget
+[  2%] Built target absl_time_zone
+[  2%] Built target geometry_db
+[  2%] Built target absl_int128
+[  2%] Built target LefBisonTarget
+[  2%] Built target notification
+[  2%] Built target json-parser
+[  2%] Built target lemon
+[  2%] Built target usage
+[  2%] Built target eval_util_wirelength_lut
+[  2%] Built target eval_db
+[  2%] Built target ivec_util
+[  4%] Built target gdsii-parser
+[  4%] Built target iIR-Rust
+[  4%] Built target edadb
+[  8%] Built target yaml-cpp
+[  8%] Built target eval_util_init_flute
+[  8%] Built target ipl-module-topology_manager
+[  8%] Built target solver_geometry_boost
+[  8%] Built target file_manager_base
+[  9%] Built target ipl-configurator
+[ 11%] Built target report_table
+[ 11%] Built target absl_raw_logging_internal
+[ 11%] Built target ipl-solver-simulate_anneal
+[ 11%] Built target ipl-solver-partition
+[ 11%] Built target icts_model
+[ 12%] Built target ivec_db
+[ 13%] Built target ir_solver
+[ 13%] Built target ir-matrix
+[ 16%] Built target lef
+[ 16%] Built target file_manager_cts
+[ 16%] Built target file_manager_placement
+[ 16%] Built target absl_throw_delegate
+[ 18%] Built target def
+[ 18%] Built target ipl-module-filler
+[ 18%] Built target absl_bad_optional_access
+[ 18%] Built target icts_report
+[ 18%] Built target absl_bad_variant_access
+[ 18%] Built target absl_cordz_functions
+[ 19%] Built target absl_debugging_internal
+[ 20%] Built target ivec_patch_db
+[ 22%] Built target absl_base
+[ 22%] Built target ivec_layout_db
+warning: unused manifest key: package.git
+[ 23%] Built target salt
+warning: unused manifest key: package.git
+warning: unused manifest key: package.git
+[ 23%] Built target defzlib
+[ 23%] Built target absl_stacktrace
+[ 23%] Built target solver_geometry
+[ 24%] Built target tcl
+[ 24%] Built target absl_malloc_internal
+[ 24%] Built target absl_demangle_internal
+[ 24%] Built target absl_low_level_hash
+[ 24%] Built target absl_crc_cpu_detect
+[ 24%] Built target absl_strings_internal
+[ 24%] Built target absl_city
+[ 24%] Building CXX object src/database/edadb/idb/CMakeFiles/db_edadb.dir/edadb_idb_init.cpp.o
+[ 24%] Built target absl_graphcycles_internal
+    Finished release [optimized] target(s) in 0.09s
+[ 24%] Built target absl_crc_internal
+    Finished release [optimized] target(s) in 0.09s
+    Finished release [optimized] target(s) in 0.10s
+[ 24%] No install step for 'verilog_parser'
+[ 25%] Built target absl_strings
+[ 25%] No install step for 'liberty_parser'
+[ 25%] No install step for 'spef_parser'
+    Finished release [optimized] target(s) in 0.11s
+[ 25%] Completed 'verilog_parser'
+[ 26%] Built target absl_symbolize
+[ 26%] Built target absl_hash
+[ 26%] Completed 'liberty_parser'
+[ 26%] No install step for 'vcd_parser'
+[ 27%] Built target absl_time
+[ 29%] Built target absl_crc32c
+[ 29%] Built target str
+[ 29%] Completed 'spef_parser'
+[ 29%] Built target time
+[ 29%] Completed 'vcd_parser'
+[ 29%] Built target absl_crc_cord_state
+[ 29%] Built target flow_config
+[ 29%] Built target absl_synchronization
+[ 29%] Built target verilog_parser
+[ 30%] Built target liberty_parser
+[ 31%] Built target spef_parser
+[ 31%] Built target absl_cordz_handle
+[ 31%] Built target verilog
+[ 32%] Built target absl_hashtablez_sampler
+[ 33%] Built target absl_cord_internal
+[ 34%] Built target vcd_parser
+[ 34%] Built target spef
+[ 34%] Built target vcd
+[ 34%] Built target absl_raw_hash_set
+[ 34%] Built target absl_cordz_info
+[ 36%] Built target lef_builder
+[ 39%] Built target idb
+[ 39%] Built target absl_cord
+[ 39%] Built target def_service
+[ 39%] Built target gds_builder
+[ 39%] Built target lef_service
+[ 39%] Built target json_builder
+[ 39%] Built target graph
+[ 39%] Built target aocv-parser
+[ 39%] Built target ieco_data
+[ 40%] Built target verilog_builder
+[ 40%] Built target ieco_dm
+In file included from /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/database/edadb/core/include/edadb/DbTableDefBuilder.h:14,
+                 from /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/database/edadb/core/include/edadb.h:19,
+                 from /home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/database/edadb/idb/edadb_idb_init.cpp:8:
+/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/database/edadb/core/include/edadb/DbTableOperator.h: In instantiation of ‘edadb::DbTableOperatorBase<DbType>::DbTableOperatorBase(edadb::DbTableOperatorBase<DbType>::DbTabDef*, edadb::DbTableOperatorBase<DbType>::OpBaseT*) [with edadb::DbBackendType DbType = edadb::DbBackendType::DUCKDB; edadb::DbTableOperatorBase<DbType>::DbTabDef = const edadb::DbTableDefBase; edadb::DbTableOperatorBase<DbType>::OpBaseT = edadb::DbTableOperatorBase<edadb::DbBackendType::DUCKDB>]’:
+/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/database/edadb/core/include/edadb/backend/duckdb/DbTableOpCreate4Duckdb.h:55:41:   required from ‘edadb::DbTableOperatorImpl<TStack, DbTableDefT, edadb::DbOperation::CREATE_TABLE, edadb::DbBackendType::DUCKDB>::DbTableOperatorImpl(edadb::DbTableOperatorImpl<TStack, DbTableDefT, edadb::DbOperation::CREATE_TABLE, edadb::DbBackendType::DUCKDB>::DbTabDefT*, edadb::DbTableOperatorImpl<TStack, DbTableDefT, edadb::DbOperation::CREATE_TABLE, edadb::DbBackendType::DUCKDB>::DbOpBaseT*) [with TStack = edadb::TypeStack<>; DbTableDefT = idb::IdbDesign; edadb::DbTableOperatorImpl<TStack, DbTableDefT, edadb::DbOperation::CREATE_TABLE, edadb::DbBackendType::DUCKDB>::DbTabDefT = const edadb::DbTableDefBase; edadb::DbTableOperatorImpl<TStack, DbTableDefT, edadb::DbOperation::CREATE_TABLE, edadb::DbBackendType::DUCKDB>::DbOpBaseT = edadb::DbTableOperatorBase<edadb::DbBackendType::DUCKDB>]’
+/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/database/edadb/core/include/edadb.h:336:26:   required from ‘bool edadb::createTable(bool) [with T = idb::IdbDesign]’
+/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/database/edadb/idb/edadb_idb_init.cpp:72:35:   required from ‘int idb::edadb_adapter::initTable(bool, bool) [with T = idb::IdbDesign]’
+/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/database/edadb/idb/edadb_idb_init.cpp:99:5:   required from here
+/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/database/edadb/core/include/edadb/DbTableOperator.h:42:15: warning: ‘edadb::DbTableOperatorBase<edadb::DbBackendType::DUCKDB>::tableDef’ will be initialized after [-Wreorder]
+   42 |     DbTabDef* tableDef = nullptr; // related DbTableDefBase type, non-owning pointer
+      |               ^~~~~~~~
+/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/database/edadb/core/include/edadb/DbTableOperator.h:38:14: warning:   ‘edadb::DbTableOperatorBase<edadb::DbBackendType::DUCKDB>::OpBaseT* edadb::DbTableOperatorBase<edadb::DbBackendType::DUCKDB>::parent’ [-Wreorder]
+   38 |     OpBaseT* parent = nullptr; // nullptr for root
+      |              ^~~~~~
+/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/database/edadb/core/include/edadb/DbTableOperator.h:45:5: warning:   when initialized here [-Wreorder]
+   45 |     DbTableOperatorBase(DbTabDef* t, OpBaseT* p = nullptr) : tableDef(t), parent(p) {}
+      |     ^~~~~~~~~~~~~~~~~~~
+[ 41%] Linking CXX static library ../../../../lib/libdb_edadb.a
+[ 41%] Built target db_edadb
+[ 43%] Built target def_builder
+Consolidate compiler generated dependencies of target IdbBuilder
+[ 44%] Built target IdbBuilder
+[ 44%] Built target sta-solver
+[ 44%] Built target tool_api_ipdn
+[ 44%] Built target tool_api_ifp
+[ 44%] Built target ista_utility
+[ 45%] Built target tool_api_irt
+[ 46%] Built target pg-netlist
+[ 46%] Built target liberty
+[ 47%] Built target iir-api
+[ 47%] Built target netlist
+[ 47%] Built target delay
+[ 48%] Built target sdc
+[ 48%] Built target core
+[ 50%] Built target calc_toggle_sp
+[ 50%] Built target annotate
+[ 50%] Built target build_graph
+[ 51%] Built target dump
+[ 51%] Built target calc_power
+[ 51%] Built target vcd_wrapper
+[ 51%] Built target plot_power
+[ 51%] Built target propagate_toggle_sp
+[ 52%] Built target levelize
+[ 54%] Built target sdc-cmd
+[ 55%] Built target power
+[ 58%] Built target sta
+[ 58%] Built target ista-engine
+[ 58%] Built target pwr-cmd
+[ 59%] Built target shell-cmd
+[ 59%] Built target tcl_util
+[ 59%] Built target tcl_notification
+[ 60%] Built target feature_builder
+[ 61%] Built target feature_parser
+[ 61%] Built target ieda_feature
+[ 61%] Built target solver_lg_method
+[ 62%] Built target solver_legalization
+[ 62%] Built target tool_api_ipnp
+[ 62%] Built target tool_api_ino
+[ 62%] Built target tool_api_ito
+[ 62%] Built target tool_api_ipl
+[ 62%] Built target tool_api_idrc
+[ 62%] Built target tool_api_icts
+[ 62%] Built target tool_api_ipw
+[ 62%] Built target tool_api_ista
+[ 63%] Built target tool_api_ieval
+[ 63%] Built target tool_manager
+[ 63%] Built target ieda_report_drc
+[ 63%] Built target ieda_report_place
+[ 63%] Built target ieda_report_route
+[ 63%] Built target ieda_report_evaluator
+[ 65%] Built target ieda_report_db
+[ 65%] Built target report_basic
+[ 65%] Built target ieda_report
+[ 66%] Built target flow
+[ 66%] Built target file_manager_drc
+[ 67%] Built target idm
+[ 67%] Built target ino_module
+[ 67%] Built target ino_io
+[ 67%] Built target ino_source
+[ 67%] Built target ino_api
+[ 67%] Built target icts_local_legalization
+[ 67%] Built target icts_cbs
+[ 68%] Built target icts_bst
+[ 68%] Built target icts_tree_builder
+[ 68%] Built target icts_timing_propagator
+[ 68%] Built target icts_anneal_opt
+[ 68%] Built target icts_balance_clustering
+[ 69%] Built target icts_solver_database
+[ 69%] Built target icts_solver
+[ 69%] Built target icts_router
+[ 69%] Built target icts_evaluator
+[ 70%] Built target icts_io
+[ 70%] Built target icts_database
+[ 70%] Built target icts_config
+[ 70%] Built target icts_api
+[ 70%] Built target ito_vg_buffer
+[ 70%] Built target ito_shallow_light_tree
+[ 72%] Built target ito_flute_tree
+[ 72%] Built target ito_hv_tree
+[ 72%] Built target ito_tree_build
+[ 72%] Built target ito_placer
+[ 72%] Built target ito_fix_setup
+[ 72%] Built target ito_fix_hold
+[ 73%] Built target ito_fix_drv
+[ 73%] Built target ito_eval
+[ 74%] Built target ito_timing_engine
+[ 74%] Built target ito_data_manager
+[ 74%] Built target ito_config
+[ 74%] Built target ito_utility
+[ 74%] Built target ito_source
+[ 75%] Built target ito_api
+[ 75%] Built target irt_utility
+[ 75%] Built target irt_monitor
+[ 75%] Built target irt_logger
+[ 75%] Built target irt_early_router
+[ 75%] Built target irt_violation_reporter
+[ 75%] Built target irt_detailed_router
+[ 75%] Built target irt_track_assigner
+[ 75%] Built target irt_space_router
+[ 75%] Built target irt_layer_assigner
+[ 76%] Built target irt_topology_generator
+[ 76%] Built target irt_supply_analyzer
+[ 76%] Built target irt_pin_accessor
+[ 76%] Built target irt_gds_plotter
+[ 76%] Built target irt_drc_engine
+[ 76%] Built target irt_data_manager
+[ 77%] Built target irt_interface
+[ 79%] Built target ipl-utility
+[ 79%] Built target ipl-solver-nesterov
+[ 79%] Built target ipl-module-wrapper
+[ 79%] Built target ipl-module-grid_manager
+[ 79%] Built target ipl-module-buffer
+[ 79%] Built target ipl-layout_checker
+[ 79%] Built target ipl_module_evaluator_timing
+[ 79%] Built target ipl-dct
+[ 79%] Built target ipl_module_evaluator_density
+[ 79%] Built target ipl_module_evaluator_wirelength
+[ 81%] Built target ipl-module-detail_placer
+[ 82%] Built target ipl-module-legalizer
+[ 82%] Built target ipl-module-post_gp
+[ 82%] Built target ipl-electrostatic_placer
+[ 83%] Built target ipl-random_placer
+[ 83%] Built target ipl-center_placer
+[ 83%] Built target ipl-source
+[ 83%] Built target ipl-reporter
+[ 83%] Built target ipl-external_api
+[ 83%] Built target ipl-api
+[ 83%] Built target pnp-synthesis
+[ 83%] Built target pnp-optimizer
+[ 84%] Built target pnp-evaluator
+[ 84%] Built target pnp-data
+[ 84%] Built target pnp-config
+[ 84%] Built target pnp
+[ 84%] Built target ipnp_api
+[ 84%] Built target ipdn_via
+[ 84%] Built target ipdn_plan
+[ 84%] Built target ipdn_db
+[ 86%] Built target ipdn_api
+[ 86%] Built target ifp_tapcell
+[ 86%] Built target ifp_io_placer
+[ 87%] Built target ifp_init
+[ 87%] Built target ifp_api
+[ 87%] Built target ieco_via
+[ 88%] Built target ieco_src
+[ 88%] Built target ieco_api
+[ 88%] Built target idrc_utility
+[ 88%] Built target idrc_monitor
+[ 89%] Built target idrc_logger
+[ 91%] Built target idrc_rule_validator
+[ 91%] Built target idrc_gds_plotter
+[ 91%] Built target idrc_data_manager
+[ 91%] Built target idrc_interface
+[ 91%] Built target eval_util_init_idb
+[ 91%] Built target eval_util_init_ista
+[ 93%] Built target eval_util_init_egr
+[ 93%] Built target eval_util_general_ops
+[ 94%] Built target eval_io
+[ 94%] Built target eval_wirelength_eval
+[ 94%] Built target eval_timing_eval
+[ 94%] Built target eval_density_eval
+[ 94%] Built target eval_congestion_eval
+[ 94%] Built target eval_union_api
+[ 94%] Built target eval_wirelength_api
+[ 94%] Built target eval_timing_api
+[ 94%] Built target eval_density_api
+[ 94%] Built target eval_congestion_api
+[ 94%] Built target ivec_feature
+[ 94%] Built target ivec_patch_dm
+[ 94%] Built target ivec_layout_dm
+[ 95%] Built target ivec_graph_dm
+[ 95%] Built target ivec_dm
+[ 95%] Built target vectorization
+[ 95%] Built target ivec_api
+[ 95%] Built target tcl_vec
+[ 95%] Built target tcl_eco
+[ 95%] Built target tcl_eval
+[ 95%] Built target tcl_feature
+[ 95%] Built target tcl_ino
+[ 95%] Built target tcl_report
+[ 95%] Built target tcl_ipw
+[ 95%] Built target tcl_ista
+[ 96%] Built target tcl_ito
+[ 96%] Built target tcl_ipl
+[ 97%] Built target tcl_ipnp
+[ 97%] Built target tcl_ipdn
+[ 98%] Built target tcl_ifp
+[ 98%] Built target tcl_irt
+[ 98%] Built target tcl_inst
+[ 98%] Built target tcl_idrc
+[100%] Built target tcl_icts
+[100%] Built target tcl_flow
+[100%] Built target tcl_idb
+[100%] Built target tcl_config
+[100%] Built target ieda_tcl
+[100%] Linking CXX executable /tmp/edadb-sky130-duckdb-20261117/bin/iEDA
+/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/third_party/lefdef/def/def/defrData.hpp:68: warning: type ‘union YYSTYPE’ violates the C++ One Definition Rule [-Wodr]
+   68 | } YYSTYPE;
+      | 
+/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/third_party/lefdef/lef/lef/lef.tab.h:516: note: a different type is defined in another translation unit
+  516 | union YYSTYPE
+      | 
+/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/third_party/lefdef/def/def/defrData.hpp:65: note: the first difference of corresponding definitions is field ‘keyword’
+   65 |         int    keyword ;  // really just a nop
+      | 
+/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/third_party/lefdef/lef/lef/lef.y:198: note: a field with different name is defined in another translation unit
+  198 |         LefDefParser::lefPOINT  pt;
+      | 
+../third_party/lefdef/def/def.tab.c:171: warning: type ‘LefDefParser::yysymbol_kind_t’ violates the C++ One Definition Rule [-Wodr]
+../third_party/lefdef/lef/lef.tab.c:244: note: an enum with different value name is defined in another translation unit
+../third_party/lefdef/def/def.tab.c:177: note: name ‘YYSYMBOL_QSTRING’ differs from name ‘YYSYMBOL_K_HISTORY’ defined in another translation unit
+../third_party/lefdef/lef/lef.tab.c:250: note: mismatching definition
+[100%] Built target iEDA

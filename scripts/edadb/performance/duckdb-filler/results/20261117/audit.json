@@ -1,0 +1,6 @@
+{
+  "status": "PASS",
+  "roundtrips": 6,
+  "formal_rounds": 5,
+  "canonical_def_sha256": "b2a8ade6f7e74f620491f56914a34d8fb89dd3efe957e4dc3ec4a42d50104c5e"
+}

@@ -1,0 +1,572 @@
+[  0%] Built target flute
+[  0%] Built target absl_log_severity
+[  0%] Built target absl_int128
+[  0%] Built target DefBisonTarget
+[  0%] Built target absl_exponential_biased
+[  0%] Built target LefBisonTarget
+[  0%] Built target memory
+[  0%] Performing build step for 'verilog_parser'
+[  0%] Built target fftsg_library
+[  0%] Performing build step for 'vcd_parser'
+[  0%] Built target fort
+[  0%] Built target feature_db
+[  0%] Performing build step for 'liberty_parser'
+[  0%] Built target absl_civil_time
+[  0%] Built target absl_spinlock_wait
+[  0%] Built target geometry_db
+[  1%] Built target ls_assigner
+[  0%] Performing build step for 'spef_parser'
+[  1%] Built target log
+[  2%] Built target absl_time_zone
+[  3%] Built target gdsii-parser
+[  3%] Built target usage
+[  3%] Built target notification
+[  4%] Built target iIR-Rust
+[  4%] Built target json-parser
+[  4%] Built target eval_db
+[  4%] Built target ivec_util
+[  4%] Built target eval_util_wirelength_lut
+[  4%] Built target lemon
+Consolidate compiler generated dependencies of target solver_geometry_boost
+Consolidate compiler generated dependencies of target icts_model
+[  5%] Built target ipl-configurator
+[  9%] Built target yaml-cpp
+Consolidate compiler generated dependencies of target ir_solver
+[  9%] Built target file_manager_base
+[  9%] Built target ipl-solver-simulate_anneal
+[ 10%] Built target absl_raw_logging_internal
+[ 10%] Built target ipl-solver-partition
+[ 10%] Built target edadb
+Consolidate compiler generated dependencies of target ir-matrix
+[ 11%] Built target report_table
+[ 11%] Built target eval_util_init_flute
+[ 11%] Built target ipl-module-topology_manager
+[ 11%] Built target icts_model
+[ 12%] Built target ivec_db
+Consolidate compiler generated dependencies of target ipl-module-filler
+[ 13%] Built target ir_solver
+[ 16%] Built target lef
+[ 16%] Built target ir-matrix
+[ 16%] Built target solver_geometry_boost
+[ 16%] Built target file_manager_cts
+[ 16%] Built target absl_bad_optional_access
+[ 16%] Built target absl_bad_variant_access
+[ 16%] Built target ipl-module-filler
+[ 16%] Built target absl_throw_delegate
+[ 16%] Built target absl_cordz_functions
+[ 16%] Built target icts_report
+[ 16%] Built target file_manager_placement
+[ 17%] Built target absl_base
+[ 18%] Built target absl_debugging_internal
+Consolidate compiler generated dependencies of target ivec_layout_db
+[ 19%] Built target ivec_patch_db
+[ 19%] Built target ivec_layout_db
+warning: unused manifest key: package.git
+warning: unused manifest key: package.git
+[ 19%] Built target absl_demangle_internal
+[ 19%] Built target absl_crc_cpu_detect
+[ 19%] Built target absl_malloc_internal
+[ 19%] Built target absl_low_level_hash
+[ 19%] Built target absl_strings_internal
+warning: unused manifest key: package.git
+[ 19%] Built target absl_stacktrace
+Consolidate compiler generated dependencies of target tcl
+Consolidate compiler generated dependencies of target solver_geometry
+[ 20%] Built target db_edadb
+[ 22%] Built target tcl
+    Finished release [optimized] target(s) in 0.09s
+Consolidate compiler generated dependencies of target absl_city
+    Finished release [optimized] target(s) in 0.10s
+    Finished release [optimized] target(s) in 0.10s
+[ 22%] Built target solver_geometry
+[ 22%] No install step for 'liberty_parser'
+[ 22%] Built target absl_city
+[ 22%] No install step for 'spef_parser'
+[ 22%] No install step for 'verilog_parser'
+[ 22%] Completed 'liberty_parser'
+[ 22%] Completed 'spef_parser'
+[ 22%] Completed 'verilog_parser'
+[ 23%] Built target liberty_parser
+[ 24%] Built target spef_parser
+[ 24%] Built target verilog_parser
+[ 24%] Built target spef
+    Finished release [optimized] target(s) in 0.24s
+[ 24%] No install step for 'vcd_parser'
+[ 24%] Completed 'vcd_parser'
+[ 25%] Built target vcd_parser
+[ 25%] Built target vcd
+Consolidate compiler generated dependencies of target absl_graphcycles_internal
+Consolidate compiler generated dependencies of target absl_crc_internal
+Consolidate compiler generated dependencies of target absl_strings
+[ 25%] Built target absl_graphcycles_internal
+[ 25%] Built target absl_crc_internal
+[ 26%] Built target absl_strings
+Consolidate compiler generated dependencies of target def
+Consolidate compiler generated dependencies of target absl_symbolize
+[ 29%] Built target def
+[ 30%] Built target absl_symbolize
+Consolidate compiler generated dependencies of target absl_hash
+[ 30%] Built target absl_hash
+Consolidate compiler generated dependencies of target absl_time
+Consolidate compiler generated dependencies of target str
+Consolidate compiler generated dependencies of target absl_crc32c
+[ 31%] Built target absl_time
+[ 31%] Built target str
+[ 32%] Built target absl_crc32c
+Consolidate compiler generated dependencies of target defzlib
+[ 32%] Built target defzlib
+Consolidate compiler generated dependencies of target salt
+Consolidate compiler generated dependencies of target verilog
+Consolidate compiler generated dependencies of target flow_config
+Consolidate compiler generated dependencies of target absl_synchronization
+Consolidate compiler generated dependencies of target time
+Consolidate compiler generated dependencies of target absl_crc_cord_state
+[ 32%] Built target time
+[ 32%] Built target verilog
+[ 32%] Built target flow_config
+[ 32%] Built target absl_crc_cord_state
+[ 33%] Built target salt
+[ 33%] Built target absl_synchronization
+Consolidate compiler generated dependencies of target lef_builder
+Consolidate compiler generated dependencies of target absl_cordz_handle
+Consolidate compiler generated dependencies of target absl_hashtablez_sampler
+Consolidate compiler generated dependencies of target absl_cord_internal
+[ 33%] Built target absl_cordz_handle
+[ 34%] Built target absl_hashtablez_sampler
+[ 36%] Built target absl_cord_internal
+[ 37%] Built target lef_builder
+Consolidate compiler generated dependencies of target absl_cordz_info
+Consolidate compiler generated dependencies of target absl_raw_hash_set
+[ 37%] Built target absl_raw_hash_set
+[ 37%] Built target absl_cordz_info
+Consolidate compiler generated dependencies of target idb
+Consolidate compiler generated dependencies of target def_builder
+Consolidate compiler generated dependencies of target absl_cord
+[ 37%] Built target absl_cord
+[ 40%] Built target idb
+[ 41%] Built target def_builder
+Consolidate compiler generated dependencies of target graph
+Consolidate compiler generated dependencies of target aocv-parser
+[ 41%] Built target graph
+[ 41%] Built target aocv-parser
+Consolidate compiler generated dependencies of target def_service
+Consolidate compiler generated dependencies of target json_builder
+[ 41%] Built target def_service
+Consolidate compiler generated dependencies of target ieco_data
+[ 41%] Built target json_builder
+[ 41%] Built target ieco_data
+Consolidate compiler generated dependencies of target gds_builder
+Consolidate compiler generated dependencies of target verilog_builder
+Consolidate compiler generated dependencies of target lef_service
+[ 41%] Built target gds_builder
+[ 43%] Built target verilog_builder
+[ 43%] Built target lef_service
+Consolidate compiler generated dependencies of target ieco_dm
+[ 43%] Built target ieco_dm
+Consolidate compiler generated dependencies of target IdbBuilder
+[ 43%] Building CXX object src/database/manager/builder/CMakeFiles/IdbBuilder.dir/builder.cpp.o
+[ 43%] Linking CXX static library ../../../../lib/libIdbBuilder.a
+[ 44%] Built target IdbBuilder
+Consolidate compiler generated dependencies of target sta-solver
+Consolidate compiler generated dependencies of target tool_api_ifp
+Consolidate compiler generated dependencies of target tool_api_ipdn
+Consolidate compiler generated dependencies of target tool_api_irt
+Consolidate compiler generated dependencies of target ista_utility
+[ 44%] Built target sta-solver
+[ 44%] Built target tool_api_ifp
+[ 44%] Built target tool_api_ipdn
+[ 45%] Built target tool_api_irt
+[ 45%] Built target ista_utility
+Consolidate compiler generated dependencies of target pg-netlist
+Consolidate compiler generated dependencies of target liberty
+[ 45%] Built target liberty
+[ 46%] Built target pg-netlist
+Consolidate compiler generated dependencies of target iir-api
+[ 47%] Built target iir-api
+Consolidate compiler generated dependencies of target netlist
+[ 47%] Built target netlist
+Consolidate compiler generated dependencies of target delay
+Consolidate compiler generated dependencies of target sdc
+Consolidate compiler generated dependencies of target core
+[ 47%] Built target delay
+[ 48%] Built target sdc
+[ 48%] Built target core
+Consolidate compiler generated dependencies of target annotate
+Consolidate compiler generated dependencies of target build_graph
+Consolidate compiler generated dependencies of target calc_toggle_sp
+Consolidate compiler generated dependencies of target dump
+[ 48%] Built target annotate
+[ 50%] Built target calc_toggle_sp
+[ 50%] Built target build_graph
+[ 51%] Built target dump
+Consolidate compiler generated dependencies of target vcd_wrapper
+[ 51%] Built target vcd_wrapper
+Consolidate compiler generated dependencies of target propagate_toggle_sp
+Consolidate compiler generated dependencies of target levelize
+Consolidate compiler generated dependencies of target calc_power
+Consolidate compiler generated dependencies of target plot_power
+[ 51%] Built target propagate_toggle_sp
+[ 52%] Built target levelize
+[ 52%] Built target calc_power
+[ 52%] Built target plot_power
+Consolidate compiler generated dependencies of target sdc-cmd
+Consolidate compiler generated dependencies of target power
+[ 54%] Built target sdc-cmd
+[ 55%] Built target power
+Consolidate compiler generated dependencies of target sta
+[ 58%] Built target sta
+Consolidate compiler generated dependencies of target ista-engine
+Consolidate compiler generated dependencies of target pwr-cmd
+[ 58%] Built target ista-engine
+[ 58%] Built target pwr-cmd
+Consolidate compiler generated dependencies of target shell-cmd
+[ 59%] Built target shell-cmd
+Consolidate compiler generated dependencies of target tcl_util
+[ 59%] Built target tcl_util
+Consolidate compiler generated dependencies of target tcl_notification
+[ 59%] Built target tcl_notification
+Consolidate compiler generated dependencies of target feature_builder
+[ 60%] Built target feature_builder
+Consolidate compiler generated dependencies of target feature_parser
+[ 61%] Built target feature_parser
+Consolidate compiler generated dependencies of target ieda_feature
+[ 61%] Built target ieda_feature
+Consolidate compiler generated dependencies of target solver_lg_method
+[ 61%] Built target solver_lg_method
+Consolidate compiler generated dependencies of target solver_legalization
+[ 62%] Built target solver_legalization
+Consolidate compiler generated dependencies of target tool_api_ipnp
+[ 62%] Built target tool_api_ipnp
+Consolidate compiler generated dependencies of target tool_api_ino
+[ 62%] Built target tool_api_ino
+Consolidate compiler generated dependencies of target tool_api_ito
+[ 62%] Built target tool_api_ito
+Consolidate compiler generated dependencies of target tool_api_ipl
+[ 62%] Built target tool_api_ipl
+Consolidate compiler generated dependencies of target tool_api_idrc
+[ 62%] Built target tool_api_idrc
+Consolidate compiler generated dependencies of target tool_api_icts
+[ 62%] Built target tool_api_icts
+Consolidate compiler generated dependencies of target tool_api_ipw
+[ 62%] Built target tool_api_ipw
+Consolidate compiler generated dependencies of target tool_api_ista
+[ 62%] Built target tool_api_ista
+Consolidate compiler generated dependencies of target tool_api_ieval
+[ 63%] Built target tool_api_ieval
+Consolidate compiler generated dependencies of target tool_manager
+[ 63%] Built target tool_manager
+Consolidate compiler generated dependencies of target ieda_report_drc
+[ 63%] Built target ieda_report_drc
+Consolidate compiler generated dependencies of target ieda_report_place
+[ 63%] Built target ieda_report_place
+Consolidate compiler generated dependencies of target ieda_report_route
+[ 63%] Built target ieda_report_route
+Consolidate compiler generated dependencies of target ieda_report_evaluator
+[ 63%] Built target ieda_report_evaluator
+Consolidate compiler generated dependencies of target ieda_report_db
+[ 65%] Built target ieda_report_db
+Consolidate compiler generated dependencies of target report_basic
+[ 65%] Built target report_basic
+Consolidate compiler generated dependencies of target ieda_report
+[ 65%] Built target ieda_report
+Consolidate compiler generated dependencies of target flow
+[ 66%] Built target flow
+Consolidate compiler generated dependencies of target file_manager_drc
+[ 66%] Built target file_manager_drc
+Consolidate compiler generated dependencies of target idm
+[ 67%] Built target idm
+Consolidate compiler generated dependencies of target ino_module
+[ 67%] Built target ino_module
+Consolidate compiler generated dependencies of target ino_io
+[ 67%] Built target ino_io
+Consolidate compiler generated dependencies of target ino_source
+[ 67%] Built target ino_source
+Consolidate compiler generated dependencies of target ino_api
+[ 67%] Built target ino_api
+Consolidate compiler generated dependencies of target icts_local_legalization
+[ 67%] Built target icts_local_legalization
+Consolidate compiler generated dependencies of target icts_cbs
+[ 67%] Built target icts_cbs
+Consolidate compiler generated dependencies of target icts_bst
+[ 68%] Built target icts_bst
+Consolidate compiler generated dependencies of target icts_tree_builder
+[ 68%] Built target icts_tree_builder
+Consolidate compiler generated dependencies of target icts_timing_propagator
+[ 68%] Built target icts_timing_propagator
+Consolidate compiler generated dependencies of target icts_anneal_opt
+[ 68%] Built target icts_anneal_opt
+Consolidate compiler generated dependencies of target icts_balance_clustering
+[ 68%] Built target icts_balance_clustering
+Consolidate compiler generated dependencies of target icts_solver_database
+[ 69%] Built target icts_solver_database
+Consolidate compiler generated dependencies of target icts_solver
+[ 69%] Built target icts_solver
+Consolidate compiler generated dependencies of target icts_router
+[ 69%] Built target icts_router
+Consolidate compiler generated dependencies of target icts_evaluator
+[ 69%] Built target icts_evaluator
+Consolidate compiler generated dependencies of target icts_io
+[ 70%] Built target icts_io
+Consolidate compiler generated dependencies of target icts_database
+[ 70%] Built target icts_database
+Consolidate compiler generated dependencies of target icts_config
+[ 70%] Built target icts_config
+Consolidate compiler generated dependencies of target icts_api
+[ 70%] Built target icts_api
+Consolidate compiler generated dependencies of target ito_vg_buffer
+[ 70%] Built target ito_vg_buffer
+Consolidate compiler generated dependencies of target ito_shallow_light_tree
+[ 70%] Built target ito_shallow_light_tree
+Consolidate compiler generated dependencies of target ito_flute_tree
+[ 72%] Built target ito_flute_tree
+Consolidate compiler generated dependencies of target ito_hv_tree
+[ 72%] Built target ito_hv_tree
+Consolidate compiler generated dependencies of target ito_tree_build
+[ 72%] Built target ito_tree_build
+Consolidate compiler generated dependencies of target ito_placer
+[ 72%] Built target ito_placer
+Consolidate compiler generated dependencies of target ito_fix_setup
+[ 72%] Built target ito_fix_setup
+Consolidate compiler generated dependencies of target ito_fix_hold
+[ 72%] Built target ito_fix_hold
+Consolidate compiler generated dependencies of target ito_fix_drv
+[ 73%] Built target ito_fix_drv
+Consolidate compiler generated dependencies of target ito_eval
+[ 73%] Built target ito_eval
+Consolidate compiler generated dependencies of target ito_timing_engine
+[ 74%] Built target ito_timing_engine
+Consolidate compiler generated dependencies of target ito_data_manager
+[ 74%] Built target ito_data_manager
+Consolidate compiler generated dependencies of target ito_config
+[ 74%] Built target ito_config
+Consolidate compiler generated dependencies of target ito_utility
+[ 74%] Built target ito_utility
+Consolidate compiler generated dependencies of target ito_source
+[ 74%] Built target ito_source
+Consolidate compiler generated dependencies of target ito_api
+[ 75%] Built target ito_api
+Consolidate compiler generated dependencies of target irt_utility
+[ 75%] Built target irt_utility
+Consolidate compiler generated dependencies of target irt_monitor
+[ 75%] Built target irt_monitor
+Consolidate compiler generated dependencies of target irt_logger
+[ 75%] Built target irt_logger
+Consolidate compiler generated dependencies of target irt_early_router
+[ 75%] Built target irt_early_router
+Consolidate compiler generated dependencies of target irt_violation_reporter
+[ 75%] Built target irt_violation_reporter
+Consolidate compiler generated dependencies of target irt_detailed_router
+[ 75%] Built target irt_detailed_router
+Consolidate compiler generated dependencies of target irt_track_assigner
+[ 75%] Built target irt_track_assigner
+Consolidate compiler generated dependencies of target irt_space_router
+[ 75%] Built target irt_space_router
+Consolidate compiler generated dependencies of target irt_layer_assigner
+[ 75%] Built target irt_layer_assigner
+Consolidate compiler generated dependencies of target irt_topology_generator
+[ 76%] Built target irt_topology_generator
+Consolidate compiler generated dependencies of target irt_supply_analyzer
+[ 76%] Built target irt_supply_analyzer
+Consolidate compiler generated dependencies of target irt_pin_accessor
+[ 76%] Built target irt_pin_accessor
+Consolidate compiler generated dependencies of target irt_gds_plotter
+[ 76%] Built target irt_gds_plotter
+Consolidate compiler generated dependencies of target irt_drc_engine
+[ 76%] Built target irt_drc_engine
+Consolidate compiler generated dependencies of target irt_data_manager
+[ 76%] Built target irt_data_manager
+Consolidate compiler generated dependencies of target irt_interface
+[ 77%] Built target irt_interface
+Consolidate compiler generated dependencies of target ipl-utility
+[ 79%] Built target ipl-utility
+Consolidate compiler generated dependencies of target ipl-solver-nesterov
+[ 79%] Built target ipl-solver-nesterov
+Consolidate compiler generated dependencies of target ipl-module-wrapper
+[ 79%] Built target ipl-module-wrapper
+Consolidate compiler generated dependencies of target ipl-module-grid_manager
+[ 79%] Built target ipl-module-grid_manager
+Consolidate compiler generated dependencies of target ipl-module-buffer
+[ 79%] Built target ipl-module-buffer
+Consolidate compiler generated dependencies of target ipl-layout_checker
+[ 79%] Built target ipl-layout_checker
+Consolidate compiler generated dependencies of target ipl_module_evaluator_timing
+[ 79%] Built target ipl_module_evaluator_timing
+Consolidate compiler generated dependencies of target ipl-dct
+[ 79%] Built target ipl-dct
+Consolidate compiler generated dependencies of target ipl_module_evaluator_density
+[ 79%] Built target ipl_module_evaluator_density
+Consolidate compiler generated dependencies of target ipl_module_evaluator_wirelength
+[ 79%] Built target ipl_module_evaluator_wirelength
+Consolidate compiler generated dependencies of target ipl-module-detail_placer
+[ 81%] Built target ipl-module-detail_placer
+Consolidate compiler generated dependencies of target ipl-module-legalizer
+[ 82%] Built target ipl-module-legalizer
+Consolidate compiler generated dependencies of target ipl-module-post_gp
+[ 82%] Built target ipl-module-post_gp
+Consolidate compiler generated dependencies of target ipl-electrostatic_placer
+[ 82%] Built target ipl-electrostatic_placer
+Consolidate compiler generated dependencies of target ipl-random_placer
+[ 83%] Built target ipl-random_placer
+Consolidate compiler generated dependencies of target ipl-center_placer
+[ 83%] Built target ipl-center_placer
+Consolidate compiler generated dependencies of target ipl-source
+[ 83%] Built target ipl-source
+Consolidate compiler generated dependencies of target ipl-reporter
+[ 83%] Built target ipl-reporter
+Consolidate compiler generated dependencies of target ipl-external_api
+[ 83%] Built target ipl-external_api
+Consolidate compiler generated dependencies of target ipl-api
+[ 83%] Built target ipl-api
+Consolidate compiler generated dependencies of target pnp-synthesis
+[ 83%] Built target pnp-synthesis
+Consolidate compiler generated dependencies of target pnp-optimizer
+[ 83%] Built target pnp-optimizer
+Consolidate compiler generated dependencies of target pnp-evaluator
+[ 84%] Built target pnp-evaluator
+Consolidate compiler generated dependencies of target pnp-data
+[ 84%] Built target pnp-data
+Consolidate compiler generated dependencies of target pnp-config
+[ 84%] Built target pnp-config
+Consolidate compiler generated dependencies of target pnp
+[ 84%] Built target pnp
+Consolidate compiler generated dependencies of target ipnp_api
+[ 84%] Built target ipnp_api
+Consolidate compiler generated dependencies of target ipdn_via
+[ 84%] Built target ipdn_via
+Consolidate compiler generated dependencies of target ipdn_plan
+[ 84%] Built target ipdn_plan
+Consolidate compiler generated dependencies of target ipdn_db
+[ 84%] Built target ipdn_db
+Consolidate compiler generated dependencies of target ipdn_api
+[ 86%] Built target ipdn_api
+Consolidate compiler generated dependencies of target ifp_tapcell
+[ 86%] Built target ifp_tapcell
+Consolidate compiler generated dependencies of target ifp_io_placer
+[ 86%] Built target ifp_io_placer
+Consolidate compiler generated dependencies of target ifp_init
+[ 87%] Built target ifp_init
+Consolidate compiler generated dependencies of target ifp_api
+[ 87%] Built target ifp_api
+Consolidate compiler generated dependencies of target ieco_via
+[ 87%] Built target ieco_via
+Consolidate compiler generated dependencies of target ieco_src
+[ 88%] Built target ieco_src
+Consolidate compiler generated dependencies of target ieco_api
+[ 88%] Built target ieco_api
+Consolidate compiler generated dependencies of target idrc_utility
+[ 88%] Built target idrc_utility
+Consolidate compiler generated dependencies of target idrc_monitor
+[ 88%] Built target idrc_monitor
+Consolidate compiler generated dependencies of target idrc_logger
+[ 89%] Built target idrc_logger
+Consolidate compiler generated dependencies of target idrc_rule_validator
+[ 91%] Built target idrc_rule_validator
+Consolidate compiler generated dependencies of target idrc_gds_plotter
+[ 91%] Built target idrc_gds_plotter
+Consolidate compiler generated dependencies of target idrc_data_manager
+[ 91%] Built target idrc_data_manager
+Consolidate compiler generated dependencies of target idrc_interface
+[ 91%] Built target idrc_interface
+Consolidate compiler generated dependencies of target eval_util_init_idb
+[ 91%] Built target eval_util_init_idb
+Consolidate compiler generated dependencies of target eval_util_init_ista
+[ 91%] Built target eval_util_init_ista
+Consolidate compiler generated dependencies of target eval_util_init_egr
+[ 93%] Built target eval_util_init_egr
+Consolidate compiler generated dependencies of target eval_util_general_ops
+[ 93%] Built target eval_util_general_ops
+Consolidate compiler generated dependencies of target eval_io
+[ 94%] Built target eval_io
+Consolidate compiler generated dependencies of target eval_wirelength_eval
+[ 94%] Built target eval_wirelength_eval
+Consolidate compiler generated dependencies of target eval_timing_eval
+[ 94%] Built target eval_timing_eval
+Consolidate compiler generated dependencies of target eval_density_eval
+[ 94%] Built target eval_density_eval
+Consolidate compiler generated dependencies of target eval_congestion_eval
+[ 94%] Built target eval_congestion_eval
+Consolidate compiler generated dependencies of target eval_union_api
+[ 94%] Built target eval_union_api
+Consolidate compiler generated dependencies of target eval_wirelength_api
+[ 94%] Built target eval_wirelength_api
+Consolidate compiler generated dependencies of target eval_timing_api
+[ 94%] Built target eval_timing_api
+Consolidate compiler generated dependencies of target eval_density_api
+[ 94%] Built target eval_density_api
+Consolidate compiler generated dependencies of target eval_congestion_api
+[ 94%] Built target eval_congestion_api
+Consolidate compiler generated dependencies of target ivec_feature
+[ 94%] Built target ivec_feature
+Consolidate compiler generated dependencies of target ivec_patch_dm
+[ 94%] Built target ivec_patch_dm
+Consolidate compiler generated dependencies of target ivec_layout_dm
+[ 94%] Built target ivec_layout_dm
+Consolidate compiler generated dependencies of target ivec_graph_dm
+[ 95%] Built target ivec_graph_dm
+Consolidate compiler generated dependencies of target ivec_dm
+[ 95%] Built target ivec_dm
+Consolidate compiler generated dependencies of target vectorization
+[ 95%] Built target vectorization
+Consolidate compiler generated dependencies of target ivec_api
+[ 95%] Built target ivec_api
+Consolidate compiler generated dependencies of target tcl_vec
+[ 95%] Built target tcl_vec
+Consolidate compiler generated dependencies of target tcl_eco
+[ 95%] Built target tcl_eco
+Consolidate compiler generated dependencies of target tcl_eval
+[ 95%] Built target tcl_eval
+Consolidate compiler generated dependencies of target tcl_feature
+[ 95%] Built target tcl_feature
+Consolidate compiler generated dependencies of target tcl_ino
+[ 95%] Built target tcl_ino
+Consolidate compiler generated dependencies of target tcl_report
+[ 95%] Built target tcl_report
+Consolidate compiler generated dependencies of target tcl_ipw
+[ 95%] Built target tcl_ipw
+Consolidate compiler generated dependencies of target tcl_ista
+[ 95%] Built target tcl_ista
+Consolidate compiler generated dependencies of target tcl_ito
+[ 96%] Built target tcl_ito
+Consolidate compiler generated dependencies of target tcl_ipl
+[ 96%] Built target tcl_ipl
+Consolidate compiler generated dependencies of target tcl_ipnp
+[ 97%] Built target tcl_ipnp
+Consolidate compiler generated dependencies of target tcl_ipdn
+[ 97%] Built target tcl_ipdn
+Consolidate compiler generated dependencies of target tcl_ifp
+[ 98%] Built target tcl_ifp
+Consolidate compiler generated dependencies of target tcl_irt
+[ 98%] Built target tcl_irt
+Consolidate compiler generated dependencies of target tcl_inst
+[ 98%] Built target tcl_inst
+Consolidate compiler generated dependencies of target tcl_idrc
+[ 98%] Built target tcl_idrc
+Consolidate compiler generated dependencies of target tcl_icts
+[100%] Built target tcl_icts
+Consolidate compiler generated dependencies of target tcl_flow
+[100%] Built target tcl_flow
+Consolidate compiler generated dependencies of target tcl_idb
+[100%] Built target tcl_idb
+Consolidate compiler generated dependencies of target tcl_config
+[100%] Built target tcl_config
+Consolidate compiler generated dependencies of target ieda_tcl
+[100%] Built target ieda_tcl
+Consolidate compiler generated dependencies of target iEDA
+[100%] Linking CXX executable /tmp/edadb-sky130-duckdb-20261117/bin/iEDA
+/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/third_party/lefdef/def/def/defrData.hpp:68: warning: type ‘union YYSTYPE’ violates the C++ One Definition Rule [-Wodr]
+   68 | } YYSTYPE;
+      | 
+/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/third_party/lefdef/lef/lef/lef.tab.h:516: note: a different type is defined in another translation unit
+  516 | union YYSTYPE
+      | 
+/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/third_party/lefdef/def/def/defrData.hpp:65: note: the first difference of corresponding definitions is field ‘keyword’
+   65 |         int    keyword ;  // really just a nop
+      | 
+/home/zhiyiwang/cs/arch/eda/iEDA-EDADB/src/third_party/lefdef/lef/lef/lef.y:198: note: a field with different name is defined in another translation unit
+  198 |         LefDefParser::lefPOINT  pt;
+      | 
+../third_party/lefdef/def/def.tab.c:171: warning: type ‘LefDefParser::yysymbol_kind_t’ violates the C++ One Definition Rule [-Wodr]
+../third_party/lefdef/lef/lef.tab.c:244: note: an enum with different value name is defined in another translation unit
+../third_party/lefdef/def/def.tab.c:177: note: name ‘YYSYMBOL_QSTRING’ differs from name ‘YYSYMBOL_K_HISTORY’ defined in another translation unit
+../third_party/lefdef/lef/lef.tab.c:250: note: mismatching definition
+[100%] Built target iEDA
